@@ -53,8 +53,14 @@ INSTALLED_APPS = [
     "apps.labs",
 ]
 
+# Custom user model
+AUTH_USER_MODEL = 'accounts.User'
+
+GLOBAL_HOSTS = ""
+
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # 'apps.core.middleware.TenantMiddleware', # created middleware
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -63,12 +69,15 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = '/'
+
 ROOT_URLCONF = "lims_auth.urls"
 
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [

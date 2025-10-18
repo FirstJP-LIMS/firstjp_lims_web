@@ -5,9 +5,6 @@ class TenantAwareManager(models.Manager):
     """
     Custom manager that always requires a tenant object to scope the queryset.
     """
-    # NOTE: The ForeignKey field should match the name in your models (e.g., 'vendor')
-    # We'll stick to 'tenant=tenant' as per your SampleRequest example.
-
     def for_tenant(self, tenant):
         """Returns a queryset filtered by the provided Vendor/Tenant object."""
         if not tenant:
@@ -19,3 +16,16 @@ class TenantAwareManager(models.Manager):
         # Override to potentially add global filters, but for tenant models,
         # To resolve un-scoped for .for_tenant()
         return super().get_queryset()
+
+
+# # Check the two
+# class TenantAwareManager(models.Manager):
+#     def for_tenant(self, tenant):
+#         if tenant is None:
+#             return self.get_queryset().none()
+#         # tenant may be Vendor instance or UUID
+#         tenant_obj = tenant if hasattr(tenant, 'internal_id') else None
+#         if tenant_obj:
+#             return self.get_queryset().filter(tenant=tenant_obj)
+#         # fallback
+#         return self.get_queryset().filter(tenant__internal_id=tenant)
