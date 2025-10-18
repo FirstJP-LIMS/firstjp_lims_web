@@ -1,11 +1,146 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
-    <h1>Welcome to FirstJP LIMS.</h1>
-</body>
-</html>
+{% extends 'base.html' %}
+
+{% block title %}FirstJP LIMS - Laboratory Information Management System{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h1 class="display-4 fw-bold mb-4">Transform Your Laboratory Operations</h1>
+                <p class="lead mb-4 opacity-75">
+                    Use our advanced LIMS solution. Become a vendor, own a unique domain name, 
+                    and streamline your biomedical laboratory workflows with cutting-edge technology.
+                </p>
+                <div class="d-flex gap-3 flex-wrap">
+                    <a href="{% url 'register' %}" class="btn btn-light btn-lg px-4 py-2">
+                        Start Free Trial
+                    </a>
+                    <a href="#how-it-works" class="btn btn-outline-light btn-lg px-4 py-2">
+                        Learn More
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-6 text-center">
+                <div class="position-relative">
+                    <div class="bg-light rounded-3 p-4 shadow" style="transform: rotate(3deg);">
+                        <div class="bg-white rounded-2 p-3">
+                            <h6 class="text-wine mb-3">lab.yourname.firstjplims.com</h6>
+                            <div class="bg-light-red rounded p-2 mb-2">
+                                <small class="text-muted">Instrument: Siemens IMMULITE</small>
+                                <div class="text-success">✓ Connected</div>
+                            </div>
+                            <div class="bg-light-red rounded p-2">
+                                <small class="text-muted">Samples Processed Today</small>
+                                <h5 class="text-wine mb-0">247</h5>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section id="features" class="py-5 bg-light">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="display-5 fw-bold text-wine mb-3">Why Choose FirstJP LIMS?</h2>
+            <p class="lead">Designed for modern biomedical laboratories</p>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="feature-card bg-white p-4 h-100">
+                    <div class="feature-icon mb-3">
+                        <div class="bg-wine rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                            <i class="text-white">🔬</i>
+                        </div>
+                    </div>
+                    <h5 class="fw-bold">Multi-Tenant Architecture</h5>
+                    <p>Each vendor gets their own unique domain name while sharing the same robust infrastructure.</p>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="feature-card bg-white p-4 h-100">
+                    <div class="feature-icon mb-3">
+                        <div class="bg-wine rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                            <i class="text-white">⚡</i>
+                        </div>
+                    </div>
+                    <h5 class="fw-bold">Real-time Instrument Integration</h5>
+                    <p>Seamlessly connect with Siemens IMMULITE and other laboratory instruments for automatic data capture.</p>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="feature-card bg-white p-4 h-100">
+                    <div class="feature-icon mb-3">
+                        <div class="bg-wine rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                            <i class="text-white">🛡️</i>
+                        </div>
+                    </div>
+                    <h5 class="fw-bold">ISO 15189 Compliant</h5>
+                    <p>Built-in validation and quality control processes to meet international laboratory standards.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- How It Works Section -->
+<section id="how-it-works" class="py-5">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="display-5 fw-bold text-wine mb-3">How It Works</h2>
+            <p class="lead">Get your laboratory online in 3 simple steps</p>
+        </div>
+        
+        <div class="row align-items-center">
+            <div class="col-lg-4 text-center">
+                <div class="position-relative">
+                    <div class="bg-wine text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                        <h3 class="mb-0">1</h3>
+                    </div>
+                    <h5 class="fw-bold">Register & Get Your Domain</h5>
+                    <p>Sign up and choose your unique subdomain (e.g., lab.yourname.firstjplims.com)</p>
+                </div>
+            </div>
+            
+            <div class="col-lg-4 text-center">
+                <div class="position-relative">
+                    <div class="bg-wine text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                        <h3 class="mb-0">2</h3>
+                    </div>
+                    <h5 class="fw-bold">Connect Your Instruments</h5>
+                    <p>Install our Windows Service and connect your Siemens IMMULITE or other instruments</p>
+                </div>
+            </div>
+            
+            <div class="col-lg-4 text-center">
+                <div class="position-relative">
+                    <div class="bg-wine text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                        <h3 class="mb-0">3</h3>
+                    </div>
+                    <h5 class="fw-bold">Start Processing Samples</h5>
+                    <p>Begin receiving, processing, and analyzing laboratory data through your personalized portal</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="py-5 bg-wine text-white">
+    <div class="container text-center">
+        <h2 class="display-5 fw-bold mb-4">Ready to Transform Your Laboratory?</h2>
+        <p class="lead mb-4">Join dozens of laboratories already using FirstJP LIMS to streamline their operations</p>
+        <a href="{% url 'register' %}" class="btn btn-light btn-lg px-5 py-3">
+            Get Your Unique Domain Now
+        </a>
+    </div>
+</section>
+{% endblock %}

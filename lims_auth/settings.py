@@ -25,7 +25,7 @@ ENVIRONMENT = os.getenv(default="ENVIRONMENT", key="ENVIRONMENT")
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-5sscem&1hsv$+5ggil7440sowrn*oj6)g(ho6n$p(@ftv1g3-k"
+SECRET_KEY = os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 if ENVIRONMENT == "PRODUCTION":
@@ -44,7 +44,7 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
-    "django.contrib.staticfiles",
+    "django.contrib.staticfiles",   # to be also used with the django degug toolbar
 
     # created apps 
     "apps.accounts",
@@ -53,20 +53,37 @@ INSTALLED_APPS = [
     "apps.labs",
 ]
 
+if ENVIRONMENT != "PRODUCTION":
+    INSTALLED_APPS.append("debug_toolbar")
+
 # Custom user model
 AUTH_USER_MODEL = 'accounts.User'
 
-GLOBAL_HOSTS = ""
+# The root domains where django instance will be deployed
+if ENVIRONMENT == "PRODUCTION":
+    pass
+else:
+    GLOBAL_HOSTS = ['127.0.0.1', 'localhost']
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    # 'apps.core.middleware.TenantMiddleware', # created middleware
+    'apps.core.middleware.TenantMiddleware', # created middleware
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+]
+
+if ENVIRONMENT != "PRODUCTION":
+    # MIDDLEWARE.insert(-1, "debug_toolbar.middleware.DebugToolbarMiddleware")
+    MIDDLEWARE.append("debug_toolbar.middleware.DebugToolbarMiddleware",)
+
+INTERNAL_IPS = [
+    # ...
+    "127.0.0.1",
+    # ...
 ]
 
 LOGIN_URL = 'login'
@@ -151,6 +168,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = "static/"
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

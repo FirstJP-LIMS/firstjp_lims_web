@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}FirstJP LIMS - Laboratory Information Management System{% endblock %}</title>
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <style>
+        :root {
+            --primary-red: #8B0000;
+            --primary-wine: #722F37;
+            --accent-red: #A52A2A;
+            --light-bg: #F8F9FA;
+            --dark-text: #2C3E50;
+            --border-light: #E9ECEF;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            color: var(--dark-text);
+            line-height: 1.6;
+        }
+        
+        .bg-wine {
+            background-color: var(--primary-wine) !important;
+        }
+        
+        .bg-light-red {
+            background-color: #FFF5F5;
+        }
+        
+        .text-wine {
+            color: var(--primary-wine) !important;
+        }
+        
+        .btn-wine {
+            background-color: var(--primary-wine);
+            border-color: var(--primary-wine);
+            color: white;
+        }
+        
+        .btn-wine:hover {
+            background-color: var(--primary-red);
+            border-color: var(--primary-red);
+            color: white;
+        }
+        
+        .btn-outline-wine {
+            border-color: var(--primary-wine);
+            color: var(--primary-wine);
+        }
+        
+        .btn-outline-wine:hover {
+            background-color: var(--primary-wine);
+            color: white;
+        }
+        
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+        }
+        
+        .hero-section {
+            background: linear-gradient(135deg, var(--primary-wine) 0%, var(--primary-red) 100%);
+            color: white;
+            padding: 100px 0;
+        }
+        
+        .feature-card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .form-control:focus {
+            border-color: var(--primary-wine);
+            box-shadow: 0 0 0 0.2rem rgba(114, 47, 55, 0.25);
+        }
+        
+        .auth-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .auth-card {
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+        }
+        
+        .footer {
+            background-color: var(--dark-text);
+            color: white;
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    {% block body %}
+    <!-- Navigation will be included in non-auth pages -->
+    {% if not hide_navigation %}
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+        <div class="container">
+            <a class="navbar-brand text-wine" href="{% url 'landing' %}">
+                <strong>FirstJP</strong> LIMS
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'landing' %}#features">Features</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'landing' %}#how-it-works">How It Works</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'landing' %}#pricing">Pricing</a>
+                    </li>
+                </ul>
+                
+                <div class="navbar-nav">
+                    {% if user.is_authenticated %}
+                        <a class="nav-link" href="{% url 'landing' %}">Dashboard</a>
+                        <a class="nav-link" href="{% url 'logout' %}">Logout</a>
+                    {% else %}
+                        <a class="nav-link" href="{% url 'login' %}">Login</a>
+                        <a class="btn btn-wine ms-2" href="{% url 'register' %}">Get Started</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+
+    <main>
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    {% if not hide_footer %}
+    <footer class="footer mt-5">
+        <div class="container py-5">
+            <div class="row">
+                <div class="col-md-4">
+                    <h5 class="mb-3">FirstJP LIMS</h5>
+                    <p>Revolutionizing laboratory management with cutting-edge technology and multi-tenant solutions for modern biomedical laboratories.</p>
+                </div>
+                <div class="col-md-2">
+                    <h6>Product</h6>
+                    <ul class="list-unstyled">
+                        <li><a href="#features" class="text-light text-decoration-none">Features</a></li>
+                        <li><a href="#pricing" class="text-light text-decoration-none">Pricing</a></li>
+                        <li><a href="#" class="text-light text-decoration-none">API</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-2">
+                    <h6>Company</h6>
+                    <ul class="list-unstyled">
+                        <li><a href="#" class="text-light text-decoration-none">About</a></li>
+                        <li><a href="#" class="text-light text-decoration-none">Contact</a></li>
+                        <li><a href="#" class="text-light text-decoration-none">Careers</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <h6>Contact Us</h6>
+                    <p class="mb-1">Email: info@firstjplims.com</p>
+                    <p class="mb-1">Phone: +1 (555) 123-LIMS</p>
+                    <p>Support: support@firstjplims.com</p>
+                </div>
+            </div>
+            <hr class="my-4">
+            <div class="text-center">
+                <p>&copy; 2024 FirstJP LIMS. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+    {% endif %}
+    {% endblock %}
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

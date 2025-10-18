@@ -39,6 +39,7 @@ class TenantMiddleware(MiddlewareMixin):
         # Guard: Block requests if tenant cannot be resolved AND it's not a global page.
         # This is the security firewall.
         if not request.tenant and host not in settings.GLOBAL_HOSTS: 
+        # if not request.tenant: 
             # settings.GLOBAL_HOSTS would list marketing.com, api.com, etc.
             return HttpResponseNotFound("Tenant not found or inactive.")
         
