@@ -1,0 +1,94 @@
+/* custom css */
+:root {
+    --primary-red: #8B0000;
+    --primary-wine: #722F37;
+    --accent-red: #A52A2A;
+    --light-bg: #F8F9FA;
+    --dark-text: #2C3E50;
+    --border-light: #E9ECEF;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    color: var(--dark-text);
+    line-height: 1.6;
+}
+
+.bg-wine {
+    background-color: var(--primary-wine) !important;
+}
+
+.bg-light-red {
+    background-color: #FFF5F5;
+}
+
+.text-wine {
+    color: var(--primary-wine) !important;
+}
+
+.btn-wine {
+    background-color: var(--primary-wine);
+    border-color: var(--primary-wine);
+    color: white;
+}
+
+.btn-wine:hover {
+    background-color: var(--primary-red);
+    border-color: var(--primary-red);
+    color: white;
+}
+
+.btn-outline-wine {
+    border-color: var(--primary-wine);
+    color: var(--primary-wine);
+}
+
+.btn-outline-wine:hover {
+    background-color: var(--primary-wine);
+    color: white;
+}
+
+.navbar-brand {
+    font-weight: 700;
+    font-size: 1.5rem;
+}
+
+.hero-section {
+    background: linear-gradient(135deg, var(--primary-wine) 0%, var(--primary-red) 100%);
+    color: white;
+    padding: 100px 0;
+}
+
+.feature-card {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 5px 25px rgba(0,0,0,0.08);
+    transition: transform 0.3s ease;
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+}
+
+.form-control:focus {
+    border-color: var(--primary-wine);
+    box-shadow: 0 0 0 0.2rem rgba(114, 47, 55, 0.25);
+}
+
+.auth-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.auth-card {
+    border: none;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+}
+
+.footer {
+    background-color: var(--dark-text);
+    color: white;
+}

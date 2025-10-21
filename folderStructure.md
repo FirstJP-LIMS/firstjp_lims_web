@@ -42,9 +42,9 @@ firstjp_lims_web/                    # project root
 │  ├─ integrations/            # Windows service client records, API keys
 │  │  ├─ models.py             # Device/Service registration, API tokens
 │  │  └─ views.py              # token management endpoints
-│  └─ admin_ui/                # admin / vendor dashboard templates & views
+│  └─ adminUi/                # admin / vendor dashboard templates & views
 │     ├─ views.py
-│     └─ templates/admin_ui/
+│     └─ templates/adminUi/
 ├─ static/
 │  ├─ css/
 │  └─ js/

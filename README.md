@@ -1,3 +1,10 @@
+subdomain --- 
+#  127.0.0.1   vendor1.localhost
+#  127.0.0.1   carboni1.localhost
+# 127.0.0.1   vendor2.localhost
+#  127.0.0.1   labx.localhost
+
+
 ## 🚀 FirstJP LIMS Multi-Tenant Architecture
 
 ### Multi-Tenant Architecture Overview

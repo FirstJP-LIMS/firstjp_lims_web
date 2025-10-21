@@ -1,0 +1,27 @@
+<!-- templates/tenants/admin_vendor_dashboard.html -->
+<h2>Platform Admin Dashboard</h2>
+
+<h3>Pending Vendors</h3>
+<table>
+  <tr><th>Name</th><th>Tenant ID</th><th>Email</th><th>Action</th></tr>
+  {% for vendor in pending_vendors %}
+  <tr>
+    <td>{{ vendor.name }}</td>
+    <td>{{ vendor.tenant_id }}</td>
+    <td>{{ vendor.contact_email }}</td>
+    <td><a href="{% url 'activate_vendor' vendor.internal_id %}">Activate</a></td>
+  </tr>
+  {% endfor %}
+</table>
+
+<h3>Active Vendors</h3>
+<table>
+  <tr><th>Name</th><th>Domain</th><th>Plan</th></tr>
+  {% for vendor in active_vendors %}
+  <tr>
+    <td>{{ vendor.name }}</td>
+    <td>{{ vendor.domains.first.domain_name }}</td>
+    <td>{{ vendor.plan_type }}</td>
+  </tr>
+  {% endfor %}
+</table>

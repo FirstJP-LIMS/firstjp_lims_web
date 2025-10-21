@@ -21,7 +21,13 @@ class Vendor(models.Model):
 
     name = models.CharField(max_length=255)
     contact_email = models.EmailField(unique=True)
-
+    subdomain_prefix = models.SlugField(
+        max_length=64,
+        unique=True,
+        blank=True,
+        null=True,
+        help_text="Subdomain prefix for this vendor (e.g., carbonilab)."
+    )
     # ACCESS & SUBSCRIPTION
     is_active = models.BooleanField(default=False, help_text="Set to False if subscription lapses or vendor is disabled.")
     plan_type = models.CharField(max_length=50,
@@ -40,22 +46,19 @@ class Vendor(models.Model):
 
 
 class VendorDomain(models.Model):
-    vendor = models.ForeignKey(
-        Vendor,
-        on_delete=models.CASCADE,
-        related_name='domains'
-    )
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='domains')
     domain_name = models.CharField(
         max_length=255,
         unique=True,
         db_index=True,
-        help_text="The domain or subdomain used by this vendor."
+        help_text="The full domain/subdomain used by this vendor."
     )
     is_primary = models.BooleanField(default=True)
 
     class Meta:
         # Only one domain can be marked as primary to a vendor
-        unique_together = ('vendor', 'is_primary') 
-        
+        unique_together = ('vendor', 'is_primary')
+
     def __str__(self):
         return self.domain_name
+
