@@ -94,5 +94,5 @@ def vendor_onboarding_view(request):
     else:
         form = VendorOnboardingForm()
         
-    return render(request, "tenants/vendor_onboarding.html", {"form": form})
+    return render(request, "core/vendor_onboarding.html", {"form": form})
 

@@ -1,0 +1,112 @@
+{% extends "crm/base.html" %}
+
+{% block page_title %}Vendor Dashboard{% endblock %}
+
+{% block content %}
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        {% if request.is_platform_admin and not vendor %}
+            <div class="alert alert-warning">
+                You are viewing the **Platform Admin Index**. No specific tenant is resolved.
+                <a href="{% url 'vendor_onboarding' %}" class="alert-link">Onboard a New Vendor</a>.
+            </div>
+            {% else %}
+            <div class="alert alert-info border-info" role="alert">
+                <i class="bi bi-house-door me-2"></i>
+                You are currently viewing the **{{ lab_name }}** CRM. Primary Host: 
+                <code class="text-dark">{{ vendor_domain|default:"N/A" }}</code>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card shadow-sm border-start border-4 border-success h-100">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <i class="bi bi-journal-check fa-2x text-success"></i>
+                    </div>
+                    <div class="col">
+                        <div class="text-xs fw-bold text-success text-uppercase mb-1">
+                            Pending Samples
+                        </div>
+                        <div class="h5 mb-0 fw-bold text-gray-800">12</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card shadow-sm border-start border-4 border-primary h-100">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <i class="bi bi-clock-history fa-2x text-primary"></i>
+                    </div>
+                    <div class="col">
+                        <div class="text-xs fw-bold text-primary text-uppercase mb-1">
+                            Avg. Turnaround Time (24h)
+                        </div>
+                        <div class="h5 mb-0 fw-bold text-gray-800">4.5 Hrs</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card shadow-sm border-start border-4 border-warning h-100">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <i class="bi bi-bell fa-2x text-warning"></i>
+                    </div>
+                    <div class="col">
+                        <div class="text-xs fw-bold text-warning text-uppercase mb-1">
+                            Unread Results
+                        </div>
+                        <div class="h5 mb-0 fw-bold text-gray-800">3</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card shadow-sm border-start border-4 border-info h-100">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <i class="bi bi-calendar-check fa-2x text-info"></i>
+                    </div>
+                    <div class="col">
+                        <div class="text-xs fw-bold text-info text-uppercase mb-1">
+                            Total Samples (Month)
+                        </div>
+                        <div class="h5 mb-0 fw-bold text-gray-800">458</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 card-header-wine">
+                <h6 class="m-0 fw-bold text-light">Recent Sample Activity</h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Table showing the latest 10 samples processed by your lab, scoped only to {{ lab_name }}. (Data from `SampleRequest.objects.for_tenant(tenant)`) will go here.</p>
+                </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+

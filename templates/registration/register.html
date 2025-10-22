@@ -1,132 +1,47 @@
-{% extends 'base.html' %}
-
-{% block title %}Register - FirstJP LIMS{% endblock %}
-
+{% extends "base.html" %}
 {% block content %}
-<div class="auth-container">
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-md-8 col-lg-6">
-                <div class="auth-card bg-white p-4 p-md-5">
-                    <div class="text-center mb-4">
-                        <a href="{% url 'landing' %}" class="text-decoration-none">
-                            <h2 class="text-wine fw-bold">FirstJP LIMS</h2>
-                        </a>
-                        <p class="text-muted">Create your laboratory account</p>
-                    </div>
 
-                    <form method="post" novalidate>
-                        {% csrf_token %}
-                        
-                        {% if form.errors %}
-                        <div class="alert alert-danger">
-                            <strong>Please correct the errors below:</strong>
-                            {{ form.non_field_errors }}
-                        </div>
-                        {% endif %}
+<div class="onboard-container">
+    <div class="onboard-card">
+        <h2>Create Account</h2>
+        <p class="subtitle">Join your lab workspace</p>
 
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="{{ form.first_name.id_for_label }}" class="form-label">First Name</label>
-                                    {{ form.first_name }}
-                                    {% if form.first_name.errors %}
-                                    <div class="text-danger small">{{ form.first_name.errors }}</div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="{{ form.last_name.id_for_label }}" class="form-label">Last Name</label>
-                                    {{ form.last_name }}
-                                    {% if form.last_name.errors %}
-                                    <div class="text-danger small">{{ form.last_name.errors }}</div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="{{ form.email.id_for_label }}" class="form-label">Email Address</label>
-                            {{ form.email }}
-                            {% if form.email.errors %}
-                            <div class="text-danger small">{{ form.email.errors }}</div>
-                            {% endif %}
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="{{ form.laboratory_name.id_for_label }}" class="form-label">Laboratory Name</label>
-                            {{ form.laboratory_name }}
-                            <div class="form-text">This will be part of your unique domain</div>
-                            {% if form.laboratory_name.errors %}
-                            <div class="text-danger small">{{ form.laboratory_name.errors }}</div>
-                            {% endif %}
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="{{ form.subdomain.id_for_label }}" class="form-label">Preferred Subdomain</label>
-                            <div class="input-group">
-                                {{ form.subdomain }}
-                                <span class="input-group-text">.firstjplims.com</span>
-                            </div>
-                            <div class="form-text">Choose a unique subdomain for your laboratory</div>
-                            {% if form.subdomain.errors %}
-                            <div class="text-danger small">{{ form.subdomain.errors }}</div>
-                            {% endif %}
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="{{ form.password1.id_for_label }}" class="form-label">Password</label>
-                            {{ form.password1 }}
-                            {% if form.password1.errors %}
-                            <div class="text-danger small">{{ form.password1.errors }}</div>
-                            {% endif %}
-                        </div>
-
-                        <div class="mb-4">
-                            <label for="{{ form.password2.id_for_label }}" class="form-label">Confirm Password</label>
-                            {{ form.password2 }}
-                            {% if form.password2.errors %}
-                            <div class="text-danger small">{{ form.password2.errors }}</div>
-                            {% endif %}
-                        </div>
-
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-wine btn-lg py-2">Create Laboratory Account</button>
-                        </div>
-                    </form>
-
-                    <div class="text-center mt-4">
-                        <p class="text-muted">
-                            Already have an account? 
-                            <a href="{% url 'login' %}" class="text-wine text-decoration-none">Sign in here</a>
-                        </p>
-                    </div>
-
-                    <div class="mt-4 p-3 bg-light-red rounded">
-                        <h6 class="text-wine mb-2">🎉 What happens next?</h6>
-                        <p class="small text-muted mb-0">
-                            After registration, you'll receive a confirmation email. Once verified, 
-                            you can set up your instruments and start using your personalized laboratory domain.
-                        </p>
-                    </div>
-                </div>
-            </div>
+        {% if form.errors %}
+        <div class="alert error">
+            Please correct the errors below.
         </div>
+        {% endif %}
+
+        <form method="POST">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="id_first_name">First Name</label>
+                {{ form.first_name }}
+            </div>
+            <div class="form-group">
+                <label for="id_last_name">Last Name</label>
+                {{ form.last_name }}
+            </div>
+            <div class="form-group">
+                <label for="id_email">Email Address</label>
+                {{ form.email }}
+            </div>
+            <div class="form-group">
+                <label for="id_password1">Password</label>
+                {{ form.password1 }}
+            </div>
+            <div class="form-group">
+                <label for="id_password2">Confirm Password</label>
+                {{ form.password2 }}
+            </div>
+
+            <button type="submit" class="btn-primary">Register</button>
+        </form>
+
+        <p class="subtitle" style="margin-top:1rem;">
+            Already have an account?
+            <a href="{% url 'login' %}" style="color:#a80e09; font-weight:500;">Login</a>
+        </p>
     </div>
 </div>
-
-<style>
-    .form-control {
-        border-radius: 10px;
-        padding: 12px 15px;
-        border: 2px solid var(--border-light);
-        transition: all 0.3s ease;
-    }
-    
-    .form-control:focus {
-        border-color: var(--primary-wine);
-        box-shadow: 0 0 0 0.2rem rgba(114, 47, 55, 0.25);
-    }
-</style>
 {% endblock %}

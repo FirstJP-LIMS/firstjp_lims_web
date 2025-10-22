@@ -4,5 +4,6 @@ from . import views
 
 urlpatterns = [
     path("onboarding/", views.vendor_onboarding_view, name="vendor_onboarding"),
-    path("onboarding/success/", lambda r: render(r, "tenants/vendor_onboarding_success.html"), name="vendor_onboarding_success"),
+    path("onboarding/success/", lambda r: render(r, "core/vendor_onboarding_success.html"), name="vendor_onboarding_success"),
 ]
+

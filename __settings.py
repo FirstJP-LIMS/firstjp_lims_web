@@ -50,7 +50,6 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.tenants",
     "apps.core",
-    "apps.labs",
 ]
 
 if ENVIRONMENT != "PRODUCTION":

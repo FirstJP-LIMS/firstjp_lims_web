@@ -2,6 +2,8 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from apps.tenants.models import Vendor
+from django.contrib.auth.forms import AuthenticationForm
+
 
 User = get_user_model()
 
@@ -30,14 +32,31 @@ class RegistrationForm(forms.ModelForm):
         if commit:
             user.save()
         return user
+    
+# class TenantAuthenticationForm(AuthenticationForm):
+#     # Use default fields (username, password) but username is email
+#     username = forms.EmailField(widget=forms.EmailInput(attrs={'autofocus': True}))
 
-
-
-# apps/accounts/forms.py
-from django import forms
-from django.contrib.auth.forms import AuthenticationForm
-
+# from django import forms
+# from django.contrib.auth.forms import AuthenticationForm
 
 class TenantAuthenticationForm(AuthenticationForm):
-    # Use default fields (username, password) but username is email
-    username = forms.EmailField(widget=forms.EmailInput(attrs={'autofocus': True}))
+    username = forms.EmailField(
+        widget=forms.EmailInput(
+            attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter your email address',
+                'autofocus': True,
+            }
+        ),
+        label='Email Address',
+    )
+    password = forms.CharField(
+        widget=forms.PasswordInput(
+            attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter your password',
+            }
+        ),
+        label='Password',
+    )

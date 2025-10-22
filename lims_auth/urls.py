@@ -28,7 +28,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("account/", include("apps.accounts.urls")),
     path("tenants/", include("apps.tenants.urls")),
-    
+    path("laboratory/", include("apps.crm.urls")),    
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 urlpatterns += debug_toolbar_urls()

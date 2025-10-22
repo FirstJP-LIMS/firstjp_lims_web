@@ -55,44 +55,83 @@ firstjp_lims_web/                    # project root
        └─ footer.html
 
 
+
 python manage.py startapp accounts apps/accounts
 
+That's the most crucial step before proceeding with development\! To run a subdomain like `carbs.127.0.0.1:8000` (or the cleaner `carbs.localhost:8000`) locally, you need to trick your operating system into thinking those subdomains are valid and point back to your local machine.
 
+Since you're likely on Windows (based on earlier discussions about the hosts file), here are the **three essential steps** to run your subdomain multi-tenancy locally:
 
-<!-- firstjp_lims_web/                  # repo root
-├─ .github/                     # CI/CD
-├─ deploy/                      # deployment scripts (systemd, nginx, gunicorn)
-│  ├─ deploy_nginx.conf.j2
-│  ├─ systemd/
-│  └─ letsencrypt/
-├─ docs/
-├─ requirements.txt
-├─ manage.py
-├─ universal_lis/               # project settings
-│  ├─ __init__.py
-│  ├─ settings/
-│  │  ├─ base.py
-│  │  ├─ production.py
-│  │  └─ local.py
-│  ├─ urls.py
-│  └─ wsgi.py / asgi.py
-├─ apps/
-│  ├─ core/                     # tenant-aware middleware, helpers
-│  │  ├─ models.py              # Tenant model, Tenant config
-│  │  ├─ middleware.py          # Tenant middleware
-│  │  └─ templatetags/
-│  ├─ accounts/                 # custom user model, auth, templates
-│  │  ├─ models.py              # CustomUser
-│  │  ├─ views.py               # login/logout/profile
-│  │  └─ templates/accounts/
-│  ├─ tenants/                  # tenant management UI (admin only)
-│  ├─ vendors/                  # vendor (lab) domain logic, profiles
-│  ├─ instruments/              # instrument models, instrument types
-│  ├─ windows_connector/        # models + API + registration for Windows service
-│  ├─ api/                      # DRF endpoints, token auth, versioned
-│  └─ admin_dashboard/          # admin site views (analytics)
-├─ templates/                    # global templates fallback
-│  ├─ base.html
-│  └─ accounts/
-├─ static/
-└─ tests/ -->
+-----
+
+## 1\. Configure Django Settings
+
+You must define your local base domain and tell Django it's okay to accept requests from any subdomain of that base.
+
+### `settings/local.py`
+
+Ensure you have these lines in your local settings:
+
+```python
+# settings/local.py
+
+# 1. Define the custom host base for testing
+# We use a custom extension (like .test) because Windows sometimes caches .local poorly.
+PLATFORM_BASE_DOMAIN = "localhost.test" 
+
+# 2. Add the host names Django will recognize.
+ALLOWED_HOSTS = [
+    '127.0.0.1', 
+    'localhost', 
+    '127.1.0.0', # IP address used in your example
+    '.localhost.test', # ALLOWS ALL SUBDOMAINS (e.g., carbs.localhost.test)
+    'carboni1.localhost', # Your specific entry
+    '.localhost' # Allows all subdomains ending in .localhost
+]
+
+# 3. Define the GLOBAL_HOSTS for your TenantMiddleware
+GLOBAL_HOSTS = ['127.0.0.1', 'localhost', '127.1.0.0', PLATFORM_BASE_DOMAIN]
+```
+
+-----
+
+## 2\. Edit Your Hosts File (Windows)
+
+The Windows hosts file tells your operating system to map a hostname directly to an IP address, bypassing external DNS servers.
+
+1.  **Locate the file:** `C:\Windows\System32\drivers\etc\hosts`
+2.  **Open as Administrator:** You **must** open your text editor (like Notepad or VS Code) with **"Run as administrator"** permissions to save the file.
+3.  **Add entries:** Map your desired tenant subdomains to the loopback address (`127.0.0.1`).
+
+| IP Address | Hostname | Comment |
+| :--- | :--- | :--- |
+| `127.0.0.1` | `localhost` | (Standard) |
+| `127.0.0.1` | `localhost.test` | (Base Domain) |
+| `127.0.0.1` | **`carbs.localhost.test`** | (Example Tenant 1) |
+| `127.0.0.1` | **`lab001.localhost.test`** | (Example Tenant 2) |
+| `127.0.0.1` | **`carboni1.localhost`** | (Your custom setup, if using) |
+
+**Important Note:** You must manually add an entry for *every unique subdomain* you want to test, as Windows hosts files do not support wildcard entries (`*.localhost.test`).
+
+-----
+
+## 3\. Run the Django Server and Test
+
+1.  **Run the server:**
+
+    ```bash
+    python manage.py runserver 0.0.0.0:8000
+    ```
+
+    (Using `0.0.0.0` ensures the server listens on all available interfaces, including `127.0.0.1`).
+
+2.  **Test the Access Points:**
+
+    | URL | Expected Action | Django Component |
+    | :--- | :--- | :--- |
+    | `http://127.0.0.1:8000/` | Global Landing Page | `TenantMiddleware` skips tenant resolution. |
+    | `http://localhost.test:8000/` | Global Landing Page | `TenantMiddleware` skips tenant resolution (in `GLOBAL_HOSTS`). |
+    | `http://carbs.localhost.test:8000/` | **Tenant Login/Dashboard** | `TenantMiddleware` resolves tenant **'carbs'**. |
+    | `http://lab001.localhost.test:8000/` | **Tenant Login/Dashboard** | `TenantMiddleware` resolves tenant **'lab001'**. |
+
+If you can successfully access the site using the subdomain URL, your `TenantMiddleware` is working, and you can proceed with testing the user access and data isolation.
