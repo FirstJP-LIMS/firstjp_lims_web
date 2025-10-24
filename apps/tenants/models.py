@@ -4,6 +4,8 @@
 """
 import uuid
 from django.db import models
+from django.db.models import Max
+from django.db import transaction
 
 
 PLAN_CHOICES = [
@@ -13,11 +15,9 @@ PLAN_CHOICES = [
 ]
 
 class Vendor(models.Model):
-    # INTERNAL SYSTEM IDENTIFIER (used as PK for consistency and safety)
     internal_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
 
-    # HUMAN-READABLE TENANT IDENTIFIER (used for integration, communication)
-    tenant_id = models.CharField(max_length=64, unique=True, help_text="Short, readable identifier (e.g., LAB001)")
+    tenant_id = models.CharField(max_length=64, unique=True)
 
     name = models.CharField(max_length=255)
     contact_email = models.EmailField(unique=True)
@@ -40,6 +40,22 @@ class Vendor(models.Model):
     billing_metadata = models.JSONField( default=dict, blank=True, help_text="External IDs: Stripe Customer ID, Subscription ID, etc.")
 
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if not self.tenant_id:
+            with transaction.atomic():
+                # Lock the table to prevent race conditions
+                last_vendor = Vendor.objects.select_for_update().order_by('-created_at').first()
+                if last_vendor and last_vendor.tenant_id.startswith('LAB'):
+                    try:
+                        current_number = int(last_vendor.tenant_id.replace('LAB', ''))
+                    except ValueError:
+                        current_number = 0
+                else:
+                    current_number = 0
+                next_number = current_number + 1
+                self.tenant_id = f"LAB{next_number:04d}"
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.name} ({self.tenant_id})"

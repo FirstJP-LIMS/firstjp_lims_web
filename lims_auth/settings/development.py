@@ -2,14 +2,6 @@ from .base import *
 
 DEBUG = True
 
-ALLOWED_HOSTS = [
-    '127.0.0.1',
-    'localhost',
-    '127.1.0.0',
-    '.localhost.test',
-    'carboni1.localhost',
-    '.localhost',
-]
 
 INSTALLED_APPS += ["debug_toolbar"]
 
@@ -24,5 +16,14 @@ DATABASES = {
     }
 }
 
-PLATFORM_BASE_DOMAIN = "localhost.test"
-GLOBAL_HOSTS = ['127.0.0.1', 'localhost', '127.1.0.0', PLATFORM_BASE_DOMAIN]
+
+PLATFORM_BASE_DOMAIN = "localhost.test"  # Used for domain generation
+GLOBAL_HOSTS = [
+    "127.0.0.1",
+    "localhost",
+    ".localhost.test",
+]
+
+ALLOWED_HOSTS = GLOBAL_HOSTS
+
+

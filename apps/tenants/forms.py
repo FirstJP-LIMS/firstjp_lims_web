@@ -15,12 +15,14 @@ class VendorOnboardingForm(forms.Form):
         label="Business / Lab Name",
         widget=forms.TextInput(attrs={"placeholder": "Enter your lab name"})
     )
-    tenant_id = forms.CharField(
-        max_length=64,
-        label="Tenant ID",
-        help_text="A short, unique code (e.g., LAB001)",
-        widget=forms.TextInput(attrs={"placeholder": "e.g., LAB001"})
-    )
+    
+    # tenant_id = forms.CharField(
+    #     max_length=64,
+    #     label="Tenant ID",
+    #     help_text="A short, unique code (e.g., LAB001)",
+    #     widget=forms.TextInput(attrs={"placeholder": "e.g., LAB001"})
+    # )
+
     admin_email = forms.EmailField(
         label="Vendor Admin Email",
         help_text="Email for the vendor admin account",

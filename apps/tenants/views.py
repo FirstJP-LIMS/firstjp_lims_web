@@ -20,7 +20,7 @@ def vendor_onboarding_view(request):
                 with transaction.atomic():
                     # 1. Create Vendor (Inactive)
                     vendor = Vendor.objects.create(
-                        tenant_id=form.cleaned_data["tenant_id"],
+                        # tenant_id=form.cleaned_data["tenant_id"],
                         name=form.cleaned_data["name"],
                         # Use admin email as vendor contact email
                         contact_email=form.cleaned_data["admin_email"],
@@ -96,3 +96,96 @@ def vendor_onboarding_view(request):
         
     return render(request, "core/vendor_onboarding.html", {"form": form})
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# # apps/tenants/views.py
+# from django.core.mail import send_mail
+# from django.shortcuts import render, redirect
+# from django.contrib import messages
+# from django.db import transaction, IntegrityError
+# from django.urls import reverse
+# from django.conf import settings
+
+# from .models import Vendor
+# from apps.accounts.models import User
+# from .forms import VendorOnboardingForm
+
+
+# def vendor_onboarding_view(request):
+#     """Handles vendor onboarding — creates Vendor, Admin User, and sends notification."""
+#     if request.method == "POST":
+#         form = VendorOnboardingForm(request.POST)
+#         if form.is_valid():
+#             contact_email = form.cleaned_data["admin_email"]
+#             try:
+#                 # ⚙️ Step 1: Create vendor first (in its own safe block)
+#                 vendor = Vendor.objects.create(
+#                     name=form.cleaned_data["name"],
+#                     contact_email=contact_email,
+#                     plan_type=form.cleaned_data["plan_type"],
+#                     is_active=False,  # will be activated by admin later
+#                 )
+
+#                 # Make sure the Vendor actually exists and has a PK
+#                 vendor.refresh_from_db()
+
+#                 # ⚙️ Step 2: Create Vendor Admin User (linked to vendor)
+#                 with transaction.atomic():
+#                     user = User.objects.create_user(
+#                         email=contact_email,
+#                         password=form.cleaned_data["admin_password"],
+#                         first_name=form.cleaned_data["admin_first_name"],
+#                         last_name=form.cleaned_data["admin_last_name"],
+#                         vendor=vendor,
+#                         role="vendor_admin",
+#                         is_staff=True,
+#                     )
+
+#                 # ⚙️ Step 3: Feedback + optional notification
+#                 messages.success(request, f"Request submitted successfully for {vendor.name}! Tenant ID: {vendor.tenant_id}")
+
+#                 # Optionally notify admin team
+#                 # send_mail(
+#                 #     subject="New Vendor Onboarding Request",
+#                 #     message=f"A new vendor ({vendor.name}) has submitted a request.",
+#                 #     from_email=settings.DEFAULT_FROM_EMAIL,
+#                 #     recipient_list=[settings.SUPPORT_EMAIL],
+#                 #     fail_silently=True,
+#                 # )
+
+#                 return redirect(reverse("vendor_onboarding_success"))
+
+#             except IntegrityError as e:
+#                 messages.error(request, f"Database integrity error: {e}")
+#                 return redirect(reverse("vendor_onboarding"))
+
+#             except Exception as e:
+#                 messages.error(request, f"An error occurred during submission: {e}")
+#                 return redirect(reverse("vendor_onboarding"))
+
+#         else:
+#             messages.error(request, "Please correct the form errors below.")
+#     else:
+#         form = VendorOnboardingForm()
+
+#     return render(request, "core/vendor_onboarding.html", {"form": form})

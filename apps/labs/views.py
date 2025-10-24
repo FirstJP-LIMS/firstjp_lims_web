@@ -1,9 +1,17 @@
-# apps/crm/views.py
+"""
+PATIENT  →  SAMPLE(S)  →  TEST REQUEST(S)  →  RESULT(S)
+   |             |              |                  |
+   |          Sample ID      Test ID           Verified / Released
+   |             |              |
+Doctor → Clinical Info    Department → Test Type
+
+"""
+# apps/labs/views.py
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
 from functools import wraps
-from ..labs.utils import check_tenant_access
+from .utils import check_tenant_access
 
 
 # --- Decorator Definition ---
