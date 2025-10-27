@@ -1,409 +1,204 @@
-# Django Multi-tenant Auth & Middleware Scaffold
-# This document contains multiple files (path headers + code) to copy into your project.
-# Files included:
-# - apps/accounts/models.py
-# - apps/accounts/forms.py
-# - apps/accounts/views.py
-# - apps/core/managers.py
-# - apps/core/middleware.py
-# - templates/registration/login.html
-# - universalis_project/settings/base.py (snippets to add)
-
-# =========================
-# File: apps/accounts/models.py
-# =========================
 from django.db import models
-from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.utils import timezone
 from django.conf import settings
-from tenants.models import Vendor
+from apps.tenants.models import Vendor
 
 
-class CustomUserManager(BaseUserManager):
-    def _create_user(self, email, password, **extra_fields):
-        if not email:
-            raise ValueError('The given email must be set')
-        email = self.normalize_email(email)
-        user = self.model(email=email, **extra_fields)
-        user.set_password(password)
-        user.save(using=self._db)
-        return user
+# Create your models here.
+"""
+Departments:
+1. Hematology & Immunology 
+2. Chemical Pathology 
+3. Medical Microbiology 
+4. Histopathology 
+5. Cytology
+6. Molecular Diagnostics 
+7. Radiology
+    And there are different tests under each category. From the front end, patient details with clinical & sample information and specific test requests are logged in.
+    If you have the know of how lims work, can you break things down, for execution...
 
-    def create_user(self, email, password=None, **extra_fields):
-        extra_fields.setdefault('is_staff', False)
-        extra_fields.setdefault('is_superuser', False)
-        return self._create_user(email, password, **extra_fields)
-
-    def create_superuser(self, email, password, **extra_fields):
-        extra_fields.setdefault('is_staff', True)
-        extra_fields.setdefault('is_superuser', True)
-        if extra_fields.get('is_staff') is not True:
-            raise ValueError('Superuser must have is_staff=True.')
-        if extra_fields.get('is_superuser') is not True:
-            raise ValueError('Superuser must have is_superuser=True.')
-        return self._create_user(email, password, **extra_fields)
+Department and Test type to be controlled by the platform admin. i.e the LIMS, has all department available to all tenants..
+Vendor, controls, their lab assistants, patients, samples, test requests and results.
 
 
-class User(AbstractBaseUser, PermissionsMixin):
-    ROLE_CHOICES = [
-        ('platform_admin', 'Platform Admin'),
-        ('vendor_admin', 'Vendor Admin'),
-        ('lab_staff', 'Lab Staff'),
-    ]
-
-    email = models.EmailField(unique=True)
-    first_name = models.CharField(max_length=150, blank=True)
-    last_name = models.CharField(max_length=150, blank=True)
-
-    # Link user to a vendor (nullable for platform admins)
-    vendor = models.ForeignKey(Vendor, null=True, blank=True, on_delete=models.SET_NULL)
-    role = models.CharField(max_length=32, choices=ROLE_CHOICES, default='lab_staff')
-
-    is_active = models.BooleanField(default=True)
-    is_staff = models.BooleanField(default=False)
-    date_joined = models.DateTimeField(default=timezone.now)
-
-    objects = CustomUserManager()
-
-    USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = []
-
-    def __str__(self):
-        return self.email
-
-    @property
-    def is_platform_admin(self):
-        return self.is_superuser or self.role == 'platform_admin'
-
-# =========================
-# File: apps/accounts/forms.py
-# =========================
-from django import forms
-from django.contrib.auth.forms import AuthenticationForm
+Ask Scientist - If Each tenant can choose which department and test types they want to enable for their lab, or all tenants have access to all departments and test types by default.
 
 
-class TenantAuthenticationForm(AuthenticationForm):
-    # Use default fields (username, password) but username is email
-    username = forms.EmailField(widget=forms.EmailInput(attrs={'autofocus': True}))
+# ---------------------
+# Tenant-Scoped Models (Vendor Managed)
+# Patient	TENANT	Patient records specific to the vendor/lab.
+# TestRequest	TENANT	The patient's order for a list of tests.
+# Sample	TENANT	The physical specimen received by the vendor/lab.
+# TestAssignment	TENANT	Tracks the execution of a GlobalTest within this vendor's workflow.
+# Result	TENANT	The final measured value for a TestAssignment.
+# Equipment	TENANT	Tracks the vendor's specific lab instruments.
+# ---------------------
 
-# =========================
-# File: apps/accounts/views.py
-# =========================
-from django.contrib.auth import login as auth_login
-from django.contrib.auth.views import LoginView, LogoutView
-from django.shortcuts import redirect
-from django.urls import reverse_lazy
-from django.views.generic import TemplateView
-
-
-class TenantLoginView(LoginView):
-    template_name = 'registration/login.html'
-    authentication_form = None  # set in urls or dynamically
-
-    def get_form_class(self):
-        from .forms import TenantAuthenticationForm
-        return TenantAuthenticationForm
-
-    def form_valid(self, form):
-        # After login, ensure user belongs to the current tenant (unless platform admin)
-        user = form.get_user()
-        request = self.request
-        tenant = getattr(request, 'tenant', None)
-        if user.is_platform_admin:
-            auth_login(request, user)
-            return redirect(self.get_success_url())
-
-        # If user is not platform admin, ensure vendor matches request.tenant
-        if tenant is None:
-            # No tenant resolved: deny access or redirect to central landing
-            return redirect(reverse_lazy('no_tenant'))
-
-        if user.vendor_id and user.vendor_id == tenant.internal_id:
-            auth_login(request, user)
-            return redirect(self.get_success_url())
-
-        # Mismatch: deny
-        return redirect(reverse_lazy('login'))
+"""
 
 
-class TenantLogoutView(LogoutView):
-    next_page = reverse_lazy('login')
+# apps/lis/models.py (Global Definitions)
 
-
-class DashboardView(TemplateView):
-    template_name = 'admin_ui/dashboard.html'
-
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        ctx['tenant'] = getattr(self.request, 'tenant', None)
-        return ctx
-
-# =========================
-# File: apps/core/managers.py
-# =========================
 from django.db import models
+from django.utils.text import slugify
 
-
-class TenantAwareManager(models.Manager):
-    def for_tenant(self, tenant):
-        if tenant is None:
-            return self.get_queryset().none()
-        # tenant may be Vendor instance or UUID
-        tenant_obj = tenant if hasattr(tenant, 'internal_id') else None
-        if tenant_obj:
-            return self.get_queryset().filter(tenant=tenant_obj)
-        # fallback
-        return self.get_queryset().filter(tenant__internal_id=tenant)
-
-# =========================
-# File: apps/core/middleware.py
-# =========================
-from django.utils.deprecation import MiddlewareMixin
-from tenants.models import VendorDomain
-from django.http import HttpResponseNotFound
-
-
-class TenantMiddleware(MiddlewareMixin):
-    """Resolve tenant from Host header or X-Tenant-ID header and attach to request."""
-
-    def process_request(self, request):
-        host = request.get_host().split(':')[0].lower()
-
-        # Allow explicit header override (useful for API clients / tests)
-        tenant_header = request.headers.get('X-Tenant-ID') or request.META.get('HTTP_X_TENANT_ID')
-
-        tenant = None
-        if tenant_header:
-            # tenant_header expected to be tenant_id (human readable) or UUID
-            domain_qs = VendorDomain.objects.select_related('vendor').filter(vendor__tenant_id=tenant_header)
-            domain = domain_qs.first()
-            if domain:
-                tenant = domain.vendor
-        else:
-            try:
-                domain = VendorDomain.objects.select_related('vendor').get(domain_name=host)
-                tenant = domain.vendor
-            except VendorDomain.DoesNotExist:
-                tenant = None
-
-        request.tenant = tenant
-
-        # If you want to block unknown domains, return a response here
-        # if not tenant:
-        #     return HttpResponseNotFound('Tenant not found')
-
-# =========================
-# File: templates/registration/login.html
-# (Place this under project templates path: templates/registration/login.html)
-# =========================
-"""
-{% extends "base.html" %}
-
-{% block content %}
-  <div class="login-box">
-    <h2>Sign in{% if tenant %} - {{ tenant.name }}{% endif %}</h2>
-    <form method="post" novalidate>
-      {% csrf_token %}
-      {{ form.non_field_errors }}
-      <div>
-        <label for="id_username">Email</label>
-        {{ form.username }}
-      </div>
-      <div>
-        <label for="id_password">Password</label>
-        {{ form.password }}
-      </div>
-      <button type="submit">Sign in</button>
-    </form>
-  </div>
-{% endblock %}
-"""
-
-# =========================
-# Snippet: universalis_project/settings/base.py
-# Add / modify these settings as needed. Place this snippet into your base.py settings.
-# =========================
-"""
-# Add 'apps.accounts', 'apps.tenants', 'apps.core', etc. to INSTALLED_APPS
-INSTALLED_APPS += [
-    'apps.accounts',
-    'apps.tenants',
-    'apps.core',
-    'apps.integrations',
-    'apps.labs',
-    'apps.admin_ui',
-]
-
-# Custom user model
-AUTH_USER_MODEL = 'accounts.User'
-
-# Middleware: ensure TenantMiddleware is early in the chain (after security middleware)
-MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    # ... other middleware ...
-    'apps.core.middleware.TenantMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    # ... the rest ...
-]
-
-# Templates: ensure 'templates' path is included
-TEMPLATES[0]['DIRS'] = [BASE_DIR / 'templates']
-
-LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = '/'
-"""
-
-# End of scaffold
-
-# =========================
-# Registration: apps/accounts/forms.py (append)
-# =========================
-from django import forms
-from django.contrib.auth import get_user_model
-from tenants.models import Vendor
-
-User = get_user_model()
-
-
-class RegistrationForm(forms.ModelForm):
-    password1 = forms.CharField(widget=forms.PasswordInput)
-    password2 = forms.CharField(widget=forms.PasswordInput)
+# global model
+class Department(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True, null=True)
 
     class Meta:
-        model = User
-        fields = ('email', 'first_name', 'last_name')
+        verbose_name = "Department Catalog"
+        ordering = ["name"]
 
-    def clean_password2(self):
-        p1 = self.cleaned_data.get('password1')
-        p2 = self.cleaned_data.get('password2')
-        if p1 and p2 and p1 != p2:
-            raise forms.ValidationError('Passwords do not match')
-        return p2
-
-    def save(self, commit=True, vendor=None, role='lab_staff'):
-        user = super().save(commit=False)
-        user.set_password(self.cleaned_data['password1'])
-        if vendor:
-            user.vendor = vendor
-        user.role = role
-        if commit:
-            user.save()
-        return user
-
-# =========================
-# Registration view: apps/accounts/views.py (append)
-# =========================
-from django.views.generic.edit import FormView
-from django.urls import reverse_lazy
-from django.shortcuts import get_object_or_404
-from .forms import RegistrationForm
-from tenants.models import Vendor
+    def __str__(self):
+        return self.name
 
 
-class TenantRegistrationView(FormView):
-    template_name = 'registration/register.html'
-    form_class = RegistrationForm
-    success_url = reverse_lazy('login')
-
-    def dispatch(self, request, *args, **kwargs):
-        # Only allow registration when tenant resolved or allow a public signup policy
-        self.tenant = getattr(request, 'tenant', None)
-        return super().dispatch(request, *args, **kwargs)
-
-    def form_valid(self, form):
-        # If tenant exists, assign user to tenant. Otherwise, registration is blocked.
-        if not self.tenant:
-            form.add_error(None, 'Tenant could not be resolved. Contact support.')
-            return self.form_invalid(form)
-
-        # Default role: lab_staff. Vendor_admin creation should be restricted to platform_admin or invite flow.
-        form.save(vendor=self.tenant, role='lab_staff')
-        return super().form_valid(form)
+# global model
+class TestType(models.Model):
+    """
+    Platform-level test definitions (global).
+    Vendors do NOT modify these entries directly.
+    """
+    code = models.CharField(max_length=64, unique=True)
+    department = models.ForeignKey(Department, on_delete=models.CASCADE, related_name='tests')
+    name = models.CharField(max_length=150)
+    specimen_type = models.CharField(max_length=100, help_text="Blood, Urine, Tissue, etc.")
+    default_units = models.CharField(max_length=50, blank=True)
+    default_reference = models.CharField(max_length=255, blank=True)
+    default_turnaround = models.DurationField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    
+    def __str__(self):
+        return f"{self.name} under {self.department}"
 
 
-# Admin-only vendor-admin creation (example function)
-from django.contrib.auth.decorators import user_passes_test
-from django.shortcuts import render, redirect
+# ---------------------
+# Per-vendor configuration (enables/price/overrides)
+# ---------------------
+class VendorTest(models.Model):
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="vendor_tests")
+    test = models.ForeignKey(TestType, on_delete=models.CASCADE, related_name="vendor_configs")
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
+    turnaround_override = models.DurationField(null=True, blank=True)
+    enabled = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = ("vendor", "test")
+
+    def effective_tat(self):
+        return self.turnaround_override or self.test.default_turnaround
+
+    def __str__(self):
+        return f"{self.vendor} - {self.test.code}"
 
 
-def is_platform_admin(user):
-    return user.is_authenticated and user.is_platform_admin
+# ---------------------
+# Tenant-scoped operational data
+# ---------------------
+class Patient(models.Model):
+    GENDER_CHOICE = [
+        ('M', 'Male'),
+        ('F', 'Female')
+        ]
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='patients')
+    """# can we work on the patient Id to be auto generated and be 6 -digits """
+    patient_id = models.CharField(max_length=20, unique=True) 
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    date_of_birth = models.DateField(null=True, blank=True)
+    gender = models.CharField(max_length=1, choices=GENDER_CHOICE)
+    contact_email = models.EmailField(blank=True)
+    contact_number = models.CharField(max_length=15, blank=True)
 
-@user_passes_test(is_platform_admin)
-def create_vendor_admin(request, vendor_id):
-    vendor = get_object_or_404(Vendor, internal_id=vendor_id)
-    if request.method == 'POST':
-        form = RegistrationForm(request.POST)
-        if form.is_valid():
-            form.save(vendor=vendor, role='vendor_admin')
-            return redirect('admin:tenants_vendor_change', vendor.internal_id)
-    else:
-        form = RegistrationForm()
-    return render(request, 'registration/create_vendor_admin.html', {'form': form, 'vendor': vendor})
+    class Meta:
+        unique_together = ("vendor", "patient_id")
 
-# =========================
-# Templates: templates/registration/register.html
-# =========================
-"""
-{% extends 'base.html' %}
+    def __str__(self):
+        return f"{self.patient_id} — {self.first_name} {self.last_name}"
 
-{% block content %}
-  <div class="register-box">
-    <h2>Register for {{ tenant.name }}</h2>
-    <form method="post">
-      {% csrf_token %}
-      {{ form.non_field_errors }}
-      <div>
-        <label for="id_email">Email</label>
-        {{ form.email }}
-      </div>
-      <div>
-        <label for="id_first_name">First name</label>
-        {{ form.first_name }}
-      </div>
-      <div>
-        <label for="id_last_name">Last name</label>
-        {{ form.last_name }}
-      </div>
-      <div>
-        <label for="id_password1">Password</label>
-        {{ form.password1 }}
-      </div>
-      <div>
-        <label for="id_password2">Confirm password</label>
-        {{ form.password2 }}
-      </div>
-      <button type="submit">Register</button>
-    </form>
-  </div>
-{% endblock %}
-"""
+# About the sample, there is a story about barcode generations for samples.
+class Sample(models.Model):
+    SAMPLE_STATUS = [
+        ('Accepted', 'Accepted'),
+        ('Rejected', 'Rejected'),
+        ('Completed', 'Completed'),
+    ]
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="samples")
+    """# can we work on the sample Id to be auto generated and be 6 -digits """
+    sample_id = models.CharField(max_length=64, unique=True)  # globally unique label
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name="samples")
+    specimen_type = models.CharField(max_length=100)
+    collected_by = models.CharField(max_length=120, blank=True, null=True, help_text="Name of the staff who collected the sample")
+    collected_at = models.DateTimeField(default=timezone.now)
+    status = models.CharField(choices=SAMPLE_STATUS, max_length=10, default='Accepted')
+    
+    location = models.CharField(max_length=200, blank=True)  # bench or fridge
 
-# =========================
-# URLs snippet: universalis_project/urls.py (append)
-# =========================
-"""
-from django.urls import path, include
-from apps.accounts.views import TenantLoginView, TenantLogoutView, TenantRegistrationView
+    def __str__(self): 
+        return f"{self.sample_id} - {self.specimen_type}"
+    
 
-urlpatterns = [
-    path('accounts/login/', TenantLoginView.as_view(), name='login'),
-    path('accounts/logout/', TenantLogoutView.as_view(), name='logout'),
-    path('accounts/register/', TenantRegistrationView.as_view(), name='register'),
-    # ... other urls ...
-]
-"""
+class TestOrder(models.Model):
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="orders")
+    order_id = models.CharField(max_length=64, unique=True)  # generate e.g., ORD-<vendor>-0001
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name="orders")
+    sample = models.ForeignKey(Sample, on_delete=models.SET_NULL, null=True, blank=True, related_name="orders")
+    test = models.ForeignKey(TestType, on_delete=models.PROTECT, related_name="orders")
+    vendor_test = models.ForeignKey(VendorTest, null=True, blank=True, on_delete=models.SET_NULL)
+    requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    clinical_history = models.TextField(blank=True)
+    priority = models.CharField(max_length=32, default="routine")  # routine/urgent
+    status = models.CharField(max_length=32, default="pending")  # pending, queued, sent, processing, completed, verified, released
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    sent_to_lab_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
 
-# =========================
-# Notes and Security
-# =========================
-# - For Vendor Admin creation, use invite tokens (email-based) rather than open registration.
-# - Consider restricting /accounts/register/ to only allow lab_staff creation; vendor_admin must be created by platform admin or via an invite.
-# - Add email verification if you will use sensitive operations.
-# - The registration flow above requires tenant to be resolved by middleware; for API-based onboarding, provide an invite and a one-time token.
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.order_id
 
 
+class TestResult(models.Model):
+    order = models.OneToOneField(TestOrder, on_delete=models.CASCADE, related_name="result")
+    result_value = models.TextField()
+    units = models.CharField(max_length=50, blank=True)
+    reference_range = models.CharField(max_length=80, blank=True)
+    remarks = models.TextField(blank=True)
+    entered_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="entered_results")
+    verified_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="verified_results")
+    entered_at = models.DateTimeField(auto_now_add=True)
+    verified_at = models.DateTimeField(null=True, blank=True)
+    released = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Result {self.order.order_id}"
+
+
+# Equipment & devices (Windows service registers)
+class Equipment(models.Model):
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="equipment")
+    name = models.CharField(max_length=200)
+    manufacturer = models.CharField(max_length=200, blank=True)
+    model = models.CharField(max_length=200, blank=True)
+    serial_number = models.CharField(max_length=200, blank=True)
+    device_key = models.CharField(max_length=64, unique=True)  # create API key per device
+    last_heartbeat = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.vendor} - {self.name}"
+
+# Audit log
+class AuditLog(models.Model):
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="audit_logs", null=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    action = models.CharField(max_length=255)
+    payload = models.JSONField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
 
 
@@ -417,109 +212,204 @@ urlpatterns = [
 
 
 
+# apps/lis/models.py (Tenant Operational Data)
 
+import uuid
+from django.db import models, transaction
+from django.utils import timezone
+from django.db.models import Max
 
+# ... Imports for Vendor and User models
 
+# ---------------------
+# Tenant-scoped operational data
+# ---------------------
 
+class Patient(models.Model):
+    GENDER_CHOICE = [
+        ('M', 'Male'),
+        ('F', 'Female')
+    ]
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='patients')
+    
+    # Auto-generated per-vendor ID
+    patient_id = models.CharField(max_length=20, help_text="Auto-generated 6-digit patient ID.") 
+    
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    date_of_birth = models.DateField(null=True, blank=True)
+    gender = models.CharField(max_length=1, choices=GENDER_CHOICE)
+    contact_email = models.EmailField(blank=True)
+    contact_number = models.CharField(max_length=15, blank=True)
 
+    class Meta:
+        unique_together = ("vendor", "patient_id")
+        ordering = ("-id",) # Use ID for performance in save() lookup
 
+    def save(self, *args, **kwargs):
+        """Auto-generate sequential patient_id scoped to the vendor."""
+        if not self.patient_id and self.vendor:
+            prefix = "" # No prefix, just sequential number
+            with transaction.atomic():
+                # Find the highest ID for the current vendor
+                max_id = Patient.objects.filter(vendor=self.vendor).aggregate(Max('patient_id'))['patient_id__max']
+                
+                current_number = 0
+                if max_id:
+                    try:
+                        current_number = int(max_id)
+                    except ValueError:
+                        pass # Keep at 0 if non-numeric ID exists
 
-
-# apps/tenants/views.py
-from django.core.mail import send_mail
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from django.db import transaction
-from django.urls import reverse
-from .models import Vendor, VendorDomain
-from .forms import VendorOnboardingForm
-from apps.accounts.models import User
-from django.conf import settings
-
-def vendor_onboarding_view(request):
-    """Handles self-registration, creating Vendor, Domain, and initial User."""
-    if request.method == "POST":
-        form = VendorOnboardingForm(request.POST)
-        contact_email = request.POST.get("admin_email") # For notification emails
-        if form.is_valid():
-            # Use a transaction to ensure all 3 steps (Vendor, Domain, User) succeed or fail together.
-            try:
-                with transaction.atomic():
-                    # 1. Create Vendor (Inactive)
-                    vendor = Vendor.objects.create(
-                        tenant_id=form.cleaned_data["tenant_id"],
-                        name=form.cleaned_data["name"],
-                        # Use admin email as vendor contact email
-                        contact_email=form.cleaned_data["admin_email"],
-                        # subdomain_prefix=form.cleaned_data["domain_name"],
-                        plan_type=form.cleaned_data["plan_type"],
-                        is_active=False, # Wait for Platform Admin approval
-                    )
-
-                    # # 2. Save Preferred Domain (if provided)
-                    # preferred_domain = form.cleaned_data.get("domain_name")
-                    # if preferred_domain:
-                    #     VendorDomain.objects.create(
-                    #         vendor=vendor,
-                    #         domain_name=preferred_domain.lower(),
-                    #         is_primary=True,
-                    #     )
-
-                    # 3. Create Vendor Admin User
-                    User.objects.create_user(
-                        email=form.cleaned_data["admin_email"],
-                        password=form.cleaned_data["admin_password"],
-                        first_name=form.cleaned_data["admin_first_name"],
-                        last_name=form.cleaned_data["admin_last_name"],
-                        vendor=vendor, # <-- Link to the new vendor
-                        role='vendor_admin', # <-- Set the role
-                        is_staff=True # Vendor Admins usually have some staff privileges
-                    )
-
-                #     # ✅ Notify platform admin
-                #     send_mail(
-                #         subject="🆕 New Vendor Onboarding Request",
-                #         message=(
-                #             f"A new vendor has requested onboarding:\n\n"
-                #             f"Vendor Name: {vendor.name}\n"
-                #             f"Tenant ID: {vendor.tenant_id}\n"
-                #             f"Contact Email: {vendor.contact_email}\n"
-                #             f"Preferred Domain: {preferred_domain or 'Not specified'}\n\n"
-                #             f"Please review and proceed with domain setup."
-                #         ),
-                #         from_email=settings.DEFAULT_FROM_EMAIL,
-                #         recipient_list=[settings.PLATFORM_ADMIN_EMAIL],
-                #         fail_silently=True,
-                #     )
-
-                #     # ✅ Notify vendor admin (acknowledgment)
-                #     send_mail(
-                #         subject="Your Onboarding Request Received",
-                #         message=(
-                #             f"Dear {form.cleaned_data['admin_first_name']},\n\n"
-                #             f"Thank you for registering {vendor.name}.\n"
-                #             f"Our platform admin will contact you shortly to complete your domain setup.\n\n"
-                #             f"Best Regards,\nThe LIS Platform Team"
-                #         ),
-                #         from_email=settings.DEFAULT_FROM_EMAIL,
-                #         recipient_list=[contact_email],
-                #         fail_silently=True,
-                #     )
-                # # If successful, commit transaction and send message
-                messages.success(request, "Request submitted! We've sent an email to complete setup.")
-                # Email notification logic here...
-                return redirect(reverse("vendor_onboarding_success"))
-
-            except Exception as e:
-                # If anything in the atomic block fails, it rolls back. Log the error.
-                messages.error(request, f"An error occurred during submission. Please try again. ({e})")
-                # Log the exception (recommended)
-                return redirect(reverse("vendor_onboarding"))
-
-        else:
-            messages.error(request, "Please correct the form errors.")
-    else:
-        form = VendorOnboardingForm()
+                next_number = current_number + 1
+                self.patient_id = f"{prefix}{next_number:06d}" # e.g., 000001
         
-    return render(request, "core/vendor_onboarding.html", {"form": form})
+        super().save(*args, **kwargs)
 
+    def __str__(self):
+        return f"{self.patient_id} — {self.first_name} {self.last_name}"
+
+
+class Sample(models.Model):
+    SAMPLE_STATUS = [
+        ('A', 'Accessioned'), # Sample has been logged and assigned an ID
+        ('R', 'Rejected'),
+        ('C', 'Consumed'),
+        ('I', 'In Storage'),
+    ]
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="samples")
+    
+    # Global unique sample/barcode ID (recommended for barcoding)
+    sample_id = models.CharField(max_length=64, unique=True, help_text="Globally unique ID for barcoding.") 
+    
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name="samples")
+    specimen_type = models.CharField(max_length=100)
+    
+    # New Field: Link to the TestRequest that generated this sample
+    test_request = models.ForeignKey('TestRequest', on_delete=models.CASCADE, related_name='samples') 
+    
+    collected_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="collected_samples")
+    collected_at = models.DateTimeField(default=timezone.now)
+    status = models.CharField(choices=SAMPLE_STATUS, max_length=1, default='A')
+    location = models.CharField(max_length=200, blank=True) 
+
+    # Implement global sequential save logic here (similar to Vendor.save) 
+    # if you want a guaranteed unique 6-digit ID across ALL labs (best for barcoding).
+    
+    def __str__(self): 
+        return f"{self.sample_id} - {self.specimen_type}"
+
+
+class TestRequest(models.Model):
+    """Represents the entire patient order/request for multiple tests."""
+    ORDER_STATUS = [
+        ('P', 'Pending'),
+        ('R', 'Received'),
+        ('A', 'Analysis'),
+        ('C', 'Complete'),
+        ('V', 'Verified'),
+    ]
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="requests")
+    
+    # Request ID generated sequentially per-vendor (e.g., REQ-0001)
+    request_id = models.CharField(max_length=64, unique=True) 
+    
+    patient = models.ForeignKey(Patient, on_delete=models.PROTECT, related_name="requests")
+    requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="ordered_requests")
+    clinical_history = models.TextField(blank=True)
+    priority = models.CharField(max_length=32, default="routine") 
+    status = models.CharField(choices=ORDER_STATUS, max_length=1, default="P")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    verified_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        # Implement sequential save logic here for request_id (REQ-0001)
+
+    def __str__(self):
+        return self.request_id
+
+
+class TestAssignment(models.Model):
+    """The individual unit of work: one Test assigned to one Request."""
+    ASSIGNMENT_STATUS = [
+        ('P', 'Pending'),
+        ('Q', 'Queued on Instrument'),
+        ('A', 'Analysis Complete'),
+        ('V', 'Result Verified'),
+    ]
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="assignments")
+    request = models.ForeignKey(TestRequest, on_delete=models.CASCADE, related_name="assignments")
+    
+    # Links to the Global Test Definition and the Vendor's config
+    global_test = models.ForeignKey(GlobalTest, on_delete=models.PROTECT, related_name="assignments")
+    vendor_config = models.ForeignKey(VendorTest, null=True, on_delete=models.SET_NULL)
+    
+    # Inherit routing from VendorTest, or use the global default
+    department = models.ForeignKey(Department, on_delete=models.PROTECT, related_name="assigned_work") 
+    
+    status = models.CharField(choices=ASSIGNMENT_STATUS, max_length=1, default='P')
+    instrument = models.ForeignKey('Equipment', null=True, blank=True, on_delete=models.SET_NULL)
+    
+    class Meta:
+        # Ensures a vendor doesn't accidentally assign the same test twice to one request
+        unique_together = ('request', 'global_test')
+
+    def __str__(self):
+        return f"{self.request.request_id} - {self.global_test.code}"
+
+
+class TestResult(models.Model):
+    """The final measured value for a single TestAssignment."""
+    # One-to-One link to the unit of work
+    assignment = models.OneToOneField(TestAssignment, on_delete=models.CASCADE, related_name="result")
+    
+    result_value = models.TextField(help_text="The measured value.")
+    units = models.CharField(max_length=50, blank=True)
+    reference_range = models.CharField(max_length=80, blank=True)
+    
+    # New Field: Flag to indicate high/low/normal (H, L, N)
+    NORMAL_FLAG_CHOICES = [('N', 'Normal'), ('H', 'High'), ('L', 'Low'), ('A', 'Abnormal')]
+    flag = models.CharField(max_length=1, choices=NORMAL_FLAG_CHOICES, default='N')
+    
+    remarks = models.TextField(blank=True)
+    entered_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="entered_results")
+    verified_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="verified_results")
+    
+    entered_at = models.DateTimeField(auto_now_add=True)
+    verified_at = models.DateTimeField(null=True, blank=True)
+    released = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Result for {self.assignment.global_test.code}"
+
+
+# Equipment & AuditLog Models (mostly unchanged, except for AuditLog FK clarification)
+class Equipment(models.Model):
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="equipment")
+    name = models.CharField(max_length=200)
+    manufacturer = models.CharField(max_length=200, blank=True)
+    model = models.CharField(max_length=200, blank=True)
+    serial_number = models.CharField(max_length=200, blank=True)
+    
+    # API key per device for local Windows service communication
+    device_key = models.CharField(max_length=64, unique=True, default=uuid.uuid4) 
+    last_heartbeat = models.DateTimeField(null=True, blank=True)
+    
+    # NOTE: You'll also need a VendorInterface model to manage the connection settings.
+
+    def __str__(self):
+        return f"{self.vendor.name} - {self.name}"
+
+class AuditLog(models.Model):
+    # Nullable vendor to allow platform admin actions to be logged without a specific tenant
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="audit_logs", null=True, blank=True) 
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    action = models.CharField(max_length=255)
+    payload = models.JSONField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"[{self.created_at.strftime('%Y-%m-%d %H:%M')}] {self.action} by {self.user}"

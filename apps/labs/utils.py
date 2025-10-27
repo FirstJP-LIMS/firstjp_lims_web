@@ -1,3 +1,8 @@
+from django.db import transaction
+from django.db.models import F
+from apps.tenants.models import Vendor
+
+
 # --- Core Security Check Function ---
 def check_tenant_access(request):
     """
@@ -18,3 +23,23 @@ def check_tenant_access(request):
 
     # Deny if mismatch
     return None, is_platform_admin
+
+
+# --- Sequence Generator Function for ids ---
+def get_next_sequence(prefix: str, vendor: Vendor = None) -> str:
+    """
+    Thread-safe counter generator. 
+    Each vendor (tenant) can have its own independent counters if needed.
+    """
+    from apps.labs.models import SequenceCounter 
+
+    with transaction.atomic():
+        counter, _ = SequenceCounter.objects.select_for_update().get_or_create(
+            vendor=vendor,
+            prefix=prefix,
+            defaults={"last_number": 0}
+        )
+        counter.last_number = F("last_number") + 1
+        counter.save()
+        counter.refresh_from_db()
+        return f"{prefix}{counter.last_number:06d}"

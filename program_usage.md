@@ -45,3 +45,27 @@ Click on join --- Fill forms, which the admin will receive,
 
 
 
+
+
+
+
+
+Departments:
+1. Hematology & Immunology 
+2. Chemical Pathology 
+3. Medical Microbiology 
+4. Histopathology 
+5. Cytology
+6. Molecular Diagnostics 
+7. Radiology
+    And there are different tests under each category. From the front end, patient details with clinical & sample information and specific test requests are logged in.
+
+
+Dashboard
+patients -
+Samples
+Results
+Equipment
+Analytics
+CRM
+settings

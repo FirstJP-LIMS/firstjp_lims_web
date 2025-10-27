@@ -5,6 +5,9 @@ PATIENT  →  SAMPLE(S)  →  TEST REQUEST(S)  →  RESULT(S)
    |             |              |
 Doctor → Clinical Info    Department → Test Type
 
+
+olas@gmail.com
+password#12345  
 """
 # apps/labs/views.py
 from django.shortcuts import render
@@ -36,7 +39,10 @@ def dashboard(request):
     is_platform_admin = request.is_platform_admin
 
     if is_platform_admin and not tenant:
-        return render(request, "crm/tenant_index.html") # for registering of lab assistant
+        return render(request, "crm/tenant_index.html")
+
+    # if is_platform_admin and not tenant:
+    #     return render(request, "crm/tenant_index.html")
 
     lab_name = getattr(tenant, 'business_name', tenant.name)
     context = {
