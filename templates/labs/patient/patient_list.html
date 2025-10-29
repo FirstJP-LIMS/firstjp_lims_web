@@ -1,0 +1,27 @@
+{% extends "labs/base.html" %}
+{% block content %}
+<div class="container mt-4">
+  <h3>Patients</h3>
+  <a href="{% url 'add_patient' %}" class="btn btn-success mb-3">+ Add Patient</a>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>ID</th><th>Name</th><th>DOB</th><th>Gender</th><th>Contact</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in patients %}
+      <tr>
+        <td>{{ p.patient_id }}</td>
+        <td>{{ p.first_name }} {{ p.last_name }}</td>
+        <td>{{ p.date_of_birth|default:"-" }}</td>
+        <td>{{ p.get_gender_display }}</td>
+        <td>{{ p.contact_number }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" class="text-center">No patients found.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

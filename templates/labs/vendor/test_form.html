@@ -1,0 +1,12 @@
+{% extends "labs/base.html" %}
+{% block content %}
+<div class="container mt-4">
+  <h3>Create New Test</h3>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Submit Test</button>
+  </form>
+</div>
+{% endblock %}
+

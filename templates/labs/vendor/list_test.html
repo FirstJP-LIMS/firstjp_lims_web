@@ -1,0 +1,36 @@
+{% extends "labs/base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h3>Vendor Tests</h3>
+    <a href="{% url 'vendor_test_create' %}" class="btn btn-primary mb-3">Add Test</a>
+
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Test</th>
+                <th>Department</th>
+                <th>Price</th>
+                <th>Enabled</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in tests %}
+            <tr>
+                <td>{{ t.test.name }}</td>
+                <td>{{ t.assigned_department.name }}</td>
+                <td>{{ t.price }}</td>
+                <td>{{ t.enabled|yesno:"Yes,No" }}</td>
+                <td>
+                    <a href="{% url 'vendor_test_edit' t.slug %}" class="btn btn-sm btn-secondary">Edit</a>
+                    <a href="{% url 'vendor_test_delete' t.slug %}" class="btn btn-sm btn-danger"
+                       onclick="return confirm('Are you sure?');">Delete</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5">No vendor tests found.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

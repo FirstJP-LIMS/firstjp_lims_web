@@ -1,14 +1,21 @@
-{% extends "crm/base.html" %}
+{% extends "labs/base.html" %}
 
 {% block content %}
 <!-- Page Header -->
 <div class="page-header">
     <div class="d-flex justify-content-between align-items-center">
         <div>
-            <h1 class="page-title">Dashboard Overview</h1>
-            <p class="page-subtitle">Welcome to your laboratory management dashboard</p>
+            <h1 class="page-title">Dashboard</h1>
+            <div class="d-flex gap-2">
+                <p class="page-subtitle">Welcome</p>
+                <a href="{% url 'vendor_test_create' %}">Create test</a>
+                <a href="{% url 'vendor_tests_list' %}">list test</a>
+            </div>
         </div>
         <div class="d-flex gap-2">
+            <button class="btn btn-wine">
+                <i class="bi bi-plus-circle me-2"></i>Update Test Catalog
+            </button>
             <button class="btn btn-outline-wine">
                 <i class="bi bi-download me-2"></i>Export Report
             </button>

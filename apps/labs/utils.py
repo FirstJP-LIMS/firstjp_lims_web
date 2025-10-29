@@ -43,3 +43,4 @@ def get_next_sequence(prefix: str, vendor: Vendor = None) -> str:
         counter.save()
         counter.refresh_from_db()
         return f"{prefix}{counter.last_number:06d}"
+

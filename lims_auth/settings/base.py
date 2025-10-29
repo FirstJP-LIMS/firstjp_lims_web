@@ -35,8 +35,7 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.tenants",
     "apps.core",
-    # "apps.crm",
-    "apps.labs",
+    "apps.labs", # manages CRM and lab operations
 ]
 
 AUTH_USER_MODEL = 'accounts.User'

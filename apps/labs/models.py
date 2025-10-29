@@ -8,37 +8,6 @@ from django.utils.text import slugify
 from .utils import get_next_sequence
 
 # Create your models here.
-"""
-Departments:
-1. Hematology & Immunology 
-2. Chemical Pathology 
-3. Medical Microbiology 
-4. Histopathology 
-5. Cytology
-6. Molecular Diagnostics 
-7. Radiology
-    And there are different tests under each category. From the front end, patient details with clinical & sample information and specific test requests are logged in.
-    If you have the know of how lims work, can you break things down, for execution...
-
-Department and Test type to be controlled by the platform admin. i.e the LIMS, has all department available to all tenants..
-Vendor, controls, their lab assistants, patients, samples, test requests and results.
-
-
-Ask Scientist - If Each tenant can choose which department and test types they want to enable for their lab, or all tenants have access to all departments and test types by default.
-
-
-# ---------------------
-# Tenant-Scoped Models (Vendor Managed)
-# Patient	TENANT	Patient records specific to the vendor/lab.
-# TestRequest	TENANT	The patient's order for a list of tests.
-# Sample	TENANT	The physical specimen received by the vendor/lab.
-# TestAssignment	TENANT	Tracks the execution of a GlobalTest within this vendor's workflow.
-# Result	TENANT	The final measured value for a TestAssignment.
-# Equipment	TENANT	Tracks the vendor's specific lab instruments.
-# ---------------------
-
-"""
-
 # Global Model: Department Catalog
 class Department(models.Model):
     """Platform-level standard lab departments (e.g., Hematology)."""
@@ -53,7 +22,6 @@ class Department(models.Model):
         return self.name
 
 # Global Model: Test Definitions
-# Renamed from TestType for clarity
 class GlobalTest(models.Model):
     """
     Platform-level test definitions (e.g., Hemoglobin).
@@ -83,14 +51,24 @@ class GlobalTest(models.Model):
 class VendorTest(models.Model):
     """Vendor-specific configuration (pricing, TAT override) for a GlobalTest."""
     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="vendor_tests")
-    test = models.ForeignKey(GlobalTest, on_delete=models.CASCADE, related_name="vendor_configs")    
+    test = models.ForeignKey(GlobalTest, on_delete=models.CASCADE, related_name="vendor_configs")
+    assigned_department = models.ForeignKey(Department, 
+        on_delete=models.CASCADE, related_name="vendor_assignments", help_text="The department in this lab responsible for running the test.")
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
     turnaround_override = models.DurationField(null=True, blank=True)
     enabled = models.BooleanField(default=True)
+    slug = models.SlugField(max_length=150, blank=True, null=True, help_text="Name to be used on the url bar.")
 
     class Meta:
         unique_together = ("vendor", "test")
 
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base_slug = slugify(self.test.name, allow_unicode=True)
+            timestamp = timezone.now().strftime("%Y%m%d%H%M%S")
+            self.slug = f"{base_slug}-{timestamp}"
+        super().save(*args, **kwargs)
+        
     def effective_tat(self):
         return self.turnaround_override or self.test.default_turnaround
 
@@ -98,7 +76,9 @@ class VendorTest(models.Model):
         return f"{self.vendor.name} - {self.test.code}"
 
 
-
+# ---------------------
+# To customize id
+# ---------------------
 class SequenceCounter(models.Model):
     """
     Maintains atomic counters per vendor for generating IDs.
@@ -140,16 +120,17 @@ class Patient(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.patient_id:
-            self.patient_id = get_next_sequence("PAT")
+            self.patient_id = get_next_sequence("PAT", vendor=self.vendor)
         super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.patient_id} — {self.first_name} {self.last_name}"
 
 
+# Test Request and Assignment
 class Sample(models.Model):
     SAMPLE_STATUS = [
-        ('A', 'Accepted'), # Sample has been logged and assigned an ID
+        ('A', 'Accessioned'), # Sample has been logged and assigned an ID
         ('R', 'Rejected'),
         ('C', 'Consumed'),
         ('I', 'In Storage'),
@@ -159,9 +140,11 @@ class Sample(models.Model):
     # Global unique sample/barcode ID (recommended for barcoding)
     sample_id = models.CharField(max_length=64, unique=True, help_text="Globally unique ID for barcoding.") 
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name="samples")
-    specimen_type = models.CharField(max_length=100)
     
-    # New Field: Link to the TestRequest that generated this sample
+    # Specimen type is synced with VendorTest or GlobalTest
+    specimen_type = models.CharField(max_length=100, help_text="Specimen type e.g. Blood, Urine, Serum, etc.")
+
+    # Link to the TestRequest that generated this sample
     test_request = models.ForeignKey('TestRequest', on_delete=models.CASCADE, related_name='samples') 
     
     collected_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="collected_samples")
@@ -169,9 +152,7 @@ class Sample(models.Model):
     status = models.CharField(choices=SAMPLE_STATUS, max_length=1, default='A')
     location = models.CharField(max_length=200, blank=True) 
     
-
     # if you want a guaranteed unique 6-digit ID across ALL labs (best for barcoding).
-
     # Save Uniques Id     
     def save(self, *args, **kwargs):
         if not self.sample_id:
@@ -199,6 +180,9 @@ class TestRequest(models.Model):
     
     patient = models.ForeignKey(Patient, on_delete=models.PROTECT, related_name="requests")
     requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="ordered_requests")
+
+    requested_tests = models.ManyToManyField(VendorTest, related_name="test_requests")
+
     clinical_history = models.TextField(blank=True)
     priority = models.CharField(max_length=32, default="routine") 
     status = models.CharField(choices=ORDER_STATUS, max_length=1, default="P")
@@ -214,8 +198,7 @@ class TestRequest(models.Model):
     def save(self, *args, **kwargs):
         if not self.request_id:
             prefix = f"ORD-{self.vendor.tenant_id}-"
-            seq = get_next_sequence(prefix, vendor=self.vendor)
-            self.request_id = seq
+            self.request_id = get_next_sequence(prefix, vendor=self.vendor)
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -249,6 +232,7 @@ class TestAssignment(models.Model):
 
     def __str__(self):
         return f"{self.request.request_id} - {self.global_test.code}"
+
 
 
 class TestResult(models.Model):

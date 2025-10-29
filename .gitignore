@@ -8,3 +8,10 @@ __pycache__/
 /base__.html
 /dashboard__.html
 /codefile.py
+
+/folderStructure.md
+/.vscode/
+/.idea/
+*.log
+/program_usage.md
+
