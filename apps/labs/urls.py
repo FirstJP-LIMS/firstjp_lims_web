@@ -20,5 +20,7 @@ urlpatterns = [
 
     # test request create
     path('test-requests/create/', views.create_test_request, name='create_test_request'),
+    path('test-requests/', views.test_request_list, name='test_request_list'),
+    path('requests/<int:pk>/', views.test_request_detail, name='request_detail'),
 ]
 

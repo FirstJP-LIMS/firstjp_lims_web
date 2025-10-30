@@ -5,9 +5,13 @@ PATIENT  →  SAMPLE(S)  →  TEST REQUEST(S)  →  RESULT(S)
    |             |              |
 Doctor → Clinical Info    Department → Test Type
 
+Cost Type,Initial 3-Month Minimum Estimate
+Infrastructure (3 months),"$700 - $1,900"
+Deployment/CI/CD Setup,"$1,000 - $2,000"
+Security Auditing,"$0 - $5,000 (Depends on scope)"
+Legal/Compliance Setup,"$5,000 - $10,000"
+TOTAL INITIAL LAUNCH BUDGET,"$6,700 - $18,900+"
 
-olas@gmail.com
-password#12345  
 """
 # apps/labs/views.py
 from django.shortcuts import render, redirect, get_object_or_404
@@ -30,6 +34,7 @@ from .models import (
     Sample,
     TestAssignment,
 )
+from django.core.paginator import Paginator
 
 
 # --- Decorator Definition ---
@@ -96,15 +101,32 @@ def vendor_tests_list(request):
     tests = VendorTest.objects.filter(vendor=vendor)
     return render(request, "labs/vendor/list_test.html", {"tests": tests})
 
+# @login_required
+# def vendor_test_create(request):
+#     # create a new 
+#     vendor = request.user.vendor
+#     if request.method == "POST":
+#         form = VendorTestForm(request.POST, vendor=vendor)
+#         if form.is_valid():
+#             vendor_test = form.save(commit=False)
+#             vendor_test.vendor = vendor
+#             vendor_test.save()
+#             form.is_active = True
+#             messages.success(request, "Vendor Test created successfully.")
+#             return redirect("vendor_tests_list")
+#     else:
+#         form = VendorTestForm(vendor=vendor)
+#     return render(request, "labs/vendor/test_form.html", {"form": form, "title": "Add Vendor Test"})
+
 @login_required
 def vendor_test_create(request):
-    # create a new 
     vendor = request.user.vendor
     if request.method == "POST":
         form = VendorTestForm(request.POST, vendor=vendor)
         if form.is_valid():
             vendor_test = form.save(commit=False)
             vendor_test.vendor = vendor
+            vendor_test.enabled = True
             vendor_test.save()
             messages.success(request, "Vendor Test created successfully.")
             return redirect("vendor_tests_list")
@@ -168,53 +190,121 @@ def add_patient(request):
 
     return render(request, "labs/patient/patient_form.html", {"form": form})
 
-
 # ***********************
 # Test Requests / C Operation
+# Models involved are: Sample, TestRequest, TestAssignment
 # ***********************
+# @login_required
+# def create_test_request(request):
+#     vendor = getattr(request.user, 'vendor', None) or getattr(request, 'tenant', None)
+#     if not vendor:
+#         messages.error(request, "Vendor not found for this user.")
+#         return redirect('dashboard')
+
+#     if request.method == 'POST':
+#         form = TestRequestForm(request.POST, vendor=vendor)
+#         if form.is_valid():
+#             tests_to_order = form.cleaned_data.pop('tests_to_order')
+
+#             try:
+#                 with transaction.atomic():
+#                     request_instance = form.save(commit=False)
+#                     request_instance.vendor = vendor
+#                     request_instance.requested_by = request.user
+#                     request_instance.save()
+
+#                     # Save requested tests
+#                     request_instance.requested_tests.set(tests_to_order)
+
+#                     # Create a sample for the request
+#                     Sample.objects.create(
+#                         vendor=vendor,
+#                         patient=request_instance.patient,
+#                         specimen_type="Blood",
+#                         test_request=request_instance
+#                     )
+
+#                     # Create Test Assignments
+#                     assignments = []
+#                     for vendor_test in tests_to_order:
+#                         assignments.append(TestAssignment(
+#                             vendor=vendor,
+#                             request=request_instance,
+#                             global_test=vendor_test.test,
+#                             vendor_config=vendor_test,
+#                             department=vendor_test.assigned_department or vendor_test.test.department
+#                         ))
+#                     TestAssignment.objects.bulk_create(assignments)
+
+#                     messages.success(request, f"Request {request_instance.request_id} created successfully.")
+#                     return redirect('lis:test_request_list')
+
+#             except Exception as e:
+#                 messages.error(request, f"Error creating request: {e}")
+#     else:
+#         form = TestRequestForm(vendor=vendor)
+
+#     return render(request, 'labs/requests/test_request_form.html', {'form': form})
+
+
+@login_required
 def create_test_request(request):
-    vendor = getattr(request.user, 'vendor', None)  # Adjust this if vendor is stored differently
+    vendor = getattr(request.user, 'vendor', None) or getattr(request, 'tenant', None)
+    if not vendor:
+        messages.error(request, "Vendor not found for this user.")
+        return redirect('dashboard')
 
     if request.method == 'POST':
         form = TestRequestForm(request.POST, vendor=vendor)
         if form.is_valid():
-            tests_to_order = form.cleaned_data.pop('tests_to_order')
             try:
                 with transaction.atomic():
-                    # 1. Create TestRequest
+                    # Get tests before saving
+                    tests_to_order = form.cleaned_data['tests_to_order']
+                    
+                    # Create the request instance
                     request_instance = form.save(commit=False)
                     request_instance.vendor = vendor
+                    request_instance.requested_by = request.user
+                    
+                    # Generate request ID
+                    request_instance.request_id = f"REQ-{vendor.requests.count() + 1:04d}"
+                    
                     request_instance.save()
 
-                    # 2. Create Sample (default one per request)
+                    # Save requested tests
+                    request_instance.requested_tests.set(tests_to_order)
+
+                    # Create a sample for the request
                     Sample.objects.create(
                         vendor=vendor,
                         patient=request_instance.patient,
-                        specimen_type="Blood",  # You can customize this
-                        test_request=request_instance
+                        specimen_type="Blood",  # You might want to make this dynamic
+                        test_request=request_instance,
+                        sample_id=f"SMP-{vendor.samples.count() + 1:06d}"
                     )
 
-                    # 3. Create Test Assignments
+                    # Create Test Assignments
                     assignments = []
                     for vendor_test in tests_to_order:
-                        assignment = TestAssignment(
+                        assignments.append(TestAssignment(
                             vendor=vendor,
                             request=request_instance,
                             global_test=vendor_test.test,
                             vendor_config=vendor_test,
                             department=vendor_test.assigned_department or vendor_test.test.department
-                        )
-                        assignments.append(assignment)
-
+                        ))
                     TestAssignment.objects.bulk_create(assignments)
 
-                    messages.success(request, f"Request {request_instance.request_id} created with {len(assignments)} tests.")
-                    return redirect(reverse_lazy('lis:dashboard'))
+                    messages.success(request, f"Request {request_instance.request_id} created successfully.")
+                    return redirect('test_request_list')  # Make sure this URL name matches
 
             except Exception as e:
-                messages.error(request, f"Order creation failed: {e}")
-        else:
-            messages.error(request, "Please correct the errors below.")
+                messages.error(request, f"Error creating request: {e}")
+                # Log the actual error for debugging
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Test request creation error: {e}")
     else:
         form = TestRequestForm(vendor=vendor)
 
@@ -223,3 +313,84 @@ def create_test_request(request):
 
 
 
+@login_required
+def test_request_list(request):
+    """
+    Displays a paginated list of all TestRequests for the current vendor (tenant).
+    """
+    vendor = getattr(request.user, 'vendor', None)
+
+    if not vendor:
+        messages.error(request, "User is not associated with a vendor/lab.")
+        return redirect(reverse_lazy('login')) 
+
+    # 1. Filter the queryset by the current vendor
+    # Ordering by -created_at shows the most recent requests first.
+    queryset = TestRequest.objects.filter(vendor=vendor).order_by('-created_at').select_related('patient')
+
+    # 2. Add simple pagination
+    paginator = Paginator(queryset, 25) # Show 25 requests per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'page_obj': page_obj,
+        'title': 'All Test Requests',
+    }
+    
+    return render(request, 'labs/requests/test_request_list.html', context)
+
+
+
+# apps/lis/views.py
+
+from django.shortcuts import get_object_or_404, render
+from django.contrib.auth.decorators import login_required
+from .models import TestRequest
+from django.db.models import Prefetch
+
+@login_required
+def test_request_detail(request, pk):
+    """
+    Displays the full details of a specific TestRequest, including all assignments.
+    """
+    vendor = getattr(request.user, 'vendor', None)
+    
+    # Use Prefetch to retrieve all related models in minimal queries (optimization)
+    request_instance = get_object_or_404(
+        TestRequest.objects.select_related(
+            'patient', 
+            'requested_by'
+        ).prefetch_related(
+            # Fetch all assignments and their related test/department/result data
+            Prefetch(
+                'assignments', 
+                queryset=TestAssignment.objects.select_related(
+                    'global_test__department', 
+                    'vendor_config', 
+                    'result'
+                ).order_by('department__name', 'global_test__name')
+            ),
+            'samples' # Fetch all samples linked to this request
+        ),
+        pk=pk, 
+        vendor=vendor
+    )
+    
+    # Group assignments by department for structured display in the report template
+    assignments_by_department = {}
+    for assignment in request_instance.assignments.all():
+        dept_name = assignment.department.name
+        if dept_name not in assignments_by_department:
+            assignments_by_department[dept_name] = []
+        assignments_by_department[dept_name].append(assignment)
+
+    context = {
+        'request_instance': request_instance,
+        'patient': request_instance.patient,
+        'samples': request_instance.samples.all(),
+        'assignments_by_department': assignments_by_department,
+        'title': f"Request Details: {request_instance.request_id}",
+    }
+    
+    return render(request, 'labs/requests/test_request_detail.html', context)

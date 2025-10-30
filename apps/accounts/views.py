@@ -5,12 +5,16 @@ from apps.tenants.models import Vendor
 from .forms import RegistrationForm, TenantAuthenticationForm
 from django.urls import reverse, reverse_lazy
 from django.contrib import messages
-from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
+from django.contrib.auth import authenticate, login, logout
 from .forms import TenantAuthenticationForm
 from django.contrib.auth.decorators import user_passes_test
 from django.shortcuts import render, redirect
 
-
+# ----------------------------------
+# Tenant-aware auth. 
+# ----------------------------------
+# laboris@gmail.com
+# password#12345
 def tenant_register(request):
     tenant = getattr(request, 'tenant', None)
 
@@ -56,7 +60,7 @@ def tenant_login(request):
 
             # Platform Admin: global access
             if getattr(user, 'is_platform_admin', False):
-                auth_login(request, user)
+                login(request, user)
                 messages.success(request, f"Welcome back, {user.email}")
                 return redirect(reverse('dashboard'))  # Adjust destination as needed
 
@@ -66,7 +70,7 @@ def tenant_login(request):
                 return redirect(reverse('no_tenant'))
 
             if user.vendor_id and user.vendor_id == tenant.internal_id:
-                auth_login(request, user)
+                login(request, user)
                 messages.success(request, f"Welcome, {user.email}")
                 return redirect(reverse('vendor_dashboard'))
 
@@ -76,16 +80,23 @@ def tenant_login(request):
         form = TenantAuthenticationForm(request)
 
     return render(request, 'registration/login.html', {'form': form})
-
-# ------------------------------
-# Tenant-Aware Logout View (FBV)
-# ------------------------------
 def tenant_logout(request):
-    auth_logout(request)
+    logout(request)
     messages.info(request, "You have been logged out successfully.")
     return redirect(reverse_lazy('login'))
 
+"""
+    Tasks to complete:
+    Password Resetting...
+"""
 
+# ------------------------------
+# Tenant-Aware Auth. ends here
+# ------------------------------
+
+# ----------------------------------
+# Admin Dashboard to be worked on..
+# ----------------------------------
 class DashboardView(TemplateView):
     template_name = 'admin_ui/dashboard.html'
 

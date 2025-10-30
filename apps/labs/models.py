@@ -41,7 +41,7 @@ class GlobalTest(models.Model):
     # Tracks the basic text reference range
     default_reference_text = models.CharField(max_length=255, blank=True)
     
-    default_turnaround = models.DurationField(null=True, blank=True)
+    default_turnaround = models.DurationField(null=True, blank=True, help_text="the expected time it takes to complete the test.")
 
     """Added field for result improvement"""
     # quantitative or qualitative 
@@ -74,9 +74,11 @@ class VendorTest(models.Model):
     assigned_department = models.ForeignKey(Department, 
         on_delete=models.CASCADE, related_name="vendor_assignments", help_text="The department in this lab responsible for running the test.")
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
-    turnaround_override = models.DurationField(null=True, blank=True)
+    turnaround_override = models.DurationField(null=True, blank=True, help_text="the expected time it takes to complete the test.")
     enabled = models.BooleanField(default=True)
     slug = models.SlugField(max_length=150, blank=True, null=True, help_text="Name to be used on the url bar.")
+    created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, blank=True, null=True)
 
     class Meta:
         unique_together = ("vendor", "test")
@@ -132,6 +134,8 @@ class Patient(models.Model):
     gender = models.CharField(max_length=1, choices=GENDER_CHOICE)
     contact_email = models.EmailField(blank=True)
     contact_number = models.CharField(max_length=15, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, blank=True, null=True)
 
     class Meta:
         unique_together = ("vendor", "patient_id")

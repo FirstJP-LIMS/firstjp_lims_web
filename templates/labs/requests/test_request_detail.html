@@ -1,0 +1,90 @@
+{% extends "labs/base.html" %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <h2>Request: {{ request_instance.request_id }}</h2>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-3">
+                <div class="card-header bg-light fw-bold">Patient Information</div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item">Name: {{ patient.first_name }} {{ patient.last_name }}</li>
+                    <li class="list-group-item">Patient ID: {{ patient.patient_id }}</li>
+                    <li class="list-group-item">Age/Gender: {{ patient.get_age }} / {{ patient.get_gender_display }}</li>
+                    <li class="list-group-item">Clinical History: {{ request_instance.clinical_history|default:"N/A" }}</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card mb-3">
+                <div class="card-header bg-light fw-bold">Sample & Order Status</div>
+                <ul class="list-group list-group-flush">
+                    {% for sample in samples %}
+                        <li class="list-group-item">Sample ID: <strong>{{ sample.sample_id }}</strong> ({{ sample.specimen_type }})</li>
+                    {% empty %}
+                        <li class="list-group-item text-danger">No sample recorded.</li>
+                    {% endfor %}
+                    <li class="list-group-item">Date Requested: {{ request_instance.created_at|date:"Y-m-d H:i" }}</li>
+                    <li class="list-group-item">Current Status: <span class="badge bg-primary">{{ request_instance.get_status_display }}</span></li>
+                    <li class="list-group-item">Requested By: {{ request_instance.requested_by.get_full_name|default:"N/A" }}</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <hr>
+    
+    <h3>Test Results & Assignments</h3>
+    
+    {% for dept_name, assignments in assignments_by_department.items %}
+        <div class="card mb-4 border-dark">
+            <div class="card-header bg-dark text-white">
+                <i class="bi bi-gear me-2"></i>{{ dept_name }}
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-striped mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width: 25%">Test Name (Code)</th>
+                            <th style="width: 15%">Patient Result</th>
+                            <th style="width: 10%">Unit</th>
+                            <th style="width: 20%">Reference Range</th>
+                            <th style="width: 10%">Flag</th>
+                            <th style="width: 20%">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for assignment in assignments %}
+                            {% with result=assignment.result %}
+                            <tr>
+                                <td>{{ assignment.global_test.name }} ({{ assignment.global_test.code }})</td>
+                                <td>
+                                    {% if result %}
+                                        <strong>{{ result.result_value }}</strong>
+                                    {% else %}
+                                        <a href="{% url 'lis:result_entry' assignment.pk %}" class="btn btn-sm btn-outline-success">Enter Result</a>
+                                    {% endif %}
+                                </td>
+                                <td>{{ result.units|default:assignment.global_test.default_units }}</td>
+                                <td>{{ result.reference_range|default:assignment.global_test.default_reference_text }}</td>
+                                <td>
+                                    {% if result %}
+                                        <span class="badge bg-{% if result.flag == 'H' %}danger{% elif result.flag == 'L' %}warning{% else %}success{% endif %}">
+                                            {{ result.get_flag_display|default:"N" }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ assignment.get_status_display }}</td>
+                            </tr>
+                            {% endwith %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endfor %}
+    
+    </div>
+{% endblock %}

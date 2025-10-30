@@ -1,12 +1,86 @@
 {% extends "labs/base.html" %}
-{% block content %}
-<div class="container mt-4">
-  <h3>Create New Test</h3>
-  <form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit" class="btn btn-primary">Submit Test</button>
-  </form>
-</div>
-{% endblock %}
+{% load crispy_forms_tags %}
 
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-1 text-gray-800">
+                        <i class="bi bi-plus-circle me-2 text-wine"></i>
+                        {% if form.instance.pk %}Edit Test{% else %}Create New Test{% endif %}
+                    </h1>
+                    <p class="text-muted mb-0">Add a new laboratory test to your vendor profile</p>
+                </div>
+                <a href="{% url 'vendor_tests_list' %}" class="btn btn-outline-wine">
+                    <i class="bi bi-arrow-left me-2"></i>Back to Tests
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Card -->
+    <div class="row justify-content-center">
+        <div class="col-xl-8 col-lg-10">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white py-3 border-bottom">
+                    <h5 class="card-title mb-0 text-wine">
+                        <i class="bi bi-clipboard2-pulse me-2"></i>
+                        Test Information
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    {% crispy form %}
+                </div>
+            </div>
+
+            <!-- Help Card -->
+            <div class="card border-0 bg-light-red mt-4">
+                <div class="card-body">
+                    <div class="d-flex align-items-start">
+                        <i class="bi bi-lightbulb text-wine fs-5 me-3 mt-1"></i>
+                        <div>
+                            <h6 class="text-wine mb-2">Creating Effective Test Listings</h6>
+                            <p class="small text-muted mb-0">
+                                Provide clear descriptions and accurate turnaround times to help clients make informed decisions. 
+                                Active tests will be visible in your catalog immediately after saving.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-control, .form-select {
+        border-radius: 10px;
+        border: 2px solid #e9ecef;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: #722F37;
+        box-shadow: 0 0 0 0.2rem rgba(114, 47, 55, 0.1);
+    }
+
+    .btn-wine {
+        background: linear-gradient(135deg, #722F37, #8B0000);
+        border: none;
+        color: white;
+        font-weight: 500;
+    }
+
+    .btn-wine:hover {
+        background: linear-gradient(135deg, #8B0000, #722F37);
+        color: white;
+    }
+
+    .bg-light-red {
+        background: linear-gradient(135deg, #FFF5F5 0%, #FFE8E8 100%);
+    }
+</style>
+{% endblock %}

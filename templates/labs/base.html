@@ -30,13 +30,13 @@
                 <i class="bi bi-people-fill"></i>
                 <span>Lab Assistants</span>
             </a>
-            <a class="nav-link {% if request.resolver_match.url_name == 'lab_assistants' %}active{% endif %}" href="{% url 'lab_assistants' %}">
+            <a class="nav-link {% if request.resolver_match.url_name == 'patient_list' %}active{% endif %}" href="{% url 'patient_list' %}">
                 <i class="bi bi-people-fill"></i>
                 <span>Patients</span>
             </a>
-            <a class="nav-link" href="#">
+            <a class="nav-link" href="{% url 'test_request_list' %}">
                 <i class="bi bi-file-earmark-medical"></i>
-                <span>Sample Requests</span>
+                <span>Test Requests</span>
                 <span class="badge bg-warning ms-auto">12</span>
             </a>
             <a class="nav-link" href="#">
