@@ -77,36 +77,6 @@ def tenant_login(request):
 
     return render(request, 'registration/login.html', {'form': form})
 
-
-# def tenant_login(request):
-#     tenant = getattr(request, 'tenant', None)
-
-#     if request.method == 'POST':
-#         form = TenantAuthenticationForm(request, data=request.POST)
-#         if form.is_valid():
-#             user = form.get_user()
-
-#             # Platform Admin: global access
-#             if getattr(user, 'is_platform_admin', False):
-#                 auth_login(request, user)
-#                 messages.success(request, f"Welcome back, {user.email}")
-#                 return redirect('dashboard')
-
-#             # Tenant (Vendor/Lab Staff) Access
-#             if tenant and user.vendor_id == tenant.internal_id:
-#                 auth_login(request, user)
-#                 messages.success(request, f"Welcome, {user.email}")
-#                 return redirect('vendor_dashboard')
-
-#             messages.error(request, "Invalid tenant or user mismatch.")
-#         else:
-#             messages.error(request, "Invalid login credentials.")
-#     else:
-#         form = TenantAuthenticationForm(request)
-
-#     return render(request, 'registration/login.html', {'form': form})
-
-
 # ------------------------------
 # Tenant-Aware Logout View (FBV)
 # ------------------------------

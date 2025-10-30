@@ -1,11 +1,10 @@
-# apps/tenants/models.py
 """
-    Tenants management: Models to be used for lab owners who wants to share our platform to analyze their samples.. Unique domain name attached to individual tenants.
+Tenants management: Models to be used for lab owners who wants to share our platform to analyze their samples.. Unique domain name attached to individual tenants.
 """
 import uuid
 from django.db import models
-from django.db.models import Max
 from django.db import transaction
+# from django.db.models import Max
 
 
 PLAN_CHOICES = [
@@ -41,10 +40,10 @@ class Vendor(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # generate vendor id  
     def save(self, *args, **kwargs):
         if not self.tenant_id:
             with transaction.atomic():
-                # Lock the table to prevent race conditions
                 last_vendor = Vendor.objects.select_for_update().order_by('-created_at').first()
                 if last_vendor and last_vendor.tenant_id.startswith('LAB'):
                     try:

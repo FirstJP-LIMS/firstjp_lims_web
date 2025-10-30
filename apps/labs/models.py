@@ -26,6 +26,11 @@ class GlobalTest(models.Model):
     """
     Platform-level test definitions (e.g., Hemoglobin).
     """
+    RESULT_TYPE_CHOICES = [
+        ('QNT', 'Quantitative (Numeric)'),
+        ('QLT', 'Qualitative (Text/Descriptive)'),
+    ]
+
     code = models.CharField(max_length=64, unique=True)
     department = models.ForeignKey(Department, on_delete=models.PROTECT, related_name='global_tests',help_text="Standard department responsible for this test."
     )
@@ -37,6 +42,20 @@ class GlobalTest(models.Model):
     default_reference_text = models.CharField(max_length=255, blank=True)
     
     default_turnaround = models.DurationField(null=True, blank=True)
+
+    """Added field for result improvement"""
+    # quantitative or qualitative 
+    result_type = models.CharField(
+        max_length=3,
+        choices=RESULT_TYPE_CHOICES,
+        default='QNT',
+        help_text="Defines the format for data entry and display."
+    )
+    # Predefined text for the General Comment section of the report
+    general_comment_template = models.TextField(
+        blank=True,
+        help_text="Constant interpretive text or template for the report."
+    )
     is_active = models.BooleanField(default=True)
     
     def __str__(self):
@@ -179,12 +198,15 @@ class TestRequest(models.Model):
     request_id = models.CharField(max_length=64, unique=True) 
     
     patient = models.ForeignKey(Patient, on_delete=models.PROTECT, related_name="requests")
+
     requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="ordered_requests")
 
     requested_tests = models.ManyToManyField(VendorTest, related_name="test_requests")
 
     clinical_history = models.TextField(blank=True)
+    
     priority = models.CharField(max_length=32, default="routine") 
+    
     status = models.CharField(choices=ORDER_STATUS, max_length=1, default="P")
     
     created_at = models.DateTimeField(auto_now_add=True)
@@ -245,11 +267,17 @@ class TestResult(models.Model):
     reference_range = models.CharField(max_length=80, blank=True)
     
     # New Field: Flag to indicate high/low/normal (H, L, N)
-    NORMAL_FLAG_CHOICES = [('N', 'Normal'), ('H', 'High'), ('L', 'Low'), ('A', 'Abnormal')]
+    NORMAL_FLAG_CHOICES = [
+        ('N', 'Normal'), 
+        ('H', 'High'), 
+        ('L', 'Low'), 
+        ('A', 'Abnormal')
+        ]
     flag = models.CharField(max_length=1, choices=NORMAL_FLAG_CHOICES, default='N')
     
     remarks = models.TextField(blank=True)
     entered_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="entered_results")
+    
     verified_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="verified_results")
     
     entered_at = models.DateTimeField(auto_now_add=True)
