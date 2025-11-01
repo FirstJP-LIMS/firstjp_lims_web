@@ -1,0 +1,188 @@
+:root {
+    --primary-red: #C8102E;
+    --primary-navy: #0658fc;
+    --accent-gold: #D4AF37;
+    --pure-white: #FFFFFF;
+    --light-gray: #F8F9FA;
+    --dark-navy: #0F1A2F;
+}
+
+/* Global Styles */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    color: var(--primary-navy);
+}
+
+/* Navbar Styles */
+.navbar {
+    background: var(--pure-white) !important;
+    border-bottom: 1px solid rgba(30, 43, 69, 0.1);
+    padding: 1rem 0;
+}
+
+.navbar-brand {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: black !important;
+}
+
+.navbar-brand strong {
+    color: var(--primary-red);
+}
+
+.nav-link {
+    /* color: var(--primary-navy) !important; */
+    color: black !important;
+    font-weight: 500;
+    margin: 0 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.nav-link:hover {
+    color: var(--primary-red) !important;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-red) 0%, #A50E26 100%);
+    border: none;
+    padding: 0.5rem 1.5rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(200, 16, 46, 0.3);
+}
+
+/* Hero Section */
+.hero-section {
+    background: linear-gradient(135deg, var(--primary-navy) 0%, var(--dark-navy) 100%);
+    color: var(--pure-white);
+    padding: 120px 0 100px;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"><polygon fill="%23D4AF37" fill-opacity="0.03" points="0,1000 1000,0 1000,1000"/></svg>');
+    background-size: cover;
+}
+
+.hero-section h1 {
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    position: relative;
+}
+
+.hero-section .lead {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.2rem;
+    margin-bottom: 2rem;
+}
+
+.btn-light {
+    background: var(--pure-white);
+    color: var(--primary-navy);
+    border: none;
+    font-weight: 600;
+    padding: 0.75rem 2rem;
+    transition: all 0.3s ease;
+}
+
+.btn-light:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(255, 255, 255, 0.3);
+}
+
+.btn-outline-light {
+    border: 2px solid var(--pure-white);
+    color: var(--pure-white);
+    background: transparent;
+    font-weight: 600;
+    padding: 0.75rem 2rem;
+    transition: all 0.3s ease;
+}
+
+.btn-outline-light:hover {
+    background: var(--pure-white);
+    color: var(--primary-navy);
+    transform: translateY(-2px);
+}
+
+/* Demo Card Styles */
+.position-relative {
+    position: relative;
+}
+
+.bg-light {
+    background: rgba(255, 255, 255, 0.1) !important;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.bg-white {
+    background: var(--pure-white) !important;
+    border-radius: 12px;
+}
+
+.text-wine {
+    color: var(--primary-red) !important;
+    font-weight: 600;
+}
+
+.bg-light-red {
+    background: rgba(200, 16, 46, 0.1) !important;
+    border: 1px solid rgba(200, 16, 46, 0.2);
+    border-radius: 8px;
+}
+
+.text-success {
+    color: #28a745 !important;
+    font-weight: 600;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .hero-section {
+        padding: 80px 0 60px;
+        text-align: center;
+    }
+    
+    .hero-section h1 {
+        font-size: 2.5rem;
+    }
+    
+    .d-flex.gap-3 {
+        justify-content: center;
+    }
+}
+
+/* Additional Elegant Touches */
+.shadow-sm {
+    box-shadow: 0 2px 15px rgba(30, 43, 69, 0.1) !important;
+}
+
+.rounded-3 {
+    border-radius: 12px !important;
+}
+
+.rounded-2 {
+    border-radius: 8px !important;
+}
+
+/* Gold Accent Elements */
+.gold-accent {
+    color: var(--accent-gold);
+}
+
+.border-gold {
+    border: 1px solid var(--accent-gold);
+}

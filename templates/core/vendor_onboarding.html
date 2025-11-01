@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Vendor Onboarding{% endblock %}
+{% block content %}
+
+
+<style>
+    .onboard-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 90vh;
+    background-color: #ffffff;
+    padding: 2rem;
+}
+
+.onboard-card {
+    width: 100%;
+    max-width: 500px;
+    background-color: #fff;
+    border-radius: 1rem;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    padding: 2rem 2.5rem;
+    border-top: 6px solid #a80e09; /* wind color accent */
+}
+
+.onboard-card h2 {
+    text-align: center;
+    color: #e20c05;
+    margin-bottom: 0.3rem;
+    font-weight: 600;
+}
+
+.onboard-card .subtitle {
+    text-align: center;
+    color: #6b7280;
+    margin-bottom: 1.5rem;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 500;
+    color: #0f172a;
+    margin-bottom: 0.3rem;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 0.6rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #a80e09; 
+    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+}
+
+.form-group small {
+    display: block;
+    color: #d3524e;
+    font-size: 0.85rem;
+}
+
+.btn-primary {
+    width: 100%;
+    background-color: #a80e09;
+    color: white;
+    font-weight: 600;
+    border: none;
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-primary:hover {
+    background-color: #a80e09;
+}
+
+.alert {
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+}
+
+.alert.success {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+.alert.error {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+</style>
+
+
+<div class="onboard-container">
+    <div class="onboard-card">
+        <h2>Vendor Onboarding</h2>
+        <p class="subtitle">Join our platform and set up your own lab space.</p>
+
+        {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                    <div class="alert {{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <form method="POST" novalidate>
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="id_name">Business / Lab Name</label>
+                {{ form.name }}
+            </div>
+
+            <div class="form-group">
+                <label for="id_admin_email">Contact Email</label>
+                {{ form.admin_email }}
+                <small>{{ form.admin_email.help_text }}</small>
+            </div>
+
+            <div class="form-group">
+                <label for="id_admin_first_name">Admin's First Name</label>
+                {{ form.admin_first_name }}
+            </div>
+
+            <div class="form-group">
+                <label for="id_admin_last_name">Admin's Last Name</label>
+                {{ form.admin_last_name }}
+            </div>
+
+            <div class="form-group">
+                <label for="id_admin_password">Admin's Password</label>
+                {{ form.admin_password }}
+            </div>
+            
+            <div class="form-group">
+                <label for="id_admin_password_confirm">Confirm Admin's Password</label>
+                {{ form.admin_password_confirm }}
+            </div>
+
+            <div class="form-group">
+                <label for="id_plan_type">Subscription Plan</label>
+                {{ form.plan_type }}
+            </div>
+
+            <div class="form-group">
+                <label for="id_domain_name">Preferred Domain (optional)</label>
+                {{ form.domain_name }}
+            </div>
+
+            <button type="submit" class="btn-primary">Submit</button>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

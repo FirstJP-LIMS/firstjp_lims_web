@@ -1,0 +1,280 @@
+{% extends "labs/base.html" %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="page-title">Dashboard</h1>
+            <div class="d-flex gap-2">
+                <p class="page-subtitle">Welcome</p>
+                <a href="{% url 'vendor_test_create' %}">Create test</a>
+                <a href="{% url 'vendor_tests_list' %}">list test</a>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-wine">
+                <i class="bi bi-plus-circle me-2"></i>Update Test Catalog
+            </button>
+            <button class="btn btn-outline-wine">
+                <i class="bi bi-download me-2"></i>Export Report
+            </button>
+            <button class="btn btn-wine">
+                <i class="bi bi-plus-circle me-2"></i>New Sample
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Alert Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        {% if request.is_platform_admin and not vendor %}
+        <div class="alert alert-warning d-flex align-items-center">
+            <i class="bi bi-exclamation-triangle-fill me-3 fs-5"></i>
+            <div>
+                <strong>Platform Admin View</strong> - You are viewing the platform admin dashboard. 
+                <a href="{% url 'vendor_onboarding' %}" class="alert-link">Onboard a new vendor</a>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-info d-flex align-items-center">
+            <i class="bi bi-info-circle-fill me-3 fs-5"></i>
+            <div>
+                <strong>{{ lab_name }} Laboratory</strong> - You are currently managing 
+                <strong class="text-wine">{{ vendor_domain|default:"N/A" }}</strong>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row g-4 mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card">
+            <div class="card-body">
+                <div class="stat-icon bg-success bg-opacity-10 text-success">
+                    <i class="bi bi-journal-check"></i>
+                </div>
+                <div class="stat-value">12</div>
+                <div class="stat-label">Pending Samples</div>
+                <div class="stat-trend trend-up">
+                    <i class="bi bi-arrow-up-short"></i>
+                    2.5% from yesterday
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card">
+            <div class="card-body">
+                <div class="stat-icon bg-primary bg-opacity-10 text-primary">
+                    <i class="bi bi-clock-history"></i>
+                </div>
+                <div class="stat-value">4.5<span class="fs-6 text-muted">h</span></div>
+                <div class="stat-label">Avg. Turnaround Time</div>
+                <div class="stat-trend trend-down">
+                    <i class="bi bi-arrow-down-short"></i>
+                    0.3h improvement
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card">
+            <div class="card-body">
+                <div class="stat-icon bg-warning bg-opacity-10 text-warning">
+                    <i class="bi bi-bell"></i>
+                </div>
+                <div class="stat-value">3</div>
+                <div class="stat-label">Unread Results</div>
+                <div class="stat-trend trend-up">
+                    <i class="bi bi-arrow-up-short"></i>
+                    1 new today
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card">
+            <div class="card-body">
+                <div class="stat-icon bg-info bg-opacity-10 text-info">
+                    <i class="bi bi-calendar-check"></i>
+                </div>
+                <div class="stat-value">458</div>
+                <div class="stat-label">Monthly Samples</div>
+                <div class="stat-trend trend-up">
+                    <i class="bi bi-arrow-up-short"></i>
+                    12.8% growth
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts and Main Content -->
+<div class="row g-4">
+    <!-- Recent Activity -->
+    <div class="col-xl-8">
+        <div class="main-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-activity me-2 text-wine"></i>
+                    Recent Sample Activity
+                </h5>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        Last 7 days
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#">Today</a></li>
+                        <li><a class="dropdown-item" href="#">Last 7 days</a></li>
+                        <li><a class="dropdown-item" href="#">Last 30 days</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Sample ID</th>
+                                <th>Patient</th>
+                                <th>Test Type</th>
+                                <th>Status</th>
+                                <th>Received</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>#SMP-001</strong></td>
+                                <td>John Smith</td>
+                                <td>Blood Chemistry</td>
+                                <td><span class="badge bg-warning">Processing</span></td>
+                                <td>2 hours ago</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-wine">View</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>#SMP-002</strong></td>
+                                <td>Sarah Johnson</td>
+                                <td>Hematology</td>
+                                <td><span class="badge bg-success">Completed</span></td>
+                                <td>4 hours ago</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-wine">View</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>#SMP-003</strong></td>
+                                <td>Mike Davis</td>
+                                <td>Immunology</td>
+                                <td><span class="badge bg-primary">Pending</span></td>
+                                <td>6 hours ago</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-wine">View</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-center mt-3">
+                    <a href="#" class="btn btn-outline-wine">View All Samples</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats & Actions -->
+    <div class="col-xl-4">
+        <!-- Instrument Status -->
+        <div class="main-card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-cpu me-2 text-wine"></i>
+                    Instrument Status
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3 p-2 rounded bg-light">
+                    <div>
+                        <strong>Siemens IMMULITE</strong>
+                        <div class="text-muted small">Chemistry Analyzer</div>
+                    </div>
+                    <span class="badge bg-success">Online</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-3 p-2 rounded bg-light">
+                    <div>
+                        <strong>Abbott Cell-Dyn</strong>
+                        <div class="text-muted small">Hematology</div>
+                    </div>
+                    <span class="badge bg-warning">Maintenance</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center p-2 rounded bg-light">
+                    <div>
+                        <strong>Roche Cobas</strong>
+                        <div class="text-muted small">Immunoassay</div>
+                    </div>
+                    <span class="badge bg-success">Online</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="main-card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-lightning me-2 text-wine"></i>
+                    Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-wine text-start">
+                        <i class="bi bi-plus-circle me-2"></i>
+                        New Sample Request
+                    </button>
+                    <button class="btn btn-outline-wine text-start">
+                        <i class="bi bi-file-earmark-text me-2"></i>
+                        Generate Report
+                    </button>
+                    <button class="btn btn-outline-wine text-start">
+                        <i class="bi bi-person-plus me-2"></i>
+                        Add Lab Assistant
+                    </button>
+                    <button class="btn btn-outline-wine text-start">
+                        <i class="bi bi-graph-up me-2"></i>
+                        View Analytics
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .btn-wine {
+        background: linear-gradient(135deg, var(--brand-wine), var(--brand-wine-light));
+        border: none;
+        color: white;
+        font-weight: 500;
+    }
+
+    .btn-outline-wine {
+        border: 1px solid var(--brand-wine);
+        color: var(--brand-wine);
+        background: transparent;
+    }
+
+    .btn-outline-wine:hover {
+        background: var(--brand-wine);
+        color: white;
+    }
+</style>
+{% endblock %}

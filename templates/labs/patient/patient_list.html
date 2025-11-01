@@ -1,0 +1,143 @@
+{% extends "labs/base.html" %}
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 text-gray-800 mb-1">Patients</h1>
+            <p class="text-muted mb-0">Manage patient records and information</p>
+        </div>
+        <a href="{% url 'add_patient' %}" class="btn btn-wine">
+            <i class="bi bi-person-plus me-2"></i>Add Patient
+        </a>
+    </div>
+
+    <!-- Stats -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 bg-primary bg-opacity-10">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h4 class="mb-0">{{ patients.count }}</h4>
+                            <span class="text-muted">Total Patients</span>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-people text-primary fs-2"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Patients Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white py-3">
+            <h5 class="card-title mb-0 text-wine">
+                <i class="bi bi-person-lines-fill me-2"></i>
+                Patient Records
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="border-0">Patient ID</th>
+                            <th class="border-0">Name</th>
+                            <th class="border-0">Gender</th>
+                            <th class="border-0">Date of Birth</th>
+                            <th class="border-0">Contact</th>
+                            <th class="border-0">Registered</th>
+                            <th class="border-0 text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for patient in patients %}
+                        <tr>
+                            <td>
+                                <strong class="text-wine">#{{ patient.patient_id }}</strong>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-person-circle text-wine me-2"></i>
+                                    <div>
+                                        <strong>{{ patient.first_name }} {{ patient.last_name }}</strong>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark">
+                                    {{ patient.get_gender_display }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if patient.date_of_birth %}
+                                <small>{{ patient.date_of_birth|date:"M d, Y" }}</small>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="small">
+                                    {% if patient.contact_email %}
+                                    <div>{{ patient.contact_email }}</div>
+                                    {% endif %}
+                                    {% if patient.contact_number %}
+                                    <div class="text-muted">{{ patient.contact_number }}</div>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <small class="text-muted">{{ patient.created_at|date:"M d, Y" }}</small>
+                            </td>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <a href="#" class="btn btn-outline-wine" title="View Profile">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="#" class="btn btn-outline-secondary" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4">
+                                <div class="text-muted">
+                                    <i class="bi bi-person-x display-4 d-block mb-2"></i>
+                                    No patients found. <a href="{% url 'add_patient' %}" class="text-wine">Register first patient</a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .btn-wine {
+        background: #722F37;
+        border: none;
+        color: white;
+    }
+    .btn-wine:hover {
+        background: #5a252b;
+        color: white;
+    }
+    .btn-outline-wine {
+        border-color: #722F37;
+        color: #722F37;
+    }
+    .btn-outline-wine:hover {
+        background: #722F37;
+        color: white;
+    }
+    .text-wine { color: #722F37; }
+</style>
+{% endblock %}
