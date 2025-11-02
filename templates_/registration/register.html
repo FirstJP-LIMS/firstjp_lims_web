@@ -1,0 +1,93 @@
+{% extends "vendorbase.html" %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-7">
+        
+        <!-- Registration Card -->
+        <div class="card p-4 shadow-lg card-gold-border">
+            <div class="card-body">
+                
+                <div class="text-center mb-5">
+                    <i class="bi bi-person-plus-fill brand-logo-accent fs-1 mb-2"></i>
+                    
+                    <!-- Customized Welcome Text -->
+                    {% if lab_name %}
+                        <h2 class="fw-bold" style="color: var(--brand-navy);">
+                            Register for {{ lab_name }}
+                        </h2>
+                        <p class="text-muted">Create your Lab Staff account to begin.</p>
+                    {% else %}
+                        <h2 class="fw-bold" style="color: var(--brand-navy);">
+                            New Account Registration
+                        </h2>
+                        <p class="text-muted">Sign up to access the LIMS portal.</p>
+                    {% endif %}
+                </div>
+
+                <!-- Django Messages (if any) -->
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- Registration Form -->
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    
+                    <!-- Name Fields (Row) -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.first_name|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.last_name|as_crispy_field }}
+                        </div>
+                    </div>
+                    
+                    <!-- Email Field -->
+                    <div class="mb-3">
+                        {{ form.email|as_crispy_field }}
+                    </div>
+                    
+                    <!-- Password Fields (Row) -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.password1|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            {{ form.password2|as_crispy_field }}
+                        </div>
+                    </div>
+                    
+                    <!-- Submit Button with Brand Colors -->
+                    <div class="d-grid gap-2 mt-3">
+                        <button type="submit" class="btn btn-lg fw-bold" 
+                                style="background-color: var(--brand-red); color: var(--brand-white);">
+                            <i class="bi bi-person-check-fill me-2"></i>Register Account
+                        </button>
+                    </div>
+                </form>
+
+                <div class="text-center mt-4">
+                    <small>
+                        Already have an account? 
+                        <a href="{% url 'login' %}" style="color: var(--brand-navy);">
+                            Sign In Here
+                        </a>
+                    </small>
+                </div>
+
+            </div>
+        </div>
+        <!-- End Registration Card -->
+        
+    </div>
+</div>
+{% endblock content %}

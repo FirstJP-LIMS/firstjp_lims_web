@@ -15,3 +15,5 @@ __pycache__/
 *.log
 /program_usage.md
 
+/workflow.md
+

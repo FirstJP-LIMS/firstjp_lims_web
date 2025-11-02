@@ -1,11 +1,12 @@
-# apps/accounts/models.py
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.utils import timezone
 from apps.tenants.models import Vendor
-from django.conf import settings
+from phonenumber_field.modelfields import PhoneNumberField
+# from geopy.geocoders import Nominatim
+import uuid
+from django.db import transaction
 
-# Customized User Authentication Model
 class CustomUserManager(BaseUserManager):
     def _create_user(self, email, password, **extra_fields):
         if not email:
@@ -30,13 +31,11 @@ class CustomUserManager(BaseUserManager):
             raise ValueError('Superuser must have is_superuser=True.')
         return self._create_user(email, password, **extra_fields)
 
-
 class User(AbstractBaseUser, PermissionsMixin):
     ROLE_CHOICES = [
         ('platform_admin', 'Platform Admin'),
         ('vendor_admin', 'Vendor Admin'),
         ('lab_staff', 'Lab Staff'),
-        # add patients and clinicials 
         ('clinician', 'Clinician'),
         ('patient', 'Patient'),
     ]
@@ -44,11 +43,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     first_name = models.CharField(max_length=150, blank=True)
     last_name = models.CharField(max_length=150, blank=True)
-
-    # Link user to a vendor (nullable for platform admins)
+    contact_number = PhoneNumberField(blank=True, null=True)
     vendor = models.ForeignKey(Vendor, null=True, blank=True, on_delete=models.SET_NULL)
     role = models.CharField(max_length=32, choices=ROLE_CHOICES, default='lab_staff')
-
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
@@ -64,9 +61,51 @@ class User(AbstractBaseUser, PermissionsMixin):
     @property
     def is_platform_admin(self):
         return self.is_superuser or self.role == 'platform_admin'
-    
 
-# complete profile setup 
-"""
-KYC, Logo, address 
-"""
+class BaseProfile(models.Model):
+    entity_img = models.ImageField(upload_to='logos/', blank=True, null=True)
+    office_address = models.TextField(blank=True, help_text="Number, street")
+    office_city_state = models.CharField(max_length=100, blank=True)
+    office_country = models.CharField(max_length=100, blank=True)
+    office_zipcode = models.CharField(max_length=20, blank=True)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        abstract = True
+
+    @property
+    def is_complete(self):
+        return all([
+            self.entity_img,
+            self.office_address,
+            self.office_city_state,
+            self.office_country,
+            self.office_zipcode,
+        ])
+
+class VendorProfile(BaseProfile):
+    vendor = models.OneToOneField(Vendor, on_delete=models.CASCADE, related_name='profile')
+    registration_number = models.CharField(max_length=100, blank=True, null=True)
+    contact_number = PhoneNumberField(blank=True, null=True)  # Added missing field
+
+    def __str__(self):
+        return f"Profile of {self.vendor.name}"
+
+
+
+    # def save(self, *args, **kwargs):
+    #     if self.office_address and self.office_city_state and self.office_country:
+    #         full_address = f"{self.office_address}, {self.office_city_state}, {self.office_country}, {self.office_zipcode}"
+    #         try:
+    #             geolocator = Nominatim(user_agent="firstjp_lims")
+    #             location = geolocator.geocode(full_address)
+    #             if location:
+    #                 self.latitude = location.latitude
+    #                 self.longitude = location.longitude
+    #         except Exception:
+    #             # Silently fail if geocoding doesn't work
+    #             pass
+    #     super().save(*args, **kwargs)

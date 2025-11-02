@@ -1,37 +1,124 @@
-subdomain --- 
-#  127.0.0.1   vendor1.localhost
-#  127.0.0.1   carboni1.localhost
-# 127.0.0.1   vendor2.localhost
-#  127.0.0.1   labx.localhost
+# 🧪 FirstJP LIMS — Multi-Tenant Laboratory Information Management System
 
+**FirstJP LIMS** is a modern, modular Laboratory Information Management System (LIMS) built with **Django**, designed to support **multi-tenant architecture** — where multiple laboratories (vendors) operate independently under one platform.
 
-## 🚀 FirstJP LIMS Multi-Tenant Architecture
+Each lab (tenant) has its own domain/subdomain, users, and data isolation.
+The system supports various user roles such as **Platform Admin**, **Vendor Admin**, **Lab Staff**, **Clinician**, and **Patient**.
 
-### Multi-Tenant Architecture Overview
+---
 
-This project is built on a **Shared Database, Shared Schema** multi-tenant architecture, allowing a single deployment to serve multiple independent laboratories/vendors under unique domain names (e.g., `labone.lis.com`, `labtwo.lis.com`).
+## 🚀 Key Features
 
-The entire system is secured through mandatory tenant identification and data scoping at the database level.
+* **Multi-Tenant Architecture**
 
-### Key Architectural Decisions
+  * Tenant resolution via subdomain (e.g., `carbon12.localhost.test:5050`)
+  * Isolated data per vendor with shared core models
 
-1.  **Shared Infrastructure:** A single Django application instance and a single database server manage all vendor data.
-2.  **Tenant Registry:** The **`Vendor`** and **`VendorDomain`** models (`apps/tenants/models.py`) act as the central registry, mapping incoming domain names to an internal `Vendor` entity.
-3.  **Shared Identity:** A single, unified `accounts` system manages all users. Every user is linked to a single `Vendor` via a mandatory Foreign Key (`TenantId`).
-4.  **Enforced Isolation:** Data isolation is guaranteed through application logic, not database separation.
+* **Role-Based Access**
 
-### Core Component Breakdown
+  * Platform Admin: Global control and vendor management
+  * Vendor Admin: Manages lab operations, staff, and test catalogs
+  * Lab Staff: Handles sample collection, verification, and reporting
+  * Clinician: Requests and reviews test results
+  * Patient: Accesses personal test results securely
 
-| Component | File/Location | Function | Multi-Tenancy Role |
-| :--- | :--- | :--- | :--- |
-| **Tenant Resolution** | `core/middleware.py` | Extracts the host/domain from the request or the `X-Tenant-ID` header. | **Crucial Entry Point:** Resolves the domain to a `Vendor` object and attaches it to the request as **`request.tenant`**. |
-| **Tenant Registry** | `apps/tenants/models.py` | Defines the `Vendor` (the tenant entity) and `VendorDomain` (the domain-to-vendor mapping) models. | **Domain Mapping:** Links external domains to the internal `Vendor` object used for scoping. |
-| **Data Scoping Manager** | `core/managers.py` | Defines the `TenantAwareManager`. | **Security Guarantee:** Enforces that every database query on a tenant-specific model (e.g., `SampleRequest`) *must* be filtered by `request.tenant`. Un-scoped queries are explicitly prevented. |
-| **Tenant Data Models** | `apps/labs/models.py` (and others) | Defines models like `SampleRequest`. | **Data Structure:** Contains a mandatory `ForeignKey` to the `Vendor` model, establishing the **`TenantId` column** on all tenant-specific tables. |
+* **Authentication**
 
-### Deployment Considerations (Next Steps)
+  * Tenant-aware login and registration
+  * Role-restricted user registration (per vendor)
+  * Secure password management and session handling
 
-For this architecture to work, the deployment environment must support the following:
+* **Core LIMS Workflow**
 
-* **NGINX/Reverse Proxy:** Must be configured to forward traffic from all unique vendor domains (`*.lis.com`) to the single backend application host.
-* **DNS Wildcard:** A wildcard DNS record (`*.lis.com` or similar) must be pointed to the server's IP address.
+  1. Patient Registration
+  2. Test Request Creation
+  3. Sample Collection & Barcode Assignment
+  4. Sample Reception & Verification
+  5. Test Assignment and Processing
+  6. Result Entry & Validation
+
+* **Vendor Management**
+
+  * Vendor onboarding (by Platform Admin)
+  * Customizable test pricing and turnaround times (via `VendorTest` model)
+  * Automatic barcode generation for samples
+
+---
+
+## 🏗️ Tech Stack
+
+| Component       | Technology                                     |
+| --------------- | ---------------------------------------------- |
+| Backend         | Django 5.x                                     |
+| Frontend        | Django Templating (Jinja2)                     |
+| Database        | PostgreSQL (Recommended for schema separation) |
+| Tenant Handling | Custom Middleware (`TenantMiddleware`)         |
+| Authentication  | Django’s Custom User Model                     |
+| Environment     | Python 3.12+, Virtual Environment              |
+
+---
+
+## ⚙️ Installation & Setup
+
+```bash
+# 1️⃣ Clone the repository
+git clone repo
+
+cd firstjp-lims
+
+# 2️⃣ Create and activate a virtual environment
+python -m venv .venv
+
+.venv\Scripts\activate # On Mac: source .venv/bin/activate
+
+# 3️⃣ Install dependencies
+pip install -r requirements.txt
+
+# 4️⃣ Apply migrations
+python manage.py migrations
+python manage.py migrate
+
+# 5️⃣ Run the development server
+python manage.py runserver
+
+```
+
+---
+
+## 🌐 Tenant Configuration
+
+### Example: Vendor Subdomain Setup
+
+| Vendor             | Domain                    | URL                                                                        |
+| ------------------ | ------------------------- | -------------------------------------------------------------------------- |
+| Carbon12 Labs      | `carbon12.localhost.test` | [http://carbon12.localhost.test:5050](http://carbon12.localhost.test:5050) |
+| MedPro Diagnostics | `medpro.localhost.test`   | [http://medpro.localhost.test:5050](http://medpro.localhost.test:5050)     |
+
+Each domain is linked via the `VendorDomain` model in the admin panel or through the onboarding form.
+
+---
+
+## 👥 User Roles Overview
+
+| Role               | Description                                  | Access Domain    |
+| ------------------ | -------------------------------------------- | ---------------- |
+| **Platform Admin** | Oversees platform-wide operations            | Main domain      |
+| **Vendor Admin**   | Manages one lab/vendor account               | Vendor subdomain |
+| **Lab Staff**      | Operates within lab (sample, result, report) | Vendor subdomain |
+| **Clinician**      | Requests and views patient tests             | Vendor subdomain |
+| **Patient**        | Views own test results                       | Vendor subdomain |
+
+---
+
+## 🧭 Development Notes
+
+* Always test using vendor subdomains (`<vendor>.localhost.test:5050`)
+* Use `TenantMiddleware` to attach `request.tenant` dynamically
+* Vendor Admins are created only by Platform Admins
+* Other roles register within their vendor’s subdomain only
+
+---
+
+## 📜 License
+
+MIT License © 2025

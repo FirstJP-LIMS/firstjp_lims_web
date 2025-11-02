@@ -36,7 +36,7 @@ class Vendor(models.Model):
     )
 
     # FLEXIBLE METADATA
-    configuration = models.JSONField(default=dict, blank=True, help_text="LIS-specific settings (logo, timezone, features).")
+    # configuration = models.JSONField(default=dict, blank=True, help_text="LIS-specific settings (logo, timezone, features).")
     billing_metadata = models.JSONField( default=dict, blank=True, help_text="External IDs: Stripe Customer ID, Subscription ID, etc.")
 
     created_at = models.DateTimeField(auto_now_add=True)

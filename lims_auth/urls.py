@@ -26,8 +26,11 @@ from django.conf.urls.static import static
 urlpatterns = [
     path("admin/", admin.site.urls),
     path('', include('apps.core.urls')),
-    # path("account/", include("apps.accounts.urls")),
-    # path("tenants/", include("apps.tenants.urls")),
+   
+    path("account/", include("apps.accounts.urls", namespace="account")),
+
+
+    path("tenants/", include("apps.tenants.urls")),
     # path("laboratory/", include("apps.labs.urls")),    
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
