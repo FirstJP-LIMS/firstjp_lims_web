@@ -1,5 +1,5 @@
 from django import forms
-from .models import VendorTest, GlobalTest, Department, Patient, TestRequest
+from .models import VendorTest, Department, Patient, TestRequest
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Row, Column, Submit
 
@@ -8,113 +8,58 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Row, Column, Field, HTML, Div
 from crispy_forms.bootstrap import PrependedText, AppendedText
 from .models import VendorTest
+from django import forms
+from .models import Department, VendorTest
 
-class VendorTestForm(forms.ModelForm):
+
+class DepartmentForm(forms.ModelForm):
+    """Form for creating and updating Vendor-scoped lab departments."""
     class Meta:
-        model = VendorTest
-        exclude = ['vendor', 'slug']
+        model = Department
+        fields = ['name', 'description']
         widgets = {
-            'description': forms.Textarea(attrs={'rows': 3}),
-            'special_instructions': forms.Textarea(attrs={'rows': 2}),
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Hematology'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
 
-    def __init__(self, *args, **kwargs):
-        vendor = kwargs.pop('vendor', None)
-        super().__init__(*args, **kwargs)
+class VendorLabTestForm(forms.ModelForm):
+    """Form for defining a Lab Test within a specific Vendor's catalog."""
+    class Meta:
+        model = VendorTest
+        fields = [
+            'code', 'name', 'assigned_department', 
+            'price', 'turnaround_override', 'enabled', 
+            'specimen_type', 'default_units', 'default_reference_text', 
+            'result_type', 'general_comment_template'
+        ]
+        widgets = {
+            'code': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., HGB'}),
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Hemoglobin'}),
+            'price': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
+            'turnaround_override': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., 2:00:00 (HH:MM:SS)'}),
+            'specimen_type': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Whole Blood'}),
+            'default_units': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., g/dL'}),
+            'default_reference_text': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., 12.0 - 16.0'}),
+            'general_comment_template': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        }
 
-        self.fields['test'].queryset = GlobalTest.objects.all().order_by('name')
-        self.fields['assigned_department'].queryset = Department.objects.all().order_by('name')
+    def __init__(self, *args, vendor=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        # CRITICAL: Filter Department choices based on the current Vendor
+        if vendor:
+            self.fields['assigned_department'].queryset = Department.objects.filter(vendor=vendor)
         
-        # Crispy forms configuration
-        self.helper = FormHelper()
-        self.helper.form_method = 'post'
-        self.helper.form_class = 'needs-validation'
-        self.helper.form_id = 'vendor-test-form'
-        
-        self.helper.layout = Layout(
-            HTML("""
-                {% if form.non_field_errors %}
-                <div class="alert alert-danger border-0 rounded-3 mb-4">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                        <div>
-                            <strong>Please correct the errors below:</strong>
-                            <ul class="mb-0 mt-1">
-                                {% for error in form.non_field_errors %}
-                                <li>{{ error }}</li>
-                                {% endfor %}
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-            """),
-            
-            Row(
-                Column(
-                    Field('test', css_class='form-select'),
-                    css_class='col-md-6'
-                ),
-                Column(
-                    Field('assigned_department', css_class='form-select'),
-                    css_class='col-md-6'
-                ),
-                css_class='mb-3'
-            ),
-            
-            Row(
-                Column(
-                    AppendedText('price', '$', css_class='form-control'),
-                    css_class='col-md-4'
-                ),
-                Column(
-                    AppendedText('turnaround_time', 'hours', css_class='form-control'),
-                    css_class='col-md-4'
-                ),
-                Column(
-                    AppendedText('discount_percentage', '%', css_class='form-control'),
-                    css_class='col-md-4'
-                ),
-                css_class='mb-3'
-            ),
-            
-            Row(
-                Column(
-                    Field('is_active', css_class='form-check-input', template='forms/switch_field.html'),
-                    css_class='col-md-6'
-                ),
-                Column(
-                    Field('requires_special_handling', css_class='form-check-input', template='forms/switch_field.html'),
-                    css_class='col-md-6'
-                ),
-                css_class='mb-3'
-            ),
-            
-            Field('description', rows=3, css_class='form-control', placeholder='Enter test description...'),
-            
-            Field('special_instructions', rows=2, css_class='form-control', placeholder='Any special instructions...'),
-            
-            HTML("""
-                <div class="row mt-4 pt-3 border-top">
-                    <div class="col-12">
-                        <div class="d-flex gap-2 justify-content-end">
-                            <a href="{% url 'vendor_tests_list' %}" class="btn btn-outline-secondary px-4">
-                                <i class="bi bi-x-circle me-2"></i>Cancel
-                            </a>
-                            <button type="submit" class="btn btn-wine px-4">
-                                <i class="bi bi-check-circle me-2"></i>
-                                {% if form.instance.pk %}Update Test{% else %}Create Test{% endif %}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            """)
-        )
+        self.fields['assigned_department'].widget.attrs.update({'class': 'form-select'})
+
 
 # class VendorTestForm(forms.ModelForm):
 #     class Meta:
 #         model = VendorTest
 #         exclude = ['vendor', 'slug']
+#         widgets = {
+#             'description': forms.Textarea(attrs={'rows': 3}),
+#             'special_instructions': forms.Textarea(attrs={'rows': 2}),
+#         }
 
 #     def __init__(self, *args, **kwargs):
 #         vendor = kwargs.pop('vendor', None)
@@ -122,8 +67,92 @@ class VendorTestForm(forms.ModelForm):
 
 #         self.fields['test'].queryset = GlobalTest.objects.all().order_by('name')
 #         self.fields['assigned_department'].queryset = Department.objects.all().order_by('name')
-#         self.fields["created_at"].disabled = True
-#         self.fields["updated_at"].disabled = True
+        
+#         # Crispy forms configuration
+#         self.helper = FormHelper()
+#         self.helper.form_method = 'post'
+#         self.helper.form_class = 'needs-validation'
+#         self.helper.form_id = 'vendor-test-form'
+        
+#         self.helper.layout = Layout(
+#             HTML("""
+#                 {% if form.non_field_errors %}
+#                 <div class="alert alert-danger border-0 rounded-3 mb-4">
+#                     <div class="d-flex align-items-center">
+#                         <i class="bi bi-exclamation-triangle-fill me-2"></i>
+#                         <div>
+#                             <strong>Please correct the errors below:</strong>
+#                             <ul class="mb-0 mt-1">
+#                                 {% for error in form.non_field_errors %}
+#                                 <li>{{ error }}</li>
+#                                 {% endfor %}
+#                             </ul>
+#                         </div>
+#                     </div>
+#                 </div>
+#                 {% endif %}
+#             """),
+            
+#             Row(
+#                 Column(
+#                     Field('test', css_class='form-select'),
+#                     css_class='col-md-6'
+#                 ),
+#                 Column(
+#                     Field('assigned_department', css_class='form-select'),
+#                     css_class='col-md-6'
+#                 ),
+#                 css_class='mb-3'
+#             ),
+            
+#             Row(
+#                 Column(
+#                     AppendedText('price', '$', css_class='form-control'),
+#                     css_class='col-md-4'
+#                 ),
+#                 Column(
+#                     AppendedText('turnaround_time', 'hours', css_class='form-control'),
+#                     css_class='col-md-4'
+#                 ),
+#                 Column(
+#                     AppendedText('discount_percentage', '%', css_class='form-control'),
+#                     css_class='col-md-4'
+#                 ),
+#                 css_class='mb-3'
+#             ),
+            
+#             Row(
+#                 Column(
+#                     Field('is_active', css_class='form-check-input', template='forms/switch_field.html'),
+#                     css_class='col-md-6'
+#                 ),
+#                 Column(
+#                     Field('requires_special_handling', css_class='form-check-input', template='forms/switch_field.html'),
+#                     css_class='col-md-6'
+#                 ),
+#                 css_class='mb-3'
+#             ),
+            
+#             Field('description', rows=3, css_class='form-control', placeholder='Enter test description...'),
+            
+#             Field('special_instructions', rows=2, css_class='form-control', placeholder='Any special instructions...'),
+            
+#             HTML("""
+#                 <div class="row mt-4 pt-3 border-top">
+#                     <div class="col-12">
+#                         <div class="d-flex gap-2 justify-content-end">
+#                             <a href="{% url 'vendor_tests_list' %}" class="btn btn-outline-secondary px-4">
+#                                 <i class="bi bi-x-circle me-2"></i>Cancel
+#                             </a>
+#                             <button type="submit" class="btn btn-wine px-4">
+#                                 <i class="bi bi-check-circle me-2"></i>
+#                                 {% if form.instance.pk %}Update Test{% else %}Create Test{% endif %}
+#                             </button>
+#                         </div>
+#                     </div>
+#                 </div>
+#             """)
+#         )
 
 
 class PatientForm(forms.ModelForm):

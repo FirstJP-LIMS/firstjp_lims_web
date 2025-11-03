@@ -1,0 +1,172 @@
+{% extends "vendorbase.html" %}
+{% load static %}
+
+{% block title %}Manage Departments - FirstJP LIMS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="page-title">Manage Departments</h1>
+            <p class="page-subtitle">Create and manage laboratory departments</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'labs:department_create' %}" class="btn btn-red">
+                <i class="bi bi-plus-circle me-2"></i>Add New Department
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-content">
+    <!-- Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                <i class="bi bi-{% if message.tags == 'success' %}check-circle{% else %}exclamation-triangle{% endif %}-fill me-2"></i>
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Departments List -->
+    <div class="main-card">
+        <div class="card-header">
+            <h5 class="card-title">
+                <i class="bi bi-building me-2"></i>
+                Laboratory Departments
+            </h5>
+            <span class="badge bg-primary">{{ departments.count }} department{{ departments.count|pluralize }}</span>
+            <!-- <span class="badge bg-primary">count</span> -->
+        </div>
+        <div class="card-body">
+            {% if departments %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Department Name</th>
+                            <th>Description</th>
+                            <th>Vendor</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for department in departments %}
+                        <tr>
+                            <td>
+                                <strong class="text-brand-blue">{{ department.name }}</strong>
+                            </td>
+                            <td>
+                                {% if department.description %}
+                                    {{ department.description|truncatewords:10 }}
+                                {% else %}
+                                    <span class="text-muted">No description</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ department.vendor.name }}</span>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'labs:department_update' department.pk %}" class="btn btn-outline-primary">
+                                        <i class="bi bi-pencil"></i> Edit
+                                    </a>
+                                    <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ department.pk }}">
+                                        <i class="bi bi-trash"></i> Delete
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- Delete Confirmation Modal -->
+                        <div class="modal fade" id="deleteModal{{ department.pk }}" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title text-brand-blue">Confirm Delete</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p>Are you sure you want to delete the department <strong>"{{ department.name }}"</strong>?</p>
+                                        <p class="text-danger"><small>This action cannot be undone.</small></p>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                        <form method="post" action="{% url 'labs:department_delete' department.pk %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-danger">Delete Department</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-building fs-1 text-muted mb-3"></i>
+                <h5 class="text-muted">No Departments Found</h5>
+                <p class="text-muted">Get started by creating your first laboratory department.</p>
+                <a href="{% url 'labs:department_create' %}" class="btn btn-red">
+                    <i class="bi bi-plus-circle me-2"></i>Create First Department
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="row mt-4">
+        <div class="col-md-4">
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-icon bg-primary bg-opacity-10 text-primary">
+                        <i class="bi bi-building"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value">{{ departments.count }}</div>
+                        <div class="stat-label">Total Departments</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-icon bg-success bg-opacity-10 text-success">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value">{{ departments.count }}</div>
+                        <div class="stat-label">Active</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-icon bg-info bg-opacity-10 text-info">
+                        <i class="bi bi-clock-history"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value">0</div>
+                        <div class="stat-label">Pending Setup</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .btn-group-sm .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+</style>
+{% endblock %}

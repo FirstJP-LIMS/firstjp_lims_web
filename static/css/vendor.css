@@ -1,3 +1,4 @@
+
 /* Custom Brand Colors and Typography */
 :root {
     --brand-navy: #001f40; /* Deep Navy Blue */
@@ -7,25 +8,26 @@
 }
 
 body {
-    font-family: 'Poppins', sans-serif;
+    font-family: "Mulish", sans-serif;
     background-color: #f8f9fa;
 }
 
 .navbar-navy {
-    background-color: var(--brand-navy) !important;
-    border-bottom: 4px solid var(--brand-red); /* Red accent line */
+    background-color: var(--brand-white) !important;
+    border-bottom: 2px solid var(--brand-red); /* Red accent line */
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .navbar-brand-text {
-    color: var(--brand-white);
+    color: var(--brand-navy);
     font-weight: 700;
     letter-spacing: 1px;
     text-transform: uppercase;
 }
 
 .nav-link {
-    color: rgba(255, 255, 255, 0.8) !important;
+    /* color: rgba(255, 255, 255, 0.8) !important; */
+    color: var(--brand-white);
     font-weight: 600;
     padding: 0.5rem 1rem;
     border-radius: 5px;

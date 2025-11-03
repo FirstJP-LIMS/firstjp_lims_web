@@ -7,94 +7,6 @@ from django.db.models import Max
 from django.utils.text import slugify
 from .utils import get_next_sequence
 
-# Create your models here.
-# Global Model: Department Catalog
-class Department(models.Model):
-    """Platform-level standard lab departments (e.g., Hematology)."""
-    name = models.CharField(max_length=100, unique=True)
-    description = models.TextField(blank=True, null=True)
-
-    class Meta:
-        verbose_name = "Department Catalog"
-        ordering = ["name"]
-
-    def __str__(self):
-        return self.name
-
-# Global Model: Test Definitions
-class GlobalTest(models.Model):
-    """
-    Platform-level test definitions (e.g., Hemoglobin).
-    """
-    RESULT_TYPE_CHOICES = [
-        ('QNT', 'Quantitative (Numeric)'),
-        ('QLT', 'Qualitative (Text/Descriptive)'),
-    ]
-
-    code = models.CharField(max_length=64, unique=True)
-    department = models.ForeignKey(Department, on_delete=models.PROTECT, related_name='global_tests',help_text="Standard department responsible for this test."
-    )
-    name = models.CharField(max_length=150)
-    specimen_type = models.CharField(max_length=100, help_text="Blood, Urine, Tissue, etc.")
-    default_units = models.CharField(max_length=50, blank=True)
-    
-    # Tracks the basic text reference range
-    default_reference_text = models.CharField(max_length=255, blank=True)
-    
-    default_turnaround = models.DurationField(null=True, blank=True, help_text="the expected time it takes to complete the test.")
-
-    """Added field for result improvement"""
-    # quantitative or qualitative 
-    result_type = models.CharField(
-        max_length=3,
-        choices=RESULT_TYPE_CHOICES,
-        default='QNT',
-        help_text="Defines the format for data entry and display."
-    )
-    # Predefined text for the General Comment section of the report
-    general_comment_template = models.TextField(
-        blank=True,
-        help_text="Constant interpretive text or template for the report."
-    )
-    is_active = models.BooleanField(default=True)
-    
-    def __str__(self):
-        return f"{self.code}: {self.name}"
-
-# NOTE: TestReferenceRange model is still needed for advanced ranges (age/gender/etc.) 
-# but is omitted here for brevity. It would link to GlobalTest.
-
-# ---------------------
-# Per-vendor configuration (enables/price/overrides)
-# ---------------------
-class VendorTest(models.Model):
-    """Vendor-specific configuration (pricing, TAT override) for a GlobalTest."""
-    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="vendor_tests")
-    test = models.ForeignKey(GlobalTest, on_delete=models.CASCADE, related_name="vendor_configs")
-    assigned_department = models.ForeignKey(Department, 
-        on_delete=models.CASCADE, related_name="vendor_assignments", help_text="The department in this lab responsible for running the test.")
-    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
-    turnaround_override = models.DurationField(null=True, blank=True, help_text="the expected time it takes to complete the test.")
-    enabled = models.BooleanField(default=True)
-    slug = models.SlugField(max_length=150, blank=True, null=True, help_text="Name to be used on the url bar.")
-    created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
-    updated_at = models.DateTimeField(auto_now=True, blank=True, null=True)
-
-    class Meta:
-        unique_together = ("vendor", "test")
-
-    def save(self, *args, **kwargs):
-        if not self.slug:
-            base_slug = slugify(self.test.name, allow_unicode=True)
-            timestamp = timezone.now().strftime("%Y%m%d%H%M%S")
-            self.slug = f"{base_slug}-{timestamp}"
-        super().save(*args, **kwargs)
-        
-    def effective_tat(self):
-        return self.turnaround_override or self.test.default_turnaround
-
-    def __str__(self):
-        return f"{self.vendor.name} - {self.test.code}"
 
 
 # ---------------------
@@ -115,6 +27,77 @@ class SequenceCounter(models.Model):
         return f"{self.vendor or 'GLOBAL'} - {self.prefix} ({self.last_number})"
 
 
+# # Create your models here.
+# # Global Model: Department Catalog and Test Definitions Deleted
+
+# # NOTE: TestReferenceRange model is still needed for advanced ranges (age/gender/etc.) 
+
+# ---------------------
+# Per-vendor configuration
+# ---------------------
+class Department(models.Model):
+    """
+        Vendor-specific lab departments (e.g., Hematology, Serology).
+        CRITICAL CHANGE: Added vendor FK.
+    """
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='departments')
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True, null=True)
+
+    class Meta:
+        verbose_name = "Vendor Department"
+        ordering = ["name"]
+        unique_together = ('vendor', 'name') 
+
+    def __str__(self):
+        return f"{self.vendor.name} - {self.name}"
+
+
+class VendorTest(models.Model):
+    """
+    The primary test definition, completely scoped to a specific vendor/lab.
+    
+    This model combines the function of the old GlobalTest and VendorTest.
+    """
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="lab_tests")    
+    code = models.CharField(max_length=64) 
+    name = models.CharField(max_length=150)
+    assigned_department = models.ForeignKey(
+        Department, 
+        on_delete=models.PROTECT, 
+        related_name='tests',
+        help_text="The department in this lab responsible for running the test."
+    )    
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
+    turnaround_override = models.DurationField(null=True, blank=True)
+    enabled = models.BooleanField(default=True)
+    specimen_type = models.CharField(max_length=100, help_text="Blood, Urine, Tissue, etc.")
+    default_units = models.CharField(max_length=50, blank=True)
+    default_reference_text = models.CharField(max_length=255, blank=True)
+    # Required for the Quantitative/Qualitative requirement
+    RESULT_TYPE_CHOICES = [('QNT', 'Quantitative'), ('QLT', 'Qualitative')]
+    result_type = models.CharField(max_length=3, choices=RESULT_TYPE_CHOICES, default='QNT')
+    general_comment_template = models.TextField(blank=True) # For constant report comments
+    created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, blank=True, null=True)
+
+    class Meta:
+        verbose_name = "Lab Test"
+        unique_together = ("vendor", "code") 
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base_slug = slugify(self.test.name, allow_unicode=True)
+            timestamp = timezone.now().strftime("%Y%m%d%H%M%S")
+            self.slug = f"{base_slug}-{timestamp}"
+        super().save(*args, **kwargs)
+        
+    def effective_tat(self):
+        return self.turnaround_override or self.test.default_turnaround
+
+    def __str__(self):
+        return f"[{self.vendor.name}] {self.code}: {self.name}"
+
 # ---------------------
 # Tenant-scoped operational data
 # ---------------------
@@ -123,11 +106,8 @@ class Patient(models.Model):
         ('M', 'Male'),
         ('F', 'Female')
     ]
-    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='patients')
-    
-    # Auto-generated per-vendor ID
-    patient_id = models.CharField(max_length=20, help_text="Auto-generated 6-digit patient ID.") 
-    
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='patients')    
+    patient_id = models.CharField(max_length=20, help_text="Auto-generated 6-digit patient ID.")
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     date_of_birth = models.DateField(null=True, blank=True)
@@ -182,34 +162,35 @@ class Sample(models.Model):
             self.sample_id = get_next_sequence("SMP")
         super().save(*args, **kwargs)
 
-
     def __str__(self): 
         return f"{self.sample_id} - {self.specimen_type}"
 
+# Assuming all necessary imports (Vendor, settings.AUTH_USER_MODEL, etc.) are present
 
+# --- Minor cleanup to TestRequest save method ---
 class TestRequest(models.Model):
     """Represents the entire patient order/request for multiple tests."""
     ORDER_STATUS = [
-        ('P', 'Pending'),
-        ('R', 'Received'),
-        ('A', 'Analysis'),
-        ('C', 'Complete'),
-        ('V', 'Verified'),
+        ('P', 'Pending'), # Created, waiting for sample accessioning
+        ('R', 'Received'), # Sample accessioned, tests assigned
+        ('A', 'Analysis'), # Work is being done on tests
+        ('C', 'Complete'), # All tests analyzed, waiting for verification
+        ('V', 'Verified'), # Final report ready for release
     ]
     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="requests")
     
     # Request ID generated sequentially per-vendor (e.g., REQ-0001)
-    request_id = models.CharField(max_length=64, unique=True) 
+    request_id = models.CharField(max_length=64, unique=True) # Unique globally for simplicity
     
-    patient = models.ForeignKey(Patient, on_delete=models.PROTECT, related_name="requests")
+    patient = models.ForeignKey('Patient', on_delete=models.PROTECT, related_name="requests")
 
     requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="ordered_requests")
 
-    requested_tests = models.ManyToManyField(VendorTest, related_name="test_requests")
+    requested_tests = models.ManyToManyField('VendorTest', related_name="test_requests")
 
     clinical_history = models.TextField(blank=True)
     
-    priority = models.CharField(max_length=32, default="routine") 
+    priority = models.CharField(max_length=32, default="routine") # e.g., routine, stat
     
     status = models.CharField(choices=ORDER_STATUS, max_length=1, default="P")
     
@@ -219,46 +200,47 @@ class TestRequest(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
-        # Implement sequential save logic here for request_id (REQ-0001)
 
     def save(self, *args, **kwargs):
+        # Simplified ID generation logic, assuming get_next_sequence handles prefixing
         if not self.request_id:
-            prefix = f"ORD-{self.vendor.tenant_id}-"
-            self.request_id = get_next_sequence(prefix, vendor=self.vendor)
+            # Using 'REQ' prefix for Request ID
+            self.request_id = get_next_sequence("REQ", vendor=self.vendor) 
         super().save(*args, **kwargs)
 
     def __str__(self):
         return self.request_id
 
 
+# --- Critical cleanup and simplification to TestAssignment ---
 class TestAssignment(models.Model):
     """The individual unit of work: one Test assigned to one Request."""
     ASSIGNMENT_STATUS = [
-        ('P', 'Pending'),
-        ('Q', 'Queued on Instrument'),
-        ('A', 'Analysis Complete'),
-        ('V', 'Result Verified'),
+        ('P', 'Pending'), # Created, waiting for instrument assignment
+        ('Q', 'Queued'), # Queued on Instrument
+        ('A', 'Analysis Complete'), # Result is back from instrument/manually entered
+        ('V', 'Result Verified'), # Result is verified by a staff member
     ]
+
     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="assignments")
     request = models.ForeignKey(TestRequest, on_delete=models.CASCADE, related_name="assignments")
-    
-    # Links to the Global Test Definition and the Vendor's config
-    global_test = models.ForeignKey(GlobalTest, on_delete=models.PROTECT, related_name="assignments")
-    vendor_config = models.ForeignKey(VendorTest, null=True, on_delete=models.SET_NULL)
-    
-    # Inherit routing from VendorTest, or use the global default
-    department = models.ForeignKey(Department, on_delete=models.PROTECT, related_name="assigned_work") 
-    
+    # Links directly to the LabTest definition
+    lab_test = models.ForeignKey('VendorTest', on_delete=models.PROTECT, related_name="assignments") 
+    # The sample containing the material needed for this test
+    sample = models.ForeignKey('Sample', on_delete=models.PROTECT, related_name="assignments", 
+                               help_text="The sample specimen required to run this test.")
+    # Department is copied from VendorTest definition at creation time for performance/routing
+    department = models.ForeignKey('Department', on_delete=models.PROTECT, related_name="assigned_work")
     status = models.CharField(choices=ASSIGNMENT_STATUS, max_length=1, default='P')
-    instrument = models.ForeignKey('Equipment', null=True, blank=True, on_delete=models.SET_NULL)
+    instrument = models.ForeignKey('Equipment', null=True, blank=True, on_delete=models.SET_NULL,
+                                   help_text="The equipment used or scheduled to run this test.")
     
     class Meta:
-        # Ensures a vendor doesn't accidentally assign the same test twice to one request
-        unique_together = ('request', 'global_test')
+        # Ensures no two Assignments for the SAME test exist within one request
+        unique_together = ('request', 'lab_test') 
 
     def __str__(self):
-        return f"{self.request.request_id} - {self.global_test.code}"
-
+        return f"{self.request.request_id} - {self.lab_test.code}"
 
 
 class TestResult(models.Model):
@@ -278,12 +260,9 @@ class TestResult(models.Model):
         ('A', 'Abnormal')
         ]
     flag = models.CharField(max_length=1, choices=NORMAL_FLAG_CHOICES, default='N')
-    
     remarks = models.TextField(blank=True)
     entered_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="entered_results")
-    
     verified_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="verified_results")
-    
     entered_at = models.DateTimeField(auto_now_add=True)
     verified_at = models.DateTimeField(null=True, blank=True)
     released = models.BooleanField(default=False)
@@ -319,4 +298,3 @@ class AuditLog(models.Model):
     
     def __str__(self):
         return f"[{self.created_at.strftime('%Y-%m-%d %H:%M')}] {self.action} by {self.user}"
-

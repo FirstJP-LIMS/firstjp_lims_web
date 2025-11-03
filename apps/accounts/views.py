@@ -16,23 +16,8 @@ from django.shortcuts import render, redirect
 # laboris@gmail.com
 # password#12345
 
-# def tenant_register(request):
-#     tenant = getattr(request, 'tenant', None)
-
-#     if request.method == 'POST':
-#         form = RegistrationForm(request.POST)
-#         if not tenant:
-#             messages.error(request, "Tenant could not be resolved. Contact support.")
-#             return render(request, 'registration/register.html', {'form': form})
-
-#         if form.is_valid():
-#             form.save(vendor=tenant, role='lab_staff')
-#             messages.success(request, "Registration successful. You can now log in.")
-#             return redirect(reverse('login'))
-#     else:
-#         form = RegistrationForm()
-
-#     return render(request, 'registration/register.html', {'form': form})
+# lastborn.ai@gmail.com
+# password#1234
 
 
 # Define allowed roles for public registration on the vendor subdomain
@@ -53,12 +38,9 @@ def tenant_register_by_role(request, role_name):
     # Check if tenant exists
     if not tenant:
         messages.error(request, "Cannot register. Tenant could not be resolved from the domain. Contact support.")
-        # This will render the template but show the error
         form = RegistrationForm()
     
     # Get the human-readable role name for the template context
-    # Note: Accessing choices this way assumes the User model is available
-    # For simplicity, we default to capitalizing the role key.
     role_display_name = role_name.replace('_', ' ').title()
 
     if request.method == 'POST':
@@ -106,38 +88,87 @@ def create_vendor_admin(request, vendor_id):
     return render(request, 'registration/create_vendor_admin.html', {'form': form, 'vendor': vendor})
 
 
+# def tenant_login(request):
+#     vendorInfo = Vendor.objects.prefetch_related('name')
+#     tenant = getattr(request, 'tenant', None)
+#     if request.method == 'POST':
+#         form = TenantAuthenticationForm(request, data=request.POST)
+#         if form.is_valid():
+#             user = form.get_user()
+#             # Platform Admin: global access
+#             if getattr(user, 'is_platform_admin', False):
+#                 login(request, user)
+#                 messages.success(request, f"Welcome back, {user.email}")
+#                 return redirect(reverse('dashboard'))
+#             # Vendor/Lab Staff: tenant-restricted
+#             if not tenant:
+#                 messages.error(request, "No tenant could be resolved. Access denied.")
+#                 return redirect(reverse('no_tenant'))
+
+#             if user.vendor_id and user.vendor_id == tenant.internal_id:
+#                 login(request, user)
+#                 messages.success(request, f"Welcome, {user.email}")
+#                 return redirect(reverse('labs:vendor_dashboard'))
+#             messages.error(request, "Invalid tenant or user mismatch.")
+#             return redirect(reverse('login'))
+#     else:
+#         form = TenantAuthenticationForm(request)
+#     # pass tenant object  
+#     context = {
+#         'form': form,
+#         'tenant': tenant,
+#         'vendorInfo': vendorInfo,
+#     }
+#     return render(request, 'registration/login.html', context)
+
+
 def tenant_login(request):
     vendorInfo = Vendor.objects.prefetch_related('name')
-    tenant = getattr(request, 'tenant', None)
+    tenant = getattr(request, 'tenant', None)    
     if request.method == 'POST':
         form = TenantAuthenticationForm(request, data=request.POST)
         if form.is_valid():
             user = form.get_user()
-            # Platform Admin: global access
+
+            # 1️⃣ Platform Admin: global access
             if getattr(user, 'is_platform_admin', False):
                 login(request, user)
                 messages.success(request, f"Welcome back, {user.email}")
                 return redirect(reverse('dashboard'))
-            # Vendor/Lab Staff: tenant-restricted
+
+            # 2️⃣ Tenant validation
             if not tenant:
                 messages.error(request, "No tenant could be resolved. Access denied.")
                 return redirect(reverse('no_tenant'))
 
-            if user.vendor_id and user.vendor_id == tenant.internal_id:
-                login(request, user)
-                messages.success(request, f"Welcome, {user.email}")
-                return redirect(reverse('vendor_dashboard'))
-            messages.error(request, "Invalid tenant or user mismatch.")
-            return redirect(reverse('login'))
+            if not user.vendor or user.vendor.internal_id != tenant.internal_id:
+                messages.error(request, "This account does not belong to this tenant.")
+                return redirect(reverse('login'))
+
+            # 3️⃣ Tenant-bound login successful
+            login(request, user)
+            messages.success(request, f"Welcome, {user.email}")
+
+            # 4️⃣ Role-based redirection
+            if user.role in ['vendor_admin', 'lab_staff']:
+                return redirect(reverse('labs:vendor_dashboard'))
+            elif user.role == 'patient':
+                return redirect(reverse('labs:patient_dashboard'))
+            elif user.role == 'clinician':
+                return redirect(reverse('labs:clinician_dashboard'))
+            else:
+                # fallback route for unknown roles
+                return redirect(reverse('login'))
     else:
         form = TenantAuthenticationForm(request)
-    # pass tenant object  
+
     context = {
         'form': form,
         'tenant': tenant,
         'vendorInfo': vendorInfo,
     }
     return render(request, 'registration/login.html', context)
+
 
 
 def tenant_logout(request):

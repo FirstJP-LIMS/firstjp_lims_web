@@ -1,0 +1,363 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FirstJP LIMS - Dashboard</title>
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar">
+        <div class="sidebar-header d-flex align-items-center justify-content-between">
+            <div class="brand">
+                <span class="brand-first">FirstJP</span>
+                <span class="brand-accent">LIMS</span>
+            </div>
+            <button>TT</button>
+        </div>
+        
+        <div class="sidebar-menu">
+            <div class="nav-item">
+                <a class="nav-link active" data-page="dashboard">
+                    <i class="bi bi-speedometer2"></i>
+                    Dashboard
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link" data-page="patients">
+                    <i class="bi bi-people"></i>
+                    Patients
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link" data-page="samples">
+                    <i class="bi bi-droplet"></i>
+                    Samples
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link" data-page="reports">
+                    <i class="bi bi-file-text"></i>
+                    Reports
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link" data-page="settings">
+                    <i class="bi bi-gear"></i>
+                    Settings
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link" href="/logout">
+                    <i class="bi bi-box-arrow-right"></i>
+                    Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Dashboard Page -->
+        <div id="dashboard" class="page-content active">
+            <!-- Top Header -->
+            <header class="top-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1 class="page-title">Dashboard</h1>
+                        <p class="page-subtitle">Welcome back!</p>
+                    </div>
+
+                    <div class="d-flex gap-2 align-items-center">
+                        <!-- Operations Dropdown -->
+                        <div class="dropdown">
+                            <button class="btn btn-outline-red dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-gear me-2"></i>Operations
+                            </button>
+                            <ul class="dropdown-menu">
+                                <!-- Departments Section -->
+                                <li><h6 class="dropdown-header text-brand-blue">
+                                    <i class="bi bi-building me-2"></i>Departments
+                                </h6></li>
+                                <li><a class="dropdown-item" href="#">
+                                    <i class="bi bi-heart-pulse me-2 text-success"></i>Hematology
+                                </a></li>
+                                <li><a class="dropdown-item" href="#">
+                                    <i class="bi bi-dna me-2 text-info"></i>Microbiology
+                                </a></li>
+                                <li><a class="dropdown-item" href="#">
+                                    <i class="bi bi-activity me-2 text-danger"></i>Pathology
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                
+                                <!-- Tests Section -->
+                                <li><h6 class="dropdown-header text-brand-blue">
+                                    <i class="bi bi-clipboard-check me-2"></i>Tests
+                                </h6></li>
+                                <li><a class="dropdown-item" href="#">
+                                    <i class="bi bi-plus-circle me-2 text-success"></i>Create New Test
+                                </a></li>
+                                <li><a class="dropdown-item" href="#">
+                                    <i class="bi bi-check-circle me-2 text-success"></i>Completed Tests
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                
+                                <!-- Quick Actions -->
+                                <li><a class="dropdown-item" href="{% url 'labs:department_list' %}">
+                                    <i class="bi bi-sliders me-2 text-secondary"></i>Manage Departments
+                                </a></li>
+                                <li><a class="dropdown-item" href="#">
+                                    <i class="bi bi-pencil-square me-2 text-secondary"></i>Configure Tests
+                                </a></li>
+                            </ul>
+                        </div>
+
+                        <button class="btn btn-red">
+                            <i class="bi bi-plus-circle me-2"></i>New Sample
+                        </button>
+                        <button class="btn btn-outline-red">
+                            <i class="bi bi-download me-2"></i>Export Report
+                        </button>
+                    </div>
+
+                </div>
+            </header>
+
+            <!-- Dashboard Content -->
+            <div class="dashboard-content">
+                <!-- Alert -->
+                <div class="lab-alert">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong class="lab-name">7wings Laboratory</strong> - You are currently managing 
+                    <strong class="domain-name">7wings.localhost.test</strong>
+                </div>
+
+                <!-- Statistics Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon pending">
+                                <i class="bi bi-journal-check"></i>
+                            </div>
+                            <div>
+                                <div class="stat-value">12</div>
+                                <div class="stat-label">Pending Samples</div>
+                            </div>
+                        </div>
+                        <div class="stat-trend trend-up">
+                            <i class="bi bi-arrow-up-short"></i>
+                            2.5% from yesterday
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon time">
+                                <i class="bi bi-clock-history"></i>
+                            </div>
+                            <div>
+                                <div class="stat-value">4.5<span class="fs-6 text-muted">h</span></div>
+                                <div class="stat-label">Avg. Turnaround Time</div>
+                            </div>
+                        </div>
+                        <div class="stat-trend trend-down">
+                            <i class="bi bi-arrow-down-short"></i>
+                            0.3h improvement
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon results">
+                                <i class="bi bi-bell"></i>
+                            </div>
+                            <div>
+                                <div class="stat-value">3</div>
+                                <div class="stat-label">Unread Results</div>
+                            </div>
+                        </div>
+                        <div class="stat-trend trend-up">
+                            <i class="bi bi-arrow-up-short"></i>
+                            1 new today
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon monthly">
+                                <i class="bi bi-calendar-check"></i>
+                            </div>
+                            <div>
+                                <div class="stat-value">458</div>
+                                <div class="stat-label">Monthly Samples</div>
+                            </div>
+                        </div>
+                        <div class="stat-trend trend-up">
+                            <i class="bi bi-arrow-up-short"></i>
+                            12.8% growth
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Content Grid -->
+                <div class="content-grid">
+                    <!-- Left Column -->
+                    <div>
+                        <!-- Recent Activity -->
+                        <div class="main-card">
+                            <div class="card-header">
+                                <h5 class="card-title">
+                                    <i class="bi bi-activity"></i>
+                                    Recent Sample Activity
+                                </h5>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                        Last 7 days
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="#">Today</a></li>
+                                        <li><a class="dropdown-item" href="#">Last 7 days</a></li>
+                                        <li><a class="dropdown-item" href="#">Last 30 days</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Sample ID</th>
+                                                <th>Patient</th>
+                                                <th>Test Type</th>
+                                                <th>Status</th>
+                                                <th>Received</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><strong>#SMP-001</strong></td>
+                                                <td>John Smith</td>
+                                                <td>Blood Chemistry</td>
+                                                <td><span class="badge bg-warning">Processing</span></td>
+                                                <td>2 hours ago</td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-outline-red">View</button>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>#SMP-002</strong></td>
+                                                <td>Sarah Johnson</td>
+                                                <td>Hematology</td>
+                                                <td><span class="badge bg-success">Completed</span></td>
+                                                <td>4 hours ago</td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-outline-red">View</button>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>#SMP-003</strong></td>
+                                                <td>Mike Davis</td>
+                                                <td>Immunology</td>
+                                                <td><span class="badge bg-primary">Pending</span></td>
+                                                <td>6 hours ago</td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-outline-red">View</button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="text-center mt-3">
+                                    <a href="#" class="btn btn-outline-red">View All Samples</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column -->
+                    <div>
+                        <!-- Instrument Status -->
+                        <div class="main-card mb-4">
+                            <div class="card-header">
+                                <h5 class="card-title">
+                                    <i class="bi bi-cpu"></i>
+                                    Instrument Status
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="instrument-item">
+                                    <div class="instrument-info">
+                                        <p class="instrument-name">Siemens IMMULITE</p>
+                                        <p class="instrument-type">Chemistry Analyzer</p>
+                                    </div>
+                                    <span class="badge bg-success">Online</span>
+                                </div>
+                                <div class="instrument-item">
+                                    <div class="instrument-info">
+                                        <p class="instrument-name">Abbott Cell-Dyn</p>
+                                        <p class="instrument-type">Hematology</p>
+                                    </div>
+                                    <span class="badge bg-warning">Maintenance</span>
+                                </div>
+                                <div class="instrument-item">
+                                    <div class="instrument-info">
+                                        <p class="instrument-name">Roche Cobas</p>
+                                        <p class="instrument-type">Immunoassay</p>
+                                    </div>
+                                    <span class="badge bg-success">Online</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quick Actions -->
+                        <div class="main-card">
+                            <div class="card-header">
+                                <h5 class="card-title">
+                                    <i class="bi bi-lightning"></i>
+                                    Quick Actions
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="quick-actions">
+                                    <button class="btn btn-outline-red text-start w-100">
+                                        <i class="bi bi-plus-circle me-2"></i>
+                                        New Sample Request
+                                    </button>
+                                    <button class="btn btn-outline-red text-start w-100">
+                                        <i class="bi bi-file-earmark-text me-2"></i>
+                                        Generate Report
+                                    </button>
+                                    <button class="btn btn-outline-red text-start w-100">
+                                        <i class="bi bi-person-plus me-2"></i>
+                                        Add Lab Assistant
+                                    </button>
+                                    <button class="btn btn-outline-red text-start w-100">
+                                        <i class="bi bi-graph-up me-2"></i>
+                                        View Analytics
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Other pages will be loaded here dynamically -->
+        <div id="page-container"></div>
+    </main>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JS -->
+    <script src="{% static 'js/dashboard.js' %}"></script>
+</body>
+</html>

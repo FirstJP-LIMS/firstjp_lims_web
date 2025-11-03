@@ -56,7 +56,7 @@ class RegistrationForm(forms.ModelForm):
         if commit:
             user.save()
         return user
-
+    
 
 class TenantAuthenticationForm(AuthenticationForm):
     username = forms.EmailField(

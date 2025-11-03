@@ -31,8 +31,10 @@ urlpatterns = [
 
 
     path("tenants/", include("apps.tenants.urls")),
-    # path("laboratory/", include("apps.labs.urls")),    
+    
+    path("laboratory/", include("apps.labs.urls", namespace="labs")),
+
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 urlpatterns += debug_toolbar_urls()
-# urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
