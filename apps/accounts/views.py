@@ -88,40 +88,6 @@ def create_vendor_admin(request, vendor_id):
     return render(request, 'registration/create_vendor_admin.html', {'form': form, 'vendor': vendor})
 
 
-# def tenant_login(request):
-#     vendorInfo = Vendor.objects.prefetch_related('name')
-#     tenant = getattr(request, 'tenant', None)
-#     if request.method == 'POST':
-#         form = TenantAuthenticationForm(request, data=request.POST)
-#         if form.is_valid():
-#             user = form.get_user()
-#             # Platform Admin: global access
-#             if getattr(user, 'is_platform_admin', False):
-#                 login(request, user)
-#                 messages.success(request, f"Welcome back, {user.email}")
-#                 return redirect(reverse('dashboard'))
-#             # Vendor/Lab Staff: tenant-restricted
-#             if not tenant:
-#                 messages.error(request, "No tenant could be resolved. Access denied.")
-#                 return redirect(reverse('no_tenant'))
-
-#             if user.vendor_id and user.vendor_id == tenant.internal_id:
-#                 login(request, user)
-#                 messages.success(request, f"Welcome, {user.email}")
-#                 return redirect(reverse('labs:vendor_dashboard'))
-#             messages.error(request, "Invalid tenant or user mismatch.")
-#             return redirect(reverse('login'))
-#     else:
-#         form = TenantAuthenticationForm(request)
-#     # pass tenant object  
-#     context = {
-#         'form': form,
-#         'tenant': tenant,
-#         'vendorInfo': vendorInfo,
-#     }
-#     return render(request, 'registration/login.html', context)
-
-
 def tenant_login(request):
     vendorInfo = Vendor.objects.prefetch_related('name')
     tenant = getattr(request, 'tenant', None)    

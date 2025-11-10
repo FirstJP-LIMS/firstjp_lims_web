@@ -17,8 +17,8 @@
     <nav class="sidebar">
         <div class="sidebar-header d-flex align-items-center justify-content-between">
             <div class="brand">
-                <span class="brand-first">FirstJP</span>
-                <span class="brand-accent">LIMS</span>
+                <span class="brand-first">{{tenant.name}}</span>
+                <!-- <span class="brand-accent">LIMS</span> -->
             </div>
             <button>TT</button>
         </div>
@@ -34,6 +34,12 @@
                 <a class="nav-link" data-page="patients">
                     <i class="bi bi-people"></i>
                     Patients
+                </a>
+            </div>
+            <div class="nav-item">
+                <a href="{% url 'labs:test_request_list' %}" class="nav-link" data-page="patients">
+                    <i class="bi bi-people"></i>
+                    Test Request
                 </a>
             </div>
             <div class="nav-item">
@@ -113,20 +119,21 @@
                                 <li><a class="dropdown-item" href="{% url 'labs:department_list' %}">
                                     <i class="bi bi-sliders me-2 text-secondary"></i>Manage Departments
                                 </a></li>
-                                <li><a class="dropdown-item" href="#">
+                                <li><a class="dropdown-item" href="{% url 'labs:test_list' %}">
                                     <i class="bi bi-pencil-square me-2 text-secondary"></i>Configure Tests
                                 </a></li>
                             </ul>
                         </div>
-
                         <button class="btn btn-red">
-                            <i class="bi bi-plus-circle me-2"></i>New Sample
+                            <a href="{% url 'labs:create_test_request' %}">
+                                <i class="bi bi-plus-circle me-2"></i>
+                                Request Test
+                            </a>
                         </button>
                         <button class="btn btn-outline-red">
                             <i class="bi bi-download me-2"></i>Export Report
                         </button>
                     </div>
-
                 </div>
             </header>
 

@@ -3,7 +3,7 @@
 :root {
     --brand-navy: #001f40; /* Deep Navy Blue */
     --brand-red: #cc0033;  /* Deep Crimson Red */
-    --brand-gold: #FFD700; /* Gold Accent */
+    --brand-gold: #ff9500; /* Gold Accent */
     --brand-white: #ffffff;
 }
 
@@ -25,9 +25,8 @@ body {
     text-transform: uppercase;
 }
 
-.nav-link {
-    /* color: rgba(255, 255, 255, 0.8) !important; */
-    color: var(--brand-white);
+.nav-link a{
+    color: var(--brand-navy) !important;
     font-weight: 600;
     padding: 0.5rem 1rem;
     border-radius: 5px;

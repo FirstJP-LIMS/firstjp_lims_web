@@ -22,6 +22,7 @@ class DepartmentForm(forms.ModelForm):
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
 
+
 class VendorLabTestForm(forms.ModelForm):
     """Form for defining a Lab Test within a specific Vendor's catalog."""
     class Meta:
@@ -261,96 +262,124 @@ class PatientForm(forms.ModelForm):
 
 
 class TestRequestForm(forms.ModelForm):
+    """
+    A flexible form for creating Test Requests.
+    Handles both new and existing patients.
+    """
+
+    # ... (Existing Patient Section Fields) ...
+    existing_patient = forms.ModelChoiceField(
+        queryset=Patient.objects.none(),
+        required=False,
+        label="Select Existing Patient",
+        help_text="Choose an existing patient or enter new patient details below."
+    )
+    first_name = forms.CharField(required=False, max_length=100, label="First Name")
+    last_name = forms.CharField(required=False, max_length=100, label="Last Name")
+    date_of_birth = forms.DateField(
+    required=False,
+    widget=forms.DateInput(attrs={'type': 'date'}),
+    label="Date of Birth",
+    input_formats=['%Y-%m-%d'],  # optional
+    )
+
+    gender = forms.ChoiceField(
+        required=False,
+        choices=Patient.GENDER_CHOICE,
+        label="Gender"
+    )
+    contact_email = forms.EmailField(required=False, label="Contact Email")
+    contact_phone = forms.CharField(required=False, max_length=15, label="Contact Phone")
+
+    # --- Test Section ---
     tests_to_order = forms.ModelMultipleChoiceField(
         queryset=VendorTest.objects.none(),
         widget=forms.CheckboxSelectMultiple,
-        required=True,
         label="Select Tests"
     )
 
     class Meta:
         model = TestRequest
-        fields = ['patient', 'clinical_history', 'priority']
-        widgets = {
-            'patient': forms.Select(attrs={'class': 'form-select'}),
-            'clinical_history': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
-            'priority': forms.Select(attrs={'class': 'form-select'}),
-        }
-
+        fields = ["existing_patient", "first_name", "last_name", "date_of_birth",
+                  "gender", "contact_email", "contact_phone", "tests_to_order",
+                  "clinical_history", "priority", "has_informed_consent", "external_referral"]
+                  
     def __init__(self, *args, **kwargs):
         vendor = kwargs.pop('vendor', None)
         super().__init__(*args, **kwargs)
 
         if vendor:
-            self.fields['patient'].queryset = Patient.objects.filter(vendor=vendor)
-            # FIX: Changed 'vendor_test' to 'test'
-            self.fields['tests_to_order'].queryset = VendorTest.objects.filter(
-                vendor=vendor, enabled=True
-            ).select_related('test')  # ✅ CORRECT FIELD NAME
+            self.fields["existing_patient"].queryset = Patient.objects.filter(vendor=vendor)
+            self.fields["tests_to_order"].queryset = VendorTest.objects.filter(vendor=vendor).order_by('name')
 
-        # Crispy forms setup
-        self.helper = FormHelper()
-        self.helper.form_method = 'post'
-        self.helper.form_class = 'needs-validation'
+        # Make date_of_birth field accept empty values properly
+        self.fields['date_of_birth'].empty_value = None
+
+    def clean_date_of_birth(self):
+        """Handle empty date values properly."""
+        dob = self.cleaned_data.get('date_of_birth')
+        if not dob:
+            return None
+        return dob
+
+    def clean(self):
+        cleaned_data = super().clean()
+        existing_patient = cleaned_data.get("existing_patient")
+        first_name = cleaned_data.get("first_name")
+        last_name = cleaned_data.get("last_name")
+        date_of_birth = cleaned_data.get("date_of_birth")  
+
+        # Require at least one patient option
+        if not existing_patient and not (first_name and last_name):
+            raise forms.ValidationError(
+                "Please select an existing patient or provide new patient details."
+            )
+
+        # Require at least one test
+        tests_to_order = cleaned_data.get("tests_to_order")
+        if not tests_to_order or tests_to_order.count() == 0:
+            raise forms.ValidationError("Please select at least one test to order.")
+
+        return cleaned_data
+    
+    @property
+    def total_order_price(self):
+        """Calculates the total price of the currently selected tests."""
+        tests = self.cleaned_data.get('tests_to_order', [])
+        total = sum(test.price for test in tests)
+        return total
+
+    @property
+    def patient(self):
+        existing_patient = self.cleaned_data.get("existing_patient")
+        if existing_patient:
+            return existing_patient
+        return {
+            "first_name": self.cleaned_data.get("first_name"),
+            "last_name": self.cleaned_data.get("last_name"),
+            "date_of_birth": self.cleaned_data.get("date_of_birth"),
+            "gender": self.cleaned_data.get("gender"),
+            "contact_email": self.cleaned_data.get("contact_email"),
+            "contact_phone": self.cleaned_data.get("contact_phone"),
+        }
+
+
+from . models import Sample
+class SampleForm(forms.ModelForm):
+    """Handles specimen/phlebotomy info for a given test request."""
+    class Meta:
+        model = Sample
+        fields = [
+            'specimen_type', 'specimen_description',
+            'collected_by', 'collection_method',
+            'collection_site', 'container_type',
+            'volume_collected_ml', 'location'
+        ]
+        widgets = {
+            'specimen_description': forms.Textarea(attrs={'rows': 2}),
+            'collection_method': forms.TextInput(attrs={'placeholder': 'e.g., Venipuncture'}),
+            'collection_site': forms.TextInput(attrs={'placeholder': 'e.g., Left Arm'}),
+            'container_type': forms.TextInput(attrs={'placeholder': 'e.g., EDTA Tube'}),
+            'volume_collected_ml': forms.NumberInput(attrs={'min': 0, 'step': '0.1'}),
+        }
         
-        self.helper.layout = Layout(
-            Row(
-                Column('patient', css_class='col-md-6 mb-3'),
-                Column('priority', css_class='col-md-6 mb-3'),
-            ),
-            'clinical_history',
-            HTML("""
-                <div class="mb-3">
-                    <label class="form-label fw-semibold text-wine">
-                        <i class="bi bi-clipboard2-check me-2"></i>
-                        Select Tests
-                    </label>
-                    <div class="border rounded p-3 bg-light">
-            """),
-            Field('tests_to_order', template='forms/checkbox_select.html'),
-            HTML("""
-                    </div>
-                    <div class="form-text">Choose the tests to include in this request</div>
-                </div>
-            """),
-            Submit('submit', 'Create Test Request', css_class='btn-wine w-100 py-2')
-        )
-
-    def save(self, commit=True):
-        instance = super().save(commit=False)
-        if commit:
-            instance.save()
-            self.save_m2m()
-            instance.requested_tests.set(self.cleaned_data['tests_to_order'])
-        return instance
-
-# class TestRequestForm(forms.ModelForm):
-#     tests_to_order = forms.ModelMultipleChoiceField(
-#         queryset=VendorTest.objects.none(),
-#         widget=forms.CheckboxSelectMultiple,
-#         required=True,
-#         label="Select Tests"
-#     )
-
-#     class Meta:
-#         model = TestRequest
-#         fields = ['patient', 'clinical_history', 'priority']
-
-#     def __init__(self, *args, **kwargs):
-#         vendor = kwargs.pop('vendor', None)
-#         super().__init__(*args, **kwargs)
-
-#         if vendor:
-#             self.fields['patient'].queryset = Patient.objects.filter(vendor=vendor)
-#             self.fields['tests_to_order'].queryset = VendorTest.objects.filter(
-#                 vendor=vendor, enabled=True
-#             ).select_related('test')
-
-#     def save(self, commit=True):
-#         instance = super().save(commit=False)
-#         if commit:
-#             instance.save()
-#             self.save_m2m()
-#             instance.requested_tests.set(self.cleaned_data['tests_to_order'])
-#         return instance
-

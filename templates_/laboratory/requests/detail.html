@@ -1,0 +1,531 @@
+{% extends "vendorbase.html" %}
+{% load static %}
+
+{% block title %}Test Request {{ test_request.request_id }} - FirstJP LIMS{% endblock %}
+
+{% block extra_css %}
+<style>
+    .print-header {
+        background: linear-gradient(135deg, var(--brand-blue) 0%, #001529 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+    }
+    
+    .consent-section {
+        border: 2px solid var(--brand-red);
+        border-radius: 8px;
+        padding: 1.5rem;
+        background: #fff9f9;
+        margin: 2rem 0;
+    }
+    
+    .signature-area {
+        border-top: 2px dashed #ccc;
+        padding-top: 1rem;
+        margin-top: 2rem;
+    }
+    
+    .billing-summary {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1.5rem;
+        border-left: 4px solid var(--brand-red);
+    }
+    
+    @media print {
+        .no-print {
+            display: none !important;
+        }
+        
+        .print-header {
+            background: #001f40 !important;
+            -webkit-print-color-adjust: exact;
+        }
+        
+        body {
+            font-size: 12pt;
+        }
+        
+        .card {
+            border: 1px solid #000 !important;
+            break-inside: avoid;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="no-print">
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="page-title">Test Request: {{ test_request.request_id }}</h1>
+                <p class="page-subtitle">Complete request details and laboratory requisition form</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'labs:test_request_list' %}" class="btn btn-outline-red">
+                    <i class="bi bi-arrow-left me-2"></i>Back to Requests
+                </a>
+                <button class="btn btn-red" onclick="window.print()">
+                    <i class="bi bi-printer me-2"></i>Print Requisition
+                </button>
+                <a href="{% url 'labs:test_request_update' test_request.pk %}" class="btn btn-outline-primary">
+                    <i class="bi bi-pencil me-2"></i>Edit Request
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Laboratory Header (Visible in print) -->
+<div class="print-header">
+    <div class="row align-items-center">
+        <div class="col-md-2 text-center">
+            {% if vendor_profile and vendor_profile.logo %}
+            <img src="{{ vendor_profile.logo.url }}" alt="{{ test_request.vendor.name }} Logo" 
+                 style="max-height: 80px; max-width: 100%;" class="mb-2">
+            {% else %}
+            <div class="bg-white rounded p-3 text-center">
+                <i class="bi bi-building fs-1 text-brand-blue"></i>
+            </div>
+            {% endif %}
+        </div>
+        <div class="col-md-8 text-center">
+            <h2 class="mb-1">{{ test_request.vendor.name }}</h2>
+            {% if vendor_profile %}
+            <p class="mb-1">
+                {{ vendor_profile.office_address }}, 
+                {{ vendor_profile.office_city_state }}, 
+                {{ vendor_profile.office_country }}
+            </p>
+            <p class="mb-1">
+                {% if vendor_profile.contact_phone %}Tel: {{ vendor_profile.contact_phone }}{% endif %}
+            </p>
+            {% endif %}
+            <h4 class="mt-3 mb-0">LABORATORY TEST REQUISITION FORM</h4>
+        </div>
+        <div class="col-md-2 text-center">
+            <div class="bg-white text-dark rounded p-2">
+                <strong>Ref: {{ test_request.request_id }}</strong><br>
+                <small>Date: {{ current_date|date:"M d, Y" }}</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-content">
+    <div class="row">
+        <!-- Patient Information -->
+        <div class="col-md-4">
+            <div class="main-card">
+                <div class="card-header">
+                    <h5 class="card-title">
+                        <i class="bi bi-person me-2"></i>
+                        Patient Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <i class="bi bi-person-circle fs-1 text-brand-blue"></i>
+                        <h4>{{ test_request.patient.first_name }} {{ test_request.patient.last_name }}</h4>
+                    </div>
+                    
+                    <table class="table table-sm table-borderless">
+                        <tr>
+                            <td><strong>Date of Birth:</strong></td>
+                            <td>{{ test_request.patient.date_of_birth|date:"M d, Y" }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Age:</strong></td>
+                            <td>
+                                {% with age=test_request.patient.date_of_birth|timesince %}
+                                    {{ age.split','.0 }}
+                                {% endwith %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Gender:</strong></td>
+                            <td>{{ test_request.patient.get_gender_display }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Contact Phone:</strong></td>
+                            <td>{{ test_request.patient.contact_phone|default:"Not provided" }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Email:</strong></td>
+                            <td>{{ test_request.patient.contact_email|default:"Not provided" }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Patient ID:</strong></td>
+                            <td>
+                                {% if test_request.patient.patient_id %}
+                                    {{ test_request.patient.patient_id }}
+                                {% else %}
+                                    <span class="text-muted">Not assigned</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Billing Information -->
+            <div class="main-card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title">
+                        <i class="bi bi-credit-card me-2"></i>
+                        Billing Information
+                    </h5>
+                </div>
+                <div class="card-body billing-summary">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Subtotal:</span>
+                        <strong>${{ total_cost|floatformat:2 }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Tax (0%):</span>
+                        <strong>$0.00</strong>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between mb-3">
+                        <span><strong>Total Amount:</strong></span>
+                        <strong class="text-brand-red">${{ total_cost|floatformat:2 }}</strong>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <h6>Payment Methods:</h6>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="cash_payment">
+                            <label class="form-check-label" for="cash_payment">
+                                Cash
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="insurance_payment">
+                            <label class="form-check-label" for="insurance_payment">
+                                Insurance
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="card_payment">
+                            <label class="form-check-label" for="card_payment">
+                                Credit/Debit Card
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="transfer_payment">
+                            <label class="form-check-label" for="transfer_payment">
+                                Bank Transfer
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Request & Sample Information -->
+        <div class="col-md-8">
+            <!-- Request Details -->
+            <div class="main-card">
+                <div class="card-header">
+                    <h5 class="card-title">
+                        <i class="bi bi-clipboard-data me-2"></i>
+                        Request Details
+                    </h5>
+                    <span class="badge 
+                        {% if test_request.priority == 'HIGH' %}bg-danger
+                        {% elif test_request.priority == 'MEDIUM' %}bg-warning
+                        {% else %}bg-success{% endif %}">
+                        {{ test_request.get_priority_display }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-sm table-borderless">
+                                <tr>
+                                    <td><strong>Request ID:</strong></td>
+                                    <td>{{ test_request.request_id }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Request Date:</strong></td>
+                                    <td>{{ test_request.created_at|date:"M d, Y H:i" }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Requested By:</strong></td>
+                                    <td>{{ test_request.requested_by.get_full_name|default:test_request.requested_by.email }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-sm table-borderless">
+                                <tr>
+                                    <td><strong>Status:</strong></td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if test_request.status == 'COMPLETED' %}bg-success
+                                            {% elif test_request.status == 'IN_PROGRESS' %}bg-info
+                                            {% else %}bg-warning{% endif %}">
+                                            {{ test_request.get_status_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Informed Consent:</strong></td>
+                                    <td>
+                                        {% if test_request.has_informed_consent %}
+                                            <span class="badge bg-success">Yes</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">No</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>External Referral:</strong></td>
+                                    <td>{{ test_request.external_referral|default:"No" }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Clinical History -->
+                    {% if test_request.clinical_history %}
+                    <div class="mt-3">
+                        <strong>Clinical History:</strong>
+                        <p class="mb-0 text-muted">{{ test_request.clinical_history }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Sample Information -->
+            {% if samples %}
+            <div class="main-card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title">
+                        <i class="bi bi-droplet me-2"></i>
+                        Sample Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% for sample in samples %}
+                    <div class="row {% if not forloop.first %}mt-4 pt-3 border-top{% endif %}">
+                        <div class="col-md-6">
+                            <table class="table table-sm table-borderless">
+                                <tr>
+                                    <td><strong>Sample ID:</strong></td>
+                                    <td>{{ sample.sample_id }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Specimen Type:</strong></td>
+                                    <td>{{ sample.specimen_type }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Collection Date:</strong></td>
+                                    <td>{{ sample.created_at|date:"M d, Y H:i" }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Container Type:</strong></td>
+                                    <td>{{ sample.container_type }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-sm table-borderless">
+                                <tr>
+                                    <td><strong>Collected By:</strong></td>
+                                    <td>{{ sample.collected_by }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Collection Method:</strong></td>
+                                    <td>{{ sample.collection_method }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Collection Site:</strong></td>
+                                    <td>{{ sample.collection_site }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Volume:</strong></td>
+                                    <td>{{ sample.volume_collected_ml }} mL</td>
+                                </tr>
+                            </table>
+                        </div>
+                        {% if sample.specimen_description %}
+                        <div class="col-12 mt-2">
+                            <strong>Description:</strong>
+                            <p class="mb-0 text-muted">{{ sample.specimen_description }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Tests Ordered -->
+    <div class="main-card mt-4">
+        <div class="card-header">
+            <h5 class="card-title">
+                <i class="bi bi-list-check me-2"></i>
+                Tests Ordered
+            </h5>
+            <span class="badge bg-primary">{{ requested_tests.count }} test{{ requested_tests.count|pluralize }}</span>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Test Code</th>
+                            <th>Test Name</th>
+                            <th>Department</th>
+                            <th>Type</th>
+                            <th>Specimen</th>
+                            <th>Price</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for test in requested_tests %}
+                        <tr>
+                            <td><strong class="text-brand-blue">{{ test.code }}</strong></td>
+                            <td>{{ test.name }}</td>
+                            <td>
+                                <span class="badge bg-secondary">{{ test.assigned_department.name }}</span>
+                            </td>
+                            <td>
+                                <span class="badge {% if test.result_type == 'QNT' %}bg-info{% else %}bg-warning{% endif %}">
+                                    {{ test.get_result_type_display }}
+                                </span>
+                            </td>
+                            <td>{{ test.specimen_type }}</td>
+                            <td>${{ test.price }}</td>
+                            <td>
+                                {% with assignment=assignments|find_assignment:test %}
+                                <span class="badge 
+                                    {% if assignment and assignment.status == 'COMPLETED' %}bg-success
+                                    {% elif assignment and assignment.status == 'IN_PROGRESS' %}bg-info
+                                    {% else %}bg-warning{% endif %}">
+                                    {{ assignment.get_status_display|default:"Pending" }}
+                                </span>
+                                {% endwith %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-active">
+                            <td colspan="5"><strong>Total</strong></td>
+                            <td><strong>${{ total_cost|floatformat:2 }}</strong></td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Patient Consent Section -->
+    <div class="consent-section">
+        <h4 class="text-center text-brand-red mb-4">
+            <i class="bi bi-shield-check me-2"></i>
+            PATIENT/GUARDIAN INFORMED CONSENT
+        </h4>
+        
+        <div class="consent-content">
+            <p class="mb-3">
+                I, <strong>{{ test_request.patient.first_name }} {{ test_request.patient.last_name }}</strong>, 
+                hereby give my consent for the laboratory tests as specified above to be performed. 
+                I understand that:
+            </p>
+            
+            <ul class="mb-4">
+                <li>These tests are necessary for diagnostic purposes</li>
+                <li>I may discuss the purpose and nature of these tests with my healthcare provider</li>
+                <li>I have the right to ask questions about the tests and procedures</li>
+                <li>Test results will be confidential and shared only with authorized personnel</li>
+                <li>I may withdraw consent at any time before the tests are performed</li>
+            </ul>
+
+            <div class="signature-area">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label"><strong>Patient/Guardian Signature</strong></label>
+                            <div class="border-bottom" style="min-height: 50px; border-color: #000 !important;"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label"><strong>Date</strong></label>
+                            <div class="border-bottom" style="min-height: 50px; border-color: #000 !important;"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-2">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label"><strong>Witness Signature</strong></label>
+                            <div class="border-bottom" style="min-height: 50px; border-color: #000 !important;"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label"><strong>Relationship to Patient</strong></label>
+                            <div class="border-bottom" style="min-height: 50px; border-color: #000 !important;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Laboratory Notes -->
+    <div class="main-card mt-4">
+        <div class="card-header">
+            <h5 class="card-title">
+                <i class="bi bi-chat-left-text me-2"></i>
+                Laboratory Notes & Instructions
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <strong>Special Instructions:</strong>
+                    <div class="border rounded p-2 mt-1" style="min-height: 100px;">
+                        <!-- Space for special instructions -->
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <strong>Laboratory Remarks:</strong>
+                    <div class="border rounded p-2 mt-1" style="min-height: 100px;">
+                        <!-- Space for laboratory remarks -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Custom template filter for assignment lookup -->
+{% with %}
+{% load custom_filters %}
+{% endwith %}
+
+<script>
+// Print functionality
+function printRequisition() {
+    window.print();
+}
+
+// Add any additional JavaScript for interactive elements
+document.addEventListener('DOMContentLoaded', function() {
+    // Add any dynamic functionality here
+});
+</script>
+{% endblock %}

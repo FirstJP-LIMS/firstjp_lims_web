@@ -82,7 +82,10 @@ python manage.py migrate
 python manage.py runserver
 
 ```
-
+---
+```
+  Create Test Request  →  Collect Sample  →  Verify/Approve Sample  →  Perform Analysis  →  Record Results  →  Review/Verify Report
+```
 ---
 
 ## 🌐 Tenant Configuration

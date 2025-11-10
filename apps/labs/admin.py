@@ -1,7 +1,12 @@
 from django.contrib import admin
 from . import models
 
+
+# iarowosola@yahoo.com
+# password#1234
+
 # Register your models here.
+admin.site.register(models.Department)
 admin.site.register(models.VendorTest)
 admin.site.register(models.Patient)
 admin.site.register(models.Sample)

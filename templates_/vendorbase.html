@@ -21,11 +21,11 @@
             <a class="navbar-brand d-flex align-items-center" href="/">
                 <i class="bi bi-heart-pulse brand-logo-accent me-2 fs-4"></i>
                 <span class="navbar-brand-text">
-                    {% if tenant %}
+                    <!-- {% if tenant %} -->
                         {{ tenant.name }} 
-                    {% else %}
-                        Vendor Portal
-                    {% endif %}
+                    <!-- {% else %}
+                        Portal
+                    {% endif %} -->
                 </span>
             </a>
 
@@ -40,13 +40,13 @@
                     
                     <!-- Patient Route -->
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'account:patient_register' %}" aria-current="page">
+                        <a class="nav-link" style="color: rgb(10, 1, 76);" href="{% url 'account:patient_register' %}" aria-current="page">
                             <i class="bi bi-person-circle me-1"></i> Patient
                         </a>
                     </li>
                     <!-- Clinician Route -->
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'account:clinician_register' %}">
+                        <a class="nav-link" style="color: rgb(10, 1, 76);" href="{% url 'account:clinician_register' %}">
                             <i class="bi bi-hospital me-1"></i> Clinician
                         </a>
                     </li>

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ vendor_name }} | Lab Request Form #{{ test_request.pk }}</title>
+    <style>
+        /* Base styles for print/PDF generation */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20mm; /* A4-like margin for print */
+            background-color: #f4f4f4;
+            color: #333;
+        }
+
+        .container {
+            max-width: 210mm; /* A4 width standard */
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            min-height: 280mm; 
+        }
+
+        /* Print-specific Styles to remove screen artifacts */
+        @media print {
+            body { background: white; padding: 0; }
+            .container { box-shadow: none; margin: 0; padding: 0; min-height: auto; }
+            .no-print { display: none; }
+        }
+
+        /* Form Structure & Aesthetics */
+        .header, .section {
+            margin-bottom: 25px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .logo { max-width: 150px; max-height: 80px; object-fit: contain;}
+
+        .lab-info h1 { margin: 0; color: #1a568c; font-size: 1.5em; }
+        .lab-info p { margin: 2px 0; font-size: 0.8em; }
+        
+        .metadata { text-align: right; font-size: 0.75em; }
+        .metadata strong { display: block; margin-top: 5px; }
+
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9em; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        th { background-color: #f0f0f0; font-weight: bold; }
+
+        /* Consent Section */
+        .consent-box {
+            border: 2px solid #1a568c;
+            padding: 15px;
+            margin-top: 30px;
+        }
+
+        .signature-line {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 40px;
+        }
+
+        .signature-area {
+            width: 45%;
+            border-top: 1px dashed #333;
+            padding-top: 5px;
+            text-align: center;
+            font-size: 0.8em;
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print">
+        <p style="text-align: center; padding: 10px; background-color: #ffdddd; border: 1px solid #f00; border-radius: 5px;">
+            **NOTE ON DOWNLOADABILITY**: This HTML view is optimized for printing. To download as a PDF, use your browser's "Print" function (**Ctrl/Cmd + P**) and select **"Save as PDF"** as the destination printer.
+        </p>
+    </div>
+
+    <div class="container">
+        <!-- LAB CUSTOMIZATION HEADER -->
+        <div class="header">
+            <div class="header-content">
+                <div class="logo-area">
+                    <!-- Customisable with the laboratory specific logo -->
+                    {% if vendor_profile.logo.url %}
+                        <img src="{{ vendor_profile.logo.url }}" alt="{{ vendor_name }} Logo" class="logo">
+                    {% else %}
+                        <h1 style="color: #1a568c;">{{ vendor_name }}</h1>
+                    {% endif %}
+                </div>
+                <div class="lab-info">
+                    <!-- Customisable with the laboratory specific address, contact details -->
+                    <p><strong>{{ vendor_name }}</strong></p>
+                    <p>{{ full_address }}</p>
+                    <p>Contact: {{ vendor_profile.contact_phone|default:"(No Phone)" }} | {{ test_request.vendor.email|default:"(No Email)" }}</p>
+                </div>
+                <div class="metadata">
+                    <!-- Customisable with form reference number and version number -->
+                    <strong>FORM REFERENCE NO: {{ form_metadata.ref_number }}</strong>
+                    <strong>VERSION: {{ form_metadata.version }}</strong>
+                    <p style="margin-top: 10px;">Request Date: {{ test_request.created_at|date:"Y-m-d" }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- PATIENT & REQUEST DETAILS SECTION -->
+        <div class="section">
+            <h2>Patient & Request Details</h2>
+            <table>
+                <tr>
+                    <th width="30%">Request ID</th>
+                    <td>TR-{{ test_request.pk }}</td>
+                    <th width="30%">Patient Name</th>
+                    <td>{{ patient.first_name }} {{ patient.last_name }}</td>
+                </tr>
+                <tr>
+                    <th>Patient DOB/Age</th>
+                    <td>{{ patient.date_of_birth|date:"Y-m-d" }} / ({{ patient.age }} years)</td>
+                    <th>Gender</th>
+                    <td>{{ patient.gender|default:"N/A" }}</td>
+                </tr>
+                <tr>
+                    <th>Ordering Clinician</th>
+                    <td colspan="3">{{ test_request.requested_by.get_full_name|default:"Self-Request" }}</td>
+                </tr>
+                <tr>
+                    <th>Collection Date</th>
+                    <td>{{ test_request.collection_date|date:"Y-m-d" }}</td>
+                    <th>Status</th>
+                    <td>{{ test_request.get_status_display }}</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- TESTS & SAMPLES SECTION -->
+        <div class="section">
+            <h2>Tests Requested & Samples</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Test Name</th>
+                        <th>Assigned Dept.</th>
+                        <th>Sample Type (ID)</th>
+                        <th>Price ({{ test_request.currency|default:"$" }})</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in requested_tests %}
+                    <tr>
+                        <td>{{ item.lab_test.name }}</td>
+                        <td>{{ item.assigned_department.name|default:"Unassigned" }}</td>
+                        <td>
+                            {% for sample in samples %}
+                                {% if sample.test_type == item.lab_test.test_type %}
+                                    {{ sample.sample_type|upper }} ({{ sample.barcode_id }})
+                                {% endif %}
+                            {% empty %}
+                                N/A
+                            {% endfor %}
+                        </td>
+                        <td>{{ item.price|floatformat:2 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4">No tests requested for this form.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- BILLING INFORMATION SECTION -->
+        <div class="section">
+            <h2>Billing Information</h2>
+            <table>
+                <tr>
+                    <th width="30%">Total Amount Due</th>
+                    <td width="20%"><strong>{{ test_request.currency|default:"$" }} {{ total_cost|floatformat:2 }}</strong></td>
+                    <th width="30%">Mode of Payment</th>
+                    <!-- Billing Information should also be included like mode of payments -->
+                    <td width="20%">{{ form_metadata.billing_payment_mode }}</td>
+                </tr>
+            </table>
+            <p style="font-size: 0.8em; margin-top: 10px;">
+                *All fees are due upon sample submission unless otherwise specified by prior arrangement or insurance agreement.
+            </p>
+        </div>
+
+        <!-- PATIENT/GUARDIAN INFORMED CONSENT SECTION -->
+        <div class="consent-box">
+            <h2>Patient/Guardian Informed Consent</h2>
+            <p style="font-size: 0.9em; line-height: 1.5;">
+                I, the undersigned patient or legal guardian, hereby confirm that I have been informed of the tests requested, the purpose of the collection, and the associated costs. I authorize **{{ vendor_name }}** to perform the requested laboratory testing on the collected samples. I understand that the results will be reported to the ordering clinician and, if required, to public health authorities.
+            </p>
+            
+            <div class="signature-line">
+                <!-- Patient/Guardian Informed consent with signature and date space -->
+                <div class="signature-area">
+                    X
+                    <div style="margin-top: 10px;">Patient/Guardian Signature / Legal Guardian</div>
+                </div>
+                <div class="signature-area">
+                    <div style="height: 1px; margin-top: 10px;"></div>
+                    Date:
+                </div>
+            </div>
+            <p style="font-size: 0.75em; text-align: center; margin-top: 10px;">
+                *Required for sample processing. Please print and sign this form before submission.
+            </p>
+        </div>
+
+    </div>
+</body>
+</html>

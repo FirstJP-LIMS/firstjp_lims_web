@@ -28,12 +28,23 @@ urlpatterns = [
 
 
     # Patient add
-    path('patients/', views.patient_list, name='patient_list'),
-    path('patients/add/', views.add_patient, name='add_patient'),
+    # path('patients/', views.patient_list, name='patient_list'),
+    # path('patients/add/', views.add_patient, name='add_patient'),
 
-    # test request create
-    path('test-requests/create/', views.create_test_request, name='create_test_request'),
+    # test request
+    path('test-requests/create/', views.test_request_create, name='create_test_request'),
+
     path('test-requests/', views.test_request_list, name='test_request_list'),
-    path('requests/<int:pk>/', views.test_request_detail, name='request_detail'),
+
+    path('requests/<int:pk>/update/', views.test_request_update, name='request_update'),
+
+    path('requests/<int:pk>/detail/', views.test_request_detail, name='request_detail'),
+    
+    path('requests/<int:pk>/delete/', views.test_request_delete, name='delete_request'),
+
+
+    # examination
+    path('examination/samples/', views.sample_examination_list, name='sample-exam-list'),
+    path('examination/sample/<str:sample_id>/', views.sample_examination_detail, name='sample-exam-detail'),
 ]
 
