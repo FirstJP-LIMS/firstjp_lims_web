@@ -1,18 +1,4 @@
-"""
-PATIENT  →  SAMPLE(S)  →  TEST REQUEST(S)  →  RESULT(S)
-   |             |              |                  |
-   |          Sample ID      Test ID           Verified / Released
-   |             |              |
-Doctor → Clinical Info    Department → Test Type
-
-Cost Type,Initial 3-Month Minimum Estimate
-Infrastructure (3 months),"$700 - $1,900"
-Deployment/CI/CD Setup,"$1,000 - $2,000"
-Security Auditing,"$0 - $5,000 (Depends on scope)"
-Legal/Compliance Setup,"$5,000 - $10,000"
-TOTAL INITIAL LAUNCH BUDGET,"$6,700 - $18,900+"
-"""
-
+from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
@@ -46,7 +32,8 @@ from apps.tenants.models import Vendor
 from django.shortcuts import render, get_object_or_404
 from django.db.models import Sum
 from django.contrib.auth.decorators import login_required
-from .account.models import VendorProfile
+from apps.accounts.models import VendorProfile
+from django.core.paginator import Paginator
 
 
 # --- Decorator Definition ---
@@ -62,6 +49,8 @@ def tenant_required(view_func):
         return view_func(request, *args, **kwargs)
     return _wrapped_view
 
+from datetime import timedelta
+from django.utils import timezone
 
 # --- CRM Views ---
 # dashboard 
@@ -72,13 +61,45 @@ def dashboard(request):
     is_platform_admin = request.is_platform_admin
     if is_platform_admin and not tenant:
         return render(request, "laboratory/registration/login.html")
-    # if is_platform_admin and not tenant:
-    #     return render(request, "labs/tenant_index.html")
+
+    # Fetch lab Departments to the header
+    try:
+        lab_departments = tenant.departments.all().order_by('name')
+    except AttributeError:
+        lab_departments = []
+
     lab_name = getattr(tenant, 'business_name', tenant.name)
+
+    # filter time from query params
+    date_filter = request.GET.get("filter", "7days")
+
+    # Fetch recent samples for this vendor
+    samples_qs = Sample.objects.filter(vendor=tenant).select_related('test_request__patient').prefetch_related('test_request__requested_tests')
+
+    # 🧮 Apply time filtering
+    now = timezone.now()
+    if date_filter == "today":
+        samples_qs = samples_qs.filter(collected_at__date=now.date())
+    elif date_filter == "7days":
+        samples_qs = samples_qs.filter(collected_at__gte=now - timedelta(days=7))
+    elif date_filter == "30days":
+        samples_qs = samples_qs.filter(collected_at__gte=now - timedelta(days=30))
+
+    # Sort newest first
+    samples_qs = samples_qs.order_by('-collected_at')
+
+    # Pagination
+    paginator = Paginator(samples_qs, 10)  # 10 samples per page
+    page_number = request.GET.get("page")
+    samples_page = paginator.get_page(page_number)
+
     context = {
         "vendor": tenant,
         "lab_name": lab_name,
         "vendor_domain": tenant.domains.first().domain_name if tenant.domains.exists() else None,
+        "lab_departments": lab_departments,
+        "samples": samples_page,  # Pagination added
+        "current_filter": date_filter,
     }
     return render(request, "laboratory/dashboard.html", context)
 
@@ -296,19 +317,28 @@ def test_request_list(request):
         messages.error(request, "Vendor not found.")
         return redirect("dashboard")
 
-    requests_qs = TestRequest.objects.filter(vendor=vendor).select_related("patient")
+    # Get all test requests for this vendor
+    requests_qs = (
+        TestRequest.objects.filter(vendor=vendor)
+        .select_related("patient")
+        .prefetch_related("samples")  # fetch related samples efficiently
+        .order_by("-created_at")
+    )
 
     # Optional filtering
     patient_name = request.GET.get("patient")
     status = request.GET.get("status")
+
     if patient_name:
         requests_qs = requests_qs.filter(patient__first_name__icontains=patient_name)
     if status:
         requests_qs = requests_qs.filter(status=status)
-        
-    return render(request, "laboratory/requests/list.html", {
+
+    context = {
         "requests": requests_qs,
-    })
+    }
+
+    return render(request, "laboratory/requests/list.html", context)
 
 
 @login_required
@@ -432,7 +462,7 @@ def test_request_update(request, pk):
     else:
         form = TestRequestForm(instance=request_instance, vendor=vendor)
 
-    return render(request, "labs/requests/form.html", {
+    return render(request, "laboratory/requests/form.html", {
         "form": form,
         "update_mode": True,
     })
@@ -459,11 +489,9 @@ def test_request_delete(request, pk):
     })
 
 
-
 @login_required
 def test_request_detail(request, pk):
-    """Display a detailed view of a test request with patient, billing, lab profile, and sample info.
-    """
+    """Display a detailed view of a test request with patient, billing, lab profile, and sample info."""
     vendor = getattr(request.user, "vendor", None)
     test_request = get_object_or_404(
         TestRequest.objects.select_related("patient", "vendor"), 
@@ -498,9 +526,7 @@ def test_request_detail(request, pk):
         "payment_mode": payment_mode,
         "status_display": status_display,
     }
-    return render(request, "labs/examination/test_request_detail.html", context)
-
-
+    return render(request, "laboratory/requests/test_detail.html", context)
 
 
 # Phase 2: Examination                 
@@ -510,11 +536,20 @@ def sample_examination_list(request):
     samples = Sample.objects.filter(status__in=['AC', 'RJ', 'AP']).select_related('patient', 'test_request')
     return render(request, 'laboratory/examination/sample_list.html', {'samples': samples})
 
-
+  
 @login_required
 def sample_examination_detail(request, sample_id):
     """Detail view for verifying a specific sample."""
-    sample = get_object_or_404(Sample, sample_id=sample_id)
+    sample = get_object_or_404(
+        Sample.objects.select_related(
+            'test_request',
+            'test_request__patient',
+            'vendor'
+        ).prefetch_related(
+            'test_request__requested_tests'
+        ),
+        sample_id=sample_id
+    )
 
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -524,18 +559,170 @@ def sample_examination_detail(request, sample_id):
         if action == 'verify':
             sample.verify_sample(request.user)
             messages.success(request, f"Sample {sample.sample_id} has been verified successfully.")
-            return redirect(reverse('sample-exam-detail', args=[sample.sample_id]))
+            return redirect(reverse('labs:sample-exam-detail', args=[sample.sample_id]))
 
         elif action == 'accept':
             sample.accept_sample(request.user)
             messages.success(request, f"Sample {sample.sample_id} accepted and queued for analysis.")
-            return redirect('sample-exam-list')
+            return redirect('labs:sample-exam-list')
 
         elif action == 'reject':
             sample.reject_sample(request.user, reason)
             messages.warning(request, f"Sample {sample.sample_id} rejected.")
-            return redirect('sample-exam-list')
+            return redirect('labs:sample-exam-list')
 
     return render(request, 'laboratory/examination/sample_detail.html', {'sample': sample})
 
-  
+
+# from django.template.loader import render_to_string
+# from io import BytesIO
+# from xhtml2pdf import pisa
+# from django.shortcuts import render, get_object_or_404
+# from django.http import HttpResponse
+# from django.template.loader import render_to_string
+# from django.db.models import Sum
+# from django.contrib.auth.decorators import login_required
+
+# from .models import TestRequest
+# from .utils import generate_barcode_base64
+# from .pdf import render_to_pdf  # Assuming you already have this helper
+
+
+# utils.py
+import io
+import base64
+import barcode
+from barcode.writer import ImageWriter
+
+def generate_barcode_base64(data):
+    """
+    Generate a barcode image for given data (like request_id)
+    and return it as a base64-encoded string for embedding in HTML.
+    """
+    buffer = io.BytesIO()
+    code128 = barcode.get('code128', data, writer=ImageWriter())
+    code128.write(buffer, options={'module_width': 0.4, 'module_height': 10.0})
+    buffer.seek(0)
+    img_base64 = base64.b64encode(buffer.read()).decode('utf-8')
+    return f"data:image/png;base64,{img_base64}"
+
+from django.template.loader import render_to_string
+from io import BytesIO
+from xhtml2pdf import pisa
+from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404
+from django.db.models import Sum
+from .models import TestRequest
+
+from .utils import generate_barcode_base64
+
+
+
+
+def render_to_pdf(html_content):
+    """Utility to convert rendered HTML to PDF."""
+    result = BytesIO()
+    pdf = pisa.pisaDocument(BytesIO(html_content.encode("UTF-8")), result)
+    return result.getvalue() if not pdf.err else None
+
+
+
+@login_required
+def download_test_request(request, pk=None, blank=False):
+    """Download a filled or blank Test Request form as PDF."""
+    vendor = getattr(request.user, "vendor", None)
+    vendor_profile = getattr(vendor, "profile", None)
+
+    # Handle missing logo gracefully
+    if vendor_profile and not vendor_profile.logo:
+        vendor_profile.logo = None
+
+    if blank:
+        # Blank form version — for physical clients
+        context = {
+            "vendor": vendor,
+            "vendor_profile": vendor_profile,
+            "blank": True,
+        }
+        filename = f"Blank_Test_Request_{vendor.name}.pdf"
+    else:
+        # Filled form version — for completed requests
+        test_request = get_object_or_404(TestRequest, pk=pk, vendor=vendor)
+
+        requested_tests = test_request.requested_tests.select_related("assigned_department")
+        samples = test_request.samples.all()
+        total_cost = requested_tests.aggregate(total=Sum("price"))["total"] or 0.00
+        payment_mode = getattr(test_request, "payment_mode", "Not Specified")
+
+        # ✅ Generate barcode (based on request ID or any unique field)
+        barcode_image = generate_barcode_base64(test_request.request_id)
+
+        context = {
+            "vendor": vendor,
+            "vendor_profile": vendor_profile,
+            "test_request": test_request,
+            "requested_tests": requested_tests,
+            "samples": samples,
+            "total_cost": total_cost,
+            "payment_mode": payment_mode,
+            "barcode_image": barcode_image,  # <--- added barcode here
+            "blank": False,
+        }
+        filename = f"TestRequest_{test_request.request_id}.pdf"
+
+    html = render_to_string("laboratory/requests/pdf_template.html", context)
+    pdf_file = render_to_pdf(html)
+
+    response = HttpResponse(pdf_file, content_type="application/pdf")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
+
+
+
+# @login_required
+# def download_test_request(request, pk=None, blank=False):
+#     """Download a filled or blank Test Request form as PDF."""
+#     vendor = getattr(request.user, "vendor", None)
+#     vendor_profile = getattr(vendor, "profile", None)
+
+#     # Handle missing logo gracefully
+#     if vendor_profile and not vendor_profile.logo:
+#         vendor_profile.logo = None
+
+#     if blank:
+#         # Blank form version — for physical clients
+#         context = {
+#             "vendor": vendor,
+#             "vendor_profile": vendor_profile,
+#             "blank": True,
+#         }
+#         filename = f"Blank_Test_Request_{vendor.name}.pdf"
+#     else:
+#         # Filled form version — for completed requests
+#         test_request = get_object_or_404(TestRequest, pk=pk, vendor=vendor)
+
+#         requested_tests = test_request.requested_tests.select_related("assigned_department")
+#         samples = test_request.samples.all()
+#         total_cost = requested_tests.aggregate(total=Sum("price"))["total"] or 0.00
+#         payment_mode = getattr(test_request, "payment_mode", "Not Specified")
+
+#         context = {
+#             "vendor": vendor,
+#             "vendor_profile": vendor_profile,
+#             "test_request": test_request,
+#             "requested_tests": requested_tests,
+#             "samples": samples,
+#             "total_cost": total_cost,
+#             "payment_mode": payment_mode,
+#             "blank": False,
+#         }
+#         filename = f"TestRequest_{test_request.request_id}.pdf"
+
+#     html = render_to_string("laboratory/requests/pdf_template.html", context)
+#     pdf_file = render_to_pdf(html)
+
+#     response = HttpResponse(pdf_file, content_type="application/pdf")
+#     response["Content-Disposition"] = f'attachment; filename="{filename}"'
+#     return response
+

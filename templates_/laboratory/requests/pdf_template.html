@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .barcode-section { text-align: right; margin-top: 20px; }
+        .barcode-section img { height: 50px; width: auto; }
+        .info-section { margin: 20px 0; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        {% if vendor_profile and vendor_profile.logo %}
+            <img src="{{ vendor_profile.logo.url }}" alt="Lab Logo" style="height: 80px;">
+        {% endif %}
+        <h2>{{ vendor.name }}</h2>
+        {% if vendor_profile %}
+            <p>{{ vendor_profile.address }}</p>
+            <p>Phone: {{ vendor_profile.phone_number }} | Email: {{ vendor_profile.email }}</p>
+        {% endif %}
+    </div>
+
+    {% if not blank %}
+        <!-- FILLED REQUEST FORM -->
+        <h3>Test Request Form</h3>
+        
+        <!-- ✅ FIXED: Use barcode_image from context (base64), not from model -->
+        {% if barcode_image %}
+            <div class="barcode-section">
+                <img src="{{ barcode_image }}" alt="Barcode">
+                <p style="font-size: 10px; color: #666; margin: 5px 0;">Scan to identify sample</p>
+            </div>
+        {% endif %}
+
+        <div class="info-section">
+            <p><strong>Request ID:</strong> {{ test_request.request_id }}</p>
+            <p><strong>Patient:</strong> {{ test_request.patient }}</p>
+            <p><strong>Date:</strong> {{ test_request.created_at|date:"Y-m-d H:i" }}</p>
+            <p><strong>Priority:</strong> {{ test_request.priority }}</p>
+            <p><strong>Status:</strong> {{ test_request.get_status_display }}</p>
+            
+            {% if test_request.external_referral %}
+                <p><strong>Referred By:</strong> {{ test_request.external_referral }}</p>
+            {% endif %}
+            
+            {% if test_request.clinical_history %}
+                <p><strong>Clinical History:</strong> {{ test_request.clinical_history }}</p>
+            {% endif %}
+        </div>
+
+        <h4>Requested Tests</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Test Name</th>
+                    <th>Department</th>
+                    <th>Price</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for test in requested_tests %}
+                <tr>
+                    <td>{{ test.name }}</td>
+                    <td>{{ test.assigned_department.name }}</td>
+                    <td>₦{{ test.price }}</td>
+                </tr>
+                {% endfor %}
+                <tr>
+                    <td colspan="2"><strong>Total Cost</strong></td>
+                    <td><strong>₦{{ total_cost }}</strong></td>
+                </tr>
+            </tbody>
+        </table>
+
+        {% if samples %}
+        <h4>Samples</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Sample ID</th>
+                    <th>Type</th>
+                    <th>Collection Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sample in samples %}
+                <tr>
+                    <td>{{ sample.sample_id }}</td>
+                    <td>{{ sample.sample_type }}</td>
+                    <td>{{ sample.collection_date|date:"Y-m-d H:i" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+
+        {% if test_request.collection_notes %}
+        <div class="info-section">
+            <p><strong>Collection Notes:</strong> {{ test_request.collection_notes }}</p>
+        </div>
+        {% endif %}
+
+        <div class="info-section">
+            <p><strong>Payment Mode:</strong> {{ payment_mode }}</p>
+            <p><strong>Informed Consent:</strong> {% if test_request.has_informed_consent %}Yes{% else %}No{% endif %}</p>
+        </div>
+
+    {% else %}
+        <!-- BLANK REQUEST FORM -->
+        <h3>Test Request Form (Blank)</h3>
+        
+        <div class="info-section">
+            <p><strong>Request ID:</strong> _______________________</p>
+            <p><strong>Patient Name:</strong> _______________________</p>
+            <p><strong>Patient ID:</strong> _______________________</p>
+            <p><strong>Date:</strong> _______________________</p>
+            <p><strong>Priority:</strong> ☐ Routine ☐ Urgent ☐ STAT</p>
+            <p><strong>Referred By:</strong> _______________________</p>
+        </div>
+
+        <h4>Clinical History</h4>
+        <div style="border: 1px solid #ddd; min-height: 80px; padding: 10px;">
+            <!-- Space for clinical history -->
+        </div>
+
+        <h4>Requested Tests</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 50px;">☐</th>
+                    <th>Test Name</th>
+                    <th>Department</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for i in "12345678910" %}
+                <tr>
+                    <td>☐</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="info-section">
+            <p><strong>Collection Notes:</strong></p>
+            <div style="border: 1px solid #ddd; min-height: 60px; padding: 10px;">
+                <!-- Space for collection notes -->
+            </div>
+        </div>
+
+        <div class="info-section">
+            <p>☐ Informed consent obtained</p>
+            <p><strong>Signature:</strong> _______________________ <strong>Date:</strong> _____________</p>
+        </div>
+    {% endif %}
+
+    <div style="margin-top: 40px; font-size: 10px; text-align: center; color: #666;">
+        <p>This is a computer-generated document. For queries, contact {{ vendor.name }}</p>
+    </div>
+</body>
+</html>

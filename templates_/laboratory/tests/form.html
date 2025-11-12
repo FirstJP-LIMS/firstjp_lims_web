@@ -113,7 +113,14 @@
                         <div class="mb-3">
                             {{ form.default_reference_text|as_crispy_field }}
                         </div>
-
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.min_reference_value|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.max_reference_value|as_crispy_field }}
+                            </div>
+                        </div>
                         <!-- Comments -->
                         <div class="mb-4">
                             {{ form.general_comment_template|as_crispy_field }}

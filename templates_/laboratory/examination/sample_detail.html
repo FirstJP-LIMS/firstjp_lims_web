@@ -1,0 +1,243 @@
+{% extends "vendorbase.html" %}
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 text-gray-800 mb-1">
+                Sample Examination — {{ sample.sample_id }}
+            </h1>
+            <p class="text-muted mb-0">Review and process laboratory sample</p>
+        </div>
+        <a href="{% url 'labs:sample-exam-list' %}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left me-2"></i>Back to Queue
+        </a>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="mb-4">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <!-- Sample Information -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-info-circle me-2 text-primary"></i>
+                        Specimen Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold text-muted">Sample ID</label>
+                                <p class="fs-5 text-dark">{{ sample.sample_id }}</p>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold text-muted">Specimen Type</label>
+                                <p class="fs-6">
+                                    <span class="badge bg-light text-dark fs-6">{{ sample.specimen_type }}</span>
+                                </p>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold text-muted">Test Type</label>
+                                {% for test in sample.test_request__requested_tests %}
+                                <p class="fs-6">
+                                    <span class="badge bg-light text-dark fs-6">{{ test.name }}</span>
+                                </p>
+                                {% empty %}
+                                <p class="fs-6">
+                                    <span class="badge bg-light text-dark fs-6">None</span>
+                                </p>
+                                {% endfor %}
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold text-muted">Collection Method</label>
+                                <p>{{ sample.collection_method|default:"Not specified" }}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold text-muted">Status</label>
+                                <p>
+                                    {% if sample.status == 'AC' %}
+                                    <span class="badge bg-warning fs-6">Accessioned</span>
+                                    {% elif sample.status == 'AP' %}
+                                    <span class="badge bg-success fs-6">Accepted</span>
+                                    {% elif sample.status == 'RJ' %}
+                                    <span class="badge bg-danger fs-6">Rejected</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary fs-6">{{ sample.get_status_display }}</span>
+                                    {% endif %}
+                                </p>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold text-muted">Collected By</label>
+                                <p>{{ sample.collected_by|default:"Not recorded" }}</p>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold text-muted">Collection Time</label>
+                                <p>{{ sample.collected_at|date:"M d, Y H:i" }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if sample.specimen_description %}
+                    <div class="row">
+                        <div class="col-12">
+                            <label class="form-label fw-semibold text-muted">Description</label>
+                            <div class="border rounded p-3 bg-light">
+                                {{ sample.specimen_description }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Sample Actions -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-gear me-2 text-primary"></i>
+                        Sample Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <!-- Verify Sample -->
+                        <div class="col-md-4">
+                            <form method="post" class="h-100">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="verify">
+                                <button type="submit" class="btn btn-outline-warning w-100 h-100 py-3">
+                                    <i class="bi bi-check-circle me-2 fs-4"></i>
+                                    <div class="fw-semibold">Verify Sample</div>
+                                    <small class="text-muted">Mark as verified</small>
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Accept & Queue -->
+                        <div class="col-md-4">
+                            <form method="post" class="h-100">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="accept">
+                                <button type="submit" class="btn btn-outline-success w-100 h-100 py-3">
+                                    <i class="bi bi-play-circle me-2 fs-4"></i>
+                                    <div class="fw-semibold">Accept & Queue</div>
+                                    <small class="text-muted">Queue for analysis</small>
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Reject Sample -->
+                        <div class="col-md-4">
+                            <form method="post" class="h-100">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="reject">
+                                <div class="d-flex flex-column h-100">
+                                    <input type="text" name="reason" 
+                                           placeholder="Rejection reason..." 
+                                           class="form-control mb-2">
+                                    <button type="submit" class="btn btn-outline-danger w-100 flex-grow-1">
+                                        <i class="bi bi-x-circle me-2"></i>
+                                        Reject Sample
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Verification Details & Sidebar -->
+        <div class="col-lg-4">
+            <!-- Verification Status -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-clipboard-check me-2 text-primary"></i>
+                        Verification Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-muted">Verified By</label>
+                        <p>{{ sample.verified_by|default:"—" }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-muted">Verified At</label>
+                        <p>{{ sample.verified_at|date:"M d, Y H:i"|default:"—" }}</p>
+                    </div>
+                    {% if sample.rejection_reason %}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-muted text-danger">Rejection Reason</label>
+                        <div class="border rounded p-3 bg-light">
+                            {{ sample.rejection_reason }}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Quick Patient Info -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-person me-2 text-primary"></i>
+                        Patient Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <strong class="text-dark">{{ sample.patient.first_name }} {{ sample.patient.last_name }}</strong>
+                    </div>
+                    <div class="text-muted small">
+                        ID: {{ sample.patient.patient_id }}
+                    </div>
+                    {% if sample.patient.date_of_birth %}
+                    <div class="text-muted small">
+                        DOB: {{ sample.patient.date_of_birth|date:"M d, Y" }}
+                    </div>
+                    {% endif %}
+                    {% if sample.patient.contact_number %}
+                    <div class="text-muted small">
+                        Contact: {{ sample.patient.contact_number }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .btn-outline-warning:hover {
+        background-color: #ffc107;
+        color: #000;
+    }
+    .btn-outline-success:hover {
+        background-color: #198754;
+        color: #fff;
+    }
+    .btn-outline-danger:hover {
+        background-color: #dc3545;
+        color: #fff;
+    }
+    .form-control {
+        border-radius: 8px;
+    }
+</style>
+{% endblock %}

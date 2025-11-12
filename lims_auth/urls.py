@@ -23,18 +23,24 @@ from debug_toolbar.toolbar import debug_toolbar_urls
 from django.conf import settings
 from django.conf.urls.static import static
 
+
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path('', include('apps.core.urls')),
    
     path("account/", include("apps.accounts.urls", namespace="account")),
 
-
     path("tenants/", include("apps.tenants.urls")),
     
     path("laboratory/", include("apps.labs.urls", namespace="labs")),
 
-] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+]
 
+# Serve static and media files during development
+urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# Debug Toobar 
 urlpatterns += debug_toolbar_urls()
 

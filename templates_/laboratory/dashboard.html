@@ -43,7 +43,7 @@
                 </a>
             </div>
             <div class="nav-item">
-                <a class="nav-link" data-page="samples">
+                <a href="{% url 'labs:sample-exam-list' %}" class="nav-link" data-page="samples">
                     <i class="bi bi-droplet"></i>
                     Samples
                 </a>
@@ -92,22 +92,23 @@
                                 <li><h6 class="dropdown-header text-brand-blue">
                                     <i class="bi bi-building me-2"></i>Departments
                                 </h6></li>
+                                {% for department in lab_departments %}
                                 <li><a class="dropdown-item" href="#">
-                                    <i class="bi bi-heart-pulse me-2 text-success"></i>Hematology
+                                    <i class="bi bi-activity me-2 text-success"></i>{{ department.name }}
                                 </a></li>
-                                <li><a class="dropdown-item" href="#">
-                                    <i class="bi bi-dna me-2 text-info"></i>Microbiology
-                                </a></li>
-                                <li><a class="dropdown-item" href="#">
-                                    <i class="bi bi-activity me-2 text-danger"></i>Pathology
-                                </a></li>
+                                {% empty %}
+                                <li>
+                                    <span class="dropdown-item disabled">No departments configured.</span>
+                                </li>
+                                {% endfor %}
+
                                 <li><hr class="dropdown-divider"></li>
                                 
                                 <!-- Tests Section -->
                                 <li><h6 class="dropdown-header text-brand-blue">
                                     <i class="bi bi-clipboard-check me-2"></i>Tests
                                 </h6></li>
-                                <li><a class="dropdown-item" href="#">
+                                <li><a class="dropdown-item" href="{% url 'labs:test_create' %}">
                                     <i class="bi bi-plus-circle me-2 text-success"></i>Create New Test
                                 </a></li>
                                 <li><a class="dropdown-item" href="#">
@@ -124,12 +125,14 @@
                                 </a></li>
                             </ul>
                         </div>
-                        <button class="btn btn-red">
-                            <a href="{% url 'labs:create_test_request' %}">
-                                <i class="bi bi-plus-circle me-2"></i>
-                                Request Test
-                            </a>
-                        </button>
+                        <a 
+                            href="{% url 'labs:create_test_request' %}"
+                            class="btn btn-red" 
+                            style="color: white; text-decoration: none;"
+                        >
+                            <i class="bi bi-plus-circle me-2"></i>
+                            Request Test
+                        </a>
                         <button class="btn btn-outline-red">
                             <i class="bi bi-download me-2"></i>Export Report
                         </button>
@@ -213,6 +216,7 @@
                     </div>
                 </div>
 
+
                 <!-- Main Content Grid -->
                 <div class="content-grid">
                     <!-- Left Column -->
@@ -224,16 +228,22 @@
                                     <i class="bi bi-activity"></i>
                                     Recent Sample Activity
                                 </h5>
-                                <div class="dropdown">
-                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                        Last 7 days
-                                    </button>
-                                    <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="#">Today</a></li>
-                                        <li><a class="dropdown-item" href="#">Last 7 days</a></li>
-                                        <li><a class="dropdown-item" href="#">Last 30 days</a></li>
-                                    </ul>
-                                </div>
+
+                            <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                {% if current_filter == "today" %} Today
+                                {% elif current_filter == "30days" %} Last 30 days
+                                {% else %} Last 7 days
+                                {% endif %}
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="?filter=today">Today</a></li>
+                                <li><a class="dropdown-item" href="?filter=7days">Last 7 days</a></li>
+                                <li><a class="dropdown-item" href="?filter=30days">Last 30 days</a></li>
+                            </ul>
+                            </div>
+
+
                             </div>
                             <div class="card-body">
                                 <div class="table-responsive">
@@ -248,46 +258,84 @@
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
+
                                         <tbody>
+                                        {% for sample in samples %}
                                             <tr>
-                                                <td><strong>#SMP-001</strong></td>
-                                                <td>John Smith</td>
-                                                <td>Blood Chemistry</td>
-                                                <td><span class="badge bg-warning">Processing</span></td>
-                                                <td>2 hours ago</td>
+                                                <td><strong>#{{ sample.sample_id }}</strong></td>
+                                                <td>{{ sample.test_request.patient.first_name }} {{ sample.test_request.patient.last_name }}</td>
                                                 <td>
-                                                    <button class="btn btn-sm btn-outline-red">View</button>
+                                                    {% for vendor_test in sample.test_request.requested_tests.all %}
+                                                        {{ vendor_test.name }}{% if not forloop.last %}, {% endif %}
+                                                    {% empty %}
+                                                        No tests requested
+                                                    {% endfor %}
+                                                </td>
+                                                <td>
+                                                    {% if sample.status == 'processing' %}
+                                                        <span class="badge bg-warning">Processing</span>
+                                                    {% elif sample.status == 'completed' %}
+                                                        <span class="badge bg-success">Completed</span>
+                                                    {% elif sample.status == 'pending' %}
+                                                        <span class="badge bg-primary">Pending</span>
+                                                    {% elif sample.status == 'rejected' %}
+                                                        <span class="badge bg-danger">Rejected</span>
+                                                    {% else %}
+                                                        <span class="badge bg-secondary">{{ sample.status|capfirst }}</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>{{ sample.collected_at|timesince }} ago</td>
+                                                <td>
+                                                    <a href="{% url 'labs:sample-exam-detail' sample.sample_id %}" class="btn btn-sm btn-outline-red">View</a>
                                                 </td>
                                             </tr>
+                                        {% empty %}
                                             <tr>
-                                                <td><strong>#SMP-002</strong></td>
-                                                <td>Sarah Johnson</td>
-                                                <td>Hematology</td>
-                                                <td><span class="badge bg-success">Completed</span></td>
-                                                <td>4 hours ago</td>
-                                                <td>
-                                                    <button class="btn btn-sm btn-outline-red">View</button>
+                                                <td colspan="6" class="text-center text-muted py-3">
+                                                    No samples found.
                                                 </td>
                                             </tr>
-                                            <tr>
-                                                <td><strong>#SMP-003</strong></td>
-                                                <td>Mike Davis</td>
-                                                <td>Immunology</td>
-                                                <td><span class="badge bg-primary">Pending</span></td>
-                                                <td>6 hours ago</td>
-                                                <td>
-                                                    <button class="btn btn-sm btn-outline-red">View</button>
-                                                </td>
-                                            </tr>
+                                        {% endfor %}
                                         </tbody>
                                     </table>
-                                </div>
-                                <div class="text-center mt-3">
-                                    <a href="#" class="btn btn-outline-red">View All Samples</a>
+                                    <div class="d-flex justify-content-between align-items-center mt-3">
+                                        <div>
+                                            <small>Showing {{ samples.start_index }} - {{ samples.end_index }} of {{ samples.paginator.count }}</small>
+                                        </div>
+
+                                        <nav>
+                                            <ul class="pagination pagination-sm mb-0">
+                                                {% if samples.has_previous %}
+                                                    <li class="page-item">
+                                                        <a class="page-link" href="?page={{ samples.previous_page_number }}">&laquo; Prev</a>
+                                                    </li>
+                                                {% else %}
+                                                    <li class="page-item disabled"><span class="page-link">&laquo; Prev</span></li>
+                                                {% endif %}
+
+                                                {% for page_num in samples.paginator.page_range %}
+                                                    {% if page_num == samples.number %}
+                                                        <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
+                                                    {% else %}
+                                                        <li class="page-item"><a class="page-link" href="?page={{ page_num }}">{{ page_num }}</a></li>
+                                                    {% endif %}
+                                                {% endfor %}
+
+                                                {% if samples.has_next %}
+                                                    <li class="page-item">
+                                                        <a class="page-link" href="?page={{ samples.next_page_number }}">Next &raquo;</a>
+                                                    </li>
+                                                {% else %}
+                                                    <li class="page-item disabled"><span class="page-link">Next &raquo;</span></li>
+                                                {% endif %}
+                                            </ul>
+                                        </nav>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
+
 
                     <!-- Right Column -->
                     <div>

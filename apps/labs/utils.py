@@ -44,3 +44,23 @@ def get_next_sequence(prefix: str, vendor: Vendor = None) -> str:
         counter.refresh_from_db()
         return f"{prefix}{counter.last_number:06d}"
 
+
+
+
+# utils.py
+import io
+import base64
+import barcode
+from barcode.writer import ImageWriter
+
+def generate_barcode_base64(data):
+    """
+    Generate a barcode image for given data (like request_id)
+    and return it as a base64-encoded string for embedding in HTML.
+    """
+    buffer = io.BytesIO()
+    code128 = barcode.get('code128', data, writer=ImageWriter())
+    code128.write(buffer, options={'module_width': 0.4, 'module_height': 10.0})
+    buffer.seek(0)
+    img_base64 = base64.b64encode(buffer.read()).decode('utf-8')
+    return f"data:image/png;base64,{img_base64}"

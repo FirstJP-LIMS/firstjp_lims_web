@@ -26,11 +26,6 @@ urlpatterns = [
     path("tests/<int:pk>/update/", views.test_update, name="test_update"),
     path("tests/<int:pk>/delete/", views.test_delete, name="test_delete"),
 
-
-    # Patient add
-    # path('patients/', views.patient_list, name='patient_list'),
-    # path('patients/add/', views.add_patient, name='add_patient'),
-
     # test request
     path('test-requests/create/', views.test_request_create, name='create_test_request'),
 
@@ -42,9 +37,23 @@ urlpatterns = [
     
     path('requests/<int:pk>/delete/', views.test_request_delete, name='delete_request'),
 
+    # download Test Request 
+    path('test-request/<int:pk>/download/', views.download_test_request, name='download_test_request'),
+    
+    path(
+        "requests/download/blank/",
+        views.download_test_request,
+        {"blank": True},
+        name="download_blank_test_request"
+    ),
+
+    
+
+
 
     # examination
     path('examination/samples/', views.sample_examination_list, name='sample-exam-list'),
+
     path('examination/sample/<str:sample_id>/', views.sample_examination_detail, name='sample-exam-detail'),
 ]
 

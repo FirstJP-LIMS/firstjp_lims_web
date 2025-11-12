@@ -18,3 +18,7 @@ __pycache__/
 /workflow.md
 
 /dump.py 
+
+/templates
+/templates_/form_.html
+/templates_/keep.html

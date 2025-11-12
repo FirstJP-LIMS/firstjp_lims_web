@@ -58,6 +58,12 @@ class VendorTest(models.Model):
     The primary test definition, completely scoped to a specific vendor/lab.
     This model combines the function of the old GlobalTest and VendorTest.
     """
+    
+    RESULT_TYPE_CHOICES = [
+        ('QNT', 'Quantitative'),
+        ('QLT', 'Qualitative')
+    ]
+    
     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="lab_tests")
     code = models.CharField(max_length=64)
     name = models.CharField(max_length=150)
@@ -69,17 +75,22 @@ class VendorTest(models.Model):
         help_text="The department in this lab responsible for running the test."
     )
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
-    turnaround_override = models.DurationField(null=True, blank=True)
+    
+    turnaround_override = models.DurationField(null=True, blank=True, help_text="Test Time of completion.")
+    
     enabled = models.BooleanField(default=True)
     specimen_type = models.CharField(max_length=100, help_text="Blood, Urine, Tissue, etc.")
-    default_units = models.CharField(max_length=50, blank=True)
-    default_reference_text = models.CharField(max_length=255, blank=True)
-    RESULT_TYPE_CHOICES = [
-        ('QNT', 'Quantitative'),
-        ('QLT', 'Qualitative')
-    ]
+    default_units = models.CharField(max_length=50, blank=True, null=True)
+
+    default_reference_text = models.CharField(max_length=255, blank=True, null=True) # is this not the reference value
+
     result_type = models.CharField(max_length=3, choices=RESULT_TYPE_CHOICES, default='QNT')
+    
+    min_reference_value = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True, default=0.00, help_text="Minimum reference value for a particular test")
+    max_reference_value = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True, default=0.00, help_text="Maximum reference value for a particular test")
+
     general_comment_template = models.TextField(blank=True)
+    
     created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True, blank=True, null=True)
 
@@ -134,7 +145,6 @@ class Patient(models.Model):
 
 
 
-
 class Sample(models.Model):
     """
     Represents a specimen collected from a patient for one or more lab tests.
@@ -180,9 +190,6 @@ class Sample(models.Model):
         ordering = ['-collected_at']
         verbose_name = "Sample / Specimen"
         verbose_name_plural = "Samples / Specimens"
-
-    def __str__(self):
-        return f"{self.sample_id} — {self.specimen_type}"
 
     # -------------------------
     # Save & Auto-ID
@@ -277,16 +284,132 @@ class Sample(models.Model):
             action=f"Sample {self.sample_id} marked as consumed."
         )
 
+    def __str__(self):
+        return f"{self.sample_id} — {self.specimen_type}"
+
 
 
 # ------------------------
 # TEST REQUEST MODEL
 # ------------------------
+import os
+from io import BytesIO
+from barcode import Code128
+from barcode.writer import ImageWriter
+from django.core.files.base import ContentFile
+
+# class TestRequest(models.Model):
+#     """Represents a full lab order for a patient, possibly containing multiple tests."""
+
+#     ORDER_STATUS = [
+#         ('P', 'Pending'),     # Created, awaiting sample collection
+#         ('R', 'Received'),    # Sample received/accessioned
+#         ('A', 'Analysis'),    # Tests being analyzed
+#         ('C', 'Complete'),    # Results generated, awaiting verification
+#         ('V', 'Verified'),    # Final report verified and ready for release
+#     ]
+
+#     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="requests")
+#     patient = models.ForeignKey('Patient', on_delete=models.PROTECT, related_name="requests")
+#     requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="ordered_requests")
+
+#     request_id = models.CharField(max_length=64,unique=True, help_text="Unique Request/Order ID (auto-generated).")
+
+#     requested_tests = models.ManyToManyField('VendorTest', related_name="test_requests")
+
+#     clinical_history = models.TextField(blank=True, help_text="Relevant clinical notes or history.")
+#     priority = models.CharField(max_length=32, default="routine", help_text="e.g., routine, urgent, stat.")
+#     status = models.CharField(choices=ORDER_STATUS, max_length=1, default="P")
+
+#     # --- New fields ---
+#     has_informed_consent = models.BooleanField(
+#         default=False,
+#         help_text="Indicates that informed consent was obtained."
+#     )
+#     collection_notes = models.TextField(
+#         blank=True,
+#         help_text="Additional notes on phlebotomy or collection (time deviations, complications, etc.)."
+#     )
+#     external_referral = models.CharField(max_length=255,blank=True, null=True, help_text="Referring doctor or institution, if any.")
+
+#     barcode_image = models.ImageField(upload_to='barcodes/', null=True, blank=True, default="Barcode")
+
+#     created_at = models.DateTimeField(auto_now_add=True)
+#     completed_at = models.DateTimeField(null=True, blank=True)
+#     verified_at = models.DateTimeField(null=True, blank=True)
+
+#     class Meta:
+#         ordering = ["-created_at"]
+#         verbose_name = "Test Request"
+#         verbose_name_plural = "Test Requests"
+
+#     # barcode generator 
+#     def generate_barcode(self):
+#         """Generate a barcode image for this test request."""
+#         # Combine key identifiers (e.g., Vendor ID + Patient ID + Request ID)
+#         barcode_data = f"{self.vendor.id}-{self.patient.patient_id}-{self.request_id}"
+
+#         buffer = BytesIO()
+#         barcode = Code128(barcode_data, writer=ImageWriter())
+#         barcode.write(buffer)
+
+#         filename = f"barcode_{self.request_id}.png"
+#         self.barcode_image.save(filename, ContentFile(buffer.getvalue()), save=False)
+#         buffer.close()
+#         return self.barcode_image
+
+#     def save(self, *args, **kwargs):
+#         # Call parent save first to ensure request_id exists
+#         super().save(*args, **kwargs)
+#         if not self.barcode_image:
+#             self.generate_barcode()
+#             super().save(update_fields=["barcode_image"])
+    
+
+#     def save(self, *args, **kwargs):
+#         """Auto-generate a sequential request ID per vendor."""
+#         if not self.request_id:
+#             self.request_id = get_next_sequence("REQ", vendor=self.vendor)
+#         super().save(*args, **kwargs)
+
+#     # Change status
+#     def move_to_analysis(self):
+#         self.status = 'A'
+#         self.save(update_fields=['status'])
+
+#     def complete_analysis(self):
+#         self.status = 'C'
+#         self.completed_at = timezone.now()
+#         self.save(update_fields=['status', 'completed_at'])
+
+#     def verify_results(self, user):
+#         self.status = 'V'
+#         self.verified_at = timezone.now()
+#         self.save(update_fields=['status', 'verified_at'])
+#         AuditLog.objects.create(
+#             vendor=self.vendor, user=user,
+#             action=f"Request {self.request_id} verified"
+#         )
+
+
+#     def __str__(self):
+#         return f"{self.request_id} ({self.patient})"
+
+
+import os
+from io import BytesIO
+from barcode import Code128
+from barcode.writer import ImageWriter
+from django.core.files.base import ContentFile
+from django.db import models
+from django.conf import settings
+from django.utils import timezone
+
 class TestRequest(models.Model):
     """Represents a full lab order for a patient, possibly containing multiple tests."""
 
     ORDER_STATUS = [
-        # ('P', 'Pending'),     # Created, awaiting sample collection
+        ('P', 'Pending'),     # Created, awaiting sample collection
         ('R', 'Received'),    # Sample received/accessioned
         ('A', 'Analysis'),    # Tests being analyzed
         ('C', 'Complete'),    # Results generated, awaiting verification
@@ -295,19 +418,9 @@ class TestRequest(models.Model):
 
     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="requests")
     patient = models.ForeignKey('Patient', on_delete=models.PROTECT, related_name="requests")
-    requested_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="ordered_requests"
-    )
+    requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="ordered_requests")
 
-    request_id = models.CharField(
-        max_length=64,
-        unique=True,
-        help_text="Unique Request/Order ID (auto-generated)."
-    )
+    request_id = models.CharField(max_length=64, unique=True, help_text="Unique Request/Order ID (auto-generated).")
 
     requested_tests = models.ManyToManyField('VendorTest', related_name="test_requests")
 
@@ -324,7 +437,9 @@ class TestRequest(models.Model):
         blank=True,
         help_text="Additional notes on phlebotomy or collection (time deviations, complications, etc.)."
     )
-    external_referral = models.CharField(max_length=255,blank=True, null=True, help_text="Referring doctor or institution, if any.")
+    external_referral = models.CharField(max_length=255, blank=True, null=True, help_text="Referring doctor or institution, if any.")
+
+    barcode_image = models.ImageField(upload_to='barcodes/', null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
@@ -335,13 +450,38 @@ class TestRequest(models.Model):
         verbose_name = "Test Request"
         verbose_name_plural = "Test Requests"
 
-    def save(self, *args, **kwargs):
-        """Auto-generate a sequential request ID per vendor."""
-        if not self.request_id:
-            self.request_id = get_next_sequence("REQ", vendor=self.vendor)
-        super().save(*args, **kwargs)
+    def generate_barcode(self):
+        """Generate a barcode image for this test request."""
+        # Combine key identifiers (e.g., Vendor ID + Patient ID + Request ID)
+        barcode_data = f"{self.vendor.tenant_id}-{self.patient.patient_id}-{self.request_id}"
 
-    # Change status
+        buffer = BytesIO()
+        barcode = Code128(barcode_data, writer=ImageWriter())
+        barcode.write(buffer)
+
+        filename = f"barcode_{self.request_id}.png"
+        self.barcode_image.save(filename, ContentFile(buffer.getvalue()), save=False)
+        buffer.close()
+        return self.barcode_image
+
+    def save(self, *args, **kwargs):
+        """Auto-generate request ID and barcode on first save."""
+        # Generate request_id if not exists
+        if not self.request_id:
+            # Assuming get_next_sequence exists in your codebase
+            from .utils import get_next_sequence
+            self.request_id = get_next_sequence("REQ", vendor=self.vendor)
+        
+        # Call parent save first to ensure object exists in DB
+        super().save(*args, **kwargs)
+        
+        # Generate barcode after first save (when request_id is guaranteed to exist)
+        if not self.barcode_image:
+            self.generate_barcode()
+            # Use update_fields to avoid infinite recursion
+            super().save(update_fields=["barcode_image"])
+
+    # Change status methods
     def move_to_analysis(self):
         self.status = 'A'
         self.save(update_fields=['status'])
@@ -355,11 +495,13 @@ class TestRequest(models.Model):
         self.status = 'V'
         self.verified_at = timezone.now()
         self.save(update_fields=['status', 'verified_at'])
+        # Assuming AuditLog model exists
+        from .models import AuditLog
         AuditLog.objects.create(
-            vendor=self.vendor, user=user,
+            vendor=self.vendor, 
+            user=user,
             action=f"Request {self.request_id} verified"
         )
-
 
     def __str__(self):
         return f"{self.request_id} ({self.patient})"

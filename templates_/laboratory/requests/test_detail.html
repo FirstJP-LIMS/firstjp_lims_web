@@ -144,13 +144,31 @@
 </div>
 
 <!-- ACTION BUTTONS -->
-<div class="text-end mt-3">
-    <a href="{% url 'labs:test_request_list' %}" class="btn btn-outline-secondary">
-        <i class="bi bi-arrow-left"></i> Back
-    </a>
-    <button class="btn btn-primary" onclick="printForm()">
-        <i class="bi bi-printer"></i> Print / Download
-    </button>
+<div class="container-fluid py-4">
+<!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 text-gray-800 mb-1">Test Request Details</h1>
+            <p class="text-muted mb-0">Request ID: {{ test_request.request_id }}</p>
+        </div>
+        {% if test_request.barcode_image %}
+            <div class="text-end mt-2">
+                <img src="{{ test_request.barcode_image.url }}" alt="Barcode" style="height:50px; width:auto;">
+                <p class="small text-muted mb-0">Scan to identify sample</p>
+            </div>
+        {% endif %}
+        <div class="d-flex gap-2">
+            <a href="{% url 'labs:test_request_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to List
+            </a>
+            <a href="{% url 'labs:download_test_request' test_request.pk %}" class="btn btn-primary">
+                <i class="bi bi-download me-2"></i>Download Filled Form
+            </a>
+            <a href="{% url 'labs:download_blank_test_request' blank=True %}" class="btn btn-outline-primary">
+                <i class="bi bi-file-earmark me-2"></i>Blank Form
+            </a>
+        </div>
+    </div>
 </div>
 
 <script>
