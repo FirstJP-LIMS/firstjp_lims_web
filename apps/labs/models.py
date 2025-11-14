@@ -1,13 +1,11 @@
 from django.db import models, transaction
 from django.utils import timezone
 from django.conf import settings
-from apps.tenants.models import Vendor
+from apps.tenants.models import Vendor  # ✅ Direct import at top
 import uuid
 from django.db.models import Max
 from django.utils.text import slugify
 from .utils import get_next_sequence
-
-
 
 # ---------------------
 # To customize id
@@ -16,7 +14,7 @@ class SequenceCounter(models.Model):
     """
     Maintains atomic counters per vendor for generating IDs.
     """
-    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, null=True, blank=True)
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, null=True, blank=True)  # ✅ Direct reference
     prefix = models.CharField(max_length=20)
     last_number = models.PositiveIntegerField(default=0)
 
@@ -27,20 +25,14 @@ class SequenceCounter(models.Model):
         return f"{self.vendor or 'GLOBAL'} - {self.prefix} ({self.last_number})"
 
 
-# # Create your models here.
-# # Global Model: Department Catalog and Test Definitions Deleted
-
-# # NOTE: TestReferenceRange model is still needed for advanced ranges (age/gender/etc.) 
-
 # ---------------------
 # Per-vendor configuration
 # ---------------------
 class Department(models.Model):
     """
     Vendor-specific lab departments (e.g., Hematology, Serology).
-        CRITICAL CHANGE: Added vendor FK.
     """
-    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='departments')
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='departments')  # ✅ Direct reference
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)
 
@@ -56,7 +48,6 @@ class Department(models.Model):
 class VendorTest(models.Model):
     """
     The primary test definition, completely scoped to a specific vendor/lab.
-    This model combines the function of the old GlobalTest and VendorTest.
     """
     
     RESULT_TYPE_CHOICES = [
@@ -64,7 +55,7 @@ class VendorTest(models.Model):
         ('QLT', 'Qualitative')
     ]
     
-    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="lab_tests")
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="lab_tests")  # ✅ Direct reference
     code = models.CharField(max_length=64)
     name = models.CharField(max_length=150)
     slug = models.SlugField(max_length=150, blank=True, null=True)
@@ -82,7 +73,7 @@ class VendorTest(models.Model):
     specimen_type = models.CharField(max_length=100, help_text="Blood, Urine, Tissue, etc.")
     default_units = models.CharField(max_length=50, blank=True, null=True)
 
-    default_reference_text = models.CharField(max_length=255, blank=True, null=True) # is this not the reference value
+    default_reference_text = models.CharField(max_length=255, blank=True, null=True)
 
     result_type = models.CharField(max_length=3, choices=RESULT_TYPE_CHOICES, default='QNT')
     
@@ -120,7 +111,7 @@ class Patient(models.Model):
         ('M', 'Male'),
         ('F', 'Female')
     ]
-    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='patients')    
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='patients')  # ✅ Direct reference
     patient_id = models.CharField(max_length=20, help_text="Auto-generated 6-digit patient ID.")
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
@@ -144,7 +135,6 @@ class Patient(models.Model):
         return f"{self.patient_id} — {self.first_name} {self.last_name}"
 
 
-
 class Sample(models.Model):
     """
     Represents a specimen collected from a patient for one or more lab tests.
@@ -158,15 +148,13 @@ class Sample(models.Model):
         ('CO', 'Consumed'),      # Fully used up in processing
     ]
 
-    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="samples")
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="samples")  # ✅ Direct reference
     test_request = models.ForeignKey('TestRequest', on_delete=models.CASCADE, related_name='samples')
     patient = models.ForeignKey('Patient', on_delete=models.CASCADE, related_name="samples")
 
-    sample_id = models.CharField(max_length=64, unique=True, help_text="Globally unique barcode/sample ID (auto-generated)."
-    )
+    sample_id = models.CharField(max_length=64, unique=True, help_text="Globally unique barcode/sample ID (auto-generated).")
 
-    specimen_type = models.CharField(max_length=100,help_text="Specimen type e.g., Blood, Urine, Serum, Swab, etc."
-    )
+    specimen_type = models.CharField(max_length=100, help_text="Specimen type e.g., Blood, Urine, Serum, Swab, etc.")
     specimen_description = models.TextField(blank=True, null=True)
 
     # --- Collection Information ---
@@ -191,18 +179,12 @@ class Sample(models.Model):
         verbose_name = "Sample / Specimen"
         verbose_name_plural = "Samples / Specimens"
 
-    # -------------------------
-    # Save & Auto-ID
-    # -------------------------
     def save(self, *args, **kwargs):
         """Auto-generate unique sample ID if not set."""
         if not self.sample_id:
             self.sample_id = get_next_sequence("SMP", vendor=self.vendor)
         super().save(*args, **kwargs)
 
-    # -------------------------
-    # Examination Workflow
-    # -------------------------
     def verify_sample(self, user):
         """Mark this sample as verified by a lab staff."""
         self.verified_by = user
@@ -213,7 +195,6 @@ class Sample(models.Model):
             vendor=self.vendor,
             user=user,
             action=f"Sample {self.sample_id} verified for TestRequest {self.test_request.request_id}.",
-            payload={"sample_id": self.sample_id}
         )
 
     def accept_sample(self, user):
@@ -235,7 +216,6 @@ class Sample(models.Model):
             vendor=self.vendor,
             user=user,
             action=f"Sample {self.sample_id} accepted and queued for analysis.",
-            payload={"request_id": test_request.request_id}
         )
 
     def reject_sample(self, user, reason=None):
@@ -256,10 +236,6 @@ class Sample(models.Model):
             vendor=self.vendor,
             user=user,
             action=f"Sample {self.sample_id} rejected.",
-            payload={
-                "reason": reason or "Not specified",
-                "request_id": test_request.request_id
-            }
         )
 
     def mark_stored(self, user):
@@ -288,7 +264,6 @@ class Sample(models.Model):
         return f"{self.sample_id} — {self.specimen_type}"
 
 
-
 # ------------------------
 # TEST REQUEST MODEL
 # ------------------------
@@ -297,113 +272,6 @@ from io import BytesIO
 from barcode import Code128
 from barcode.writer import ImageWriter
 from django.core.files.base import ContentFile
-
-# class TestRequest(models.Model):
-#     """Represents a full lab order for a patient, possibly containing multiple tests."""
-
-#     ORDER_STATUS = [
-#         ('P', 'Pending'),     # Created, awaiting sample collection
-#         ('R', 'Received'),    # Sample received/accessioned
-#         ('A', 'Analysis'),    # Tests being analyzed
-#         ('C', 'Complete'),    # Results generated, awaiting verification
-#         ('V', 'Verified'),    # Final report verified and ready for release
-#     ]
-
-#     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="requests")
-#     patient = models.ForeignKey('Patient', on_delete=models.PROTECT, related_name="requests")
-#     requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="ordered_requests")
-
-#     request_id = models.CharField(max_length=64,unique=True, help_text="Unique Request/Order ID (auto-generated).")
-
-#     requested_tests = models.ManyToManyField('VendorTest', related_name="test_requests")
-
-#     clinical_history = models.TextField(blank=True, help_text="Relevant clinical notes or history.")
-#     priority = models.CharField(max_length=32, default="routine", help_text="e.g., routine, urgent, stat.")
-#     status = models.CharField(choices=ORDER_STATUS, max_length=1, default="P")
-
-#     # --- New fields ---
-#     has_informed_consent = models.BooleanField(
-#         default=False,
-#         help_text="Indicates that informed consent was obtained."
-#     )
-#     collection_notes = models.TextField(
-#         blank=True,
-#         help_text="Additional notes on phlebotomy or collection (time deviations, complications, etc.)."
-#     )
-#     external_referral = models.CharField(max_length=255,blank=True, null=True, help_text="Referring doctor or institution, if any.")
-
-#     barcode_image = models.ImageField(upload_to='barcodes/', null=True, blank=True, default="Barcode")
-
-#     created_at = models.DateTimeField(auto_now_add=True)
-#     completed_at = models.DateTimeField(null=True, blank=True)
-#     verified_at = models.DateTimeField(null=True, blank=True)
-
-#     class Meta:
-#         ordering = ["-created_at"]
-#         verbose_name = "Test Request"
-#         verbose_name_plural = "Test Requests"
-
-#     # barcode generator 
-#     def generate_barcode(self):
-#         """Generate a barcode image for this test request."""
-#         # Combine key identifiers (e.g., Vendor ID + Patient ID + Request ID)
-#         barcode_data = f"{self.vendor.id}-{self.patient.patient_id}-{self.request_id}"
-
-#         buffer = BytesIO()
-#         barcode = Code128(barcode_data, writer=ImageWriter())
-#         barcode.write(buffer)
-
-#         filename = f"barcode_{self.request_id}.png"
-#         self.barcode_image.save(filename, ContentFile(buffer.getvalue()), save=False)
-#         buffer.close()
-#         return self.barcode_image
-
-#     def save(self, *args, **kwargs):
-#         # Call parent save first to ensure request_id exists
-#         super().save(*args, **kwargs)
-#         if not self.barcode_image:
-#             self.generate_barcode()
-#             super().save(update_fields=["barcode_image"])
-    
-
-#     def save(self, *args, **kwargs):
-#         """Auto-generate a sequential request ID per vendor."""
-#         if not self.request_id:
-#             self.request_id = get_next_sequence("REQ", vendor=self.vendor)
-#         super().save(*args, **kwargs)
-
-#     # Change status
-#     def move_to_analysis(self):
-#         self.status = 'A'
-#         self.save(update_fields=['status'])
-
-#     def complete_analysis(self):
-#         self.status = 'C'
-#         self.completed_at = timezone.now()
-#         self.save(update_fields=['status', 'completed_at'])
-
-#     def verify_results(self, user):
-#         self.status = 'V'
-#         self.verified_at = timezone.now()
-#         self.save(update_fields=['status', 'verified_at'])
-#         AuditLog.objects.create(
-#             vendor=self.vendor, user=user,
-#             action=f"Request {self.request_id} verified"
-#         )
-
-
-#     def __str__(self):
-#         return f"{self.request_id} ({self.patient})"
-
-
-import os
-from io import BytesIO
-from barcode import Code128
-from barcode.writer import ImageWriter
-from django.core.files.base import ContentFile
-from django.db import models
-from django.conf import settings
-from django.utils import timezone
 
 class TestRequest(models.Model):
     """Represents a full lab order for a patient, possibly containing multiple tests."""
@@ -416,7 +284,7 @@ class TestRequest(models.Model):
         ('V', 'Verified'),    # Final report verified and ready for release
     ]
 
-    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="requests")
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="requests")  # ✅ Direct reference
     patient = models.ForeignKey('Patient', on_delete=models.PROTECT, related_name="requests")
     requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="ordered_requests")
 
@@ -452,7 +320,6 @@ class TestRequest(models.Model):
 
     def generate_barcode(self):
         """Generate a barcode image for this test request."""
-        # Combine key identifiers (e.g., Vendor ID + Patient ID + Request ID)
         barcode_data = f"{self.vendor.tenant_id}-{self.patient.patient_id}-{self.request_id}"
 
         buffer = BytesIO()
@@ -466,22 +333,15 @@ class TestRequest(models.Model):
 
     def save(self, *args, **kwargs):
         """Auto-generate request ID and barcode on first save."""
-        # Generate request_id if not exists
         if not self.request_id:
-            # Assuming get_next_sequence exists in your codebase
-            from .utils import get_next_sequence
             self.request_id = get_next_sequence("REQ", vendor=self.vendor)
         
-        # Call parent save first to ensure object exists in DB
         super().save(*args, **kwargs)
         
-        # Generate barcode after first save (when request_id is guaranteed to exist)
         if not self.barcode_image:
             self.generate_barcode()
-            # Use update_fields to avoid infinite recursion
             super().save(update_fields=["barcode_image"])
 
-    # Change status methods
     def move_to_analysis(self):
         self.status = 'A'
         self.save(update_fields=['status'])
@@ -495,8 +355,7 @@ class TestRequest(models.Model):
         self.status = 'V'
         self.verified_at = timezone.now()
         self.save(update_fields=['status', 'verified_at'])
-        # Assuming AuditLog model exists
-        from .models import AuditLog
+        
         AuditLog.objects.create(
             vendor=self.vendor, 
             user=user,
@@ -507,45 +366,97 @@ class TestRequest(models.Model):
         return f"{self.request_id} ({self.patient})"
 
 
-# --- Critical cleanup and simplification to TestAssignment ---
+# Examination phase
 class TestAssignment(models.Model):
     """The individual unit of work: one Test assigned to one Request."""
     ASSIGNMENT_STATUS = [
-        ('P', 'Pending'), # Created, waiting for instrument assignment
+        ('P', 'Pending'),
         ('R', 'Rejected'),
-        ('Q', 'Queued'), # Queued on Instrument
-        ('A', 'Analysis Complete'), # Result is back from instrument/manually entered
-        ('V', 'Result Verified'), # Result is verified by a staff member
+        ('Q', 'Queued'),
+        ('I', 'In Progress'),
+        ('A', 'Analysis Complete'),
+        ('V', 'Result Verified'),
     ]
 
-    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="assignments")
-    request = models.ForeignKey(TestRequest, on_delete=models.CASCADE, related_name="assignments")
-    # Links directly to the LabTest definition
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="assignments")  # ✅ Direct reference
+    request = models.ForeignKey('TestRequest', on_delete=models.CASCADE, related_name="assignments")
     lab_test = models.ForeignKey('VendorTest', on_delete=models.PROTECT, related_name="assignments") 
-    # The sample containing the material needed for this test
     sample = models.ForeignKey('Sample', on_delete=models.PROTECT, related_name="assignments", 
                                help_text="The sample specimen required to run this test.")
-    # Department is copied from VendorTest definition at creation time for performance/routing
     department = models.ForeignKey('Department', on_delete=models.PROTECT, related_name="assigned_work")
+    
     status = models.CharField(choices=ASSIGNMENT_STATUS, max_length=1, default='P')
-    instrument = models.ForeignKey('Equipment', null=True, blank=True, on_delete=models.SET_NULL,
-                                   help_text="The equipment used or scheduled to run this test.")
+    
+    instrument = models.ForeignKey(
+        'Equipment', 
+        null=True, 
+        blank=True, 
+        on_delete=models.SET_NULL,
+        related_name="assignments",
+        help_text="The equipment used or scheduled to run this test."
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    queued_at = models.DateTimeField(null=True, blank=True, help_text="When test was sent to instrument")
+    analyzed_at = models.DateTimeField(null=True, blank=True, help_text="When result was received")
+    verified_at = models.DateTimeField(null=True, blank=True, help_text="When result was verified")
+    
+    assigned_to = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        null=True, 
+        blank=True, 
+        on_delete=models.SET_NULL,
+        related_name="assigned_tests",
+        help_text="Lab technician assigned to this test"
+    )
+    
+    # Instrument integration
+    external_id = models.CharField(max_length=100, blank=True, help_text="ID from Windows LIMS/instrument system")
+    retry_count = models.IntegerField(default=0, help_text="Number of failed attempts to send to instrument")
+    last_sync_attempt = models.DateTimeField(null=True, blank=True, help_text="Last time we tried to sync with instrument")
     
     class Meta:
-        # Ensures no two Assignments for the SAME test exist within one request
-        unique_together = ('request', 'lab_test') 
+        unique_together = ('request', 'lab_test')
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status', 'instrument']),
+            models.Index(fields=['external_id']),
+        ]
 
-    # Change status
-    def mark_queued(self):
+    def can_send_to_instrument(self):
+        """Check if assignment can be sent to instrument"""
+        return (
+            self.status == 'P' and 
+            self.instrument and 
+            self.instrument.status == 'active' and
+            bool(self.instrument.api_endpoint)
+        )
+
+    def mark_queued(self, external_id=None):
         self.status = 'Q'
+        self.queued_at = timezone.now()
+        if external_id:
+            self.external_id = external_id
+        self.save(update_fields=['status', 'queued_at', 'external_id'])
+
+    def mark_in_progress(self):
+        self.status = 'I'
         self.save(update_fields=['status'])
 
     def mark_analyzed(self):
         self.status = 'A'
-        self.save(update_fields=['status'])
+        self.analyzed_at = timezone.now()
+        self.save(update_fields=['status', 'analyzed_at'])
 
     def mark_verified(self):
         self.status = 'V'
+        self.verified_at = timezone.now()
+        self.save(update_fields=['status', 'verified_at'])
+    
+    def mark_rejected(self, reason=""):
+        self.status = 'R'
         self.save(update_fields=['status'])
 
     def __str__(self):
@@ -553,37 +464,172 @@ class TestAssignment(models.Model):
 
 
 class TestResult(models.Model):
-    """The final measured value for a single TestAssignment."""
-    # One-to-One link to the unit of work
+    """Stores the actual result/outcome for a TestAssignment."""
+    
     assignment = models.OneToOneField(TestAssignment, on_delete=models.CASCADE, related_name="result")
     
     result_value = models.TextField(help_text="The measured value.")
     units = models.CharField(max_length=50, blank=True)
     reference_range = models.CharField(max_length=80, blank=True)
     
-    # New Field: Flag to indicate high/low/normal (H, L, N)
-    NORMAL_FLAG_CHOICES = [
-        ('N', 'Normal'), 
-        ('H', 'High'), 
-        ('L', 'Low'), 
-        ('A', 'Abnormal')
-        ]
-    flag = models.CharField(max_length=1, choices=NORMAL_FLAG_CHOICES, default='N')
+    flag = models.CharField(
+        max_length=1, 
+        choices=[
+            ('N', 'Normal'),
+            ('H', 'High'),
+            ('L', 'Low'),
+            ('A', 'Abnormal'),
+            ('C', 'Critical')
+        ], 
+        default='N'
+    )
+    
     remarks = models.TextField(blank=True)
+    interpretation = models.TextField(blank=True, help_text="Clinical interpretation")
+    
+    DATA_SOURCE = [
+        ('manual', 'Manual Entry'),
+        ('instrument', 'Instrument'),
+        ('imported', 'Imported'),
+    ]
+    data_source = models.CharField(max_length=20, choices=DATA_SOURCE, default='manual')
+    
     entered_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="entered_results")
     verified_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="verified_results")
+    
     entered_at = models.DateTimeField(auto_now_add=True)
     verified_at = models.DateTimeField(null=True, blank=True)
+    
     released = models.BooleanField(default=False)
+    released_at = models.DateTimeField(null=True, blank=True)
+    
+    version = models.IntegerField(default=1)
+    previous_value = models.TextField(blank=True, help_text="Previous result value if edited")
+    
+    class Meta:
+        indexes = [
+            models.Index(fields=['entered_at']),
+            models.Index(fields=['verified_at']),
+        ]
+    
+    def auto_flag_result(self):
+        """Automatically determine normal/abnormal based on VendorTest range."""
+        from decimal import Decimal
+        
+        test = self.assignment.lab_test
+        
+        if test.result_type == 'QLT':
+            return
+        
+        try:
+            val = Decimal(self.result_value.strip())
+            
+            if test.min_reference_value and val < test.min_reference_value:
+                self.flag = 'L'
+            elif test.max_reference_value and val > test.max_reference_value:
+                self.flag = 'H'
+            else:
+                self.flag = 'N'
+        except (ValueError, Exception):
+            self.flag = 'A'
+        
+        self.save(update_fields=['flag'])
+    
+    def mark_verified(self, user):
+        self.verified_by = user
+        self.verified_at = timezone.now()
+        self.assignment.mark_verified()
+        self.save(update_fields=['verified_by', 'verified_at'])
+    
+    def release_result(self, user):
+        self.released = True
+        self.released_at = timezone.now()
+        self.save(update_fields=['released', 'released_at'])
+    
+    def update_result(self, new_value, user, reason=""):
+        self.previous_value = f"v{self.version}: {self.result_value}"
+        self.result_value = new_value
+        self.version += 1
+        self.save(update_fields=['result_value', 'previous_value', 'version'])
 
     def __str__(self):
-        return f"Result for {self.assignment.global_test.code}"
+        return f"Result for {self.assignment.lab_test.name} - {self.result_value}"
 
 
-# New model for billing details
+class Equipment(models.Model):
+    """Lab instruments/analyzers"""
+    EQUIPMENT_STATUS = [
+        ('active', 'Active'),
+        ('maintenance', 'Under Maintenance'),
+        ('inactive', 'Inactive'),
+    ]
+    
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="equipment")  # ✅ Direct reference
+    name = models.CharField(max_length=150)
+    model = models.CharField(max_length=100)
+    serial_number = models.CharField(max_length=100, unique=True)
+    department = models.ForeignKey('Department', on_delete=models.PROTECT, related_name="equipment")
+    
+    api_endpoint = models.URLField(blank=True, help_text="Windows LIMS API endpoint for this instrument")
+    api_key = models.CharField(max_length=255, blank=True, help_text="Authentication key")
+    supports_auto_fetch = models.BooleanField(default=False, help_text="Can automatically fetch results")
+    
+    status = models.CharField(max_length=20, choices=EQUIPMENT_STATUS, default='active')
+    last_calibrated = models.DateField(null=True, blank=True)
+    
+    def __str__(self):
+        return f"{self.name} ({self.serial_number})"
+
+
+class InstrumentLog(models.Model):
+    """Log all communication with instruments"""
+    LOG_TYPE = [
+        ('send', 'Sent to Instrument'),
+        ('receive', 'Received from Instrument'),
+        ('error', 'Error'),
+    ]
+    
+    assignment = models.ForeignKey(TestAssignment, on_delete=models.CASCADE, related_name="instrument_logs")
+    instrument = models.ForeignKey(Equipment, on_delete=models.SET_NULL, null=True)
+    
+    log_type = models.CharField(max_length=10, choices=LOG_TYPE)
+    payload = models.JSONField(help_text="Request/response payload")
+    response_code = models.IntegerField(null=True, blank=True)
+    error_message = models.TextField(blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['assignment', 'log_type']),
+        ]
+    
+    def __str__(self):
+        return f"{self.log_type} - {self.assignment.request.request_id} at {self.created_at}"
+
+
+class AuditLog(models.Model):
+    """System-wide audit log"""
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="audit_logs")  # ✅ Direct reference
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
+    action = models.TextField()
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['vendor', '-created_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user} - {self.action[:50]}"
+
+
 class BillingInformation(models.Model):
     """Stores billing details associated with a TestRequest."""
-    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='billing_records')
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='billing_records')  # ✅ Direct reference
     request = models.OneToOneField('TestRequest', on_delete=models.CASCADE, related_name='billing_info')
 
     BILLING_CHOICES = [
@@ -593,39 +639,8 @@ class BillingInformation(models.Model):
     ]
     billing_type = models.CharField(max_length=3, choices=BILLING_CHOICES, default='PAT')
     
-    # Example fields
     insurance_provider = models.CharField(max_length=200, blank=True)
     policy_number = models.CharField(max_length=100, blank=True)
-    
-    # You would add many more fields here (e.g., CPT codes, estimated cost, etc.)
 
     def __str__(self):
         return f"Billing for {self.request.request_id} ({self.billing_type})"
-
-# Equipment & AuditLog Models (mostly unchanged, except for AuditLog FK clarification)
-class Equipment(models.Model):
-    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="equipment")
-    name = models.CharField(max_length=200)
-    manufacturer = models.CharField(max_length=200, blank=True)
-    model = models.CharField(max_length=200, blank=True)
-    serial_number = models.CharField(max_length=200, blank=True)
-    
-    # API key per device for local Windows service communication
-    device_key = models.CharField(max_length=64, unique=True, default=uuid.uuid4) 
-    last_heartbeat = models.DateTimeField(null=True, blank=True)
-    
-    # NOTE: You'll also need a VendorInterface model to manage the connection settings.
-
-    def __str__(self):
-        return f"{self.vendor.name} - {self.name}"
-
-class AuditLog(models.Model):
-    # Nullable vendor to allow platform admin actions to be logged without a specific tenant
-    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="audit_logs", null=True, blank=True) 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
-    action = models.CharField(max_length=255)
-    payload = models.JSONField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    
-    def __str__(self):
-        return f"[{self.created_at.strftime('%Y-%m-%d %H:%M')}] {self.action} by {self.user}"

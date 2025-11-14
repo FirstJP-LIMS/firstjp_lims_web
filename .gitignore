@@ -22,3 +22,5 @@ __pycache__/
 /templates
 /templates_/form_.html
 /templates_/keep.html
+
+/apps/labs/m.py

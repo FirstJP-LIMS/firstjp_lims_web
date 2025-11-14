@@ -34,6 +34,12 @@ from django.db.models import Sum
 from django.contrib.auth.decorators import login_required
 from apps.accounts.models import VendorProfile
 from django.core.paginator import Paginator
+import logging
+
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 
 
 # --- Decorator Definition ---
@@ -128,7 +134,6 @@ def profile(request):
 Operations: 
 CRUD operations by Vendor Admins on Department and VendorTest model.
 """
-
 
 # -------------------------------------------------
 # DEPARTMENT CRUD
@@ -528,8 +533,9 @@ def test_request_detail(request, pk):
     }
     return render(request, "laboratory/requests/test_detail.html", context)
 
-
-# Phase 2: Examination                 
+# **************
+# Phase 2: Sample Examination                 
+# **************
 @login_required
 def sample_examination_list(request):
     """List all samples awaiting verification or processing."""
@@ -541,13 +547,8 @@ def sample_examination_list(request):
 def sample_examination_detail(request, sample_id):
     """Detail view for verifying a specific sample."""
     sample = get_object_or_404(
-        Sample.objects.select_related(
-            'test_request',
-            'test_request__patient',
-            'vendor'
-        ).prefetch_related(
-            'test_request__requested_tests'
-        ),
+        Sample.objects.select_related('test_request','test_request__patient', 'vendor'
+        ).prefetch_related('test_request__requested_tests'),
         sample_id=sample_id
     )
 
@@ -574,38 +575,9 @@ def sample_examination_detail(request, sample_id):
     return render(request, 'laboratory/examination/sample_detail.html', {'sample': sample})
 
 
-# from django.template.loader import render_to_string
-# from io import BytesIO
-# from xhtml2pdf import pisa
-# from django.shortcuts import render, get_object_or_404
-# from django.http import HttpResponse
-# from django.template.loader import render_to_string
-# from django.db.models import Sum
-# from django.contrib.auth.decorators import login_required
-
-# from .models import TestRequest
-# from .utils import generate_barcode_base64
-# from .pdf import render_to_pdf  # Assuming you already have this helper
-
-
-# utils.py
-import io
-import base64
-import barcode
-from barcode.writer import ImageWriter
-
-def generate_barcode_base64(data):
-    """
-    Generate a barcode image for given data (like request_id)
-    and return it as a base64-encoded string for embedding in HTML.
-    """
-    buffer = io.BytesIO()
-    code128 = barcode.get('code128', data, writer=ImageWriter())
-    code128.write(buffer, options={'module_width': 0.4, 'module_height': 10.0})
-    buffer.seek(0)
-    img_base64 = base64.b64encode(buffer.read()).decode('utf-8')
-    return f"data:image/png;base64,{img_base64}"
-
+# *******************
+# Download TestRequest
+# *******************
 from django.template.loader import render_to_string
 from io import BytesIO
 from xhtml2pdf import pisa
@@ -617,16 +589,11 @@ from .models import TestRequest
 
 from .utils import generate_barcode_base64
 
-
-
-
 def render_to_pdf(html_content):
     """Utility to convert rendered HTML to PDF."""
     result = BytesIO()
     pdf = pisa.pisaDocument(BytesIO(html_content.encode("UTF-8")), result)
     return result.getvalue() if not pdf.err else None
-
-
 
 @login_required
 def download_test_request(request, pk=None, blank=False):
@@ -678,51 +645,706 @@ def download_test_request(request, pk=None, blank=False):
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response
 
+# **************************************************
+# Post Examination Section
+# ---- Post test, get result, and prepare result 
+    # TestAssignment → represents a job sent to the instrument.
+    # TestResult → holds result data.
+    # VendorTest → defines reference range (min/max).
+# ***************************************************
+
+from django.shortcuts import get_object_or_404, render, redirect
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST, require_http_methods
+from django.db import transaction
+from django.http import JsonResponse
+from django.core.exceptions import ValidationError
+
+from .models import TestAssignment, TestResult, Equipment, AuditLog
+from .services import (
+    InstrumentService, 
+    InstrumentAPIError,
+    send_assignment_to_instrument,
+    fetch_assignment_result
+)
 
 
-# @login_required
-# def download_test_request(request, pk=None, blank=False):
-#     """Download a filled or blank Test Request form as PDF."""
-#     vendor = getattr(request.user, "vendor", None)
-#     vendor_profile = getattr(vendor, "profile", None)
+@login_required
+@require_POST
+def send_to_instrument(request, assignment_id):
+    """Send test assignment to instrument queue"""
+    assignment = get_object_or_404(
+        TestAssignment.objects.select_related('instrument', 'vendor', 'lab_test'),
+        id=assignment_id,
+        vendor=request.user.vendor  # Ensure multi-tenant security
+    )
+    
+    # Validate assignment can be sent
+    if not assignment.can_send_to_instrument():
+        messages.error(
+            request, 
+            "Cannot send to instrument. Check instrument assignment and status."
+        )
+        return redirect('test_assignment_detail', assignment_id=assignment.id)
+    
+    try:
+        result = send_assignment_to_instrument(assignment_id)
+        
+        # Log the action
+        AuditLog.objects.create(
+            vendor=assignment.vendor,
+            user=request.user,
+            action=f"Sent assignment {assignment.id} to instrument {assignment.instrument.name}",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
+        messages.success(
+            request, 
+            f"Test sent to {assignment.instrument.name} successfully. Queue ID: {result.get('id')}"
+        )
+        
+    except InstrumentAPIError as e:
+        messages.error(request, f"Error sending to instrument: {str(e)}")
+        logger.error(f"Failed to send assignment {assignment_id}: {e}")
+    
+    return redirect('test_assignment_detail', assignment_id=assignment.id)
 
-#     # Handle missing logo gracefully
-#     if vendor_profile and not vendor_profile.logo:
-#         vendor_profile.logo = None
 
-#     if blank:
-#         # Blank form version — for physical clients
-#         context = {
-#             "vendor": vendor,
-#             "vendor_profile": vendor_profile,
-#             "blank": True,
-#         }
-#         filename = f"Blank_Test_Request_{vendor.name}.pdf"
-#     else:
-#         # Filled form version — for completed requests
-#         test_request = get_object_or_404(TestRequest, pk=pk, vendor=vendor)
+@login_required
+@require_http_methods(["GET", "POST"])
+def fetch_result_from_instrument(request, assignment_id):
+    """Manually trigger result fetch from instrument"""
+    assignment = get_object_or_404(
+        TestAssignment.objects.select_related('instrument', 'vendor'),
+        id=assignment_id,
+        vendor=request.user.vendor
+    )
+    
+    # Check if already has result
+    if hasattr(assignment, 'result') and assignment.result.verified_at:
+        messages.warning(request, "This result has already been verified.")
+        return redirect('test_assignment_detail', assignment_id=assignment.id)
+    
+    try:
+        result = fetch_assignment_result(assignment_id)
+        
+        if result:
+            AuditLog.objects.create(
+                vendor=assignment.vendor,
+                user=request.user,
+                action=f"Fetched result for assignment {assignment.id} from instrument",
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            messages.success(request, "Result successfully retrieved and saved.")
+        else:
+            messages.info(request, "Result not yet available from instrument.")
+            
+    except InstrumentAPIError as e:
+        messages.error(request, f"Error fetching result: {str(e)}")
+        logger.error(f"Failed to fetch result for assignment {assignment_id}: {e}")
+    
+    return redirect('test_assignment_detail', assignment_id=assignment.id)
 
-#         requested_tests = test_request.requested_tests.select_related("assigned_department")
-#         samples = test_request.samples.all()
-#         total_cost = requested_tests.aggregate(total=Sum("price"))["total"] or 0.00
-#         payment_mode = getattr(test_request, "payment_mode", "Not Specified")
 
-#         context = {
-#             "vendor": vendor,
-#             "vendor_profile": vendor_profile,
-#             "test_request": test_request,
-#             "requested_tests": requested_tests,
-#             "samples": samples,
-#             "total_cost": total_cost,
-#             "payment_mode": payment_mode,
-#             "blank": False,
-#         }
-#         filename = f"TestRequest_{test_request.request_id}.pdf"
+@login_required
+@require_http_methods(["GET", "POST"])
+def enter_manual_result(request, assignment_id):
+    """Manually enter test result"""
+    assignment = get_object_or_404(
+        TestAssignment.objects.select_related('lab_test', 'vendor', 'request__patient'),
+        id=assignment_id,
+        vendor=request.user.vendor
+    )
+    
+    # Check if assignment is in correct status
+    if assignment.status not in ['P', 'Q', 'I']:
+        messages.error(request, "Cannot enter result for this assignment in current status.")
+        return redirect('test_assignment_detail', assignment_id=assignment.id)
+    
+    # Check if result already exists and is verified
+    if hasattr(assignment, 'result') and assignment.result.verified_at:
+        messages.error(request, "Cannot modify verified result.")
+        return redirect('test_assignment_detail', assignment_id=assignment.id)
+    
+    if request.method == "POST":
+        value = request.POST.get("result_value", "").strip()
+        unit = request.POST.get("unit", "").strip()
+        remarks = request.POST.get("remarks", "").strip()
+        
+        # Validate required fields
+        if not value:
+            messages.error(request, "Result value is required.")
+            return render(request, "laboratory/manual_result_form.html", {
+                "assignment": assignment
+            })
+        
+        try:
+            with transaction.atomic():
+                # Get or create result
+                result, created = TestResult.objects.get_or_create(
+                    assignment=assignment,
+                    defaults={
+                        'data_source': 'manual',
+                        'entered_by': request.user,
+                    }
+                )
+                
+                # If updating existing result, track the change
+                if not created and result.result_value != value:
+                    result.update_result(value, request.user, reason="Manual correction")
+                else:
+                    result.result_value = value
+                
+                result.units = unit or assignment.lab_test.default_units or ''
+                result.remarks = remarks
+                
+                # Set reference range
+                if assignment.lab_test.min_reference_value and assignment.lab_test.max_reference_value:
+                    result.reference_range = (
+                        f"{assignment.lab_test.min_reference_value} - "
+                        f"{assignment.lab_test.max_reference_value}"
+                    )
+                elif assignment.lab_test.default_reference_text:
+                    result.reference_range = assignment.lab_test.default_reference_text
+                
+                result.save()
+                
+                # Auto-flag the result
+                result.auto_flag_result()
+                
+                # Update assignment status
+                assignment.mark_analyzed()
+                
+                # Log the action
+                AuditLog.objects.create(
+                    vendor=assignment.vendor,
+                    user=request.user,
+                    action=f"Manual result entered for {assignment.request.request_id} - {assignment.lab_test.code}",
+                    ip_address=request.META.get('REMOTE_ADDR')
+                )
+                
+                messages.success(request, "Manual result entered successfully.")
+                return redirect('test_assignment_detail', assignment_id=assignment.id)
+                
+        except Exception as e:
+            messages.error(request, f"Error saving result: {str(e)}")
+            logger.error(f"Error saving manual result for assignment {assignment_id}: {e}")
+    
+    return render(request, "laboratory/manual_result_form.html", {
+        "assignment": assignment,
+    })
 
-#     html = render_to_string("laboratory/requests/pdf_template.html", context)
-#     pdf_file = render_to_pdf(html)
 
-#     response = HttpResponse(pdf_file, content_type="application/pdf")
-#     response["Content-Disposition"] = f'attachment; filename="{filename}"'
-#     return response
+@login_required
+@require_POST
+def verify_result(request, assignment_id):
+    """Verify a completed test result"""
+    assignment = get_object_or_404(
+        TestAssignment.objects.select_related('vendor'),
+        id=assignment_id,
+        vendor=request.user.vendor
+    )
+    
+    if not hasattr(assignment, "result"):
+        messages.error(request, "No result found to verify.")
+        return redirect('test_assignment_detail', assignment_id=assignment.id)
+    
+    result = assignment.result
+    
+    # Check if already verified
+    if result.verified_at:
+        messages.warning(request, "This result has already been verified.")
+        return redirect('test_assignment_detail', assignment_id=assignment.id)
+    
+    # Prevent self-verification (optional policy)
+    if result.entered_by == request.user:
+        messages.error(request, "You cannot verify results you entered yourself.")
+        return redirect('test_assignment_detail', assignment_id=assignment.id)
+    
+    try:
+        result.mark_verified(request.user)
+        messages.success(request, "Result verified successfully.")
+        
+    except ValidationError as e:
+        messages.error(request, str(e))
+    
+    return redirect('test_assignment_detail', assignment_id=assignment.id)
 
+
+@login_required
+@require_POST
+def release_result(request, assignment_id):
+    """Release verified result to patient/doctor"""
+    assignment = get_object_or_404(
+        TestAssignment.objects.select_related('vendor'),
+        id=assignment_id,
+        vendor=request.user.vendor
+    )
+    
+    if not hasattr(assignment, "result"):
+        messages.error(request, "No result found to release.")
+        return redirect('test_assignment_detail', assignment_id=assignment.id)
+    
+    result = assignment.result
+    
+    try:
+        result.release_result(request.user)
+        messages.success(request, "Result released successfully.")
+        
+    except ValidationError as e:
+        messages.error(request, str(e))
+    
+    return redirect('test_assignment_detail', assignment_id=assignment.id)
+
+
+@login_required
+def test_assignment_detail(request, assignment_id):
+    """View detailed information about a test assignment"""
+    assignment = get_object_or_404(
+        TestAssignment.objects.select_related(
+            'lab_test',
+            'request__patient',
+            'sample',
+            'instrument',
+            'department',
+            'assigned_to'
+        ).prefetch_related('instrument_logs'),
+        id=assignment_id,
+        vendor=request.user.vendor
+    )
+    
+    # Get result if exists
+    result = getattr(assignment, 'result', None)
+    
+    # Get communication logs
+    logs = assignment.instrument_logs.all()[:10]
+    
+    context = {
+        'assignment': assignment,
+        'result': result,
+        'logs': logs,
+        'can_send': assignment.can_send_to_instrument(),
+        'can_verify': (
+            result and 
+            not result.verified_at and 
+            result.entered_by != request.user
+        ),
+        'can_release': result and result.verified_at and not result.released,
+    }
+    
+    return render(request, 'laboratory/assignment/test_assignment_detail.html', context)
+
+
+@login_required
+def instrument_status_check(request, instrument_id):
+    """Check instrument connection status (AJAX endpoint)"""
+    instrument = get_object_or_404(
+        Equipment,
+        id=instrument_id,
+        vendor=request.user.vendor
+    )
+    
+    service = InstrumentService(instrument)
+    status = service.check_instrument_status()
+    
+    return JsonResponse(status)
+
+
+@login_required
+def pending_results_dashboard(request):
+    """Dashboard showing all pending test assignments"""
+    vendor = request.user.vendor
+    
+    pending_assignments = TestAssignment.objects.filter(
+        vendor=vendor,
+        status__in=['P', 'Q', 'I']
+    ).select_related(
+        'lab_test',
+        'request__patient',
+        'instrument',
+        'assigned_to'
+    ).order_by('-created_at')
+    
+    # Group by status
+    by_status = {
+        'pending': pending_assignments.filter(status='P'),
+        'queued': pending_assignments.filter(status='Q'),
+        'in_progress': pending_assignments.filter(status='I'),
+    }
+    
+    # Get results awaiting verification
+    awaiting_verification = TestAssignment.objects.filter(
+        vendor=vendor,
+        status='A'
+    ).select_related('lab_test', 'request__patient')
+    
+    context = {
+        'by_status': by_status,
+        'awaiting_verification': awaiting_verification,
+        'total_pending': pending_assignments.count(),
+    }
+    
+    return render(request, 'laboratory/pending_results_dashboard.html', context)
+
+
+# views.py - Add to your existing views.py
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.db.models import Q, Count, Prefetch
+from django.core.paginator import Paginator
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+
+from .models import TestAssignment, Equipment, TestResult, Department
+from .services import send_assignment_to_instrument, InstrumentAPIError
+
+
+@login_required
+def test_assignment_list(request):
+    """
+    List all test assignments with filtering, search, and bulk actions.
+    """
+    vendor = request.user.vendor
+    
+    # Base queryset with optimized queries
+    assignments = TestAssignment.objects.filter(
+        vendor=vendor
+    ).select_related(
+        'lab_test',
+        'request__patient',
+        'sample',
+        'instrument',
+        'department',
+        'assigned_to'
+    ).prefetch_related(
+        Prefetch('result', queryset=TestResult.objects.select_related('entered_by', 'verified_by'))
+    )
+    
+    # Get filter parameters
+    status_filter = request.GET.get('status', '')
+    department_filter = request.GET.get('department', '')
+    instrument_filter = request.GET.get('instrument', '')
+    priority_filter = request.GET.get('priority', '')
+    search_query = request.GET.get('search', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    
+    # Apply filters
+    if status_filter:
+        assignments = assignments.filter(status=status_filter)
+    
+    if department_filter:
+        assignments = assignments.filter(department_id=department_filter)
+    
+    if instrument_filter:
+        if instrument_filter == 'unassigned':
+            assignments = assignments.filter(instrument__isnull=True)
+        else:
+            assignments = assignments.filter(instrument_id=instrument_filter)
+    
+    if priority_filter:
+        assignments = assignments.filter(request__priority=priority_filter)
+    
+    if search_query:
+        assignments = assignments.filter(
+            Q(request__request_id__icontains=search_query) |
+            Q(request__patient__patient_id__icontains=search_query) |
+            Q(request__patient__first_name__icontains=search_query) |
+            Q(request__patient__last_name__icontains=search_query) |
+            Q(lab_test__name__icontains=search_query) |
+            Q(lab_test__code__icontains=search_query) |
+            Q(sample__sample_id__icontains=search_query)
+        )
+    
+    if date_from:
+        assignments = assignments.filter(created_at__gte=date_from)
+    
+    if date_to:
+        assignments = assignments.filter(created_at__lte=date_to)
+    
+    # Get ordering
+    order_by = request.GET.get('order_by', '-created_at')
+    assignments = assignments.order_by(order_by)
+    
+    # Get statistics for dashboard cards
+    stats = {
+        'total': assignments.count(),
+        'pending': assignments.filter(status='P').count(),
+        'queued': assignments.filter(status='Q').count(),
+        'in_progress': assignments.filter(status='I').count(),
+        'completed': assignments.filter(status='A').count(),
+        'verified': assignments.filter(status='V').count(),
+        'rejected': assignments.filter(status='R').count(),
+    }
+    
+    # Pagination
+    paginator = Paginator(assignments, 25)  # 25 items per page
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    # Get filter options for dropdowns
+    departments = Department.objects.filter(vendor=vendor)
+    instruments = Equipment.objects.filter(vendor=vendor, status='active')
+    
+    context = {
+        'page_obj': page_obj,
+        'assignments': page_obj.object_list,
+        'stats': stats,
+        'departments': departments,
+        'instruments': instruments,
+        
+        # Current filters (to maintain state)
+        'current_status': status_filter,
+        'current_department': department_filter,
+        'current_instrument': instrument_filter,
+        'current_priority': priority_filter,
+        'search_query': search_query,
+        'date_from': date_from,
+        'date_to': date_to,
+        'order_by': order_by,
+        
+        # Available options
+        'status_choices': TestAssignment.ASSIGNMENT_STATUS,
+        'priority_choices': [
+            ('routine', 'Routine'),
+            ('urgent', 'Urgent'),
+            ('stat', 'STAT'),
+        ],
+    }
+    
+    return render(request, 'laboratory/test_assignment_list.html', context)
+
+
+@login_required
+@require_POST
+def bulk_send_to_instrument(request):
+    """
+    Bulk send multiple assignments to their respective instruments.
+    """
+    assignment_ids = request.POST.getlist('assignment_ids[]')
+    
+    if not assignment_ids:
+        messages.error(request, "No assignments selected.")
+        return redirect('laboratory:test_assignment_list')
+    
+    vendor = request.user.vendor
+    
+    # Get valid assignments
+    assignments = TestAssignment.objects.filter(
+        id__in=assignment_ids,
+        vendor=vendor,
+        status='P',
+        instrument__isnull=False,
+        instrument__status='active'
+    ).select_related('instrument')
+    
+    success_count = 0
+    failed_count = 0
+    errors = []
+    
+    for assignment in assignments:
+        try:
+            send_assignment_to_instrument(assignment.id)
+            success_count += 1
+        except InstrumentAPIError as e:
+            failed_count += 1
+            errors.append(f"Assignment {assignment.id}: {str(e)}")
+    
+    # Show results
+    if success_count > 0:
+        messages.success(request, f"Successfully sent {success_count} assignment(s) to instruments.")
+    
+    if failed_count > 0:
+        error_msg = f"Failed to send {failed_count} assignment(s)."
+        if errors:
+            error_msg += " Errors: " + "; ".join(errors[:3])  # Show first 3 errors
+        messages.error(request, error_msg)
+    
+    return redirect('laboratory:test_assignment_list')
+
+
+@login_required
+@require_POST
+def bulk_assign_instrument(request):
+    """
+    Bulk assign instrument to multiple assignments.
+    """
+    assignment_ids = request.POST.getlist('assignment_ids[]')
+    instrument_id = request.POST.get('instrument_id')
+    
+    if not assignment_ids or not instrument_id:
+        messages.error(request, "Please select assignments and an instrument.")
+        return redirect('laboratory:test_assignment_list')
+    
+    vendor = request.user.vendor
+    
+    # Validate instrument
+    instrument = get_object_or_404(
+        Equipment,
+        id=instrument_id,
+        vendor=vendor,
+        status='active'
+    )
+    
+    # Update assignments
+    updated = TestAssignment.objects.filter(
+        id__in=assignment_ids,
+        vendor=vendor,
+        status='P'  # Only pending assignments
+    ).update(instrument=instrument)
+    
+    messages.success(request, f"Assigned {updated} test(s) to {instrument.name}.")
+    return redirect('laboratory:test_assignment_list')
+
+
+@login_required
+@require_POST
+def bulk_assign_technician(request):
+    """
+    Bulk assign technician to multiple assignments.
+    """
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    
+    assignment_ids = request.POST.getlist('assignment_ids[]')
+    user_id = request.POST.get('user_id')
+    
+    if not assignment_ids or not user_id:
+        messages.error(request, "Please select assignments and a technician.")
+        return redirect('laboratory:test_assignment_list')
+    
+    vendor = request.user.vendor
+    
+    # Validate user
+    user = get_object_or_404(User, id=user_id, vendor=vendor)
+    
+    # Update assignments
+    updated = TestAssignment.objects.filter(
+        id__in=assignment_ids,
+        vendor=vendor,
+        status__in=['P', 'Q', 'I']
+    ).update(assigned_to=user)
+    
+    messages.success(request, f"Assigned {updated} test(s) to {user.get_full_name()}.")
+    return redirect('laboratory:test_assignment_list')
+
+
+@login_required
+@require_POST
+def quick_send_to_instrument(request, assignment_id):
+    """
+    Quick action: Send single assignment to instrument from list view.
+    This is for AJAX calls from the list page.
+    """
+    assignment = get_object_or_404(
+        TestAssignment,
+        id=assignment_id,
+        vendor=request.user.vendor
+    )
+    
+    if not assignment.can_send_to_instrument():
+        return JsonResponse({
+            'success': False,
+            'error': 'Cannot send to instrument. Check status and instrument assignment.'
+        }, status=400)
+    
+    try:
+        result = send_assignment_to_instrument(assignment_id)
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Sent to {assignment.instrument.name}',
+            'external_id': result.get('id'),
+            'new_status': 'Q',
+            'new_status_display': 'Queued'
+        })
+        
+    except InstrumentAPIError as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+def export_assignments_csv(request):
+    """
+    Export filtered assignments to CSV.
+    """
+    import csv
+    from django.http import HttpResponse
+    from django.utils import timezone
+    
+    vendor = request.user.vendor
+    
+    # Get filtered assignments (reuse filter logic)
+    assignments = TestAssignment.objects.filter(vendor=vendor).select_related(
+        'lab_test', 'request__patient', 'instrument', 'department'
+    )
+    
+    # Apply same filters as list view
+    status_filter = request.GET.get('status', '')
+    if status_filter:
+        assignments = assignments.filter(status=status_filter)
+    
+    # Create CSV response
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="assignments_{timezone.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+    
+    writer = csv.writer(response)
+    writer.writerow([
+        'Assignment ID',
+        'Request ID',
+        'Patient',
+        'Test',
+        'Sample',
+        'Department',
+        'Instrument',
+        'Status',
+        'Priority',
+        'Created',
+        'Queued',
+        'Analyzed',
+        'Verified'
+    ])
+    
+    for assignment in assignments:
+        writer.writerow([
+            assignment.id,
+            assignment.request.request_id,
+            str(assignment.request.patient),
+            assignment.lab_test.name,
+            assignment.sample.sample_id,
+            assignment.department.name,
+            assignment.instrument.name if assignment.instrument else 'Not Assigned',
+            assignment.get_status_display(),
+            assignment.request.priority,
+            assignment.created_at.strftime('%Y-%m-%d %H:%M'),
+            assignment.queued_at.strftime('%Y-%m-%d %H:%M') if assignment.queued_at else '',
+            assignment.analyzed_at.strftime('%Y-%m-%d %H:%M') if assignment.analyzed_at else '',
+            assignment.verified_at.strftime('%Y-%m-%d %H:%M') if assignment.verified_at else '',
+        ])
+    
+    return response
+
+
+@login_required
+def assignment_quick_stats(request):
+    """
+    AJAX endpoint for real-time stats updates.
+    """
+    vendor = request.user.vendor
+    
+    stats = TestAssignment.objects.filter(vendor=vendor).aggregate(
+        total=Count('id'),
+        pending=Count('id', filter=Q(status='P')),
+        queued=Count('id', filter=Q(status='Q')),
+        in_progress=Count('id', filter=Q(status='I')),
+        completed=Count('id', filter=Q(status='A')),
+        verified=Count('id', filter=Q(status='V')),
+    )
+    
+    return JsonResponse(stats)
