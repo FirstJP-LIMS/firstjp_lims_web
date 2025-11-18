@@ -41,13 +41,29 @@ INSTALLED_APPS = [
     'phonenumber_field',
 
     # styling 
+    'tailwind',
+    'theme',
+    'django_browser_reload',
     'crispy_forms',
     'crispy_bootstrap5',
 
 ]
 
+TAILWIND_APP_NAME = "theme"
+
+INTERNAL_IPS = [
+    "127.0.0.1",
+    'localhost',
+]
+
+NPM_BIN_PATH = r"C:\Program Files\nodejs\npm.cmd"
+
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
+
+if DEBUG:
+    # Add django_browser_reload only in DEBUG mode
+    INSTALLED_APPS += ["django_browser_reload"]
 
 AUTH_USER_MODEL = 'accounts.User'
 
@@ -60,6 +76,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "django_browser_reload.middleware.BrowserReloadMiddleware", # tailwind
 ]
 
 ROOT_URLCONF = "lims_auth.urls"

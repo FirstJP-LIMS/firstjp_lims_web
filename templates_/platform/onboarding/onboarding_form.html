@@ -1,0 +1,85 @@
+{% extends "platform/assets/base.html" %}
+{% block content %}
+<div class="max-w-3xl mx-auto py-10">
+    <div class="bg-white shadow-md rounded-lg overflow-hidden">
+        <div class="bg-blue-900 text-white text-center py-6">
+            <h2 class="text-2xl font-semibold">Join MEDVUNO</h2>
+            <!-- <p class="opacity-80">Complete your vendor registration</p> -->
+        </div>
+
+        <div class="p-8">
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="mb-4 px-4 py-3 rounded text-white 
+                        {% if message.tags == 'success' %} bg-green-600 
+                        {% elif message.tags == 'error' %} bg-red-600 
+                        {% else %} bg-gray-700 {% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post" class="space-y-6">
+                {% csrf_token %}
+
+                <!-- Business -->
+                <div>
+                    <h3 class="text-nav-blue font-semibold border-b pb-2 mb-3">Business Information</h3>
+                    {{ form.name }}
+                </div>
+
+                <!-- Admin -->
+                <div>
+                    <h3 class="text-nav-blue font-semibold border-b pb-2 mb-3">Admin Information</h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {{ form.admin_first_name }}
+                        {{ form.admin_last_name }}
+                    </div>
+
+                    <div class="mt-4">
+                        {{ form.admin_email }}
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        {{ form.contact_number }}
+                        {{ form.admin_password }}
+                        {{ form.admin_password_confirm }}
+                    </div>
+                </div>
+
+                <!-- Address -->
+                <div>
+                    <h3 class="text-nav-blue font-semibold border-b pb-2 mb-3">Address</h3>
+
+                    {{ form.office_street_address }}
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        {{ form.office_city_state }}
+                        {{ form.office_country }}
+                    </div>
+
+                    <div class="mt-4">
+                        {{ form.office_zipcode }}
+                    </div>
+                </div>
+
+                <!-- Plan -->
+                <div>
+                    <h3 class="text-nav-blue font-semibold border-b pb-2 mb-3">Subscription Plan</h3>
+                    {{ form.plan_type }}
+                </div>
+
+                <!-- Submit -->
+                <button class="w-full bg-blue-900 text-white font-medium py-3 rounded-md transition">
+                    Submit Registration
+                </button>
+            </form>
+
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}

@@ -40,11 +40,7 @@ urlpatterns = [
     # download Test Request 
     path('test-request/<int:pk>/download/', views.download_test_request, name='download_test_request'),
     
-    path(
-        "requests/download/blank/",
-        views.download_test_request,
-        {"blank": True},
-        name="download_blank_test_request"
+    path("requests/download/blank/", views.download_test_request, {"blank": True}, name="download_blank_test_request"
     ),
 
     # examination
@@ -53,57 +49,103 @@ urlpatterns = [
     path('examination/sample/<str:sample_id>/', views.sample_examination_detail, name='sample-exam-detail'),
 
    # Test Assignment Management
+# ===== Test Assignment List & Management =====
+    path(
+        'assignments/',
+        views.test_assignment_list,
+        name='test_assignment_list'
+    ),
+    
     path(
         'assignment/<int:assignment_id>/',
         views.test_assignment_detail,
         name='test_assignment_detail'
     ),
     
-    # Instrument Integration
+    # ===== Quick Actions (AJAX) =====
+    path(
+        'assignment/<int:assignment_id>/quick-send/',
+        views.quick_send_to_instrument,
+        name='quick_send_to_instrument'
+    ),
+    
+    path(
+        'assignments/stats/',
+        views.assignment_quick_stats,
+        name='assignment_quick_stats'
+    ),
+    
+    # ===== Bulk Actions =====
+    path(
+        'assignments/bulk-send/',
+        views.bulk_send_to_instrument,
+        name='bulk_send_to_instrument'
+    ),
+    
+    path(
+        'assignments/bulk-assign-instrument/',
+        views.bulk_assign_instrument,
+        name='bulk_assign_instrument'
+    ),
+    
+    path(
+        'assignments/bulk-assign-technician/',
+        views.bulk_assign_technician,
+        name='bulk_assign_technician'
+    ),
+    
+    # ===== Export =====
+    path(
+        'assignments/export-csv/',
+        views.export_assignments_csv,
+        name='export_assignments_csv'
+    ),
+    
+    # ===== Instrument Integration (from previous) =====
     path(
         'assignment/<int:assignment_id>/send-to-instrument/',
         views.send_to_instrument,
         name='send_to_instrument'
     ),
+    
     path(
         'assignment/<int:assignment_id>/fetch-result/',
         views.fetch_result_from_instrument,
         name='fetch_result_from_instrument'
     ),
     
-    # Manual Result Entry
+    # ===== Manual Result Entry =====
     path(
         'assignment/<int:assignment_id>/enter-manual-result/',
         views.enter_manual_result,
         name='enter_manual_result'
     ),
     
-    # Result Verification & Release
+    # ===== Result Verification & Release =====
     path(
         'assignment/<int:assignment_id>/verify/',
         views.verify_result,
         name='verify_result'
     ),
+    
     path(
         'assignment/<int:assignment_id>/release/',
         views.release_result,
         name='release_result'
     ),
     
-    # Instrument Status
+    # ===== Instrument Status =====
     path(
         'instrument/<int:instrument_id>/status/',
         views.instrument_status_check,
         name='instrument_status_check'
     ),
     
-    # # Dashboard
+    # # ===== Dashboard =====
     # path(
     #     'pending-results/',
     #     views.pending_results_dashboard,
     #     name='pending_results_dashboard'
     # ),
- 
-
 ]
 

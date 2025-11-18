@@ -59,53 +59,185 @@ from datetime import timedelta
 from django.utils import timezone
 
 # --- CRM Views ---
-# dashboard 
+# # dashboard 
+# @login_required
+# @tenant_required
+# def dashboard(request):
+#     tenant = request.tenant
+#     is_platform_admin = request.is_platform_admin
+#     if is_platform_admin and not tenant:
+#         return render(request, "laboratory/registration/login.html")
+
+#     # Fetch lab Departments to the header
+#     try:
+#         lab_departments = tenant.departments.all().order_by('name')
+#     except AttributeError:
+#         lab_departments = []
+
+#     lab_name = getattr(tenant, 'business_name', tenant.name)
+
+#     # filter time from query params
+#     date_filter = request.GET.get("filter", "7days")
+
+#     # Fetch recent samples for this vendor
+#     samples_qs = Sample.objects.filter(vendor=tenant).select_related('test_request__patient').prefetch_related('test_request__requested_tests')
+
+#     # 🧮 Apply time filtering
+#     now = timezone.now()
+#     if date_filter == "today":
+#         samples_qs = samples_qs.filter(collected_at__date=now.date())
+#     elif date_filter == "7days":
+#         samples_qs = samples_qs.filter(collected_at__gte=now - timedelta(days=7))
+#     elif date_filter == "30days":
+#         samples_qs = samples_qs.filter(collected_at__gte=now - timedelta(days=30))
+
+#     # Sort newest first
+#     samples_qs = samples_qs.order_by('-collected_at')
+
+#     # Pagination
+#     paginator = Paginator(samples_qs, 10)  # 10 samples per page
+#     page_number = request.GET.get("page")
+#     samples_page = paginator.get_page(page_number)
+
+#     context = {
+#         "vendor": tenant,
+#         "lab_name": lab_name,
+#         "vendor_domain": tenant.domains.first().domain_name if tenant.domains.exists() else None,
+#         "lab_departments": lab_departments,
+#         "samples": samples_page,  # Pagination added
+#         "current_filter": date_filter,
+#     }
+#     return render(request, "laboratory/dashboard.html", context)
+
+
+
+
+from datetime import timedelta
+from django.utils import timezone
+from django.core.paginator import Paginator
+from django.db.models import Count, F, Q, Avg, ExpressionWrapper, DurationField
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
+
+# Assuming tenant_required, Sample, TestAssignment, and other models are imported correctly
+# from .decorators import tenant_required
+# from .models import Sample, TestAssignment, TestResult, ... 
+
+# NOTE: The full function signature with necessary imports/decorators is assumed 
+# to exist in your environment.
+
 @login_required
 @tenant_required
 def dashboard(request):
     tenant = request.tenant
     is_platform_admin = request.is_platform_admin
     if is_platform_admin and not tenant:
-        return render(request, "laboratory/registration/login.html")
+        # Assuming you have a login URL or process for platform admins without a tenant
+        # return redirect("platform_admin_select_tenant") 
+        pass 
 
-    # Fetch lab Departments to the header
+    # Fetch lab Departments for the header (as in your original code)
     try:
         lab_departments = tenant.departments.all().order_by('name')
     except AttributeError:
         lab_departments = []
 
     lab_name = getattr(tenant, 'business_name', tenant.name)
-
-    # filter time from query params
-    date_filter = request.GET.get("filter", "7days")
-
-    # Fetch recent samples for this vendor
-    samples_qs = Sample.objects.filter(vendor=tenant).select_related('test_request__patient').prefetch_related('test_request__requested_tests')
-
-    # 🧮 Apply time filtering
     now = timezone.now()
+
+    # --- 1. Calculate Time Ranges for Filtering ---
+    date_filter = request.GET.get("filter", "7days")
+    
     if date_filter == "today":
-        samples_qs = samples_qs.filter(collected_at__date=now.date())
-    elif date_filter == "7days":
-        samples_qs = samples_qs.filter(collected_at__gte=now - timedelta(days=7))
+        start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        previous_start_date = start_date - timedelta(days=1)
     elif date_filter == "30days":
-        samples_qs = samples_qs.filter(collected_at__gte=now - timedelta(days=30))
+        start_date = now - timedelta(days=30)
+        previous_start_date = now - timedelta(days=60)
+    else:  # Default to 7days
+        start_date = now - timedelta(days=7)
+        previous_start_date = now - timedelta(days=14)
 
-    # Sort newest first
-    samples_qs = samples_qs.order_by('-collected_at')
+    # --- 2. Fetch Dashboard Statistics ---
+    
+    # Base query for Assignments
+    assignment_base_qs = TestAssignment.objects.filter(vendor=tenant)
+    sample_base_qs = Sample.objects.filter(vendor=tenant)
 
-    # Pagination
-    paginator = Paginator(samples_qs, 10)  # 10 samples per page
+    # 2.1. Pending Samples/Assignments (P, Q, I status within the current filter period)
+    pending_assignments_count = assignment_base_qs.filter(
+        status__in=['P', 'Q', 'I'],
+        created_at__gte=start_date
+    ).count()
+
+    # 2.2. Unverified Results (Assignments that are Analyzed (A) but not Verified/Released (V/R))
+    # Filtered by the current time period to keep the count relevant to the date filter
+    unread_results_count = assignment_base_qs.filter(
+        status__in=['A'], 
+        updated_at__gte=start_date 
+    ).count()
+
+    # 2.3. Total Samples processed (for trends)
+    current_samples_count = sample_base_qs.filter(collected_at__gte=start_date).count()
+    previous_samples_count = sample_base_qs.filter(
+        collected_at__gte=previous_start_date, 
+        collected_at__lt=start_date
+    ).count()
+
+    # Trend calculation
+    samples_trend_percent = 0
+    if previous_samples_count > 0:
+        samples_trend_percent = round(((current_samples_count - previous_samples_count) / previous_samples_count) * 100, 1)
+    elif current_samples_count > 0:
+        samples_trend_percent = 100.0
+        
+    # Determine trend direction
+    trend_direction = "up" if samples_trend_percent >= 0 else "down"
+
+    # 2.4. Monthly Samples (always 30 days)
+    monthly_samples_count = sample_base_qs.filter(
+        collected_at__gte=now - timedelta(days=30)
+    ).count()
+    
+    # 2.5. Average TAT (from creation to verification/release)
+    avg_tat_display = "N/A"
+    tat_qs = assignment_base_qs.filter(status__in=['V', 'R']).annotate(
+        tat_duration=ExpressionWrapper(
+            F('verified_at') - F('created_at'),
+            output_field=DurationField()
+        )
+    )
+    avg_tat_result = tat_qs.aggregate(Avg('tat_duration'))['tat_duration__avg']
+
+    if avg_tat_result:
+        total_seconds = avg_tat_result.total_seconds()
+        hours = int(total_seconds // 3600)
+        minutes = int((total_seconds % 3600) // 60)
+        # Format: e.g., 4h 30m
+        avg_tat_display = f"{hours}h {minutes}m"
+        
+    # --- 3. Pagination for Recent Samples ---
+    samples_qs = Sample.objects.filter(vendor=tenant, collected_at__gte=start_date).order_by('-collected_at')
+    paginator = Paginator(samples_qs, 10)
     page_number = request.GET.get("page")
     samples_page = paginator.get_page(page_number)
 
     context = {
         "vendor": tenant,
         "lab_name": lab_name,
-        "vendor_domain": tenant.domains.first().domain_name if tenant.domains.exists() else None,
+        "vendor_domain": tenant.domains.first().domain_name if tenant.domains.exists() else 'N/A',
         "lab_departments": lab_departments,
-        "samples": samples_page,  # Pagination added
+        "samples": samples_page,
         "current_filter": date_filter,
+        
+        # New Statistics Context
+        "pending_assignments_count": pending_assignments_count,
+        "samples_in_period_count": current_samples_count,
+        "samples_trend_percent": abs(samples_trend_percent),
+        "samples_trend_direction": trend_direction,
+        "avg_tat_display": avg_tat_display,
+        "unread_results_count": unread_results_count,
+        "monthly_samples_count": monthly_samples_count,
     }
     return render(request, "laboratory/dashboard.html", context)
 
@@ -246,6 +378,7 @@ def test_create(request):
     tenant = getattr(request, "tenant", None)
     is_platform_admin = getattr(request, "is_platform_admin", False)
 
+    "handle error: Integrity error"
     if request.method == "POST":
         form = VendorLabTestForm(request.POST, vendor=tenant)
         if form.is_valid():
@@ -445,32 +578,50 @@ def test_request_create(request):
 
 
 # update 
+# update 
 @login_required
 def test_request_update(request, pk):
     vendor = getattr(request.user, "vendor", None)
     request_instance = get_object_or_404(TestRequest, pk=pk, vendor=vendor)
 
+    # Get sample if it exists
+    sample = Sample.objects.filter(test_request=request_instance).first()
+
     if request.method == "POST":
         form = TestRequestForm(request.POST, instance=request_instance, vendor=vendor)
-        if form.is_valid():
+        sample_form = SampleForm(request.POST, instance=sample)
+
+        if form.is_valid() and sample_form.is_valid():
             try:
                 with transaction.atomic():
                     updated_request = form.save(commit=False)
                     updated_request.vendor = vendor
                     updated_request.save()
+
+                    # Update M2M ordered tests
                     updated_request.requested_tests.set(form.cleaned_data["tests_to_order"])
 
+                    # Save sample info
+                    sample_form.instance.test_request = updated_request
+                    sample_form.save()
+
                     messages.success(request, f"{updated_request.request_id} updated successfully.")
-                    return redirect("test_request_list")
+                    return redirect("labs:test_request_list")
+
             except Exception as e:
                 messages.error(request, f"Error updating request: {e}")
+
     else:
+        # GET — instantiate both forms
         form = TestRequestForm(instance=request_instance, vendor=vendor)
+        sample_form = SampleForm(instance=sample)
 
     return render(request, "laboratory/requests/form.html", {
         "form": form,
+        "sample_form": sample_form,
         "update_mode": True,
     })
+
 
 from django.contrib.auth.decorators import user_passes_test
 
@@ -1115,7 +1266,7 @@ def test_assignment_list(request):
         ],
     }
     
-    return render(request, 'laboratory/test_assignment_list.html', context)
+    return render(request, 'laboratory/assignment/test_assignment_list.html', context)
 
 
 @login_required
@@ -1229,7 +1380,7 @@ def bulk_assign_technician(request):
     ).update(assigned_to=user)
     
     messages.success(request, f"Assigned {updated} test(s) to {user.get_full_name()}.")
-    return redirect('laboratory:test_assignment_list')
+    return redirect('labs:test_assignment_list')
 
 
 @login_required
@@ -1348,3 +1499,24 @@ def assignment_quick_stats(request):
     )
     
     return JsonResponse(stats)
+
+
+
+# @login_required
+# def instrument_logs_list(request, assignment_id):
+#     """View all instrument communication logs for an assignment"""
+#     assignment = get_object_or_404(
+#         TestAssignment.objects.select_related('instrument'),
+#         id=assignment_id,
+#         vendor=request.user.vendor
+#     )
+    
+#     logs = assignment.instrument_logs.all().select_related('instrument')
+    
+#     context = {
+#         'assignment': assignment,
+#         'logs': logs,
+#     }
+    
+#     return render(request, 'laboratory/assignment/instrument_logs_list.html', context)
+

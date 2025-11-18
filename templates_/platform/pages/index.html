@@ -1,0 +1,147 @@
+{% extends "platform/assets/base.html" %}
+{% block content %}
+
+
+<!-- Hero section -->
+<!-- <section class="bg-[#0A1A44] "> -->
+<section class="bg-gray-100">
+  <div class="max-w-7xl mx-auto px-6 lg:px-12 py-16">
+    <div class="grid grid-cols-1 md:grid-cols-2 items-center gap-12">
+
+      <!-- LEFT TEXT -->
+      <div class="text-white space-y-6">
+        <span class="text-[#D4AF37] font-semibold tracking-wide text-sm uppercase">
+          AI Powered
+        </span>
+        <h1 class="text-4xl lg:text-5xl text-[#183153] font-bold leading-tight">
+          Transform Your <br />
+          Laboratory Operations
+        </h1>
+
+        <p class="text-gray-900 leading-relaxed">
+          Upgrade to a reliable solution that can handle diverse workflows from toxicology to anatomical and from physician offices to multi-location labs, 
+          while still being easy to use and deploy.
+        </p>
+
+        <!-- ACTION BUTTON -->
+        <div>
+          <a 
+            href="#"
+            class="inline-block bg-[#E63946] hover:bg-red-700 text-white font-semibold px-6 py-3 rounded-lg shadow-lg transition"
+          >
+            Get Started
+          </a>
+        </div>
+      </div>
+
+      <!-- RIGHT IMAGE -->
+      <div class="flex justify-center md:justify-end">
+        <img 
+          src="https://creliohealth.com/assets/img/us-home/Banner-image.svg" 
+          alt="Lab Management Illustration" 
+          class="w-full max-w-md md:max-w-full object-contain"
+        />
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<section class="bg-white py-10">
+  <div class="max-w-7xl mx-auto px-6 lg:px-12">
+    <div class="text-center mb-16">
+      <h2 class="text-3xl md:text-4xl font-bold text-[#0A1A44]">
+        Powerful Features Built for Modern Laboratories
+      </h2>
+      <p class="mt-4 text-gray-600 max-w-2xl mx-auto">
+        Empower your medical lab with innovative technology and seamless automation.
+      </p>
+    </div>
+
+    <div class="relative space-y-12">
+      <div class="flex flex-col md:flex-row items-center gap-6 md:gap-12">
+        <div class="flex-shrink-0">
+          <div class="w-16 h-16 flex items-center justify-center bg-[#E63946]/10 rounded-2xl">
+            <!-- Lucide Globe -->
+            <svg class="w-8 h-8 text-[#E63946]" fill="none" stroke="currentColor" stroke-width="2"
+                 viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10"></path>
+            </svg>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="text-xl font-semibold text-[#0A1A44] mb-2">Own Your Unique Domain</h3>
+          <p class="text-gray-600">
+            Give your lab a strong online identity with a custom domain name.
+          </p>
+        </div>
+      </div>
+
+      <!-- CARD 2 (Offset) -->
+      <div class="flex flex-col md:flex-row-reverse items-center gap-6 md:gap-12 md:ml-20">
+        <div class="flex-shrink-0">
+          <div class="w-16 h-16 flex items-center justify-center bg-[#0A1A44]/10 rounded-2xl">
+            <!-- Lucide Users -->
+            <svg class="w-8 h-8 text-[#0A1A44]" fill="none" stroke="currentColor" stroke-width="2"
+                 viewBox="0 0 24 24">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+              <circle cx="19" cy="7" r="3"></circle>
+            </svg>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="text-xl font-semibold text-[#0A1A44] mb-2">Manage Your Patients</h3>
+          <p class="text-gray-600">
+            Track patient data and results with an intuitive centralized dashboard.
+          </p>
+        </div>
+      </div>
+
+      <!-- CARD 3 -->
+      <div class="flex flex-col md:flex-row items-center gap-6 md:gap-12 md:ml-40">
+        <div class="flex-shrink-0">
+          <div class="w-16 h-16 flex items-center justify-center bg-[#D4AF37]/10 rounded-2xl">
+            <!-- Lucide Cpu -->
+            <svg class="w-8 h-8 text-[#D4AF37]" fill="none" stroke="currentColor" stroke-width="2"
+                 viewBox="0 0 24 24">
+              <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+              <rect x="9" y="9" width="6" height="6"></rect>
+              <line x1="9" y1="1" x2="9" y2="4"></line>
+              <line x1="15" y1="1" x2="15" y2="4"></line>
+              <line x1="9" y1="20" x2="9" y2="23"></line>
+              <line x1="15" y1="20" x2="15" y2="23"></line>
+            </svg>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="text-xl font-semibold text-[#0A1A44] mb-2">Advanced AI-Powered LIMS</h3>
+          <p class="text-gray-600">
+            Automate workflows, reduce errors, and optimize route-to-result time.
+          </p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- CTA Button -->
+    <div class="text-center mt-16">
+      <a href="#"
+         class="inline-block bg-[#E63946] hover:bg-red-700 text-white px-8 py-4 rounded-xl shadow-lg font-semibold text-lg transition">
+        Start Free Trial
+      </a>
+    </div>
+
+  </div>
+</section>
+
+{% endblock content %}
+
+

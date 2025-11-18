@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Application Submitted - FirstJP LIMS{% endblock %}
+
+{% block content %}
+
+<div class="py-12">
+
+    <!-- Success Header -->
+    <div class="text-center mb-12">
+        <div class="mx-auto w-20 h-20 flex items-center justify-center rounded-full bg-green-100 text-green-600 mb-6">
+            <svg class="w-12 h-12" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15-5-5 1.41-1.41L10 14.17l7.59-7.58L19 8l-9 9z"/>
+            </svg>
+        </div>
+
+        <h1 class="text-3xl font-bold text-nav-blue mb-3">Application Submitted Successfully!</h1>
+        <p class="text-gray-600 max-w-2xl mx-auto">
+            Thank you for choosing FirstJP LIMS. Your journey to streamlined laboratory management begins now.
+        </p>
+    </div>
+
+    <div class="max-w-4xl mx-auto">
+
+        <!-- Success Alert -->
+        <div class="bg-green-50 border-l-4 border-green-600 p-6 rounded-lg mb-12">
+            <h3 class="text-xl font-semibold text-nav-blue mb-1">We've received your application</h3>
+            <p class="text-gray-700">
+                Our team will review your submission and contact you within 24–48 hours with next steps.
+            </p>
+        </div>
+
+        <!-- Next Steps -->
+        <div class="text-center mb-12">
+            <h2 class="text-2xl font-semibold text-nav-blue mb-6">What Happens Next?</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                {% for number, title, desc in 
+                    "1|Application Review|Our team verifies your information",
+                    "2|Environment Setup|We configure your LIMS environment",
+                    "3|Welcome Package|Credentials and guides will be sent",
+                    "4|Onboarding Session|Meet with our implementation team"
+                    |split:"|" %}{% endfor %}
+            </div>
+        </div>
+
+        <!-- We need manual cards (Django can't loop pipes easily) -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-16">
+            <!-- Step 1 -->
+            <div class="p-6 text-center border rounded-lg">
+                <div class="w-14 h-14 flex items-center justify-center rounded-full bg-brand-red text-white mx-auto mb-4">
+                    <span class="text-lg font-bold">1</span>
+                </div>
+                <h4 class="font-semibold text-nav-blue mb-2">Application Review</h4>
+                <p class="text-gray-600 text-sm">Our team verifies your business information and requirements.</p>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="p-6 text-center border rounded-lg">
+                <div class="w-14 h-14 flex items-center justify-center rounded-full bg-brand-red text-white mx-auto mb-4">
+                    <span class="text-lg font-bold">2</span>
+                </div>
+                <h4 class="font-semibold text-nav-blue mb-2">Environment Setup</h4>
+                <p class="text-gray-600 text-sm">We configure your dedicated LIMS environment and subdomain.</p>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="p-6 text-center border rounded-lg">
+                <div class="w-14 h-14 flex items-center justify-center rounded-full bg-brand-red text-white mx-auto mb-4">
+                    <span class="text-lg font-bold">3</span>
+                </div>
+                <h4 class="font-semibold text-nav-blue mb-2">Welcome Package</h4>
+                <p class="text-gray-600 text-sm">You’ll receive login credentials and setup guides.</p>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="p-6 text-center border rounded-lg">
+                <div class="w-14 h-14 flex items-center justify-center rounded-full bg-brand-red text-white mx-auto mb-4">
+                    <span class="text-lg font-bold">4</span>
+                </div>
+                <h4 class="font-semibold text-nav-blue mb-2">Onboarding Session</h4>
+                <p class="text-gray-600 text-sm">Schedule a personalized onboarding session.</p>
+            </div>
+        </div>
+
+        <!-- Contact -->
+        <div class="bg-gray-50 rounded-xl p-10 text-center mb-16">
+            <h3 class="text-2xl font-semibold text-nav-blue mb-6">Need Immediate Assistance?</h3>
+
+            <div class="flex flex-col md:flex-row justify-center gap-8">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-envelope text-brand-red"></i>
+                    <span class="text-gray-700">support@firstjplims.com</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-phone text-brand-red"></i>
+                    <span class="text-gray-700">+1 (555) 123-LABS</span>
+                </div>
+            </div>
+
+            <p class="text-gray-500 mt-4 text-sm">
+                Available Monday–Friday • 9AM–6PM EST
+            </p>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-16">
+            <a href="{% url 'vendor_onboarding' %}" 
+               class="w-full py-3 text-brand-red border border-brand-red rounded-md text-center font-semibold hover:bg-brand-red hover:text-white transition">
+                Submit Another Application
+            </a>
+
+            <a href="/" 
+               class="w-full py-3 bg-nav-blue text-white rounded-md text-center font-semibold hover:bg-brand-red transition">
+                Return to Homepage
+            </a>
+        </div>
+
+        <!-- Resource Links -->
+        <div class="text-center mb-10">
+            <h3 class="text-2xl font-semibold text-nav-blue mb-8">Explore Resources While You Wait</h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                <!-- Card 1 -->
+                <div class="p-6 text-center border rounded-lg">
+                    <div class="w-20 h-20 flex items-center justify-center rounded-full bg-brand-red text-white mx-auto mb-4">
+                        <i class="fas fa-book-open text-xl"></i>
+                    </div>
+                    <h5 class="font-semibold text-nav-blue mb-2">Documentation</h5>
+                    <p class="text-gray-600 text-sm mb-3">Browse guides and API documentation.</p>
+                    <a href="#" class="text-brand-red font-medium text-sm hover:underline">View Docs</a>
+                </div>
+
+                <!-- Card 2 -->
+                <div class="p-6 text-center border rounded-lg">
+                    <div class="w-20 h-20 flex items-center justify-center rounded-full bg-brand-red text-white mx-auto mb-4">
+                        <i class="fas fa-video text-xl"></i>
+                    </div>
+                    <h5 class="font-semibold text-nav-blue mb-2">Video Tutorials</h5>
+                    <p class="text-gray-600 text-sm mb-3">Watch step-by-step tutorials.</p>
+                    <a href="#" class="text-brand-red font-medium text-sm hover:underline">Watch Videos</a>
+                </div>
+
+                <!-- Card 3 -->
+                <div class="p-6 text-center border rounded-lg">
+                    <div class="w-20 h-20 flex items-center justify-center rounded-full bg-brand-red text-white mx-auto mb-4">
+                        <i class="fas fa-calendar-alt text-xl"></i>
+                    </div>
+                    <h5 class="font-semibold text-nav-blue mb-2">Schedule Demo</h5>
+                    <p class="text-gray-600 text-sm mb-3">Book a personalized demo.</p>
+                    <a href="#" class="text-brand-red font-medium text-sm hover:underline">Book Now</a>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}

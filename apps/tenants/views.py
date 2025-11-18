@@ -55,8 +55,8 @@ def vendor_onboarding_view(request):
     else:
         form = VendorOnboardingForm()
     
-    return render(request, "onboarding/onboarding_form.html", {"form": form})
+    return render(request, "platform/onboarding/onboarding_form.html", {"form": form})
 
 def vendor_onboarding_success(request):
-    return render(request, "onboarding/onboarding_success.html")
+    return render(request, "platform/onboarding/onboarding_success.html")
 

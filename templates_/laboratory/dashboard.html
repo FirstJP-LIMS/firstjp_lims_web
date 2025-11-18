@@ -49,7 +49,7 @@
                 </a>
             </div>
             <div class="nav-item">
-                <a href="{% url 'labs:sample-exam-list' %}" class="nav-link" data-page="samples">
+                <a href="{% url 'labs:test_assignment_list' %}" class="nav-link" data-page="samples">
                     <i class="bi bi-list-task"></i>
                     Test Assignment
                 </a>
@@ -147,16 +147,16 @@
             </header>
 
             <!-- Dashboard Content -->
-            <div class="dashboard-content">
-                <!-- Alert -->
-                <div class="lab-alert">
+            <!-- <div class="dashboard-content"> -->
+                Alert
+                <!-- <div class="lab-alert">
                     <i class="bi bi-info-circle me-2"></i>
                     <strong class="lab-name">7wings Laboratory</strong> - You are currently managing 
                     <strong class="domain-name">7wings.localhost.test</strong>
-                </div>
+                </div> -->
 
                 <!-- Statistics Cards -->
-                <div class="stats-grid">
+                <!-- <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-header">
                             <div class="stat-icon pending">
@@ -220,7 +220,103 @@
                             12.8% growth
                         </div>
                     </div>
+                </div> -->
+
+<!-- Dashboard Content -->
+<div class="dashboard-content">
+    <!-- Alert -->
+    <div class="lab-alert">
+        <i class="bi bi-info-circle me-2"></i>
+        <!-- Dynamically insert lab_name and vendor_domain -->
+        <strong class="lab-name">{{ lab_name }}</strong> - You are currently managing
+        <strong class="domain-name">{{ vendor_domain|default:"N/A" }}</strong>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="stats-grid">
+        
+        <!-- Card 1: Pending Samples -->
+        <div class="stat-card">
+            <div class="stat-header">
+                <div class="stat-icon pending">
+                    <i class="bi bi-journal-check"></i>
                 </div>
+                <div>
+                    <!-- Dynamically insert pending_assignments_count -->
+                    <div class="stat-value">{{ pending_assignments_count }}</div>
+                    <div class="stat-label">Pending Samples</div>
+                </div>
+            </div>
+            <!-- Dynamic Trend -->
+            {% with trend_direction=samples_trend_direction %}
+            <div class="stat-trend {% if trend_direction == 'up' %}trend-up{% else %}trend-down{% endif %}">
+                <!-- Use dynamic icon based on trend direction -->
+                <i class="bi {% if trend_direction == 'up' %}bi-arrow-up-short{% else %}bi-arrow-down-short{% endif %}"></i>
+                <!-- Dynamically insert samples_trend_percent -->
+                {{ samples_trend_percent|floatformat:1 }}% vs previous {{ current_filter|lower|default:"period" }}
+            </div>
+            {% endwith %}
+        </div>
+
+        <!-- Card 2: Avg. Turnaround Time -->
+        <div class="stat-card">
+            <div class="stat-header">
+                <div class="stat-icon time">
+                    <i class="bi bi-clock-history"></i>
+                </div>
+                <div>
+                    <!-- Dynamically insert avg_tat_display -->
+                    <div class="stat-value">{{ avg_tat_display }}</div>
+                    <div class="stat-label">Avg. Turnaround Time</div>
+                </div>
+            </div>
+            <!-- Note: Hardcoded trend removed as the view doesn't calculate TAT trend -->
+            <div class="stat-trend trend-down">
+                <i class="bi bi-arrow-down-short"></i>
+                Target: <span class="font-bold">4h</span>
+            </div>
+        </div>
+
+        <!-- Card 3: Unread Results -->
+        <div class="stat-card">
+            <div class="stat-header">
+                <div class="stat-icon results">
+                    <i class="bi bi-bell"></i>
+                </div>
+                <div>
+                    <!-- Dynamically insert unread_results_count -->
+                    <div class="stat-value">{{ unread_results_count }}</div>
+                    <div class="stat-label">Unread Results</div>
+                </div>
+            </div>
+            <div class="stat-trend trend-up">
+                <i class="bi bi-arrow-up-short"></i>
+                1 new today
+            </div>
+        </div>
+
+        <!-- Card 4: Monthly Samples -->
+        <div class="stat-card">
+            <div class="stat-header">
+                <div class="stat-icon monthly">
+                    <i class="bi bi-calendar-check"></i>
+                </div>
+                <div>
+                    <!-- Dynamically insert monthly_samples_count -->
+                    <div class="stat-value">{{ monthly_samples_count }}</div>
+                    <div class="stat-label">Monthly Samples</div>
+                </div>
+            </div>
+            <!-- Reusing the dynamic trend logic from Card 1 for the monthly view -->
+            {% with trend_direction=samples_trend_direction %}
+            <div class="stat-trend {% if trend_direction == 'up' %}trend-up{% else %}trend-down{% endif %}">
+                <i class="bi {% if trend_direction == 'up' %}bi-arrow-up-short{% else %}bi-arrow-down-short{% endif %}"></i>
+                {{ samples_trend_percent|floatformat:1 }}% growth
+            </div>
+            {% endwith %}
+        </div>
+        
+    </div>
 
 
                 <!-- Main Content Grid -->
@@ -410,6 +506,9 @@
                     </div>
                 </div>
             </div>
+
+
+
         </div>
 
         <!-- Other pages will be loaded here dynamically -->

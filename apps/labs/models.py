@@ -293,7 +293,12 @@ class TestRequest(models.Model):
     requested_tests = models.ManyToManyField('VendorTest', related_name="test_requests")
 
     clinical_history = models.TextField(blank=True, help_text="Relevant clinical notes or history.")
-    priority = models.CharField(max_length=32, default="routine", help_text="e.g., routine, urgent, stat.")
+    # PRIORITY_STATUS = [
+    #     ("urgent","URGENT"),
+    #     ("routine","ROUTINE"),
+    # ]
+    # priority = models.CharField(choices=PRIORITY_STATUS, max_length=45, default="routine", help_text="e.g., routine, urgent, stat.")
+    priority = models.CharField(default="routine", help_text="e.g., routine, urgent, stat.")
     status = models.CharField(choices=ORDER_STATUS, max_length=1, default="P")
 
     # --- New fields ---

@@ -1,0 +1,91 @@
+<!-- Dashboard Content -->
+<div class="p-4 md:p-8 bg-gray-50 min-h-screen">
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">Laboratory Dashboard</h1>
+
+    <!-- Alert -->
+    <div class="bg-blue-100 border border-blue-300 text-blue-800 px-4 py-3 rounded-xl shadow-md mb-8 flex items-center" role="alert">
+        <svg class="w-5 h-5 me-3" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+        <div class="text-sm">
+            <strong class="font-semibold text-blue-900">{{ lab_name }}</strong> - You are currently managing 
+            <strong class="font-mono bg-blue-200 px-1 rounded text-blue-900">{{ vendor_domain|default:"N/A" }}</strong>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        
+        <!-- Card 1: Pending Samples -->
+        <div class="bg-white p-6 rounded-xl shadow-lg border border-yellow-200 transition duration-300 hover:shadow-xl">
+            <div class="flex items-start justify-between mb-4">
+                <div class="text-3xl font-extrabold text-yellow-600">{{ pending_assignments_count }}</div>
+                <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                </div>
+            </div>
+            <div class="text-sm font-medium text-gray-500 mb-2">Pending Assignments ({{ current_filter }})</div>
+            
+            {% with trend=samples_trend_percent|floatformat:1 %}
+            <div class="flex items-center text-xs font-semibold 
+                {% if samples_trend_direction == 'up' %}text-green-600{% elif samples_trend_direction == 'down' %}text-red-600{% else %}text-gray-500{% endif %}">
+                {% if samples_trend_direction == 'up' and samples_trend_percent > 0 %}
+                    <svg class="w-4 h-4 me-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
+                {% elif samples_trend_direction == 'down' %}
+                    <svg class="w-4 h-4 me-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
+                {% else %}
+                    <svg class="w-4 h-4 me-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9h8m-8 4h8m-11 7h14a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                {% endif %}
+                {{ trend }}% Sample volume
+            </div>
+            {% endwith %}
+        </div>
+
+        <!-- Card 2: Average Turnaround Time -->
+        <div class="bg-white p-6 rounded-xl shadow-lg border border-blue-200 transition duration-300 hover:shadow-xl">
+            <div class="flex items-start justify-between mb-4">
+                <div class="text-3xl font-extrabold text-blue-600">{{ avg_tat_display }}</div>
+                <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+            </div>
+            <div class="text-sm font-medium text-gray-500 mb-2">Avg. Turnaround Time (TAT)</div>
+            <div class="text-xs font-semibold text-green-600 flex items-center">
+                <svg class="w-4 h-4 me-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l7 7-7 7m0-14l7 7-7 7"></path></svg>
+                Target: <span class="ms-1 font-bold">4h</span>
+            </div>
+        </div>
+
+        <!-- Card 3: Unread Results -->
+        <div class="bg-white p-6 rounded-xl shadow-lg border border-red-200 transition duration-300 hover:shadow-xl">
+            <div class="flex items-start justify-between mb-4">
+                <div class="text-3xl font-extrabold text-red-600">{{ unread_results_count }}</div>
+                <div class="p-3 rounded-full bg-red-100 text-red-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.405L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                </div>
+            </div>
+            <div class="text-sm font-medium text-gray-500 mb-2">Unverified Results (Awaiting sign-off)</div>
+            <div class="text-xs font-semibold text-gray-500 flex items-center">
+                <svg class="w-4 h-4 me-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Critical results filtered first
+            </div>
+        </div>
+
+        <!-- Card 4: Monthly Samples -->
+        <div class="bg-white p-6 rounded-xl shadow-lg border border-green-200 transition duration-300 hover:shadow-xl">
+            <div class="flex items-start justify-between mb-4">
+                <div class="text-3xl font-extrabold text-green-600">{{ monthly_samples_count }}</div>
+                <div class="p-3 rounded-full bg-green-100 text-green-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                </div>
+            </div>
+            <div class="text-sm font-medium text-gray-500 mb-2">Total Monthly Samples (30 Days)</div>
+            <div class="text-xs font-semibold 
+                {% if samples_trend_direction == 'up' %}text-green-600{% else %}text-red-600{% endif %} 
+                flex items-center">
+                <span class="font-bold">{{ current_samples_count }}</span> this period
+            </div>
+        </div>
+        
+    </div>
+    
+    <!-- (Your table/samples content would follow here) -->
+</div>
