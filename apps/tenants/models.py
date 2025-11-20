@@ -29,6 +29,7 @@ class Vendor(models.Model):
     )
     # ACCESS & SUBSCRIPTION
     is_active = models.BooleanField(default=False, help_text="Set to False if subscription lapses or vendor is disabled.")
+    
     plan_type = models.CharField(max_length=50,
         choices=PLAN_CHOICES,
         default='BASIC',

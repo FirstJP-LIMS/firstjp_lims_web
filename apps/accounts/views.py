@@ -2,23 +2,18 @@
 from django.shortcuts import render, redirect, get_object_or_404, Http404
 from django.views.generic import TemplateView
 from apps.tenants.models import Vendor
-from .forms import RegistrationForm, TenantAuthenticationForm
+from .forms import RegistrationForm, TenantAuthenticationForm, VendorProfile, VendorProfileForm
 from django.urls import reverse, reverse_lazy
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from .forms import TenantAuthenticationForm
-from django.contrib.auth.decorators import user_passes_test
+from django.contrib.auth.decorators import user_passes_test, login_required
 from django.shortcuts import render, redirect
+
 
 # ----------------------------------
 # Tenant-aware auth. 
 # ----------------------------------
-# laboris@gmail.com
-# password#12345
-
-# lastborn.ai@gmail.com
-# password#1234
-
 
 # Define allowed roles for public registration on the vendor subdomain
 ALLOWED_PUBLIC_ROLES = ['lab_staff', 'clinician', 'patient']
@@ -67,8 +62,6 @@ def tenant_register_by_role(request, role_name):
         'role_key': role_name, # e.g., 'lab_staff'
     }
     return render(request, 'registration/register.html', context)
-
-
 
 
 # Admin-only vendor-admin creation
@@ -133,9 +126,7 @@ def tenant_login(request):
         'tenant': tenant,
         'vendorInfo': vendorInfo,
     }
-    return render(request, 'registration/login.html', context)
-
-
+    return render(request, 'platform/pages/login.html', context)
 
 def tenant_logout(request):
     logout(request)
@@ -162,3 +153,31 @@ class DashboardView(TemplateView):
         ctx['tenant'] = getattr(self.request, 'tenant', None)
         return ctx
 
+
+# ------------------------------
+# VENDOR OPERATIONS
+# ------------------------------
+# profile management 
+@login_required
+def vendor_profile(request):
+    vendor = request.user.vendor
+
+    # Ensure vendor has a profile
+    profile, created = VendorProfile.objects.get_or_create(vendor=vendor)
+
+    if request.method == "POST":
+        form = VendorProfileForm(request.POST, request.FILES, instance=profile)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Profile updated successfully.")
+            return redirect("account:laboratory_profile")
+    else:
+        form = VendorProfileForm(instance=profile)
+
+    context = {
+        "vendor": vendor,
+        "user": request.user,   # contains email (non-editable)
+        "form": form,
+        "profile": profile,
+    }
+    return render(request, "laboratory/account_mgt/lab_profile.html", context)

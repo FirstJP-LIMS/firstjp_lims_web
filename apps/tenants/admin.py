@@ -3,7 +3,7 @@ from apps.tenants.models import Vendor, VendorDomain
 
 
 # superadmin 
-# firstjplab@gmail.com
+# iarowosola@yahoo.com
 # firstjp 
 
 # Register your models here.

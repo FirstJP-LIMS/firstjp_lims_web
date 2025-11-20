@@ -44,6 +44,7 @@ The system supports various user roles such as **Platform Admin**, **Vendor Admi
   * Automatic barcode generation for samples
 
 ---
+python manage.py startapp inventory apps/inventory
 
 ## 🏗️ Tech Stack
 

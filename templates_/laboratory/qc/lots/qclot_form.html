@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="max-w-3xl mx-auto mt-8">
+  <h1 class="text-xl font-semibold mb-4">{% if create %}New QC Lot{% else %}Edit QC Lot{% endif %}</h1>
+  <form method="post" class="bg-white p-6 rounded shadow space-y-4">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div>
+      <label class="block font-medium">Test</label>
+      {{ form.test }}
+    </div>
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="block font-medium">Level</label>
+        {{ form.level }}
+      </div>
+      <div>
+        <label class="block font-medium">Lot Number</label>
+        {{ form.lot_number }}
+      </div>
+    </div>
+
+    <div>
+      <label class="block font-medium">Manufacturer</label>
+      {{ form.manufacturer }}
+    </div>
+
+    <div class="grid grid-cols-3 gap-4">
+      <div>
+        <label class="block font-medium">Target Value</label>
+        {{ form.target_value }}
+      </div>
+      <div>
+        <label class="block font-medium">SD</label>
+        {{ form.sd }}
+      </div>
+      <div>
+        <label class="block font-medium">Units</label>
+        {{ form.units }}
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="block font-medium">Explicit Low</label>
+        {{ form.explicit_low }}
+      </div>
+      <div>
+        <label class="block font-medium">Explicit High</label>
+        {{ form.explicit_high }}
+      </div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-4">
+      <div>
+        <label class="block font-medium">Received Date</label>
+        {{ form.received_date }}
+      </div>
+      <div>
+        <label class="block font-medium">Expiry Date</label>
+        {{ form.expiry_date }}
+      </div>
+      <div>
+        <label class="block font-medium">Opened Date</label>
+        {{ form.opened_date }}
+      </div>
+    </div>
+
+    <div class="flex items-center space-x-4">
+      <label class="inline-flex items-center">
+        {{ form.is_active }}
+        <span class="ml-2">Mark as active</span>
+      </label>
+    </div>
+
+    <div>
+      <button class="px-4 py-2 bg-blue-600 text-white rounded">Save</button>
+      <a href="{% url 'labs:qclot_list' %}" class="ml-4 text-gray-600">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

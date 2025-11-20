@@ -60,57 +60,6 @@ from django.utils import timezone
 
 # --- CRM Views ---
 # # dashboard 
-# @login_required
-# @tenant_required
-# def dashboard(request):
-#     tenant = request.tenant
-#     is_platform_admin = request.is_platform_admin
-#     if is_platform_admin and not tenant:
-#         return render(request, "laboratory/registration/login.html")
-
-#     # Fetch lab Departments to the header
-#     try:
-#         lab_departments = tenant.departments.all().order_by('name')
-#     except AttributeError:
-#         lab_departments = []
-
-#     lab_name = getattr(tenant, 'business_name', tenant.name)
-
-#     # filter time from query params
-#     date_filter = request.GET.get("filter", "7days")
-
-#     # Fetch recent samples for this vendor
-#     samples_qs = Sample.objects.filter(vendor=tenant).select_related('test_request__patient').prefetch_related('test_request__requested_tests')
-
-#     # 🧮 Apply time filtering
-#     now = timezone.now()
-#     if date_filter == "today":
-#         samples_qs = samples_qs.filter(collected_at__date=now.date())
-#     elif date_filter == "7days":
-#         samples_qs = samples_qs.filter(collected_at__gte=now - timedelta(days=7))
-#     elif date_filter == "30days":
-#         samples_qs = samples_qs.filter(collected_at__gte=now - timedelta(days=30))
-
-#     # Sort newest first
-#     samples_qs = samples_qs.order_by('-collected_at')
-
-#     # Pagination
-#     paginator = Paginator(samples_qs, 10)  # 10 samples per page
-#     page_number = request.GET.get("page")
-#     samples_page = paginator.get_page(page_number)
-
-#     context = {
-#         "vendor": tenant,
-#         "lab_name": lab_name,
-#         "vendor_domain": tenant.domains.first().domain_name if tenant.domains.exists() else None,
-#         "lab_departments": lab_departments,
-#         "samples": samples_page,  # Pagination added
-#         "current_filter": date_filter,
-#     }
-#     return render(request, "laboratory/dashboard.html", context)
-
-
-
 
 from datetime import timedelta
 from django.utils import timezone
@@ -1519,4 +1468,523 @@ def assignment_quick_stats(request):
 #     }
     
 #     return render(request, 'laboratory/assignment/instrument_logs_list.html', context)
+
+
+
+"""
+QUALITY CONTROL...
+"""
+# File: apps/qc/views.py  (FBV CRUD for QCLot)
+# -----------------------------------------------------------------------------
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.urls import reverse
+from .models import QCLot
+from .forms import QCLotForm
+from django.utils import timezone
+
+
+# ==========================================
+# QC LOT MANAGEMENT
+# ==========================================
+
+@login_required
+def qc_lot_list(request):
+    """List all QC lots."""
+    vendor = request.user.vendor
+    
+    lots = QCLot.objects.filter(
+        vendor=vendor
+    ).select_related('test').order_by('-is_active', '-received_date')
+    
+    # Filter
+    test_filter = request.GET.get('test')
+    if test_filter:
+        lots = lots.filter(test_id=test_filter)
+    
+    active_filter = request.GET.get('active')
+    if active_filter == 'true':
+        lots = lots.filter(is_active=True)
+    
+    tests = VendorTest.objects.filter(vendor=vendor)
+    
+    context = {
+        'lots': lots,
+        'tests': tests,
+        'current_test': test_filter,
+    }
+    
+    return render(request, 'laboratory/qc/lots/qclot_list.html', context)
+
+
+@login_required
+def qc_lot_create(request):
+    """Create new QC lot."""
+    vendor = request.user.vendor
+    
+    if request.method == 'POST':
+        form = QCLotForm(request.POST, vendor=vendor)
+        if form.is_valid():
+            qc_lot = form.save(commit=False)
+            qc_lot.vendor = vendor
+            qc_lot.save()
+            messages.success(request, f"QC Lot {qc_lot.lot_number} created successfully.")
+            return redirect('labs:qclot_list')
+    else:
+        from .forms import QCLotForm
+        form = QCLotForm(vendor=vendor)
+    
+    return render(request, 'laboratory/qc/lots/qclot_form.html', {'form': form})
+
+
+@login_required
+def qc_lot_edit(request, pk):
+    vendor = request.user.vendor
+    qc_lot = get_object_or_404(QCLot, pk=pk, vendor=vendor)
+    if request.method == 'POST':
+        form = QCLotForm(vendor, request.POST, instance=qc_lot)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'QC Lot {qc_lot} updated')
+            return redirect('qc:qclot_list')
+    else:
+        form = QCLotForm(vendor, instance=qc_lot)
+    return render(request, 'laboratory/qc/qclot_form.html', {'form': form, 'create': False, 'qclot': qc_lot})
+
+
+@login_required
+def qclot_toggle_active(request, pk):
+    vendor = request.user.vendor
+    q = get_object_or_404(QCLot, pk=pk, vendor=vendor)
+
+    if q.is_active:
+        # Deactivating
+        q.is_active = False
+        q.closed_date = timezone.now().date()
+        q.save()
+        messages.info(request, f'{q} deactivated')
+    else:
+        # Activating: will automatically deactivate others in model.save()
+        if q.expiry_date and q.expiry_date < timezone.now().date():
+            messages.error(request, 'Cannot activate an expired lot')
+        else:
+            q.is_active = True
+            q.save()
+            messages.success(request, f'{q} activated (others deactivated)')
+
+    return redirect('labs:qclot_list')
+
+
+@login_required
+def qclot_delete(request, pk):
+    vendor = request.user.vendor
+    q = get_object_or_404(QCLot, pk=pk, vendor=vendor)
+    if request.method == 'POST':
+        q.delete()
+        messages.success(request, 'QC Lot deleted')
+        return redirect('qc:qclot_list')
+    return render(request, 'laboratory/qc/qclot_confirm_delete.html', {'qclot': q})
+
+
+
+@login_required
+def qc_entry_view(request):
+    vendor = request.user.vendor  
+    today = timezone.now().date()
+
+    if request.method == 'POST':
+        form = QCEntryForm(vendor, request.POST)
+
+        if form.is_valid():
+            qc_result = form.save(commit=False)
+            qc_result.vendor = vendor
+            qc_result.entered_by = request.user
+
+            # Determine run number for the same lot on the same day
+            qc_result.run_number = QCResult.objects.filter(
+                vendor=vendor,
+                qc_lot=qc_result.qc_lot,
+                run_date=today
+            ).count() + 1
+
+            # Save QC result (status + Westgard happens inside model/save)
+            qc_result.save()
+
+            # Update daily test approval
+            approval, _ = QCTestApproval.objects.get_or_create(
+                vendor=vendor,
+                test=qc_result.qc_lot.test,
+                date=today
+            )
+            approval.qc_results.add(qc_result)
+
+            # If last result passed, mark approved
+            if qc_result.status == 'PASS' and not qc_result.rule_violations:
+                approval.is_approved = True
+            else:
+                approval.is_approved = False
+
+            approval.save()
+
+            messages.success(request,
+                f"QC Run Saved — Status: {qc_result.status}, "
+                f"Violations: {len(qc_result.rule_violations)}"
+            )
+
+            return redirect("qc_entry")
+    else:
+        form = QCEntryForm(vendor)
+
+    # List today's QC
+    todays_runs = QCResult.objects.filter(
+        vendor=vendor, run_date=today
+    ).select_related("qc_lot", "instrument", "entered_by")
+
+    context = {
+        "form": form,
+        "todays_runs": todays_runs,
+        "today": today,
+    }
+    return render(request, "laboratory/qc/entry/qc_entry.html", context)
+
+# ==========================================
+# LEVEY-JENNINGS CHART - Data Endpoint
+# ==========================================
+
+@login_required
+def levey_jennings_data(request, qc_lot_id):
+    """
+    API endpoint to get data for Levey-Jennings chart.
+    Returns JSON data for Chart.js.
+    """
+    vendor = request.user.vendor
+    qc_lot = get_object_or_404(QCLot, id=qc_lot_id, vendor=vendor)
+    
+    # Get date range (default: last 30 days)
+    days = int(request.GET.get('days', 30))
+    start_date = timezone.now().date() - timedelta(days=days)
+    
+    # Get QC results
+    results = QCResult.objects.filter(
+        qc_lot=qc_lot,
+        run_date__gte=start_date
+    ).order_by('run_date', 'run_time')
+    
+    # Build chart data
+    labels = []
+    data_points = []
+    colors = []
+    
+    for result in results:
+        labels.append(result.run_date.strftime('%m/%d'))
+        data_points.append(float(result.result_value))
+        
+        # Color based on status
+        if result.status == 'PASS':
+            colors.append('rgba(75, 192, 192, 1)')  # Green
+        elif result.status == 'WARNING':
+            colors.append('rgba(255, 206, 86, 1)')  # Yellow
+        else:
+            colors.append('rgba(255, 99, 132, 1)')  # Red
+    
+    # Control limits
+    chart_data = {
+        'labels': labels,
+        'datasets': [
+            {
+                'label': 'QC Results',
+                'data': data_points,
+                'borderColor': 'rgba(54, 162, 235, 1)',
+                'backgroundColor': colors,
+                'pointBackgroundColor': colors,
+                'pointBorderColor': colors,
+                'pointRadius': 5,
+                'fill': False,
+            }
+        ],
+        'control_limits': {
+            'mean': float(qc_lot.mean),
+            'sd_2_high': float(qc_lot.limit_2sd_high),
+            'sd_2_low': float(qc_lot.limit_2sd_low),
+            'sd_3_high': float(qc_lot.limit_3sd_high),
+            'sd_3_low': float(qc_lot.limit_3sd_low),
+        },
+        'lot_info': {
+            'test': qc_lot.test.name,
+            'level': qc_lot.get_level_display(),
+            'lot_number': qc_lot.lot_number,
+            'target': float(qc_lot.target_value),
+            'units': qc_lot.units,
+        }
+    }
+    
+    return JsonResponse(chart_data)
+
+# ==========================================
+# LEVEY-JENNINGS CHART - View
+# ==========================================
+
+@login_required
+def levey_jennings_chart(request, qc_lot_id=None):
+    """
+    Display Levey-Jennings chart for a QC lot.
+    """
+    vendor = request.user.vendor
+    
+    # Get all active QC lots for selection
+    active_lots = QCLot.objects.filter(
+        vendor=vendor,
+        is_active=True
+    ).select_related('test').order_by('test__name', 'level')
+    
+    qc_lot = None
+    if qc_lot_id:
+        qc_lot = get_object_or_404(QCLot, id=qc_lot_id, vendor=vendor)
+    elif active_lots.exists():
+        qc_lot = active_lots.first()
+    
+    context = {
+        'qc_lot': qc_lot,
+        'active_lots': active_lots,
+    }
+    
+    return render(request, 'laboratory/qc/levey_jennings.html', context)
+
+@login_required
+def qc_results_list(request):
+    vendor = request.user.vendor
+
+    results = QCResult.objects.filter(
+        vendor=vendor
+    ).select_related("qc_lot", "qc_lot__test", "instrument")
+
+    context = {"results": results}
+    return render(request, "laboratory/qc/entry/qc_results_list.html", context)
+
+@login_required
+def qc_result_detail(request, pk):
+    vendor = request.user.vendor
+
+    result = get_object_or_404(
+        QCResult.objects.select_related(
+            "qc_lot", "qc_lot__test", "instrument", "entered_by"
+        ),
+        pk=pk,
+        vendor=vendor
+    )
+
+    context = {"result": result}
+    return render(request, "laboratory/qc/entry/qc_result_detail.html", context)
+
+
+
+# ==========================================
+# QC REPORTS
+# ==========================================
+from datetime import datetime
+
+@login_required
+def qc_monthly_report(request):
+    """Monthly QC summary report."""
+    vendor = request.user.vendor
+    
+    # Get month and year from request or default to current
+    year = int(request.GET.get('year', timezone.now().year))
+    month = int(request.GET.get('month', timezone.now().month))
+    
+    # Calculate date range
+    start_date = datetime(year, month, 1).date()
+    if month == 12:
+        end_date = datetime(year + 1, 1, 1).date() - timedelta(days=1)
+    else:
+        end_date = datetime(year, month + 1, 1).date() - timedelta(days=1)
+    
+    # Get all QC results for the month
+    results = QCResult.objects.filter(
+        vendor=vendor,
+        run_date__gte=start_date,
+        run_date__lte=end_date
+    ).select_related('qc_lot__test')
+    
+    # Summary statistics
+    total_runs = results.count()
+    passed = results.filter(status='PASS').count()
+    failed = results.filter(status='FAIL').count()
+    warnings = results.filter(status='WARNING').count()
+    
+    pass_rate = (passed / total_runs * 100) if total_runs > 0 else 0
+    
+    # Group by test
+    tests_summary = {}
+    for result in results:
+        test_code = result.qc_lot.test.code
+        if test_code not in tests_summary:
+            tests_summary[test_code] = {
+                'test': result.qc_lot.test,
+                'total': 0,
+                'passed': 0,
+                'failed': 0,
+                'warnings': 0,
+            }
+        tests_summary[test_code]['total'] += 1
+        if result.status == 'PASS':
+            tests_summary[test_code]['passed'] += 1
+        elif result.status == 'FAIL':
+            tests_summary[test_code]['failed'] += 1
+        else:
+            tests_summary[test_code]['warnings'] += 1
+    
+    context = {
+        'year': year,
+        'month': month,
+        'month_name': datetime(year, month, 1).strftime('%B %Y'),
+        'start_date': start_date,
+        'end_date': end_date,
+        'total_runs': total_runs,
+        'passed': passed,
+        'failed': failed,
+        'warnings': warnings,
+        'pass_rate': round(pass_rate, 1),
+        'tests_summary': tests_summary,
+    }
+    
+    return render(request, 'laboratory/qc/metric/monthly_report.html', context)
+
+# ==========================================
+# QC DASHBOARD - Overview of QC Status
+# ==========================================
+
+@login_required
+def qc_dashboard(request):
+    """
+    Main QC dashboard showing today's QC status for all tests.
+    """
+    vendor = request.user.vendor
+    today = timezone.now().date()
+    
+    # Get all active QC lots
+    active_lots = QCLot.objects.filter(
+        vendor=vendor,
+        is_active=True,
+        expiry_date__gte=today
+    ).select_related('test').order_by('test__name', 'level')
+    
+    # Get today's QC results
+    todays_results = QCResult.objects.filter(
+        vendor=vendor,
+        run_date=today
+    ).select_related('qc_lot', 'qc_lot__test', 'instrument')
+    
+    # Get test approvals for today
+    test_approvals = QCTestApproval.objects.filter(
+        vendor=vendor,
+        date=today
+    ).select_related('test')
+    
+    # Build summary by test
+    qc_summary = {}
+    for lot in active_lots:
+        test_code = lot.test.code
+        if test_code not in qc_summary:
+            qc_summary[test_code] = {
+                'test': lot.test,
+                'levels': {},
+                'all_passed': True,
+                'any_run': False
+            }
+        
+        # Check if this level was run today
+        level_result = todays_results.filter(qc_lot=lot).first()
+        qc_summary[test_code]['levels'][lot.get_level_display()] = {
+            'lot': lot,
+            'result': level_result,
+            'status': level_result.status if level_result else 'NOT_RUN'
+        }
+        
+        if level_result:
+            qc_summary[test_code]['any_run'] = True
+            if level_result.status != 'PASS':
+                qc_summary[test_code]['all_passed'] = False
+        else:
+            qc_summary[test_code]['all_passed'] = False
+    
+    # Statistics
+    stats = {
+        'total_tests': len(qc_summary),
+        'tests_approved': sum(1 for t in qc_summary.values() if t['all_passed']),
+        'tests_failed': sum(1 for t in qc_summary.values() if t['any_run'] and not t['all_passed']),
+        'tests_pending': sum(1 for t in qc_summary.values() if not t['any_run']),
+        'total_runs_today': todays_results.count(),
+    }
+    
+    # Recent failures (last 7 days)
+    recent_failures = QCResult.objects.filter(
+        vendor=vendor,
+        run_date__gte=today - timedelta(days=7),
+        status='FAIL'
+    ).select_related('qc_lot__test')[:10]
+    
+    context = {
+        'qc_summary': qc_summary,
+        'stats': stats,
+        'recent_failures': recent_failures,
+        'today': today,
+    }
+    
+    return render(request, 'laboratory/qc/qc_dashboard.html', context)
+
+
+# ==========================================
+# QC ENTRY - Enter Daily QC Results
+# ==========================================
+from .forms import QCEntryForm
+from .models import QCResult, QCTestApproval
+
+# def qc_entry_view(request):
+#     vendor = request.user.vendor  # get vendor from user profile
+
+#     if request.method == 'POST':
+#         form = QCEntryForm(vendor, request.POST)
+        
+#         if form.is_valid():
+#             qc_result = form.save(commit=False)
+#             qc_result.vendor = vendor
+#             qc_result.entered_by = request.user
+
+#             # Calculate run number (number of QC runs today)
+#             today = timezone.now().date()
+#             count_today = QCResult.objects.filter(
+#                 vendor=vendor,
+#                 run_date=today,
+#                 qc_lot=qc_result.qc_lot,
+#             ).count()
+
+#             qc_result.run_number = count_today + 1
+#             qc_result.save()  # triggers Westgard rules
+
+#             # Update daily approval record
+#             approval, _ = QCTestApproval.objects.get_or_create(
+#                 vendor=vendor,
+#                 test=qc_result.qc_lot.test,
+#                 date=today
+#             )
+#             approval.qc_results.add(qc_result)
+
+#             if qc_result.status == 'PASS':
+#                 approval.is_approved = True
+
+#             approval.save()
+
+#             messages.success(request,
+#                 f"QC saved. Status: {qc_result.status}. "
+#                 f"Westgard: {len(qc_result.rule_violations)} issues.")
+
+#             return redirect('qc_entry')
+#     else:
+#         form = QCEntryForm(vendor)
+
+#     return render(request, 'laboratory/qc/qc_entry.html', {
+#         'form': form,
+#     })
 

@@ -1,14 +1,13 @@
+
 {% extends "platform/assets/base.html" %}
 {% block content %}
 <div class="max-w-3xl mx-auto py-10">
     <div class="bg-white shadow-md rounded-lg overflow-hidden">
         <div class="bg-blue-900 text-white text-center py-6">
             <h2 class="text-2xl font-semibold">Join MEDVUNO</h2>
-            <!-- <p class="opacity-80">Complete your vendor registration</p> -->
         </div>
 
         <div class="p-8">
-
             {% if messages %}
                 {% for message in messages %}
                     <div class="mb-4 px-4 py-3 rounded text-white 
@@ -23,63 +22,188 @@
             <form method="post" class="space-y-6">
                 {% csrf_token %}
 
-                <!-- Business -->
+                <!-- Business Information -->
                 <div>
                     <h3 class="text-nav-blue font-semibold border-b pb-2 mb-3">Business Information</h3>
-                    {{ form.name }}
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Business / Lab Name</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                            <div class="text-red-600 text-sm mt-1">
+                                {% for error in form.name.errors %}
+                                    <p>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
                 </div>
 
-                <!-- Admin -->
+                <!-- Admin Information -->
                 <div>
                     <h3 class="text-nav-blue font-semibold border-b pb-2 mb-3">Admin Information</h3>
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Admin Email</label>
+                        {{ form.admin_email }}
+                        {% if form.admin_email.errors %}
+                            <div class="text-red-600 text-sm mt-1">
+                                {% for error in form.admin_email.errors %}
+                                    <p>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                            {{ form.admin_first_name }}
+                            {% if form.admin_first_name.errors %}
+                                <div class="text-red-600 text-sm mt-1">
+                                    {% for error in form.admin_first_name.errors %}
+                                        <p>{{ error }}</p>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                            {{ form.admin_last_name }}
+                            {% if form.admin_last_name.errors %}
+                                <div class="text-red-600 text-sm mt-1">
+                                    {% for error in form.admin_last_name.errors %}
+                                        <p>{{ error }}</p>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Contact Number</label>
+                            {{ form.contact_number }}
+                            {% if form.contact_number.errors %}
+                                <div class="text-red-600 text-sm mt-1">
+                                    {% for error in form.contact_number.errors %}
+                                        <p>{{ error }}</p>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {{ form.admin_first_name }}
-                        {{ form.admin_last_name }}
-                    </div>
-
-                    <div class="mt-4">
-                        {{ form.admin_email }}
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                        {{ form.contact_number }}
-                        {{ form.admin_password }}
-                        {{ form.admin_password_confirm }}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                            {{ form.admin_password }}
+                            {% if form.admin_password.errors %}
+                                <div class="text-red-600 text-sm mt-1">
+                                    {% for error in form.admin_password.errors %}
+                                        <p>{{ error }}</p>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+                            {{ form.admin_password_confirm }}
+                            {% if form.admin_password_confirm.errors %}
+                                <div class="text-red-600 text-sm mt-1">
+                                    {% for error in form.admin_password_confirm.errors %}
+                                        <p>{{ error }}</p>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
 
-                <!-- Address -->
+                <!-- Address Information -->
                 <div>
-                    <h3 class="text-nav-blue font-semibold border-b pb-2 mb-3">Address</h3>
-
-                    {{ form.office_street_address }}
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                        {{ form.office_city_state }}
-                        {{ form.office_country }}
+                    <h3 class="text-nav-blue font-semibold border-b pb-2 mb-3">Address Information</h3>
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Street Address</label>
+                        {{ form.office_street_address }}
+                        {% if form.office_street_address.errors %}
+                            <div class="text-red-600 text-sm mt-1">
+                                {% for error in form.office_street_address.errors %}
+                                    <p>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
                     </div>
 
-                    <div class="mt-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">City & State</label>
+                            {{ form.office_city_state }}
+                            {% if form.office_city_state.errors %}
+                                <div class="text-red-600 text-sm mt-1">
+                                    {% for error in form.office_city_state.errors %}
+                                        <p>{{ error }}</p>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Country</label>
+                            {{ form.office_country }}
+                            {% if form.office_country.errors %}
+                                <div class="text-red-600 text-sm mt-1">
+                                    {% for error in form.office_country.errors %}
+                                        <p>{{ error }}</p>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Zipcode</label>
                         {{ form.office_zipcode }}
+                        {% if form.office_zipcode.errors %}
+                            <div class="text-red-600 text-sm mt-1">
+                                {% for error in form.office_zipcode.errors %}
+                                    <p>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
 
-                <!-- Plan -->
+                <!-- Plan Selection -->
                 <div>
                     <h3 class="text-nav-blue font-semibold border-b pb-2 mb-3">Subscription Plan</h3>
-                    {{ form.plan_type }}
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Plan Type</label>
+                        {{ form.plan_type }}
+                        {% if form.plan_type.errors %}
+                            <div class="text-red-600 text-sm mt-1">
+                                {% for error in form.plan_type.errors %}
+                                    <p>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
                 </div>
 
-                <!-- Submit -->
-                <button class="w-full bg-blue-900 text-white font-medium py-3 rounded-md transition">
+                <!-- Non-field errors -->
+                {% if form.non_field_errors %}
+                    <div class="text-red-600 text-sm mb-4">
+                        {% for error in form.non_field_errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <!-- Submit Button -->
+                <button type="submit" class="w-full bg-blue-900 text-white font-medium py-3 rounded-md transition hover:bg-blue-800">
                     Submit Registration
                 </button>
             </form>
-
         </div>
-
     </div>
 </div>
-
 {% endblock %}

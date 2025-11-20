@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "platform/assets/base.html" %}
 {% load static %}
 
 {% block title %}Application Submitted - FirstJP LIMS{% endblock %}
@@ -36,51 +36,15 @@
             <h2 class="text-2xl font-semibold text-nav-blue mb-6">What Happens Next?</h2>
 
             <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                {% for number, title, desc in 
-                    "1|Application Review|Our team verifies your information",
-                    "2|Environment Setup|We configure your LIMS environment",
-                    "3|Welcome Package|Credentials and guides will be sent",
-                    "4|Onboarding Session|Meet with our implementation team"
-                    |split:"|" %}{% endfor %}
-            </div>
-        </div>
-
-        <!-- We need manual cards (Django can't loop pipes easily) -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-16">
-            <!-- Step 1 -->
-            <div class="p-6 text-center border rounded-lg">
-                <div class="w-14 h-14 flex items-center justify-center rounded-full bg-brand-red text-white mx-auto mb-4">
-                    <span class="text-lg font-bold">1</span>
-                </div>
-                <h4 class="font-semibold text-nav-blue mb-2">Application Review</h4>
-                <p class="text-gray-600 text-sm">Our team verifies your business information and requirements.</p>
-            </div>
-
-            <!-- Step 2 -->
-            <div class="p-6 text-center border rounded-lg">
-                <div class="w-14 h-14 flex items-center justify-center rounded-full bg-brand-red text-white mx-auto mb-4">
-                    <span class="text-lg font-bold">2</span>
-                </div>
-                <h4 class="font-semibold text-nav-blue mb-2">Environment Setup</h4>
-                <p class="text-gray-600 text-sm">We configure your dedicated LIMS environment and subdomain.</p>
-            </div>
-
-            <!-- Step 3 -->
-            <div class="p-6 text-center border rounded-lg">
-                <div class="w-14 h-14 flex items-center justify-center rounded-full bg-brand-red text-white mx-auto mb-4">
-                    <span class="text-lg font-bold">3</span>
-                </div>
-                <h4 class="font-semibold text-nav-blue mb-2">Welcome Package</h4>
-                <p class="text-gray-600 text-sm">You’ll receive login credentials and setup guides.</p>
-            </div>
-
-            <!-- Step 4 -->
-            <div class="p-6 text-center border rounded-lg">
-                <div class="w-14 h-14 flex items-center justify-center rounded-full bg-brand-red text-white mx-auto mb-4">
-                    <span class="text-lg font-bold">4</span>
-                </div>
-                <h4 class="font-semibold text-nav-blue mb-2">Onboarding Session</h4>
-                <p class="text-gray-600 text-sm">Schedule a personalized onboarding session.</p>
+                {% for step in steps %}
+                    {% with number=step.0 title=step.1 desc=step.2 %}
+                        <div class="p-4 bg-white shadow rounded">
+                            <div class="text-3xl font-bold text-blue-600">{{ number }}</div>
+                            <h3 class="font-semibold">{{ title }}</h3>
+                            <p class="text-gray-600">{{ desc }}</p>
+                        </div>
+                    {% endwith %}
+                {% endfor %}
             </div>
         </div>
 
@@ -107,7 +71,7 @@
         <!-- Action Buttons -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-16">
             <a href="{% url 'vendor_onboarding' %}" 
-               class="w-full py-3 text-brand-red border border-brand-red rounded-md text-center font-semibold hover:bg-brand-red hover:text-white transition">
+               class="w-full py-3 text-brand-red border border-brand-red rounded-md text-center font-semibold hover:bg-brand-red">
                 Submit Another Application
             </a>
 

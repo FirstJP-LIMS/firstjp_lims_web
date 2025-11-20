@@ -10,11 +10,6 @@ urlpatterns = [
     path('profile/', views.profile, name='vendor_profile'),
 
     # VendorTest CRUD URLs
-    # path("vendor-tests/", views.vendor_tests_list, name="vendor_tests_list"),
-    # path("vendor-tests/add/", views.vendor_test_create, name="vendor_test_create"),
-    # path("vendor-tests/<slug:slug>/edit/", views.vendor_test_edit, name="vendor_test_edit"),
-    # path("vendor-tests/<slug:slug>/delete/", views.vendor_test_delete, name="vendor_test_delete"),
-
     path("departments/", views.department_list, name="department_list"),
     path("departments/create/", views.department_create, name="department_create"),
     path("departments/<int:pk>/update/", views.department_update, name="department_update"),
@@ -26,15 +21,11 @@ urlpatterns = [
     path("tests/<int:pk>/update/", views.test_update, name="test_update"),
     path("tests/<int:pk>/delete/", views.test_delete, name="test_delete"),
 
-    # test request
+    # Test request
     path('test-requests/create/', views.test_request_create, name='create_test_request'),
-
     path('test-requests/', views.test_request_list, name='test_request_list'),
-
     path('requests/<int:pk>/update/', views.test_request_update, name='request_update'),
-
     path('requests/<int:pk>/detail/', views.test_request_detail, name='request_detail'),
-    
     path('requests/<int:pk>/delete/', views.test_request_delete, name='delete_request'),
 
     # download Test Request 
@@ -45,17 +36,15 @@ urlpatterns = [
 
     # examination
     path('examination/samples/', views.sample_examination_list, name='sample-exam-list'),
-
     path('examination/sample/<str:sample_id>/', views.sample_examination_detail, name='sample-exam-detail'),
 
    # Test Assignment Management
-# ===== Test Assignment List & Management =====
+    # ===== Test Assignment List & Management =====
     path(
         'assignments/',
         views.test_assignment_list,
         name='test_assignment_list'
     ),
-    
     path(
         'assignment/<int:assignment_id>/',
         views.test_assignment_detail,
@@ -68,7 +57,6 @@ urlpatterns = [
         views.quick_send_to_instrument,
         name='quick_send_to_instrument'
     ),
-    
     path(
         'assignments/stats/',
         views.assignment_quick_stats,
@@ -81,13 +69,11 @@ urlpatterns = [
         views.bulk_send_to_instrument,
         name='bulk_send_to_instrument'
     ),
-    
     path(
         'assignments/bulk-assign-instrument/',
         views.bulk_assign_instrument,
         name='bulk_assign_instrument'
     ),
-    
     path(
         'assignments/bulk-assign-technician/',
         views.bulk_assign_technician,
@@ -107,7 +93,6 @@ urlpatterns = [
         views.send_to_instrument,
         name='send_to_instrument'
     ),
-    
     path(
         'assignment/<int:assignment_id>/fetch-result/',
         views.fetch_result_from_instrument,
@@ -147,5 +132,25 @@ urlpatterns = [
     #     views.pending_results_dashboard,
     #     name='pending_results_dashboard'
     # ),
+
+    # ==== Quality Control ====
+    path('qc/lots/', views.qc_lot_list, name='qclot_list'),
+    path('qc/lots/create/', views.qc_lot_create, name='qclot_create'),
+    path('qc/lots/<int:pk>/edit/', views.qc_lot_edit, name='qclot_edit'),
+    path('qc/lots/<int:pk>/toggle/', views.qclot_toggle_active, name='qclot_toggle_active'),
+    path('qc/lots/<int:pk>/delete/', views.qclot_delete, name='qclot_delete'),
+
+    path("qc/entry/", views.qc_entry_view, name="qc_entry"),
+    path("qc/results/", views.qc_results_list, name="qc_results_list"),
+    path("qc/results/<int:pk>/", views.qc_result_detail, name="qc_result_detail"),
+
+    # Levey-Jennings Chart
+    path("qc/chart/<int:qc_lot_id>/", views.levey_jennings_chart, name="levey_jennings_chart"),
+    path("qc/chart/data/<int:qc_lot_id>/", views.levey_jennings_data, name="levey_jennings_data"),
+
+    path("qc/monthly/", views.qc_monthly_report, name="qc_monthly_report"),
+    path("qc/dashboard/", views.qc_dashboard, name="qc_dashboard")
+
 ]
+
 

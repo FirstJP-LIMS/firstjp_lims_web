@@ -54,7 +54,6 @@ class VendorLabTestForm(forms.ModelForm):
         
         self.fields['assigned_department'].widget.attrs.update({'class': 'form-select'})
 
-
 class PatientForm(forms.ModelForm):
     class Meta:
         model = Patient
@@ -91,6 +90,7 @@ class PatientForm(forms.ModelForm):
             Submit('submit', 'Register Patient', css_class='btn-wine w-100 py-2')
         )
         
+from .models import PRIORITY_STATUS
 
 class TestRequestForm(forms.ModelForm):
     """
@@ -127,6 +127,11 @@ class TestRequestForm(forms.ModelForm):
         queryset=VendorTest.objects.none(),
         widget=forms.CheckboxSelectMultiple,
         label="Select Tests"
+    )
+    priority = forms.ChoiceField(
+        choices=PRIORITY_STATUS,
+        label="Priority",
+        initial="routine",
     )
 
     class Meta:
@@ -214,3 +219,77 @@ class SampleForm(forms.ModelForm):
             'volume_collected_ml': forms.NumberInput(attrs={'min': 0, 'step': '0.1'}),
         }
         
+
+
+"""
+QUALITY CONTROL...
+"""
+from .models import QCResult, QCLot
+
+class QCLotForm(forms.ModelForm):
+    class Meta:
+        model = QCLot
+        fields = [
+            'test', 'lot_number', 'level', 'manufacturer',
+            'target_value', 'sd', 'explicit_low', 'explicit_high', 'units',
+            'received_date', 'expiry_date', 'opened_date', 'is_active'
+        ]
+        widgets = {
+            'received_date': forms.DateInput(attrs={'type': 'date'}),
+            'expiry_date': forms.DateInput(attrs={'type': 'date'}),
+            'opened_date': forms.DateInput(attrs={'type': 'date'}),
+        }
+
+    def __init__(self, vendor=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Limit tests to vendor's tests if vendor provided
+        if vendor is not None:
+            self.fields['test'].queryset = self.fields['test'].queryset.filter(vendor=vendor)
+
+    def clean(self):
+        cleaned = super().clean()
+        target = cleaned.get('target_value')
+        sd = cleaned.get('sd')
+        explicit_low = cleaned.get('explicit_low')
+        explicit_high = cleaned.get('explicit_high')
+
+        # If explicit range provided, don't require SD
+        if explicit_low is not None and explicit_high is not None:
+            return cleaned
+
+        # Otherwise ensure target+sd are provided together
+        if (target is None) ^ (sd is None):
+            raise forms.ValidationError('Provide either explicit range or both target value and SD')
+
+        return cleaned
+
+
+class QCEntryForm(forms.ModelForm):
+    class Meta:
+        model = QCResult
+        fields = [
+            'qc_lot',
+            'result_value',
+            'instrument',
+            'comments',
+        ]
+        widgets = {
+            'qc_lot': forms.Select(attrs={'class': 'form-select'}),
+            'result_value': forms.NumberInput(attrs={
+                'class': 'form-input',
+                'step': '0.01'
+            }),
+            'instrument': forms.Select(attrs={'class': 'form-select'}),
+            'comments': forms.Textarea(attrs={'rows': 3, 'class': 'form-textarea'}),
+        }
+
+    def __init__(self, vendor, *args, **kwargs):
+        """
+        Filter QC lots and instruments to vendor only.
+        """
+        super().__init__(*args, **kwargs)
+        self.fields['qc_lot'].queryset = QCLot.objects.filter(
+            vendor=vendor,
+            is_active=True
+        )
+        self.fields['instrument'].queryset = vendor.equipment_set.all()

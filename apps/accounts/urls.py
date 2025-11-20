@@ -15,5 +15,8 @@ urlpatterns = [
     path('login/', views.tenant_login, name='login'),
     
     path('logout/', views.tenant_logout, name='logout'),
+
+    path("laboratory/profile/", views.vendor_profile, name="laboratory_profile"),
+
 ]
 

@@ -5,7 +5,9 @@ from django.utils import timezone
 from .models import (
     TestAssignment, TestResult, Equipment, 
     InstrumentLog, AuditLog,
-    VendorTest, Patient, Sample, TestRequest, Department
+    VendorTest, Patient, Sample, TestRequest, Department,
+    # quality_control
+    QCLot
 )
 
 """
@@ -20,6 +22,13 @@ admin.site.register(Patient)
 admin.site.register(Sample)
 admin.site.register(TestRequest)
 
+
+
+@admin.register(QCLot)
+class QCLotAdmin(admin.ModelAdmin):
+    list_display = ('test', 'lot_number', 'level', 'vendor', 'is_active', 'expiry_date')
+    list_filter = ('vendor', 'test', 'level', 'is_active')
+    search_fields = ('lot_number', 'test__name', 'test__code')
 
 # @admin.register(Equipment)
 # class EquipmentAdmin(admin.ModelAdmin):

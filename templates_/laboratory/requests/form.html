@@ -1,4 +1,4 @@
-{% extends "lab_const/base.html" %}
+{% extends "laboratory/assets/base.html" %}
 {% load static %}
 {% load crispy_forms_tags %}
 
@@ -241,6 +241,7 @@
                         <div class="mb-3">
                             {{ form.priority|as_crispy_field }}
                         </div>
+
                         <div class="mb-3">
                             {{ form.external_referral|as_crispy_field }}
                         </div>

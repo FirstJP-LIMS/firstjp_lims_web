@@ -36,6 +36,9 @@ INSTALLED_APPS = [
     "apps.tenants",
     "apps.core",
     "apps.labs", # manages CRM and lab operations
+    "apps.inventory",
+    "apps.billing",
+
 
     # installed apps 
     'phonenumber_field',
@@ -46,7 +49,6 @@ INSTALLED_APPS = [
     'django_browser_reload',
     'crispy_forms',
     'crispy_bootstrap5',
-
 ]
 
 TAILWIND_APP_NAME = "theme"
@@ -130,5 +132,7 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'your_email@gmail.com'
-EMAIL_HOST_PASSWORD = 'your_app_password'
+EMAIL_HOST_USER = 'iarowosola25@gmail.com'
+EMAIL_HOST_PASSWORD = 'qffvxpgihjaxypqb'
+PLATFORM_ADMIN_EMAIL = "iarowosola@yahoo.com"
+SITE_NAME = "mednovu.com"

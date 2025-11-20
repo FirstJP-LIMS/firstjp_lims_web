@@ -56,13 +56,13 @@ class RegistrationForm(forms.ModelForm):
         if commit:
             user.save()
         return user
-    
+
 
 class TenantAuthenticationForm(AuthenticationForm):
     username = forms.EmailField(
         widget=forms.EmailInput(
             attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
                 'placeholder': 'Enter your email address',
                 'autofocus': True,
             }
@@ -72,10 +72,37 @@ class TenantAuthenticationForm(AuthenticationForm):
     password = forms.CharField(
         widget=forms.PasswordInput(
             attrs={
-                'class': 'form-control',
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
                 'placeholder': 'Enter your password',
             }
         ),
         label='Password',
     )
 
+
+
+
+from django import forms
+from .models import VendorProfile
+
+class VendorProfileForm(forms.ModelForm):
+    class Meta:
+        model = VendorProfile
+        fields = [
+            "logo",
+            "registration_number",
+            "contact_number",
+            "office_address",
+            "office_city_state",
+            "office_country",
+            "office_zipcode",
+        ]
+
+        widgets = {
+            "office_address": forms.Textarea(attrs={"rows": 2, "class": "form-control"}),
+            "office_city_state": forms.TextInput(attrs={"class": "form-control"}),
+            "office_country": forms.TextInput(attrs={"class": "form-control"}),
+            "office_zipcode": forms.TextInput(attrs={"class": "form-control"}),
+            "contact_number": forms.TextInput(attrs={"class": "form-control"}),
+            "registration_number": forms.TextInput(attrs={"class": "form-control"}),
+        }

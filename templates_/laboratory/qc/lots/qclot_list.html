@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="max-w-5xl mx-auto mt-8">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-semibold">QC Lots</h1>
+    <a href="{% url 'labs:qclot_create' %}" class="px-4 py-2 bg-blue-600 text-white rounded">New QC Lot</a>
+  </div>
+
+  <div class="bg-white shadow rounded overflow-hidden">
+    <table class="w-full table-auto">
+      <thead>
+        <tr class="bg-gray-50 text-left">
+          <th class="p-3">Test</th>
+          <th class="p-3">Level</th>
+          <th class="p-3">Lot</th>
+          <th class="p-3">Target / SD</th>
+          <th class="p-3">Expiry</th>
+          <th class="p-3">Status</th>
+          <th class="p-3">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for l in qclots %}
+        <tr class="border-t">
+          <td class="p-3">{{ l.test.name }} ({{ l.test.code }})</td>
+          <td class="p-3">{{ l.get_level_display }}</td>
+          <td class="p-3">{{ l.lot_number }}</td>
+          <td class="p-3">{% if l.target_value %}{{ l.target_value }} ± {{ l.sd }} {{ l.units }}{% else %}{{ l.explicit_low }} - {{ l.explicit_high }}{% endif %}</td>
+          <td class="p-3">{{ l.expiry_date }}</td>
+          <td class="p-3">{% if l.is_active %}<span class="px-2 py-1 bg-green-100 text-green-700 rounded">Active</span>{% else %}<span class="px-2 py-1 bg-gray-100 text-gray-700 rounded">Inactive</span>{% endif %}</td>
+          <td class="p-3">
+            <a href="{% url 'labs:qclot_edit' l.pk %}" class="mr-2">Edit</a>
+            <a href="{% url 'labs:qclot_toggle_active' l.pk %}">{% if l.is_active %}Deactivate{% else %}Activate{% endif %}</a>
+            <form action="{% url 'labs:qclot_delete' l.pk %}" method="post" style="display:inline">{% csrf_token %}<button type="submit" class="ml-2 text-red-600">Delete</button></form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="p-4 text-center text-gray-500">No QC lots found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

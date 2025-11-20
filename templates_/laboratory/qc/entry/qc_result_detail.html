@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>QC Result Detail</h2>
+
+<div class="card p-4">
+    <h4>{{ result.qc_lot.test.name }} ({{ result.qc_lot.get_level_display }})</h4>
+
+    <p><strong>Value:</strong> {{ result.result_value }}</p>
+    <p><strong>Status:</strong> {{ result.status }}</p>
+    <p><strong>Z-Score:</strong> {{ result.z_score }}</p>
+    <p><strong>Rule Violations:</strong> {{ result.rule_violations|join:", " }}</p>
+
+    <p><strong>Run Number:</strong> {{ result.run_number }}</p>
+    <p><strong>Run Date:</strong> {{ result.run_date }} {{ result.run_time }}</p>
+
+    <p><strong>Instrument:</strong> {{ result.instrument }}</p>
+
+    <h5>Comments</h5>
+    <p>{{ result.comments|default:"No comments" }}</p>
+
+    {% if result.corrective_action %}
+        <h5>Corrective Action</h5>
+        <p>{{ result.corrective_action }}</p>
+    {% endif %}
+</div>
+{% endblock %}

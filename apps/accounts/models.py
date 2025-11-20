@@ -99,17 +99,17 @@ class VendorProfile(BaseProfile):
     def __str__(self):
         return f"Profile of {self.vendor.name}"
 
-    # def save(self, *args, **kwargs):
-    #     if self.office_address and self.office_city_state and self.office_country:
-    #         full_address = f"{self.office_address}, {self.office_city_state}, {self.office_country}, {self.office_zipcode}"
-    #         try:
-    #             geolocator = Nominatim(user_agent="firstjp_lims")
-    #             location = geolocator.geocode(full_address)
-    #             if location:
-    #                 self.latitude = location.latitude
-    #                 self.longitude = location.longitude
-    #         except Exception:
-    #             # Silently fail if geocoding doesn't work
-    #             pass
-    #     super().save(*args, **kwargs)
+    def save(self, *args, **kwargs):
+        if self.office_address and self.office_city_state and self.office_country:
+            full_address = f"{self.office_address}, {self.office_city_state}, {self.office_country}, {self.office_zipcode}"
+            try:
+                geolocator = Nominatim(user_agent="firstjp_lims")
+                location = geolocator.geocode(full_address)
+                if location:
+                    self.latitude = location.latitude
+                    self.longitude = location.longitude
+            except Exception:
+                # Silently fail if geocoding doesn't work
+                pass
+        super().save(*args, **kwargs)
 

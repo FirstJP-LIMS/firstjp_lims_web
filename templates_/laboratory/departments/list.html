@@ -1,12 +1,9 @@
-{% extends "vendorbase.html" %}
+{% extends "laboratory/assets/base.html" %}
 {% load static %}
-{% block title %}Manage Departments - FirstJP LIMS{% endblock %}
+{% block title %}Manage Departments{% endblock %}
 
 {% block content %}
 <div class="page-header">
-    <div>
-        <a style="color: black; font-size: 1.5rem; text-decoration: none; border: 1px solid rgb(12, 17, 169); padding: 5px; border-radius: 10px;" href="{% url 'labs:vendor_dashboard' %}">Dashboard</a>
-    </div>
     <div class="d-flex justify-content-between align-items-center">
         <div>
             <h1 class="page-title">Manage Departments</h1>
@@ -149,20 +146,6 @@
                 </div>
             </div>
         </div>
-        <!-- <div class="col-md-4">
-            <div class="stat-card">
-                <div class="stat-header">
-                    <div class="stat-icon bg-info bg-opacity-10 text-info">
-                        <i class="bi bi-clock-history"></i>
-                    </div>
-                    <div>
-                        <div class="stat-value">0</div>
-                        <div class="stat-label">Pending Setup</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-         -->
     </div>
 </div>
 
