@@ -1,0 +1,377 @@
+{% extends 'lab_const/base.html' %}
+{% load static %}
+{% load assignment_filters %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Test Assignment Details</h4>
+                    <span class="badge bg-{{ assignment.status|status_color }} fs-6">
+                        {{ assignment.get_status_display }}
+                    </span>
+                </div>
+                
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Patient & Test Information -->
+                        <div class="col-md-6">
+                            <h5 class="text-muted mb-3">Patient Information</h5>
+                            <table class="table table-sm">
+                                <tr>
+                                    <th width="40%">Patient:</th>
+                                    <td>{{ assignment.request.patient }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Request ID:</th>
+                                    <td>{{ assignment.request.request_id }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Test:</th>
+                                    <td><strong>{{ assignment.lab_test.name }}</strong> ({{ assignment.lab_test.code }})</td>
+                                </tr>
+                                <tr>
+                                    <th>Sample:</th>
+                                    <td>{{ assignment.sample.sample_id }} - {{ assignment.lab_test.specimen_type }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Department:</th>
+                                    <td>{{ assignment.department.name }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Priority:</th>
+                                    <td>
+                                        <span class="badge bg-{% if assignment.request.priority == 'stat' %}danger{% elif assignment.request.priority == 'urgent' %}warning{% else %}info{% endif %}">
+                                            {{ assignment.request.priority|upper }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        
+                        <!-- Instrument & Timing -->
+                        <div class="col-md-6">
+                            <h5 class="text-muted mb-3">Processing Information</h5>
+                            <table class="table table-sm">
+                                <tr>
+                                    <th width="40%">Instrument:</th>
+                                    <td>
+                                        {% if assignment.instrument %}
+                                            {{ assignment.instrument.name }}
+                                            <button class="btn btn-sm btn-outline-secondary ms-2" onclick="checkInstrumentStatus({{ assignment.instrument.id }})">
+                                                <i class="bi bi-arrow-clockwise"></i> Check Status
+                                            </button>
+                                        {% else %}
+                                            <span class="text-danger">Not assigned</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% if assignment.assigned_to %}
+                                <tr>
+                                    <th>Assigned To:</th>
+                                    <td>{{ assignment.assigned_to.get_full_name }}</td>
+                                </tr>
+                                {% endif %}
+                                <tr>
+                                    <th>Created:</th>
+                                    <td>{{ assignment.created_at|date:"Y-m-d H:i" }}</td>
+                                </tr>
+                                {% if assignment.queued_at %}
+                                <tr>
+                                    <th>Queued:</th>
+                                    <td>{{ assignment.queued_at|date:"Y-m-d H:i" }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if assignment.analyzed_at %}
+                                <tr>
+                                    <th>Analyzed:</th>
+                                    <td>{{ assignment.analyzed_at|date:"Y-m-d H:i" }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if assignment.verified_at %}
+                                <tr>
+                                    <th>Verified:</th>
+                                    <td>{{ assignment.verified_at|date:"Y-m-d H:i" }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if assignment.external_id %}
+                                <tr>
+                                    <th>External ID:</th>
+                                    <td><code>{{ assignment.external_id }}</code></td>
+                                </tr>
+                                {% endif %}
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Result Display -->
+                    {% if result %}
+                    <hr class="my-4">
+                    <div class="row">
+                        <div class="col-12">
+                            <h5 class="text-muted mb-3">Test Result</h5>
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-3">
+                                            <div class="text-center">
+                                                <div class="display-4 {% if result.flag == 'H' %}text-danger{% elif result.flag == 'L' %}text-warning{% elif result.flag == 'C' %}text-danger fw-bold{% else %}text-success{% endif %}">
+                                                    {{ result.result_value }}
+                                                </div>
+                                                <div class="text-muted">{{ result.units }}</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-9">
+                                            <table class="table table-sm mb-0">
+                                                <tr>
+                                                    <th width="30%">Reference Range:</th>
+                                                    <td>{{ result.reference_range|default:"Not specified" }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Flag:</th>
+                                                    <td>
+                                                        <span class="badge bg-{% if result.flag == 'N' %}success{% elif result.flag == 'H' or result.flag == 'C' %}danger{% elif result.flag == 'L' %}warning{% else %}secondary{% endif %}">
+                                                            {{ result.get_flag_display }}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Data Source:</th>
+                                                    <td>
+                                                        <span class="badge bg-info">{{ result.get_data_source_display }}</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Entered By:</th>
+                                                    <td>
+                                                        {% if result.entered_by %}
+                                                            {{ result.entered_by.get_full_name }}
+                                                        {% else %}
+                                                            <em>System (Instrument)</em>
+                                                        {% endif %}
+                                                        on {{ result.entered_at|date:"Y-m-d H:i" }}
+                                                    </td>
+                                                </tr>
+                                                {% if result.verified_by %}
+                                                <tr>
+                                                    <th>Verified By:</th>
+                                                    <td>
+                                                        {{ result.verified_by.get_full_name }} 
+                                                        on {{ result.verified_at|date:"Y-m-d H:i" }}
+                                                    </td>
+                                                </tr>
+                                                {% endif %}
+                                                {% if result.remarks %}
+                                                <tr>
+                                                    <th>Remarks:</th>
+                                                    <td>{{ result.remarks }}</td>
+                                                </tr>
+                                                {% endif %}
+                                                {% if result.released %}
+                                                <tr>
+                                                    <th>Released:</th>
+                                                    <td>
+                                                        <span class="badge bg-success">Yes</span> 
+                                                        on {{ result.released_at|date:"Y-m-d H:i" }}
+                                                    </td>
+                                                </tr>
+                                                {% endif %}
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Action Buttons -->
+                    <hr class="my-4">
+                    <div class="btn-group" role="group">
+                        {% if assignment.status == 'P' and can_send %}
+                            <form method="post" action="{% url 'send_to_instrument' assignment.id %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-send"></i> Send to Instrument
+                                </button>
+                            </form>
+                        {% endif %}
+                        
+                        {% if assignment.status in 'QI' and assignment.external_id %}
+                            <form method="post" action="{% url 'fetch_result_from_instrument' assignment.id %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-info">
+                                    <i class="bi bi-download"></i> Fetch Result from Instrument
+                                </button>
+                            </form>
+                        {% endif %}
+                        
+                        {% if assignment.status in 'PQI' %}
+                            <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#manualResultModal">
+                                <i class="bi bi-pencil"></i> Enter Manual Result
+                            </button>
+                        {% endif %}
+                        
+                        {% if assignment.status == 'A' and result and can_verify %}
+                            <form method="post" action="{% url 'verify_result' assignment.id %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-success">
+                                    <i class="bi bi-check-circle"></i> Verify Result
+                                </button>
+                            </form>
+                        {% endif %}
+                        
+                        {% if can_release %}
+                            <form method="post" action="{% url 'release_result' assignment.id %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-warning" 
+                                        onclick="return confirm('Are you sure you want to release this result?')">
+                                    <i class="bi bi-box-arrow-up-right"></i> Release Result
+                                </button>
+                            </form>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Communication Logs -->
+                    {% if logs %}
+                    <hr class="my-4">
+                    <div class="row">
+                        <div class="col-12">
+                            <h5 class="text-muted mb-3">Instrument Communication Log</h5>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Time</th>
+                                            <th>Type</th>
+                                            <th>Instrument</th>
+                                            <th>Status</th>
+                                            <th>Details</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for log in logs %}
+                                        <tr>
+                                            <td>{{ log.created_at|date:"Y-m-d H:i:s" }}</td>
+                                            <td>
+                                                <span class="badge bg-{% if log.log_type == 'send' %}primary{% elif log.log_type == 'receive' %}success{% else %}danger{% endif %}">
+                                                    {{ log.get_log_type_display }}
+                                                </span>
+                                            </td>
+                                            <td>{{ log.instrument.name }}</td>
+                                            <td>
+                                                {% if log.response_code %}
+                                                    <span class="badge bg-{% if log.response_code < 300 %}success{% else %}danger{% endif %}">
+                                                        {{ log.response_code }}
+                                                    </span>
+                                                {% else %}
+                                                    -
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if log.error_message %}
+                                                    <span class="text-danger">{{ log.error_message|truncatewords:10 }}</span>
+                                                {% else %}
+                                                    <button class="btn btn-sm btn-link" 
+                                                            data-bs-toggle="collapse" 
+                                                            data-bs-target="#log{{ log.id }}">
+                                                        View Payload
+                                                    </button>
+                                                    <div class="collapse" id="log{{ log.id }}">
+                                                        <pre class="bg-light p-2 small"><code>{{ log.payload|pprint }}</code></pre>
+                                                    </div>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Manual Result Entry -->
+<div class="modal fade" id="manualResultModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'labs:enter_manual_result' assignment.id %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">Enter Manual Result</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <strong>Test:</strong> {{ assignment.lab_test.name }}<br>
+                        <strong>Reference Range:</strong> 
+                        {% if assignment.lab_test.min_reference_value and assignment.lab_test.max_reference_value %}
+                            {{ assignment.lab_test.min_reference_value }} - {{ assignment.lab_test.max_reference_value }}
+                        {% else %}
+                            {{ assignment.lab_test.default_reference_text|default:"Not specified" }}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="result_value" class="form-label">Result Value *</label>
+                        <input type="text" 
+                               name="result_value" 
+                               id="result_value"
+                               class="form-control form-control-lg" 
+                               required
+                               {% if result %}value="{{ result.result_value }}"{% endif %}>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="unit" class="form-label">Unit</label>
+                        <input type="text" 
+                               name="unit" 
+                               id="unit"
+                               class="form-control"
+                               value="{{ assignment.lab_test.default_units }}"
+                               placeholder="e.g., mg/dL, mmol/L">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="remarks" class="form-label">Remarks</label>
+                        <textarea name="remarks" 
+                                  id="remarks"
+                                  class="form-control" 
+                                  rows="3"
+                                  placeholder="Any additional notes or observations...">{% if result %}{{ result.remarks }}{% endif %}</textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Result</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function checkInstrumentStatus(instrumentId) {
+    fetch(`/laboratory/instrument/${instrumentId}/status/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'online') {
+                alert(`Instrument is ONLINE\nQueue: ${data.queueLength || 0} tests`);
+            } else {
+                alert(`Instrument is OFFLINE\nError: ${data.error || 'Unknown'}`);
+            }
+        })
+        .catch(error => {
+            alert('Error checking status: ' + error);
+        });
+}
+</script>
+
+{% endblock %}

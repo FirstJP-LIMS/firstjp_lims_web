@@ -40,45 +40,20 @@ urlpatterns = [
 
    # Test Assignment Management
     # ===== Test Assignment List & Management =====
-    path(
-        'assignments/',
-        views.test_assignment_list,
-        name='test_assignment_list'
-    ),
-    path(
-        'assignment/<int:assignment_id>/',
-        views.test_assignment_detail,
-        name='test_assignment_detail'
-    ),
+    path('assignments/', views.test_assignment_list, name='test_assignment_list'),
+    path('assignment/<int:assignment_id>/', views.test_assignment_detail, name='test_assignment_detail'),
     
     # ===== Quick Actions (AJAX) =====
     path(
-        'assignment/<int:assignment_id>/quick-send/',
-        views.quick_send_to_instrument,
-        name='quick_send_to_instrument'
-    ),
-    path(
-        'assignments/stats/',
-        views.assignment_quick_stats,
-        name='assignment_quick_stats'
-    ),
+        'assignment/<int:assignment_id>/quick-send/', views.quick_send_to_instrument, name='quick_send_to_instrument'),
+    path('assignments/stats/', views.assignment_quick_stats,
+        name='assignment_quick_stats'),
     
     # ===== Bulk Actions =====
-    path(
-        'assignments/bulk-send/',
-        views.bulk_send_to_instrument,
-        name='bulk_send_to_instrument'
+    path('assignments/bulk-send/', views.bulk_send_to_instrument, name='bulk_send_to_instrument'),
+    path('assignments/bulk-assign-instrument/', views.bulk_assign_instrument, name='bulk_assign_instrument'
     ),
-    path(
-        'assignments/bulk-assign-instrument/',
-        views.bulk_assign_instrument,
-        name='bulk_assign_instrument'
-    ),
-    path(
-        'assignments/bulk-assign-technician/',
-        views.bulk_assign_technician,
-        name='bulk_assign_technician'
-    ),
+    path('assignments/bulk-assign-technician/', views.bulk_assign_technician, name='bulk_assign_technician'),
     
     # ===== Export =====
     path(

@@ -106,3 +106,45 @@ class VendorProfileForm(forms.ModelForm):
             "contact_number": forms.TextInput(attrs={"class": "form-control"}),
             "registration_number": forms.TextInput(attrs={"class": "form-control"}),
         }
+
+
+# app_name/forms.py
+from django import forms
+from apps.labs.models import Equipment, Department
+
+class EquipmentForm(forms.ModelForm):
+    class Meta:
+        model = Equipment
+        fields = [
+            "name",
+            "model",
+            "serial_number",
+            "department",
+            "api_endpoint",
+            "api_key",
+            "supports_auto_fetch",
+        ]
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "input"}),
+            "model": forms.TextInput(attrs={"class": "input"}),
+            "serial_number": forms.TextInput(attrs={"class": "input"}),
+            "department": forms.Select(attrs={"class": "input"}),
+            "api_endpoint": forms.URLInput(attrs={"class": "input"}),
+            "api_key": forms.TextInput(attrs={"class": "input"}),
+            "supports_auto_fetch": forms.CheckboxInput(attrs={"class": "checkbox"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        vendor = kwargs.pop("vendor", None)
+        super().__init__(*args, **kwargs)
+
+        # Filter departments based on vendor
+        if vendor:
+            self.fields["department"].queryset = Department.objects.filter(vendor=vendor)
+
+    def clean_serial_number(self):
+        serial = self.cleaned_data.get("serial_number")
+        if Equipment.objects.filter(serial_number=serial).exists():
+            raise forms.ValidationError("Equipment with this serial number already exists.")
+        return serial
+

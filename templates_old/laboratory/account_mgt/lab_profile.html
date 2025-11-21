@@ -1,0 +1,106 @@
+{% extends "laboratory/assets/base.html" %}
+
+{% load static %}
+
+{% block content %}
+
+<div class="container py-4">
+
+    <h2 class="mb-4 fw-bold">Vendor Profile</h2>
+
+    <div class="row">
+
+        <!-- LEFT COLUMN (STATIC INFO) -->
+        <div class="col-md-4">
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-body text-center">
+
+                    {% if profile.logo %}
+                        <img src="{{ profile.logo.url }}" class="img-fluid rounded mb-3" style="max-height: 130px;">
+                    {% else %}
+                        <img src="{% static 'img/default_logo.png' %}" class="img-fluid rounded mb-3" style="max-height: 130px;">
+                    {% endif %}
+
+                    <h4>{{ vendor.name }}</h4>
+
+                    <p class="small text-muted mb-1">{{ vendor.registration_number }}</p>
+
+                    <p class="fw-bold mt-3 mb-1">Email</p>
+                    <p class="text-muted">{{ user.email }}</p>
+
+                    <p class="fw-bold mt-3 mb-1">Contact</p>
+                    <p class="text-muted">{{ profile.contact_number|default:"Not provided" }}</p>
+
+                </div>
+            </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN (EDIT FORM) -->
+        <div class="col-md-8">
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Edit Profile</h5>
+                </div>
+
+                <div class="card-body">
+
+                    <form method="POST" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label class="form-label">Logo</label>
+                            {{ form.logo }}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Registration Number</label>
+                            {{ form.registration_number }}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Contact Number</label>
+                            {{ form.contact_number }}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Office Address</label>
+                            {{ form.office_address }}
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">City / State</label>
+                                {{ form.office_city_state }}
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Country</label>
+                                {{ form.office_country }}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Zip Code</label>
+                            {{ form.office_zipcode }}
+                        </div>
+
+                        <div class="text-end">
+                            <button class="btn btn-primary px-4" type="submit">
+                                Update Profile
+                            </button>
+                        </div>
+
+                    </form>
+
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}

@@ -4,14 +4,14 @@
 {% block title %}Test Requests - FirstJP LIMS{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <div class="d-flex justify-content-between align-items-center">
+<div class="page-header mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
-            <h1 class="page-title">Test Requests</h1>
-            <p class="page-subtitle">Manage laboratory test requests and samples</p>
+            <h1 class="page-title fw-bold text-dark mb-1">Test Requests</h1>
+            <p class="page-subtitle text-muted mb-0">Manage laboratory test requests and samples efficiently</p>
         </div>
         <div class="d-flex gap-2">
-            <a href="{% url 'labs:create_test_request' %}" class="btn btn-red">
+            <a href="{% url 'labs:create_test_request' %}" class="btn btn-primary btn-lg shadow-sm">
                 <i class="bi bi-plus-circle me-2"></i>New Test Request
             </a>
         </div>
@@ -22,177 +22,225 @@
     <!-- Messages -->
     {% if messages %}
         {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                <i class="bi bi-{% if message.tags == 'success' %}check-circle{% else %}exclamation-triangle{% endif %}-fill me-2"></i>
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm border-0" role="alert">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% elif message.tags == 'error' %}x-circle{% else %}info-circle{% endif %}-fill me-3 fs-5"></i>
+                    <div class="flex-grow-1">
+                        {{ message }}
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
             </div>
         {% endfor %}
     {% endif %}
 
     <!-- Quick Stats -->
-    <div class="stats-grid mb-4">
-        <div class="stat-card">
-            <div class="stat-header">
-                <div class="stat-icon bg-primary bg-opacity-10 text-primary">
-                    <i class="bi bi-clipboard-plus"></i>
-                </div>
-                <div>
-                    <div class="stat-value">{{ requests.count }}</div>
-                    <div class="stat-label">Total Requests</div>
-                </div>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-header">
-                <div class="stat-icon bg-warning bg-opacity-10 text-warning">
-                    <i class="bi bi-clock-history"></i>
-                </div>
-                <div>
-                    <div class="stat-value">{{ requests|length }}</div>
-                    <div class="stat-label">Pending</div>
+    <div class="row g-3 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon bg-primary bg-opacity-10 text-primary rounded-3 p-3 me-3">
+                            <i class="bi bi-clipboard-plus fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="stat-value h3 fw-bold text-dark mb-0">{{ requests.count }}</div>
+                            <div class="stat-label text-muted small">Total Requests</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="stat-card">
-            <div class="stat-header">
-                <div class="stat-icon bg-success bg-opacity-10 text-success">
-                    <i class="bi bi-check-circle"></i>
-                </div>
-                <div>
-                    <div class="stat-value">{{ requests|length }}</div>
-                    <div class="stat-label">Completed</div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon bg-warning bg-opacity-10 text-warning rounded-3 p-3 me-3">
+                            <i class="bi bi-clock-history fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="stat-value h3 fw-bold text-dark mb-0">{{ pending_count|default:requests|length }}</div>
+                            <div class="stat-label text-muted small">Pending</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="stat-card">
-            <div class="stat-header">
-                <div class="stat-icon bg-info bg-opacity-10 text-info">
-                    <i class="bi bi-people"></i>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon bg-success bg-opacity-10 text-success rounded-3 p-3 me-3">
+                            <i class="bi bi-check-circle fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="stat-value h3 fw-bold text-dark mb-0">{{ completed_count|default:requests|length }}</div>
+                            <div class="stat-label text-muted small">Completed</div>
+                        </div>
+                    </div>
                 </div>
-                <div>
-                    <div class="stat-value">{{ requests|length }}</div>
-                    <div class="stat-label">Patients Today</div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon bg-info bg-opacity-10 text-info rounded-3 p-3 me-3">
+                            <i class="bi bi-people fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="stat-value h3 fw-bold text-dark mb-0">{{ patients_today|default:requests|length }}</div>
+                            <div class="stat-label text-muted small">Patients Today</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Test Requests List -->
-    <div class="main-card">
-        <div class="card-header">
-            <h5 class="card-title">
-                <i class="bi bi-list-check me-2"></i>
-                Recent Test Requests
-            </h5>
-            <div class="d-flex gap-2 align-items-center">
-                <span class="badge bg-primary">{{ requests.count }} request{{ requests.count|pluralize }}</span>
-                <div class="btn-group btn-group-sm">
-                    <button class="btn btn-outline-secondary active">All</button>
-                    <button class="btn btn-outline-secondary">Pending</button>
-                    <button class="btn btn-outline-secondary">Completed</button>
-                    <button class="btn btn-outline-secondary">Urgent</button>
+    <div class="main-card card border-0 shadow-sm">
+        <div class="card-header bg-white border-0 py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0 fw-semibold text-dark">
+                    <i class="bi bi-list-check me-2 text-primary"></i>
+                    Recent Test Requests
+                </h5>
+                <div class="d-flex gap-2 align-items-center">
+                    <span class="badge bg-primary rounded-pill fs-6">{{ requests.count }} request{{ requests.count|pluralize }}</span>
+                    <div class="btn-group btn-group-sm shadow-sm">
+                        <button class="btn btn-outline-primary active">All</button>
+                        <button class="btn btn-outline-primary">Pending</button>
+                        <button class="btn btn-outline-primary">Completed</button>
+                        <button class="btn btn-outline-primary">Urgent</button>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="card-body">
+        <div class="card-body p-0">
             {% if requests %}
             <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
                         <tr>
-                            <th>Request ID</th>
-                            <th>Patient</th>
-                            <th>Tests Ordered</th>
-                            <th>Priority</th>
-                            <th>Status</th>
-                            <th>Requested</th>
-                            <th>Actions</th>
+                            <th class="border-0 ps-4">Request ID</th>
+                            <th class="border-0">Patient</th>
+                            <th class="border-0">Tests Ordered</th>
+                            <th class="border-0">Priority</th>
+                            <th class="border-0">Status</th>
+                            <th class="border-0">Requested</th>
+                            <th class="border-0 pe-4 text-end">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for request in requests %}
-                        <tr>
-                            <td>
-                                <strong class="text-brand-blue">{{ request.request_id }}</strong>
+                        <tr class="border-top">
+                            <td class="ps-4">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-primary bg-opacity-10 rounded-2 p-2 me-3">
+                                        <i class="bi bi-clipboard-check text-primary"></i>
+                                    </div>
+                                    <div>
+                                        <strong class="text-primary d-block">{{ request.request_id }}</strong>
+                                        <small class="text-muted">Lab Request</small>
+                                    </div>
+                                </div>
                             </td>
                             
                             <td>
-                                <strong>{{ request.patient.first_name }} {{ request.patient.last_name }}</strong>
-                                <br>
-                                <small class="text-muted">
-                                    {{ request.patient.date_of_birth|date:"M d, Y" }} • 
-                                    {{ request.patient.get_gender_display }}
-                                </small>
+                                <div>
+                                    <strong class="text-dark d-block">{{ request.patient.first_name }} {{ request.patient.last_name }}</strong>
+                                    <small class="text-muted">
+                                        {{ request.patient.date_of_birth|date:"M d, Y" }} • 
+                                        {{ request.patient.get_gender_display }}
+                                    </small>
+                                </div>
                             </td>
                             
                             <td>
-                                {% for test in request.requested_tests.all|slice:":2" %}
-                                    <span class="badge bg-light text-dark border">{{ test.code }}</span>
-                                {% endfor %}
-                                {% if request.requested_tests.count > 2 %}
-                                    <span class="badge bg-secondary">+{{ request.requested_tests.count|add:"-2" }} more</span>
-                                {% endif %}
-                                <br>
+                                <div class="d-flex flex-wrap gap-1 mb-1">
+                                    {% for test in request.requested_tests.all|slice:":3" %}
+                                        <span class="badge bg-light text-dark border small">{{ test.code }}</span>
+                                    {% endfor %}
+                                    {% if request.requested_tests.count > 3 %}
+                                        <span class="badge bg-secondary small">+{{ request.requested_tests.count|add:"-3" }}</span>
+                                    {% endif %}
+                                </div>
                                 <small class="text-muted">{{ request.requested_tests.count }} test{{ request.requested_tests.count|pluralize }}</small>
                             </td>
                             
                             <td>
                                 {% if request.priority == 'HIGH' %}
-                                    <span class="badge bg-danger">High</span>
+                                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25">
+                                        <i class="bi bi-exclamation-triangle-fill me-1"></i>High
+                                    </span>
                                 {% elif request.priority == 'MEDIUM' %}
-                                    <span class="badge bg-warning">Medium</span>
+                                    <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25">
+                                        Medium
+                                    </span>
                                 {% else %}
-                                    <span class="badge bg-success">Low</span>
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">
+                                        Low
+                                    </span>
                                 {% endif %}
                             </td>
                             
                             <td>
-                                <span class="badge bg-warning">Processing</span>
+                                <span class="badge bg-warning bg-opacity-15 text-warning border-0">
+                                    <i class="bi bi-clock me-1"></i>Processing
+                                </span>
                             </td>
                             
                             <td>
-                                <small class="text-muted">{{ request.created_at|timesince }} ago</small>
-                                <br>
-                                <small>by {{ request.requested_by.get_full_name|default:request.requested_by.email }}</small>
+                                <div class="text-nowrap">
+                                    <small class="text-dark fw-medium d-block">{{ request.created_at|timesince }} ago</small>
+                                    <small class="text-muted">by {{ request.requested_by.get_full_name|default:request.requested_by.email }}</small>
+                                </div>
                             </td>
 
-                            <td>
-                                <div class="d-flex flex-wrap gap-2 align-items-start">
-                                    <!-- View Button -->
-                                    <a href="{% url 'labs:request_detail' request.pk %}" class="btn btn-outline-wine btn-sm">
-                                        <i class="bi bi-eye me-1"></i>View
-                                    </a>
-                                    
-                                    <!-- Edit Button -->
-                                    <a href="{% url 'labs:request_update' request.pk %}" class="btn btn-outline-secondary btn-sm">
-                                        <i class="bi bi-pencil me-1"></i>Edit
-                                    </a>
-                                    
-                                    <!-- Sample Verify Buttons -->
-                                    {% for sample in request.samples.all %}
-                                        {% if sample.sample_id %}
-                                        <a href="{% url 'labs:sample-exam-detail' sample.sample_id %}" 
-                                        class="btn btn-outline-success btn-sm">
-                                            <i class="bi bi-check-circle me-1"></i>Verify
+                            <td class="pe-4 text-end">
+                                <div class="d-flex flex-column gap-2 align-items-end">
+                                    <div class="d-flex gap-1">
+                                        <!-- View Button -->
+                                        <a href="{% url 'labs:request_detail' request.pk %}" 
+                                           class="btn btn-outline-primary btn-sm rounded-2 px-3"
+                                           data-bs-toggle="tooltip" title="View Details">
+                                            <i class="bi bi-eye me-1"></i>View
                                         </a>
-                                        {% endif %}
-                                    {% endfor %}
-                                </div>
-                                
-                                <!-- Sample IDs Display -->
-                                {% if request.samples.exists %}
-                                <div class="mt-1">
-                                    <small class="text-muted">
-                                        Samples: 
+                                        
+                                        <!-- Edit Button -->
+                                        <a href="{% url 'labs:request_update' request.pk %}" 
+                                           class="btn btn-outline-secondary btn-sm rounded-2 px-3"
+                                           data-bs-toggle="tooltip" title="Edit Request">
+                                            <i class="bi bi-pencil me-1"></i>Edit
+                                        </a>
+                                        
+                                        <!-- Sample Verify Buttons -->
                                         {% for sample in request.samples.all %}
                                             {% if sample.sample_id %}
-                                            <span class="badge bg-light text-dark">{{ sample.sample_id }}</span>
+                                            <a href="{% url 'labs:sample-exam-detail' sample.sample_id %}" 
+                                               class="btn btn-outline-success btn-sm rounded-2 px-3"
+                                               data-bs-toggle="tooltip" title="Verify Sample">
+                                                <i class="bi bi-check-circle me-1"></i>Verify
+                                            </a>
                                             {% endif %}
                                         {% endfor %}
-                                    </small>
+                                    </div>
+                                    
+                                    <!-- Sample IDs Display -->
+                                    {% if request.samples.exists %}
+                                    <div>
+                                        <small class="text-muted">
+                                            Samples: 
+                                            {% for sample in request.samples.all %}
+                                                {% if sample.sample_id %}
+                                                <span class="badge bg-light text-dark border small">{{ sample.sample_id }}</span>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </small>
+                                    </div>
+                                    {% endif %}
                                 </div>
-                                {% endif %}
                             </td>
                         </tr>
                         {% endfor %}
@@ -201,22 +249,42 @@
             </div>
             {% else %}
             <div class="text-center py-5">
-                <i class="bi bi-clipboard-x fs-1 text-muted mb-3"></i>
-                <h5 class="text-muted">No Test Requests</h5>
-                <p class="text-muted">Start by creating your first test request for a patient.</p>
-                <a href="{% url 'labs:create_test_request' %}" class="btn btn-red">
-                    <i class="bi bi-plus-circle me-2"></i>Create First Request
-                </a>
+                <div class="py-5">
+                    <i class="bi bi-clipboard-x fs-1 text-muted mb-3 opacity-50"></i>
+                    <h5 class="text-muted mb-2">No Test Requests Found</h5>
+                    <p class="text-muted mb-4">Start by creating your first test request for a patient.</p>
+                    <a href="{% url 'labs:create_test_request' %}" class="btn btn-primary btn-lg">
+                        <i class="bi bi-plus-circle me-2"></i>Create First Request
+                    </a>
+                </div>
             </div>
             {% endif %}
         </div>
     </div>
 </div>
+{% endblock %}
 
-<style>
-    .btn-group-sm .btn {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.875rem;
-    }
-</style>
+{% block extra_js %}
+<script>
+    // Initialize tooltips
+    document.addEventListener('DOMContentLoaded', function() {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+        
+        // Add smooth animations
+        const statCards = document.querySelectorAll('.stat-card');
+        statCards.forEach((card, index) => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            
+            setTimeout(() => {
+                card.style.transition = 'all 0.5s ease';
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, index * 100);
+        });
+    });
+</script>
 {% endblock %}

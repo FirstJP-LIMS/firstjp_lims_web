@@ -1,0 +1,29 @@
+{% extends "lab_const/base.html" %}
+
+{% block title %}Patients - {{ vendor.name }}{% endblock %}
+
+{% block page_title %}Patient Management{% endblock %}
+
+{% block breadcrumbs %}
+<li class="breadcrumb-item active" aria-current="page">Patients</li>
+{% endblock %}
+
+{% block header_actions %}
+<!-- <a href="{% url 'add_patient' %}" class="btn btn-wine btn-sm">
+    <i class="bi bi-person-plus me-1"></i>Add Patient
+</a> -->
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <!-- Your patient list content here -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">Patients List</h5>
+                <!-- Patient table content -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

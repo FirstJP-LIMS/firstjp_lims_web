@@ -1,0 +1,109 @@
+{% extends "laboratory/assets/base.html" %}
+
+{% load static %}
+
+{% block title %}Delete Test - FirstJP LIMS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="page-title">Delete Laboratory Test</h1>
+            <p class="page-subtitle">Remove test from catalog</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'labs:test_list' %}" class="btn btn-outline-red">
+                <i class="bi bi-arrow-left me-2"></i>Back to Tests
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-content">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <!-- Delete Confirmation Card -->
+            <div class="main-card border-danger">
+                <div class="card-header bg-danger bg-opacity-10 text-danger">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Confirm Test Deletion
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <i class="bi bi-clipboard-x fs-1 text-danger mb-3"></i>
+                        <h4 class="text-danger">Delete Test?</h4>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <strong>Warning:</strong> This action cannot be undone and may affect existing samples and reports.
+                    </div>
+
+                    <!-- Test Information -->
+                    <div class="card bg-light border-0 mb-4">
+                        <div class="card-body">
+                            <h6 class="text-brand-blue">Test Details</h6>
+                            <table class="table table-sm table-borderless">
+                                <tr>
+                                    <td><strong>Code:</strong></td>
+                                    <td>{{ object.code }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Name:</strong></td>
+                                    <td>{{ object.name }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Department:</strong></td>
+                                    <td>{{ object.assigned_department.name }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Type:</strong></td>
+                                    <td>
+                                        <span class="badge {% if object.result_type == 'QNT' %}bg-info{% else %}bg-warning{% endif %}">
+                                            {{ object.get_result_type_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Price:</strong></td>
+                                    <td>${{ object.price }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Vendor:</strong></td>
+                                    <td>{{ object.vendor.name }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Impact Assessment -->
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">Potential Impact</h6>
+                        <ul class="mb-0 small">
+                            <li>This test will be permanently removed from the catalog</li>
+                            <li>Existing samples using this test may be affected</li>
+                            <li>Historical reports will retain test information</li>
+                            <li>Cannot be used for new sample requests</li>
+                        </ul>
+                    </div>
+
+                    <!-- Confirmation Form -->
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex gap-2 justify-content-between">
+                            <a href="{% url 'labs:test_list' %}" class="btn btn-outline-red flex-fill">
+                                <i class="bi bi-x-circle me-2"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-danger flex-fill">
+                                <i class="bi bi-trash me-2"></i>Delete Test
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

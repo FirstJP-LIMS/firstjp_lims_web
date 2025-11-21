@@ -1,0 +1,262 @@
+{% extends "laboratory/assets/base.html" %}
+{% load static %}
+
+{% block title %}{{ title }} - {{ vendor.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h1 class="page-title fw-bold text-dark mb-1">
+                <i class="bi bi-cpu me-2 text-primary"></i>{{ title }}
+            </h1>
+            <p class="page-subtitle text-muted mb-0">
+                {% if equipment %}Update equipment details{% else %}Add new laboratory equipment{% endif %}
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'equipment_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to List
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-content">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="card-title mb-0 fw-semibold text-dark">
+                        <i class="bi bi-gear me-2 text-primary"></i>
+                        Equipment Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="equipmentForm">
+                        {% csrf_token %}
+                        
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                    <i class="bi bi-{% if message.tags == 'success' %}check-circle{% else %}exclamation-triangle{% endif %}-fill me-2"></i>
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+
+                        <div class="row g-3">
+                            <!-- Basic Information -->
+                            <div class="col-md-6">
+                                <label for="{{ form.name.id_for_label }}" class="form-label fw-semibold">
+                                    Equipment Name *
+                                </label>
+                                {{ form.name }}
+                                {% if form.name.errors %}
+                                    <div class="text-danger small">{{ form.name.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="{{ form.model.id_for_label }}" class="form-label fw-semibold">
+                                    Model
+                                </label>
+                                {{ form.model }}
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="{{ form.serial_number.id_for_label }}" class="form-label fw-semibold">
+                                    Serial Number *
+                                </label>
+                                {{ form.serial_number }}
+                                {% if form.serial_number.errors %}
+                                    <div class="text-danger small">{{ form.serial_number.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="{{ form.department.id_for_label }}" class="form-label fw-semibold">
+                                    Department *
+                                </label>
+                                {{ form.department }}
+                            </div>
+                            
+                            <!-- Status & Configuration -->
+                            <div class="col-md-6">
+                                <label for="{{ form.status.id_for_label }}" class="form-label fw-semibold">
+                                    Status
+                                </label>
+                                {{ form.status }}
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="{{ form.last_calibrated.id_for_label }}" class="form-label fw-semibold">
+                                    Last Calibration
+                                </label>
+                                {{ form.last_calibrated }}
+                            </div>
+                            
+                            <!-- API Configuration -->
+                            <div class="col-12">
+                                <div class="border-top pt-4 mt-2">
+                                    <h6 class="fw-semibold text-dark mb-3">
+                                        <i class="bi bi-plug me-2 text-info"></i>
+                                        API Configuration
+                                    </h6>
+                                    
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label for="{{ form.api_endpoint.id_for_label }}" class="form-label fw-semibold">
+                                                API Endpoint
+                                            </label>
+                                            {{ form.api_endpoint }}
+                                            <div class="form-text">URL for equipment API connection</div>
+                                        </div>
+                                        
+                                        <div class="col-md-6">
+                                            <label for="{{ form.api_key.id_for_label }}" class="form-label fw-semibold">
+                                                API Key
+                                            </label>
+                                            <div class="input-group">
+                                                {{ form.api_key }}
+                                                <button class="btn btn-outline-secondary" type="button" id="toggleApiKey">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-12">
+                                            <div class="form-check">
+                                                {{ form.supports_auto_fetch }}
+                                                <label class="form-check-label fw-semibold" for="{{ form.supports_auto_fetch.id_for_label }}">
+                                                    Enable automatic data fetching
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Additional Information -->
+                            <div class="col-12">
+                                <div class="border-top pt-4 mt-2">
+                                    <h6 class="fw-semibold text-dark mb-3">
+                                        <i class="bi bi-info-circle me-2 text-secondary"></i>
+                                        Additional Information
+                                    </h6>
+                                    
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <label for="{{ form.description.id_for_label }}" class="form-label fw-semibold">
+                                                Description
+                                            </label>
+                                            {{ form.description }}
+                                        </div>
+                                        
+                                        <div class="col-md-6">
+                                            <label for="{{ form.manufacturer.id_for_label }}" class="form-label fw-semibold">
+                                                Manufacturer
+                                            </label>
+                                            {{ form.manufacturer }}
+                                        </div>
+                                        
+                                        <div class="col-md-6">
+                                            <label for="{{ form.installation_date.id_for_label }}" class="form-label fw-semibold">
+                                                Installation Date
+                                            </label>
+                                            {{ form.installation_date }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+                            <a href="{% url 'equipment_list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle me-2"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-2"></i>
+                                {% if equipment %}Update Equipment{% else %}Create Equipment{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.form-control, .form-select {
+    border-radius: 0.5rem;
+    border: 1px solid #dee2e6;
+    padding: 0.75rem;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #2c5aa0;
+    box-shadow: 0 0 0 0.2rem rgba(44, 90, 160, 0.25);
+}
+
+.form-label {
+    color: #495057;
+    margin-bottom: 0.5rem;
+}
+
+.form-text {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.border-top {
+    border-color: #e9ecef !important;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle API key visibility
+    const toggleApiKey = document.getElementById('toggleApiKey');
+    const apiKeyField = document.getElementById('{{ form.api_key.id_for_label }}');
+    
+    if (toggleApiKey && apiKeyField) {
+        toggleApiKey.addEventListener('click', function() {
+            const type = apiKeyField.getAttribute('type') === 'password' ? 'text' : 'password';
+            apiKeyField.setAttribute('type', type);
+            this.innerHTML = type === 'password' ? '<i class="bi bi-eye"></i>' : '<i class="bi bi-eye-slash"></i>';
+        });
+    }
+    
+    // Add form validation
+    const form = document.getElementById('equipmentForm');
+    form.addEventListener('submit', function(e) {
+        const requiredFields = form.querySelectorAll('[required]');
+        let valid = true;
+        
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                valid = false;
+                field.classList.add('is-invalid');
+            } else {
+                field.classList.remove('is-invalid');
+            }
+        });
+        
+        if (!valid) {
+            e.preventDefault();
+            // Show error message
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+            alertDiv.innerHTML = `
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                Please fill in all required fields.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            form.prepend(alertDiv);
+        }
+    });
+});
+</script>
+{% endblock %}

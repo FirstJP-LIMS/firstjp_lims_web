@@ -3,166 +3,539 @@
 <head>
     <meta charset="UTF-8">
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .header { text-align: center; margin-bottom: 20px; }
-        .barcode-section { text-align: right; margin-top: 20px; }
-        .barcode-section img { height: 50px; width: auto; }
-        .info-section { margin: 20px 0; }
-        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
+        /* PDF-optimized styles */
+        @page {
+            size: A4;
+            margin: 1cm;
+            @bottom-center {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 10px;
+                color: #666;
+            }
+        }
+        
+        body {
+            font-family: 'DejaVu Sans', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+        }
+        
+        /* Header styles */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #2c5aa0;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+            page-break-after: avoid;
+        }
+        
+        .lab-info {
+            flex: 1;
+        }
+        
+        .lab-info h2 {
+            color: #2c5aa0;
+            margin: 0 0 5px 0;
+            font-size: 18px;
+        }
+        
+        .form-info {
+            text-align: right;
+            min-width: 200px;
+        }
+        
+        .form-info h3 {
+            color: #2c5aa0;
+            margin: 0 0 10px 0;
+            font-size: 16px;
+        }
+        
+        /* Section styles */
+        .section {
+            margin-bottom: 20px;
+            page-break-inside: avoid;
+        }
+        
+        .section-header {
+            background-color: #2c5aa0;
+            color: white;
+            padding: 8px 12px;
+            margin: 0;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 4px 4px 0 0;
+        }
+        
+        .section-content {
+            border: 1px solid #ddd;
+            border-top: none;
+            padding: 15px;
+            background: white;
+        }
+        
+        /* Grid layouts */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+        
+        .info-item {
+            margin-bottom: 8px;
+        }
+        
+        .info-label {
+            font-weight: bold;
+            color: #555;
+            display: inline-block;
+            min-width: 120px;
+        }
+        
+        /* Table styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            font-size: 11px;
+        }
+        
+        th {
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            font-weight: bold;
+        }
+        
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+        
+        .total-row {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        
+        /* Barcode styles */
+        .barcode-section {
+            text-align: center;
+            margin: 15px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            background: #f9f9f9;
+        }
+        
+        .barcode-section img {
+            height: 50px;
+            max-width: 200px;
+        }
+        
+        /* Signature area */
+        .signature-area {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px dashed #ccc;
+        }
+        
+        .signature-line {
+            display: inline-block;
+            width: 200px;
+            border-bottom: 1px solid #333;
+            margin: 0 20px;
+        }
+        
+        /* Status badges */
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .priority-high { background-color: #dc3545; color: white; }
+        .priority-medium { background-color: #ffc107; color: black; }
+        .priority-low { background-color: #28a745; color: white; }
+        
+        /* Utility classes */
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .text-bold { font-weight: bold; }
+        .mb-0 { margin-bottom: 0; }
+        .mt-20 { margin-top: 20px; }
+        
+        /* Blank form specific */
+        .blank-field {
+            display: inline-block;
+            min-width: 200px;
+            border-bottom: 1px solid #999;
+            margin: 0 5px;
+        }
+        
+        .checkbox-field {
+            display: inline-block;
+            width: 15px;
+            height: 15px;
+            border: 1px solid #333;
+            margin-right: 5px;
+        }
+        
+        /* Keep sections together */
+        .keep-together {
+            page-break-inside: avoid;
+        }
+        
+        /* Footer */
+        .footer {
+            margin-top: 30px;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+            font-size: 9px;
+            color: #666;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
-    <div class="header">
-        {% if vendor_profile and vendor_profile.logo %}
-            <img src="{{ vendor_profile.logo.url }}" alt="Lab Logo" style="height: 80px;">
-        {% endif %}
-        <h2>{{ vendor.name }}</h2>
-        {% if vendor_profile %}
-            <p>{{ vendor_profile.address }}</p>
-            <p>Phone: {{ vendor_profile.phone_number }} | Email: {{ vendor_profile.email }}</p>
-        {% endif %}
-    </div>
-
-    {% if not blank %}
-        <!-- FILLED REQUEST FORM -->
-        <h3>Test Request Form</h3>
-        
-        <!-- ✅ FIXED: Use barcode_image from context (base64), not from model -->
-        {% if barcode_image %}
-            <div class="barcode-section">
-                <img src="{{ barcode_image }}" alt="Barcode">
-                <p style="font-size: 10px; color: #666; margin: 5px 0;">Scan to identify sample</p>
+    <div class="container">
+        <!-- Header Section -->
+        <div class="header">
+            <div class="lab-info">
+                {% if vendor_profile and vendor_profile.logo %}
+                    <img src="{{ vendor_profile.logo.url }}" alt="Lab Logo" style="height: 60px; margin-bottom: 10px;">
+                {% endif %}
+                <h2>{{ vendor.name|upper }}</h2>
+                {% if vendor_profile %}
+                    <p class="mb-0">{{ vendor_profile.office_address|default:"" }}</p>
+                    <p class="mb-0">{{ vendor_profile.office_city_state|default:"" }}, {{ vendor_profile.office_country|default:"" }}</p>
+                    <p class="mb-0"><strong>Contact:</strong> {{ vendor_profile.contact_phone|default:"—" }}</p>
+                {% endif %}
+                <small>Form Ref: LIMS-F01 | Version 2.0</small>
             </div>
-        {% endif %}
-
-        <div class="info-section">
-            <p><strong>Request ID:</strong> {{ test_request.request_id }}</p>
-            <p><strong>Patient:</strong> {{ test_request.patient }}</p>
-            <p><strong>Date:</strong> {{ test_request.created_at|date:"Y-m-d H:i" }}</p>
-            <p><strong>Priority:</strong> {{ test_request.priority }}</p>
-            <p><strong>Status:</strong> {{ test_request.get_status_display }}</p>
             
-            {% if test_request.external_referral %}
-                <p><strong>Referred By:</strong> {{ test_request.external_referral }}</p>
-            {% endif %}
-            
-            {% if test_request.clinical_history %}
-                <p><strong>Clinical History:</strong> {{ test_request.clinical_history }}</p>
-            {% endif %}
+            <div class="form-info">
+                <h3>TEST REQUEST FORM</h3>
+                {% if not blank %}
+                    <p class="mb-0"><strong>Date:</strong> {{ test_request.created_at|date:"M d, Y" }}</p>
+                    <p class="mb-0"><strong>Request ID:</strong> {{ test_request.request_id }}</p>
+                {% else %}
+                    <p class="mb-0"><strong>Date:</strong> <span class="blank-field"></span></p>
+                    <p class="mb-0"><strong>Request ID:</strong> <span class="blank-field"></span></p>
+                {% endif %}
+            </div>
         </div>
 
-        <h4>Requested Tests</h4>
-        <table>
-            <thead>
-                <tr>
-                    <th>Test Name</th>
-                    <th>Department</th>
-                    <th>Price</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for test in requested_tests %}
-                <tr>
-                    <td>{{ test.name }}</td>
-                    <td>{{ test.assigned_department.name }}</td>
-                    <td>₦{{ test.price }}</td>
-                </tr>
-                {% endfor %}
-                <tr>
-                    <td colspan="2"><strong>Total Cost</strong></td>
-                    <td><strong>₦{{ total_cost }}</strong></td>
-                </tr>
-            </tbody>
-        </table>
+        {% if not blank %}
+        <!-- FILLED REQUEST FORM -->
+        
+        <!-- Barcode Section -->
+        {% if barcode_image %}
+        <div class="barcode-section">
+            <img src="{{ barcode_image }}" alt="Barcode">
+            <p style="font-size: 9px; margin: 5px 0 0 0;">Scan to identify sample</p>
+        </div>
+        {% endif %}
 
+        <!-- Patient Information -->
+        <div class="section keep-together">
+            <h4 class="section-header">PATIENT INFORMATION</h4>
+            <div class="section-content">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Full Name:</span>
+                        {{ test_request.patient.first_name }} {{ test_request.patient.last_name }}
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Patient ID:</span>
+                        {{ test_request.patient.patient_id }}
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Date of Birth:</span>
+                        {{ test_request.patient.date_of_birth|date:"M d, Y" }}
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Gender:</span>
+                        {{ test_request.patient.get_gender_display }}
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Contact Phone:</span>
+                        {{ test_request.patient.contact_phone|default:"—" }}
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Email:</span>
+                        {{ test_request.patient.contact_email|default:"—" }}
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Requested By:</span>
+                        {{ test_request.requested_by.get_full_name|default:test_request.requested_by.email }}
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Priority:</span>
+                        <span class="status-badge priority-{{ test_request.priority|lower }}">
+                            {{ test_request.get_priority_display }}
+                        </span>
+                    </div>
+                </div>
+                
+                {% if test_request.clinical_history %}
+                <div style="margin-top: 15px;">
+                    <strong>Clinical History:</strong><br>
+                    {{ test_request.clinical_history }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Tests Ordered -->
+        <div class="section keep-together">
+            <h4 class="section-header">TESTS ORDERED</h4>
+            <div class="section-content">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 15%">Test Code</th>
+                            <th style="width: 45%">Test Name</th>
+                            <th style="width: 20%">Department</th>
+                            <th style="width: 20%" class="text-right">Price (₦)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for test in requested_tests %}
+                        <tr>
+                            <td>{{ test.code }}</td>
+                            <td>{{ test.name }}</td>
+                            <td>{{ test.assigned_department.name }}</td>
+                            <td class="text-right">₦{{ test.price|floatformat:2 }}</td>
+                        </tr>
+                        {% endfor %}
+                        <tr class="total-row">
+                            <td colspan="3" class="text-right"><strong>Total Cost:</strong></td>
+                            <td class="text-right"><strong>₦{{ total_cost|floatformat:2 }}</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Billing Information -->
+        <div class="section keep-together">
+            <h4 class="section-header">BILLING INFORMATION</h4>
+            <div class="section-content">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Payment Mode:</span>
+                        {{ payment_mode }}
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Amount Paid:</span>
+                        ₦{{ total_cost|floatformat:2 }}
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Balance Due:</span>
+                        ₦0.00
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sample Information -->
         {% if samples %}
-        <h4>Samples</h4>
-        <table>
-            <thead>
-                <tr>
-                    <th>Sample ID</th>
-                    <th>Type</th>
-                    <th>Collection Date</th>
-                </tr>
-            </thead>
-            <tbody>
+        <div class="section keep-together">
+            <h4 class="section-header">SAMPLE INFORMATION</h4>
+            <div class="section-content">
                 {% for sample in samples %}
-                <tr>
-                    <td>{{ sample.sample_id }}</td>
-                    <td>{{ sample.sample_type }}</td>
-                    <td>{{ sample.collection_date|date:"Y-m-d H:i" }}</td>
-                </tr>
+                <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 4px;">
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="info-label">Sample ID:</span>
+                            {{ sample.sample_id }}
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Specimen Type:</span>
+                            {{ sample.specimen_type }}
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Collected By:</span>
+                            {{ sample.collected_by|default:"—" }}
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Collection Date:</span>
+                            {{ sample.collected_at|date:"M d, Y H:i" }}
+                        </div>
+                    </div>
+                </div>
                 {% endfor %}
-            </tbody>
-        </table>
+            </div>
+        </div>
         {% endif %}
 
         {% if test_request.collection_notes %}
-        <div class="info-section">
-            <p><strong>Collection Notes:</strong> {{ test_request.collection_notes }}</p>
+        <div class="section">
+            <h4 class="section-header">COLLECTION NOTES</h4>
+            <div class="section-content">
+                {{ test_request.collection_notes }}
+            </div>
         </div>
         {% endif %}
 
-        <div class="info-section">
-            <p><strong>Payment Mode:</strong> {{ payment_mode }}</p>
-            <p><strong>Informed Consent:</strong> {% if test_request.has_informed_consent %}Yes{% else %}No{% endif %}</p>
-        </div>
-
-    {% else %}
-        <!-- BLANK REQUEST FORM -->
-        <h3>Test Request Form (Blank)</h3>
-        
-        <div class="info-section">
-            <p><strong>Request ID:</strong> _______________________</p>
-            <p><strong>Patient Name:</strong> _______________________</p>
-            <p><strong>Patient ID:</strong> _______________________</p>
-            <p><strong>Date:</strong> _______________________</p>
-            <p><strong>Priority:</strong> ☐ Routine ☐ Urgent ☐ STAT</p>
-            <p><strong>Referred By:</strong> _______________________</p>
-        </div>
-
-        <h4>Clinical History</h4>
-        <div style="border: 1px solid #ddd; min-height: 80px; padding: 10px;">
-            <!-- Space for clinical history -->
-        </div>
-
-        <h4>Requested Tests</h4>
-        <table>
-            <thead>
-                <tr>
-                    <th style="width: 50px;">☐</th>
-                    <th>Test Name</th>
-                    <th>Department</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for i in "12345678910" %}
-                <tr>
-                    <td>☐</td>
-                    <td>&nbsp;</td>
-                    <td>&nbsp;</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-
-        <div class="info-section">
-            <p><strong>Collection Notes:</strong></p>
-            <div style="border: 1px solid #ddd; min-height: 60px; padding: 10px;">
-                <!-- Space for collection notes -->
+        <!-- Consent Section -->
+        <div class="section keep-together">
+            <h4 class="section-header">PATIENT CONSENT</h4>
+            <div class="section-content">
+                <p>
+                    I hereby give my informed consent for the laboratory tests listed above to be conducted. 
+                    I understand the purpose of these tests and authorize the release of results to my healthcare provider.
+                </p>
+                
+                <div class="signature-area">
+                    <div style="display: flex; justify-content: space-between;">
+                        <div style="text-align: center;">
+                            <p class="mb-0"><strong>Signature of Patient/Guardian</strong></p>
+                            <div class="signature-line"></div>
+                            <small style="font-size: 9px;">Sign above</small>
+                        </div>
+                        <div style="text-align: center;">
+                            <p class="mb-0"><strong>Date</strong></p>
+                            <div class="signature-line"></div>
+                            <small style="font-size: 9px;">MM/DD/YYYY</small>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="info-section">
-            <p>☐ Informed consent obtained</p>
-            <p><strong>Signature:</strong> _______________________ <strong>Date:</strong> _____________</p>
+        {% else %}
+        <!-- BLANK REQUEST FORM -->
+        
+        <!-- Patient Information -->
+        <div class="section">
+            <h4 class="section-header">PATIENT INFORMATION</h4>
+            <div class="section-content">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Patient Name:</span>
+                        <span class="blank-field"></span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Patient ID:</span>
+                        <span class="blank-field"></span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Date of Birth:</span>
+                        <span class="blank-field"></span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Gender:</span>
+                        <span class="blank-field"></span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Contact Phone:</span>
+                        <span class="blank-field"></span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Email:</span>
+                        <span class="blank-field"></span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Referred By:</span>
+                        <span class="blank-field"></span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Priority:</span>
+                        <span style="margin-right: 15px;">☐ Routine</span>
+                        <span style="margin-right: 15px;">☐ Urgent</span>
+                        <span>☐ STAT</span>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 15px;">
+                    <strong>Clinical History:</strong><br>
+                    <div style="border: 1px solid #ddd; min-height: 60px; padding: 8px; margin-top: 5px;"></div>
+                </div>
+            </div>
         </div>
-    {% endif %}
 
-    <div style="margin-top: 40px; font-size: 10px; text-align: center; color: #666;">
-        <p>This is a computer-generated document. For queries, contact {{ vendor.name }}</p>
+        <!-- Tests Ordered -->
+        <div class="section">
+            <h4 class="section-header">TESTS ORDERED</h4>
+            <div class="section-content">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 30px;">Select</th>
+                            <th>Test Name</th>
+                            <th>Department</th>
+                            <th class="text-right">Price (₦)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for i in "123456789" %}
+                        <tr>
+                            <td class="text-center">☐</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td class="text-right">&nbsp;</td>
+                        </tr>
+                        {% endfor %}
+                        <tr class="total-row">
+                            <td colspan="3" class="text-right"><strong>Total Cost:</strong></td>
+                            <td class="text-right"><strong>₦0.00</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Collection Notes -->
+        <div class="section">
+            <h4 class="section-header">COLLECTION NOTES</h4>
+            <div class="section-content">
+                <div style="border: 1px solid #ddd; min-height: 80px; padding: 8px;"></div>
+            </div>
+        </div>
+
+        <!-- Consent Section -->
+        <div class="section">
+            <h4 class="section-header">PATIENT CONSENT</h4>
+            <div class="section-content">
+                <p style="margin-bottom: 20px;">
+                    ☐ I hereby give my informed consent for the laboratory tests listed above to be conducted. 
+                    I understand the purpose of these tests and authorize the release of results to my healthcare provider.
+                </p>
+                
+                <div class="signature-area">
+                    <div style="display: flex; justify-content: space-between;">
+                        <div style="text-align: center;">
+                            <p class="mb-0"><strong>Signature of Patient/Guardian</strong></p>
+                            <div class="signature-line"></div>
+                        </div>
+                        <div style="text-align: center;">
+                            <p class="mb-0"><strong>Date</strong></p>
+                            <div class="signature-line"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>This is a computer-generated document from {{ vendor.name }} Laboratory Management System</p>
+            <p>Powered by FirstJP LIMS | Generated on {% now "M d, Y H:i" %}</p>
+        </div>
     </div>
 </body>
 </html>

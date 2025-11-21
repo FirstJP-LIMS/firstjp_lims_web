@@ -16,7 +16,13 @@ urlpatterns = [
     
     path('logout/', views.tenant_logout, name='logout'),
 
-    path("laboratory/profile/", views.vendor_profile, name="laboratory_profile"),
+    # Laboratory profile 
+    path("profile/", views.vendor_profile, name="laboratory_profile"),
+    
+    path("profile/equipment/", views.equipment_list, name="laboratory_equipment"),
+
+    # path('profile/equipment/', views.manage_equipment, name='manage_equipment'),
+
 
 ]
 

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>QC Results History</h2>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Test</th>
+            <th>Level</th>
+            <th>Value</th>
+            <th>Status</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for r in results %}
+        <tr>
+            <td>{{ r.run_date }}</td>
+            <td>{{ r.qc_lot.test.name }}</td>
+            <td>{{ r.qc_lot.get_level_display }}</td>
+            <td>{{ r.result_value }}</td>
+            <td>{{ r.status }}</td>
+            <td>
+                <a class="btn btn-sm btn-primary" href="{% url 'qc_result_detail' r.pk %}">View</a>
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

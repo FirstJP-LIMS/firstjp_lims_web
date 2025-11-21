@@ -1,0 +1,449 @@
+{% extends "laboratory/assets/base.html" %}
+{% load static %}
+
+{% block title %}Equipment Management - {{ vendor.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h1 class="page-title fw-bold text-dark mb-1">
+                <i class="bi bi-cpu me-2 text-primary"></i>Laboratory Equipment
+            </h1>
+            <p class="page-subtitle text-muted mb-0">Manage instruments, analyzers, and laboratory devices</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="" class="btn btn-primary btn-lg shadow-sm">
+                <i class="bi bi-plus-circle me-2"></i>Add New Equipment
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-content">
+    <!-- Stats Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon bg-success bg-opacity-10 text-success rounded-3 p-3 me-3">
+                            <i class="bi bi-check-circle fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="stat-value h3 fw-bold text-dark mb-0">{{ active_count }}</div>
+                            <div class="stat-label text-muted small">Active Equipment</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon bg-warning bg-opacity-10 text-warning rounded-3 p-3 me-3">
+                            <i class="bi bi-tools fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="stat-value h3 fw-bold text-dark mb-0">{{ maintenance_count }}</div>
+                            <div class="stat-label text-muted small">Under Maintenance</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon bg-info bg-opacity-10 text-info rounded-3 p-3 me-3">
+                            <i class="bi bi-cpu fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="stat-value h3 fw-bold text-dark mb-0">{{ equipment_list.count }}</div>
+                            <div class="stat-label text-muted small">Total Equipment</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon bg-primary bg-opacity-10 text-primary rounded-3 p-3 me-3">
+                            <i class="bi bi-plug fs-4"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="stat-value h3 fw-bold text-dark mb-0">{{ connected_count|default:0 }}</div>
+                            <div class="stat-label text-muted small">Connected Devices</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Equipment List -->
+    <div class="main-card card border-0 shadow-sm">
+        <div class="card-header bg-white border-0 py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0 fw-semibold text-dark">
+                    <i class="bi bi-list-ul me-2 text-primary"></i>
+                    Equipment Inventory
+                </h5>
+                <div class="d-flex gap-2 align-items-center">
+                    <span class="badge bg-primary rounded-pill fs-6">{{ equipment_list.count }} item{{ equipment_list.count|pluralize }}</span>
+                    <div class="btn-group btn-group-sm shadow-sm">
+                        <button class="btn btn-outline-primary active">All</button>
+                        <button class="btn btn-outline-primary">Active</button>
+                        <button class="btn btn-outline-primary">Maintenance</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            {% if equipment_list %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="border-0 ps-4">Equipment</th>
+                            <th class="border-0">Department</th>
+                            <th class="border-0">Status</th>
+                            <th class="border-0">Connection</th>
+                            <th class="border-0">Last Calibration</th>
+                            <th class="border-0 pe-4 text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for equipment in equipment_list %}
+                        <tr class="border-top equipment-row" data-status="{{ equipment.status }}">
+                            <td class="ps-4">
+                                <div class="d-flex align-items-center">
+                                    <div class="equipment-icon bg-primary bg-opacity-10 rounded-3 p-2 me-3">
+                                        <i class="bi bi-cpu text-primary fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <strong class="text-dark d-block">{{ equipment.name }}</strong>
+                                        <div class="text-muted small">
+                                            <span class="me-3">{{ equipment.model }}</span>
+                                            <code class="text-muted">{{ equipment.serial_number }}</code>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            
+                            <td>
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary border-0">
+                                    {{ equipment.department.name }}
+                                </span>
+                            </td>
+                            
+                            <td>
+                                {% if equipment.status == 'active' %}
+                                    <span class="badge bg-success bg-opacity-15 text-success border-0">
+                                        <i class="bi bi-check-circle me-1"></i>Active
+                                    </span>
+                                {% elif equipment.status == 'maintenance' %}
+                                    <span class="badge bg-warning bg-opacity-15 text-warning border-0">
+                                        <i class="bi bi-tools me-1"></i>Maintenance
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary bg-opacity-15 text-secondary border-0">
+                                        <i class="bi bi-pause-circle me-1"></i>Inactive
+                                    </span>
+                                {% endif %}
+                            </td>
+                            
+                            <td>
+                                {% if equipment.api_endpoint %}
+                                    <div class="d-flex align-items-center">
+                                        <span class="badge bg-success bg-opacity-15 text-success border-0 me-2">
+                                            <i class="bi bi-plug me-1"></i>Configured
+                                        </span>
+                                        {% if equipment.supports_auto_fetch %}
+                                        <i class="bi bi-arrow-repeat text-info" title="Auto-fetch enabled"></i>
+                                        {% endif %}
+                                    </div>
+                                {% else %}
+                                    <span class="badge bg-danger bg-opacity-15 text-danger border-0">
+                                        <i class="bi bi-plug me-1"></i>Not Configured
+                                    </span>
+                                {% endif %}
+                            </td>
+                            
+                            <td>
+                                {% if equipment.last_calibrated %}
+                                    <div class="text-nowrap">
+                                        <small class="text-dark fw-medium d-block">{{ equipment.last_calibrated|date:"M d, Y" }}</small>
+                                        <small class="text-muted">{{ equipment.last_calibrated|timesince }} ago</small>
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">Never calibrated</span>
+                                {% endif %}
+                            </td>
+
+                            <td class="pe-4 text-end">
+                                <div class="d-flex gap-1 justify-content-end">
+                                    <!-- View Details -->
+                                    <a href="{% url 'equipment_detail' equipment.id %}" 
+                                       class="btn btn-outline-primary btn-sm rounded-2 px-3"
+                                       data-bs-toggle="tooltip" title="View Details">
+                                        <i class="bi bi-eye me-1"></i>View
+                                    </a>
+                                    
+                                    <!-- Edit -->
+                                    <a href="{% url 'equipment_update' equipment.id %}" 
+                                       class="btn btn-outline-secondary btn-sm rounded-2 px-3"
+                                       data-bs-toggle="tooltip" title="Edit Equipment">
+                                        <i class="bi bi-pencil me-1"></i>Edit
+                                    </a>
+                                    
+                                    <!-- Test Connection -->
+                                    {% if equipment.api_endpoint %}
+                                    <button class="btn btn-outline-info btn-sm rounded-2 px-3 test-connection" 
+                                            data-equipment-id="{{ equipment.id }}"
+                                            data-bs-toggle="tooltip" title="Test Connection">
+                                        <i class="bi bi-plug me-1"></i>Test
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <div class="py-5">
+                    <i class="bi bi-cpu fs-1 text-muted mb-3 opacity-50"></i>
+                    <h5 class="text-muted mb-2">No Equipment Found</h5>
+                    <p class="text-muted mb-4">Start by adding your first laboratory equipment to the system.</p>
+                    <a href="" class="btn btn-primary btn-lg">
+                        <i class="bi bi-plus-circle me-2"></i>Add First Equipment
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Test Connection Modal -->
+<div class="modal fade" id="connectionModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-semibold">Testing Connection</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <div id="connectionResult">
+                    <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">Testing connection...</span>
+                    </div>
+                    <p class="text-muted mb-0">Testing equipment connection...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Connection Success Modal -->
+<div class="modal fade" id="successModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-body text-center py-4">
+                <div class="text-success mb-3">
+                    <i class="bi bi-check-circle-fill fs-1"></i>
+                </div>
+                <h5 class="fw-semibold mb-2">Connection Successful</h5>
+                <p class="text-muted mb-3" id="successMessage">Equipment is online and responding.</p>
+                <button class="btn btn-primary w-100" data-bs-dismiss="modal">Continue</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Connection Error Modal -->
+<div class="modal fade" id="errorModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-body text-center py-4">
+                <div class="text-danger mb-3">
+                    <i class="bi bi-x-circle-fill fs-1"></i>
+                </div>
+                <h5 class="fw-semibold mb-2">Connection Failed</h5>
+                <p class="text-muted mb-3" id="errorMessage">Unable to connect to equipment.</p>
+                <button class="btn btn-outline-secondary w-100" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Test connection functionality
+    const testButtons = document.querySelectorAll('.test-connection');
+    const connectionModal = new bootstrap.Modal(document.getElementById('connectionModal'));
+    const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+    const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+
+    testButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const equipmentId = this.dataset.equipmentId;
+            const equipmentRow = this.closest('.equipment-row');
+            const equipmentName = equipmentRow.querySelector('strong').textContent;
+            
+            // Show testing modal
+            connectionModal.show();
+            
+            // Simulate API call (replace with actual endpoint)
+            setTimeout(() => {
+                testEquipmentConnection(equipmentId, equipmentName);
+            }, 1500);
+        });
+    });
+
+    function testEquipmentConnection(equipmentId, equipmentName) {
+        // Replace this with actual API call
+        fetch(`/api/equipment/${equipmentId}/test-connection/`)
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            })
+            .then(data => {
+                connectionModal.hide();
+                
+                if (data.connected) {
+                    document.getElementById('successMessage').textContent = 
+                        `${equipmentName} is online and responding.`;
+                    successModal.show();
+                } else {
+                    document.getElementById('errorMessage').textContent = 
+                        data.message || `Unable to connect to ${equipmentName}.`;
+                    errorModal.show();
+                }
+            })
+            .catch(error => {
+                connectionModal.hide();
+                document.getElementById('errorMessage').textContent = 
+                    `Connection test failed: ${error.message}`;
+                errorModal.show();
+            });
+    }
+
+    // Filter functionality
+    const filterButtons = document.querySelectorAll('.btn-group .btn');
+    filterButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Remove active class from all buttons
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            // Add active class to clicked button
+            this.classList.add('active');
+            
+            const filter = this.textContent.trim().toLowerCase();
+            filterEquipment(filter);
+        });
+    });
+
+    function filterEquipment(status) {
+        const rows = document.querySelectorAll('.equipment-row');
+        
+        rows.forEach(row => {
+            if (status === 'all') {
+                row.style.display = '';
+            } else {
+                const rowStatus = row.dataset.status;
+                if (rowStatus === status) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            }
+        });
+    }
+
+    // Add hover effects
+    const equipmentRows = document.querySelectorAll('.equipment-row');
+    equipmentRows.forEach(row => {
+        row.addEventListener('mouseenter', function() {
+            this.style.backgroundColor = 'rgba(44, 90, 160, 0.02)';
+            this.style.transform = 'translateX(2px)';
+            this.style.transition = 'all 0.2s ease';
+        });
+        
+        row.addEventListener('mouseleave', function() {
+            this.style.backgroundColor = '';
+            this.style.transform = '';
+        });
+    });
+});
+</script>
+
+<style>
+.equipment-icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.equipment-row:hover .equipment-icon {
+    transform: scale(1.1);
+    background-color: rgba(44, 90, 160, 0.15) !important;
+}
+
+.btn-group-sm .btn {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    border-radius: 0.5rem;
+}
+
+/* Status-specific styles */
+.equipment-row[data-status="maintenance"] {
+    background-color: rgba(255, 193, 7, 0.03);
+}
+
+.equipment-row[data-status="inactive"] {
+    background-color: rgba(108, 117, 125, 0.03);
+    opacity: 0.8;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .page-header .d-flex {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 1rem;
+    }
+    
+    .table-responsive {
+        font-size: 0.875rem;
+    }
+    
+    .btn-group {
+        flex-wrap: wrap;
+        margin-top: 1rem;
+    }
+    
+    .equipment-icon {
+        width: 40px;
+        height: 40px;
+    }
+}
+</style>
+{% endblock %}

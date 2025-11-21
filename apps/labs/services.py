@@ -315,3 +315,5 @@ def bulk_fetch_pending_results(instrument: Equipment, max_count: int = 50) -> in
     
     logger.info(f"Fetched {fetched_count} results from {instrument.name}")
     return fetched_count
+
+    

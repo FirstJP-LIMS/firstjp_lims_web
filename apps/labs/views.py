@@ -675,6 +675,97 @@ def sample_examination_detail(request, sample_id):
     return render(request, 'laboratory/examination/sample_detail.html', {'sample': sample})
 
 
+
+# *******************
+# Download TestRequest (WEASYPRINT VERSION)
+# *******************
+# from django.template.loader import render_to_string
+# from django.http import HttpResponse
+# from django.contrib.auth.decorators import login_required
+# from django.shortcuts import get_object_or_404
+# from django.db.models import Sum
+# from django.conf import settings
+# import weasyprint  # Import the new library
+
+# from .models import TestRequest
+# from .utils import generate_barcode_base64
+
+# # NOTE: The render_to_pdf utility function has been removed. 
+# # WeasyPrint is simple enough to use directly in the view.
+
+# @login_required
+# def download_test_request(request, pk=None, blank=False):
+#     """Download a filled or blank Test Request form as PDF using WeasyPrint."""
+#     vendor = getattr(request.user, "vendor", None)
+#     vendor_profile = getattr(vendor, "profile", None)
+
+#     # Handle missing logo gracefully
+#     if vendor_profile and not vendor_profile.logo:
+#         vendor_profile.logo = None
+
+#     if blank:
+#         # Blank form version
+#         context = {
+#             "vendor": vendor,
+#             "vendor_profile": vendor_profile,
+#             "blank": True,
+#         }
+#         filename = f"Blank_Test_Request_Form.pdf"
+#     else:
+#         # Filled form version
+#         test_request = get_object_or_404(TestRequest, pk=pk, vendor=vendor)
+
+#         requested_tests = test_request.requested_tests.select_related("assigned_department")
+#         samples = test_request.samples.all()
+#         total_cost = requested_tests.aggregate(total=Sum("price"))["total"] or 0.00
+#         payment_mode = getattr(test_request, "payment_mode", "Not Specified")
+
+#         # Generate barcode
+#         barcode_image = generate_barcode_base64(test_request.request_id)
+
+#         context = {
+#             "vendor": vendor,
+#             "vendor_profile": vendor_profile,
+#             "test_request": test_request,
+#             "requested_tests": requested_tests,
+#             "samples": samples,
+#             "total_cost": total_cost,
+#             "payment_mode": payment_mode,
+#             "barcode_image": barcode_image,
+#             "blank": False,
+#         }
+#         filename = f"TestRequest_{test_request.request_id}.pdf"
+
+#     # Render the HTML template to a string
+#     html_string = render_to_string("laboratory/requests/pdf_template.html", context)
+
+#     # Prepare the HttpResponse
+#     response = HttpResponse(content_type='application/pdf')
+#     # Use 'attachment' to force download, or 'inline' to open in browser tab first
+#     response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+#     # --- WEASYPRINT GENERATION ---
+    
+#     # Determine the base URL so WeasyPrint can find local images (like media/static)
+#     # request.build_absolute_uri('/') gives you e.g., http://localhost:8000/ or https://yourdomain.com/
+#     base_url = request.build_absolute_uri('/')
+
+#     try:
+#         # Create the HTML object with base_url for asset resolution
+#         html_obj = weasyprint.HTML(string=html_string, base_url=base_url)
+        
+#         # Write the PDF directly to the response object (which acts like a file)
+#         html_obj.write_pdf(target=response)
+        
+#         return response
+        
+#     except Exception as e:
+#         # Log the actual error in development so you can see it in the console
+#         print(f"WeasyPrint Error: {e}")
+#         # In production, you might want to log this properly and return a generic error page
+#         return HttpResponse(f"Error generating PDF: {e}", status=500)
+
+
 # *******************
 # Download TestRequest
 # *******************
@@ -695,6 +786,7 @@ def render_to_pdf(html_content):
     pdf = pisa.pisaDocument(BytesIO(html_content.encode("UTF-8")), result)
     return result.getvalue() if not pdf.err else None
 
+
 @login_required
 def download_test_request(request, pk=None, blank=False):
     """Download a filled or blank Test Request form as PDF."""
@@ -706,15 +798,15 @@ def download_test_request(request, pk=None, blank=False):
         vendor_profile.logo = None
 
     if blank:
-        # Blank form version — for physical clients
+        # Blank form version
         context = {
             "vendor": vendor,
             "vendor_profile": vendor_profile,
             "blank": True,
         }
-        filename = f"Blank_Test_Request_{vendor.name}.pdf"
+        filename = f"Blank_Test_Request_Form.pdf"
     else:
-        # Filled form version — for completed requests
+        # Filled form version
         test_request = get_object_or_404(TestRequest, pk=pk, vendor=vendor)
 
         requested_tests = test_request.requested_tests.select_related("assigned_department")
@@ -722,7 +814,7 @@ def download_test_request(request, pk=None, blank=False):
         total_cost = requested_tests.aggregate(total=Sum("price"))["total"] or 0.00
         payment_mode = getattr(test_request, "payment_mode", "Not Specified")
 
-        # ✅ Generate barcode (based on request ID or any unique field)
+        # Generate barcode
         barcode_image = generate_barcode_base64(test_request.request_id)
 
         context = {
@@ -733,17 +825,23 @@ def download_test_request(request, pk=None, blank=False):
             "samples": samples,
             "total_cost": total_cost,
             "payment_mode": payment_mode,
-            "barcode_image": barcode_image,  # <--- added barcode here
+            "barcode_image": barcode_image,
             "blank": False,
         }
         filename = f"TestRequest_{test_request.request_id}.pdf"
 
     html = render_to_string("laboratory/requests/pdf_template.html", context)
+    
+    # Ensure proper PDF rendering
     pdf_file = render_to_pdf(html)
-
-    response = HttpResponse(pdf_file, content_type="application/pdf")
-    response["Content-Disposition"] = f'attachment; filename="{filename}"'
-    return response
+    
+    if pdf_file:
+        response = HttpResponse(pdf_file, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+    else:
+        return HttpResponse("Error generating PDF", status=500)
+    
 
 # **************************************************
 # Post Examination Section
@@ -875,7 +973,7 @@ def enter_manual_result(request, assignment_id):
         # Validate required fields
         if not value:
             messages.error(request, "Result value is required.")
-            return render(request, "laboratory/manual_result_form.html", {
+            return render(request, "laboratory/examination/manual_result_form.html", {
                 "assignment": assignment
             })
         

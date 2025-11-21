@@ -1,0 +1,184 @@
+{% extends "vendorbase.html" %}
+{% load static %}
+
+{% block title %}Test Request {{ test_request.request_id }} - {{ vendor.name }}{% endblock %}
+
+{% block content %}
+<div class="container my-4" id="printable-area">
+
+    <!-- HEADER / LAB INFO -->
+    <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+        <div class="d-flex align-items-center">
+            {% if vendor_profile.logo %}
+            <img src="{{ vendor_profile.logo.url }}" alt="Lab Logo" style="height:80px; width:auto;" class="me-3">
+            {% endif %}
+            <div>
+                <h4 class="fw-bold mb-0">{{ vendor.name|upper }}</h4>
+                <p class="mb-0">{{ vendor_profile.office_address }}</p>
+                <p class="mb-0">{{ vendor_profile.office_city_state }}, {{ vendor_profile.office_country }}</p>
+                <p class="mb-0"><strong>Contact:</strong> {{ vendor_profile.contact_phone|default:"—" }}</p>
+                <small class="text-muted">Form Ref: LIMS-F01 | Version 2.0</small>
+            </div>
+        </div>
+        <div>
+            <h5 class="text-end">TEST REQUEST FORM</h5>
+            <small>Date: {{ test_request.created_at|date:"M d, Y" }}</small><br>
+            <small>Request ID: {{ test_request.request_id }}</small>
+        </div>
+    </div>
+
+    <!-- PATIENT INFO -->
+    <div class="card mb-3">
+        <div class="card-header bg-light">
+            <strong><i class="bi bi-person-circle me-2"></i>Patient / Guardian Information</strong>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Patient Name:</strong> {{ test_request.patient.first_name }} {{ test_request.patient.last_name }}</p>
+                    <p><strong>Patient ID:</strong> {{ test_request.patient.patient_id }}</p>
+                    <p><strong>Date of Birth:</strong> {{ test_request.patient.date_of_birth|date:"M d, Y" }}</p>
+                    <p><strong>Gender:</strong> {{ test_request.patient.get_gender_display }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Contact:</strong> {{ test_request.patient.contact_phone|default:"—" }}</p>
+                    <p><strong>Email:</strong> {{ test_request.patient.contact_email|default:"—" }}</p>
+                    <p><strong>Requested By:</strong> {{ test_request.requested_by.get_full_name|default:test_request.requested_by.email }}</p>
+                    <p><strong>Priority:</strong> {{ test_request.get_priority_display }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TEST DETAILS -->
+    <div class="card mb-3">
+        <div class="card-header bg-light">
+            <strong><i class="bi bi-list-check me-2"></i>Tests Ordered</strong>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-striped mb-0">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Test Name</th>
+                        <th>Department</th>
+                        <th>Type</th>
+                        <th>Price</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for test in requested_tests %}
+                    <tr>
+                        <td>{{ test.code }}</td>
+                        <td>{{ test.name }}</td>
+                        <td>{{ test.assigned_department.name }}</td>
+                        <td>{{ test.get_result_type_display }}</td>
+                        <td>₦{{ test.price|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                    <tr class="table-active">
+                        <td colspan="4" class="text-end"><strong>Total:</strong></td>
+                        <td><strong>₦{{ total_cost|floatformat:2 }}</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- BILLING INFO -->
+    <div class="card mb-3">
+        <div class="card-header bg-light">
+            <strong><i class="bi bi-receipt me-2"></i>Billing Information</strong>
+        </div>
+        <div class="card-body">
+            <p><strong>Payment Mode:</strong> {{ payment_mode }}</p>
+            <p><strong>Amount Paid:</strong> ₦{{ total_cost|floatformat:2 }}</p>
+            <p><strong>Outstanding Balance:</strong> ₦0.00</p>
+        </div>
+    </div>
+
+    <!-- SAMPLE INFORMATION -->
+    <div class="card mb-3">
+        <div class="card-header bg-light">
+            <strong><i class="bi bi-droplet me-2"></i>Sample / Specimen Details</strong>
+        </div>
+        <div class="card-body">
+            {% for sample in samples %}
+            <div class="border rounded p-2 mb-2">
+                <p><strong>Sample ID:</strong> {{ sample.sample_id }}</p>
+                <p><strong>Specimen Type:</strong> {{ sample.specimen_type }}</p>
+                <p><strong>Collected By:</strong> {{ sample.collected_by|default:"—" }}</p>
+                <p><strong>Collection Date:</strong> {{ sample.collected_at|date:"M d, Y H:i" }}</p>
+                <p><strong>Status:</strong> {{ sample.get_status_display }}</p>
+            </div>
+            {% empty %}
+            <p class="text-muted">No samples recorded yet.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- INFORMED CONSENT -->
+    <div class="card mb-3">
+        <div class="card-header bg-light">
+            <strong><i class="bi bi-pencil-square me-2"></i>Patient / Guardian Consent</strong>
+        </div>
+        <div class="card-body">
+            <p>I, <span class="text-decoration-underline">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>, 
+            hereby give my informed consent for the laboratory tests listed above to be conducted.</p>
+
+            <div class="d-flex justify-content-between mt-4">
+                <div>
+                    <p><strong>Signature: ____________________________</strong></p>
+                </div>
+                <div>
+                    <p><strong>Date: _____________________</strong></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="text-center text-muted mt-4">
+        <small>© {{ vendor.name }} Laboratory — Powered by FirstJP LIMS</small>
+    </div>
+</div>
+
+<!-- ACTION BUTTONS -->
+<div class="container-fluid py-4">
+<!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 text-gray-800 mb-1">Test Request Details</h1>
+            <p class="text-muted mb-0">Request ID: {{ test_request.request_id }}</p>
+        </div>
+        {% if test_request.barcode_image %}
+            <div class="text-end mt-2">
+                <img src="{{ test_request.barcode_image.url }}" alt="Barcode" style="height:50px; width:auto;">
+                <p class="small text-muted mb-0">Scan to identify sample</p>
+            </div>
+        {% endif %}
+        <div class="d-flex gap-2">
+            <a href="{% url 'labs:test_request_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to List
+            </a>
+            <a href="{% url 'labs:download_test_request' test_request.pk %}" class="btn btn-primary">
+                <i class="bi bi-download me-2"></i>Download Filled Form
+            </a>
+            <a href="{% url 'labs:download_blank_test_request' blank=True %}" class="btn btn-outline-primary">
+                <i class="bi bi-file-earmark me-2"></i>Blank Form
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+function printForm() {
+    var content = document.getElementById('printable-area').innerHTML;
+    var printWindow = window.open('', '', 'width=900,height=650');
+    printWindow.document.write('<html><head><title>Print Request</title>');
+    printWindow.document.write('<link rel="stylesheet" href="{% static "css/bootstrap.min.css" %}">');
+    printWindow.document.write('</head><body onload="window.print()">' + content + '</body></html>');
+    printWindow.document.close();
+}
+</script>
+{% endblock %}

@@ -394,7 +394,7 @@ class TestAssignment(models.Model):
     status = models.CharField(choices=ASSIGNMENT_STATUS, max_length=1, default='P')
     
     instrument = models.ForeignKey(
-        'Equipment', 
+        'Equipment',  # Equipment
         null=True, 
         blank=True, 
         on_delete=models.SET_NULL,

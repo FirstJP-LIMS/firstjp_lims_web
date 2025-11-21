@@ -1,0 +1,118 @@
+{% extends "laboratory/assets/base.html" %}
+{% load static %}
+
+{% block title %}Test Request {{ test_request.request_id }} - {{ vendor.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* PDF-friendly styles that will work with Django PDF generators */
+    .pdf-optimized {
+        font-family: 'Helvetica', 'Arial', sans-serif;
+        line-height: 1.4;
+    }
+    
+    .section-card {
+        border: 1px solid #ddd;
+        margin-bottom: 20px;
+        page-break-inside: avoid;
+    }
+    
+    .section-header {
+        background-color: #2c5aa0;
+        color: white;
+        padding: 12px 15px;
+        font-weight: bold;
+    }
+    
+    .info-label {
+        font-weight: 600;
+        color: #333;
+        min-width: 140px;
+        display: inline-block;
+    }
+    
+    /* Ensure good contrast for printing/PDF */
+    @media print {
+        .no-print {
+            display: none !important;
+        }
+        .container {
+            max-width: 100% !important;
+        }
+        .section-header {
+            background: #2c5aa0 !important;
+            color: white !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Action Buttons - Hidden in PDF -->
+<div class="container-fluid py-4 no-print">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 fw-bold text-dark mb-1">Test Request Details</h1>
+            <p class="text-muted mb-0">Request ID: {{ test_request.request_id }}</p>
+        </div>
+        
+        <div class="d-flex gap-2">
+            <a href="{% url 'labs:test_request_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to List
+            </a>
+            
+            <!-- Browser Print -->
+            <button onclick="window.print()" class="btn btn-outline-primary">
+                <i class="bi bi-printer me-2"></i>Print
+            </button>
+            
+            <!-- PDF Download via Django URL -->
+            <a href="{% url 'labs:download_test_request' test_request.pk %}" 
+               class="btn btn-success" 
+               target="_blank">
+                <i class="bi bi-file-earmark-pdf me-2"></i>Download PDF
+            </a>
+            
+            <!-- Blank Form Download -->
+            <a href="{% url 'labs:download_blank_test_request' blank=True %}" 
+               class="btn btn-outline-secondary">
+                <i class="bi bi-file-earmark me-2"></i>Blank Form
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Printable Content -->
+<div class="container pdf-optimized" id="printable-area">
+    <!-- Your detailed content here (same as before) -->
+    <div class="lab-header">
+        <!-- Header content -->
+    </div>
+    
+    <div class="section-card">
+        <div class="section-header">
+            PATIENT INFORMATION
+        </div>
+        <div class="p-4">
+            <!-- Patient info -->
+        </div>
+    </div>
+    
+    <!-- More sections... -->
+</div>
+
+<script>
+// Simple print function for browser printing
+function setupPrinting() {
+    // Add page break hints for better printing
+    const sections = document.querySelectorAll('.section-card');
+    sections.forEach((section, index) => {
+        if (index > 0) {
+            section.style.pageBreakBefore = 'auto';
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', setupPrinting);
+</script>
+{% endblock %}
