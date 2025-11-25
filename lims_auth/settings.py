@@ -149,7 +149,7 @@ SITE_NAME = "mednovu.com"
 
 # set production 
 if ENVIRONMENT == "production":
-    DEBUG = False
+    DEBUG = True
 
     # ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",")
     ALLOWED_HOSTS = [
