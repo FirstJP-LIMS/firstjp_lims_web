@@ -149,7 +149,10 @@ SITE_NAME = "mednovu.com"
 if ENVIRONMENT == "production":
     DEBUG = False
 
-    ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",")
+    # ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",")
+    ALLOWED_HOSTS = [
+        "firstjp-lims-web.onrender.com"
+    ]
 
     DATABASES = {
         "default": {
