@@ -22,7 +22,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 SECRET_KEY = os.getenv("SECRET_KEY")
 DEBUG = False  # overridden in dev.py
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'localhost', '127.0.0.1', "firstjp-lims-web.onrender.com"
+]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
