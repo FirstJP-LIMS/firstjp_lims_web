@@ -19,8 +19,10 @@ __pycache__/
 
 /dump.py 
 
-/templates_old
+/templates_old/
 /templates_/form_.html
 /templates_/keep.html
 
 /apps/labs/m.py
+
+# git rm -r --cached templates_old
