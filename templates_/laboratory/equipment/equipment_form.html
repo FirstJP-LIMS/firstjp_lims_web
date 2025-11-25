@@ -1,41 +1,43 @@
 {% extends "laboratory/assets/base.html" %}
 {% load static %}
 
-{% block title %}{{ title }} - {{ vendor.name }}{% endblock %}
+{% block title %}{{ action }} Equipment - Laboratory{% endblock %}
 
 {% block content %}
-<div class="page-header mb-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <div>
-            <h1 class="page-title fw-bold text-dark mb-1">
-                <i class="bi bi-cpu me-2 text-primary"></i>{{ title }}
-            </h1>
-            <p class="page-subtitle text-muted mb-0">
-                {% if equipment %}Update equipment details{% else %}Add new laboratory equipment{% endif %}
-            </p>
-        </div>
-        <div class="d-flex gap-2">
-            <a href="{% url 'equipment_list' %}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left me-2"></i>Back to List
-            </a>
-        </div>
-    </div>
-</div>
-
-<div class="dashboard-content">
+<div class="container py-4">
     <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white border-0 py-3">
-                    <h5 class="card-title mb-0 fw-semibold text-dark">
-                        <i class="bi bi-gear me-2 text-primary"></i>
-                        Equipment Details
-                    </h5>
+        <div class="col-12 col-lg-9 col-xl-8">
+
+            <!-- Header -->
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3 gap-3">
+                <div>
+                    <h2 class="page-title fw-bold text-dark mb-1">
+                        <i class="fas fa-microscope"></i> {{ action }} Equipment
+                    </h2>
+                    <p class="page-subtitle text-muted mb-0">
+                        {% if action == 'Create' %}
+                            Add a new laboratory instrument or analyzer
+                        {% else %}
+                            Update equipment configuration and settings
+                        {% endif %}
+                    </p>
                 </div>
-                <div class="card-body">
+
+                <a href="{% url 'account:equipment_list' %}" class="btn btn-primary btn-lg shadow-sm ">
+                    <i class="bi bi-arrow-left me-2"></i>
+                    Back to Equipment
+                </a>
+            </div>
+
+
+            <!-- Form -->
+            <div class="card">
+                <!-- <div class="card-body"> -->
+                <div class="card-body p-3 p-md-4">
                     <form method="post" id="equipmentForm">
                         {% csrf_token %}
-                        
+
+                        <!-- Messages -->
                         {% if messages %}
                             {% for message in messages %}
                                 <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
@@ -46,217 +48,192 @@
                             {% endfor %}
                         {% endif %}
 
-                        <div class="row g-3">
-                            <!-- Basic Information -->
+                        <!-- Basic Information -->
+                        <h5 class="border-bottom pb-2 mb-3">
+                            <i class="fas fa-info-circle"></i> Basic Information
+                        </h5>
+
+                        <div class="row mb-3">
                             <div class="col-md-6">
-                                <label for="{{ form.name.id_for_label }}" class="form-label fw-semibold">
-                                    Equipment Name *
+                                <label for="name" class="form-label">
+                                    Equipment Name <span class="text-danger">*</span>
                                 </label>
-                                {{ form.name }}
-                                {% if form.name.errors %}
-                                    <div class="text-danger small">{{ form.name.errors }}</div>
-                                {% endif %}
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="name" 
+                                       name="name" 
+                                       value="{% if equipment %}{{ equipment.name }}{% endif %}"
+                                       required
+                                       placeholder="e.g., Hematology Analyzer">
                             </div>
-                            
                             <div class="col-md-6">
-                                <label for="{{ form.model.id_for_label }}" class="form-label fw-semibold">
-                                    Model
+                                <label for="model" class="form-label">
+                                    Model <span class="text-danger">*</span>
                                 </label>
-                                {{ form.model }}
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <label for="{{ form.serial_number.id_for_label }}" class="form-label fw-semibold">
-                                    Serial Number *
-                                </label>
-                                {{ form.serial_number }}
-                                {% if form.serial_number.errors %}
-                                    <div class="text-danger small">{{ form.serial_number.errors }}</div>
-                                {% endif %}
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <label for="{{ form.department.id_for_label }}" class="form-label fw-semibold">
-                                    Department *
-                                </label>
-                                {{ form.department }}
-                            </div>
-                            
-                            <!-- Status & Configuration -->
-                            <div class="col-md-6">
-                                <label for="{{ form.status.id_for_label }}" class="form-label fw-semibold">
-                                    Status
-                                </label>
-                                {{ form.status }}
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <label for="{{ form.last_calibrated.id_for_label }}" class="form-label fw-semibold">
-                                    Last Calibration
-                                </label>
-                                {{ form.last_calibrated }}
-                            </div>
-                            
-                            <!-- API Configuration -->
-                            <div class="col-12">
-                                <div class="border-top pt-4 mt-2">
-                                    <h6 class="fw-semibold text-dark mb-3">
-                                        <i class="bi bi-plug me-2 text-info"></i>
-                                        API Configuration
-                                    </h6>
-                                    
-                                    <div class="row g-3">
-                                        <div class="col-md-6">
-                                            <label for="{{ form.api_endpoint.id_for_label }}" class="form-label fw-semibold">
-                                                API Endpoint
-                                            </label>
-                                            {{ form.api_endpoint }}
-                                            <div class="form-text">URL for equipment API connection</div>
-                                        </div>
-                                        
-                                        <div class="col-md-6">
-                                            <label for="{{ form.api_key.id_for_label }}" class="form-label fw-semibold">
-                                                API Key
-                                            </label>
-                                            <div class="input-group">
-                                                {{ form.api_key }}
-                                                <button class="btn btn-outline-secondary" type="button" id="toggleApiKey">
-                                                    <i class="bi bi-eye"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="col-12">
-                                            <div class="form-check">
-                                                {{ form.supports_auto_fetch }}
-                                                <label class="form-check-label fw-semibold" for="{{ form.supports_auto_fetch.id_for_label }}">
-                                                    Enable automatic data fetching
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Additional Information -->
-                            <div class="col-12">
-                                <div class="border-top pt-4 mt-2">
-                                    <h6 class="fw-semibold text-dark mb-3">
-                                        <i class="bi bi-info-circle me-2 text-secondary"></i>
-                                        Additional Information
-                                    </h6>
-                                    
-                                    <div class="row g-3">
-                                        <div class="col-12">
-                                            <label for="{{ form.description.id_for_label }}" class="form-label fw-semibold">
-                                                Description
-                                            </label>
-                                            {{ form.description }}
-                                        </div>
-                                        
-                                        <div class="col-md-6">
-                                            <label for="{{ form.manufacturer.id_for_label }}" class="form-label fw-semibold">
-                                                Manufacturer
-                                            </label>
-                                            {{ form.manufacturer }}
-                                        </div>
-                                        
-                                        <div class="col-md-6">
-                                            <label for="{{ form.installation_date.id_for_label }}" class="form-label fw-semibold">
-                                                Installation Date
-                                            </label>
-                                            {{ form.installation_date }}
-                                        </div>
-                                    </div>
-                                </div>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="model" 
+                                       name="model" 
+                                       value="{% if equipment %}{{ equipment.model }}{% endif %}"
+                                       required
+                                       placeholder="e.g., XN-1000">
                             </div>
                         </div>
-                        
-                        <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
-                            <a href="{% url 'equipment_list' %}" class="btn btn-outline-secondary">
-                                <i class="bi bi-x-circle me-2"></i>Cancel
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="serial_number" class="form-label">
+                                    Serial Number <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="serial_number" 
+                                       name="serial_number" 
+                                       value="{% if equipment %}{{ equipment.serial_number }}{% endif %}"
+                                       {% if equipment %}readonly{% endif %}
+                                       required
+                                       placeholder="e.g., SN123456789">
+                                {% if equipment %}
+                                    <small class="text-muted">Serial number cannot be changed</small>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="department" class="form-label">
+                                    Department <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select" id="department" name="department" required>
+                                    <option value="">-- Select Department --</option>
+                                    {% for dept in form.department.field.queryset %}
+                                        <option value="{{ dept.id }}" 
+                                        {% if form.department.value == dept.id %}selected{% endif %}>
+                                            {{ dept.name }}
+                                        </option>
+                                        {% empty %}
+                                        <option value="" disabled>No departments available</option>
+                                        {% endfor %}
+                                    </select>
+                            </div>
+                        </div>
+
+                        {% if action == 'Update' %}
+                        <div class="mb-3">
+                            <label for="status" class="form-label">
+                                Status <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="status" name="status" required>
+                                <option value="active" {% if equipment.status == 'active' %}selected{% endif %}>
+                                    Active
+                                </option>
+                                <option value="maintenance" {% if equipment.status == 'maintenance' %}selected{% endif %}>
+                                    Under Maintenance
+                                </option>
+                                <option value="inactive" {% if equipment.status == 'inactive' %}selected{% endif %}>
+                                    Inactive
+                                </option>
+                            </select>
+                        </div>
+                        {% endif %}
+
+                        <!-- API Configuration -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">
+                            <i class="fas fa-plug"></i> API Configuration
+                        </h5>
+
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Integration Setup:</strong> Configure the connection to your Windows LIMS or instrument system. 
+                            Leave blank if this equipment doesn't support API integration.
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="api_endpoint" class="form-label">
+                                API Endpoint URL
+                            </label>
+                            <input type="url" 
+                                   class="form-control" 
+                                   id="api_endpoint" 
+                                   name="api_endpoint" 
+                                   value="{% if equipment %}{{ equipment.api_endpoint }}{% endif %}"
+                                   placeholder="http://192.168.1.100:8080/api">
+                            <small class="text-muted">
+                                Full URL to the instrument's API endpoint
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="api_key" class="form-label">
+                                API Key / Authentication Token
+                            </label>
+                            <input type="password" 
+                                   class="form-control" 
+                                   id="api_key" 
+                                   name="api_key" 
+                                   {% if equipment %}placeholder="Leave blank to keep current key"{% endif %}>
+                            <small class="text-muted">
+                                {% if equipment %}
+                                    Leave blank to keep the existing API key
+                                {% else %}
+                                    Authentication key provided by your instrument system
+                                {% endif %}
+                            </small>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" 
+                                   type="checkbox" 
+                                   id="supports_auto_fetch" 
+                                   name="supports_auto_fetch"
+                                   {% if equipment and equipment.supports_auto_fetch %}checked{% endif %}>
+                            <label class="form-check-label" for="supports_auto_fetch">
+                                <strong>Enable Auto-Fetch Results</strong>
+                                <br>
+                                <small class="text-muted">
+                                    Automatically retrieve test results from this equipment
+                                </small>
+                            </label>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+                            <a href="{% url 'account:equipment_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Cancel
                             </a>
                             <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-circle me-2"></i>
-                                {% if equipment %}Update Equipment{% else %}Create Equipment{% endif %}
+                                <i class="fas fa-save"></i> {{ action }} Equipment
                             </button>
                         </div>
                     </form>
+                </div>
+            </div>
+
+            <!-- Help Card -->
+            <div class="card mt-3 border-info">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="fas fa-question-circle"></i> Need Help?
+                    </h6>
+                    <ul class="mb-0 small">
+                        <li><strong>API Endpoint:</strong> Contact your IT department or equipment vendor for the correct URL</li>
+                        <li><strong>API Key:</strong> This is usually provided during equipment setup or in the instrument's admin panel</li>
+                        <li><strong>Auto-Fetch:</strong> Only enable this if the equipment supports automatic result retrieval</li>
+                    </ul>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<style>
-.form-control, .form-select {
-    border-radius: 0.5rem;
-    border: 1px solid #dee2e6;
-    padding: 0.75rem;
-}
-
-.form-control:focus, .form-select:focus {
-    border-color: #2c5aa0;
-    box-shadow: 0 0 0 0.2rem rgba(44, 90, 160, 0.25);
-}
-
-.form-label {
-    color: #495057;
-    margin-bottom: 0.5rem;
-}
-
-.form-text {
-    font-size: 0.875rem;
-    color: #6c757d;
-}
-
-.border-top {
-    border-color: #e9ecef !important;
-}
-</style>
-
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Toggle API key visibility
-    const toggleApiKey = document.getElementById('toggleApiKey');
-    const apiKeyField = document.getElementById('{{ form.api_key.id_for_label }}');
+document.getElementById('equipmentForm').addEventListener('submit', function(e) {
+    const apiEndpoint = document.getElementById('api_endpoint').value.trim();
+    const apiKey = document.getElementById('api_key').value.trim();
     
-    if (toggleApiKey && apiKeyField) {
-        toggleApiKey.addEventListener('click', function() {
-            const type = apiKeyField.getAttribute('type') === 'password' ? 'text' : 'password';
-            apiKeyField.setAttribute('type', type);
-            this.innerHTML = type === 'password' ? '<i class="bi bi-eye"></i>' : '<i class="bi bi-eye-slash"></i>';
-        });
-    }
-    
-    // Add form validation
-    const form = document.getElementById('equipmentForm');
-    form.addEventListener('submit', function(e) {
-        const requiredFields = form.querySelectorAll('[required]');
-        let valid = true;
-        
-        requiredFields.forEach(field => {
-            if (!field.value.trim()) {
-                valid = false;
-                field.classList.add('is-invalid');
-            } else {
-                field.classList.remove('is-invalid');
-            }
-        });
-        
-        if (!valid) {
+    // Warn if API endpoint is provided but no API key
+    if (apiEndpoint && !apiKey && !{{ equipment|yesno:"true,false" }}) {
+        if (!confirm('You have entered an API endpoint but no API key. The connection may not work without authentication. Continue anyway?')) {
             e.preventDefault();
-            // Show error message
-            const alertDiv = document.createElement('div');
-            alertDiv.className = 'alert alert-danger alert-dismissible fade show';
-            alertDiv.innerHTML = `
-                <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                Please fill in all required fields.
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            form.prepend(alertDiv);
         }
-    });
+    }
 });
 </script>
 {% endblock %}

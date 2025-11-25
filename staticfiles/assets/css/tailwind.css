@@ -1,0 +1,14 @@
+nav {
+    font-family: "Montserrat", sans-serif;
+    font-optical-sizing: auto;
+    /* font-weight: 400; */
+    font-style: normal;
+}
+
+.nav-items {
+    font-weight: 700;
+}
+
+.main-body{
+    font-family: "Mulish", sans-serif;
+}

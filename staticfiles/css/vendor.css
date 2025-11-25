@@ -1,0 +1,47 @@
+
+/* Custom Brand Colors and Typography */
+:root {
+    --brand-navy: #001f40; /* Deep Navy Blue */
+    --brand-red: #cc0033;  /* Deep Crimson Red */
+    --brand-gold: #ff9500; /* Gold Accent */
+    --brand-white: #ffffff;
+}
+
+body {
+    font-family: "Mulish", sans-serif;
+    background-color: #f8f9fa;
+}
+
+.navbar-navy {
+    background-color: var(--brand-white) !important;
+    border-bottom: 2px solid var(--brand-red); /* Red accent line */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-brand-text {
+    color: var(--brand-navy);
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.nav-link a{
+    color: var(--brand-navy) !important;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    transition: all 0.3s ease;
+}
+
+.nav-link:hover, .nav-link.active {
+    color: var(--brand-gold) !important; /* Gold on hover */
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.brand-logo-accent {
+    color: var(--brand-red); /* Red for a small logo accent */
+}
+
+.card-gold-border {
+    border-top: 5px solid var(--brand-gold);
+}

@@ -35,6 +35,7 @@ urlpatterns = [
     
     path("laboratory/", include("apps.labs.urls", namespace="labs")),
 
+    path("lms/", include("apps.lms.urls", namespace="lms")), # LMS app URLs
 ]
 
 # Serve static and media files during development

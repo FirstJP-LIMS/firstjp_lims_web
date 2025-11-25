@@ -43,17 +43,25 @@ urlpatterns = [
     path('assignments/', views.test_assignment_list, name='test_assignment_list'),
     path('assignment/<int:assignment_id>/', views.test_assignment_detail, name='test_assignment_detail'),
     
-    # ===== Quick Actions (AJAX) =====
-    path(
-        'assignment/<int:assignment_id>/quick-send/', views.quick_send_to_instrument, name='quick_send_to_instrument'),
-    path('assignments/stats/', views.assignment_quick_stats,
-        name='assignment_quick_stats'),
     
+    # ===== Quick Instrument Assignment =====
+    path('assignment/<int:assignment_id>/assign-instrument/', views.assign_instrument, name='assign_instrument'),
+
     # ===== Bulk Actions =====
-    path('assignments/bulk-send/', views.bulk_send_to_instrument, name='bulk_send_to_instrument'),
-    path('assignments/bulk-assign-instrument/', views.bulk_assign_instrument, name='bulk_assign_instrument'
-    ),
+    path('assignments/bulk-assign-instrument/', views.bulk_assign_instrument, name='bulk_assign_instrument'),    
+    path('assignments/auto_assign_instruments/', views.auto_assign_instruments, name='auto_assign_instruments'),
+
+
+    # Unclear
     path('assignments/bulk-assign-technician/', views.bulk_assign_technician, name='bulk_assign_technician'),
+    
+    path('assignments/bulk-send/', views.bulk_send_to_instrument, name='bulk_send_to_instrument'),
+    
+
+    # ===== Quick Actions (AJAX) =====
+    # path('assignment/<int:assignment_id>/quick-send/', views.quick_send_to_instrument, name='quick_send_to_instrument'),
+
+    path('assignments/stats/', views.assignment_quick_stats,name='assignment_quick_stats'),
     
     # ===== Export =====
     path(
@@ -68,6 +76,7 @@ urlpatterns = [
         views.send_to_instrument,
         name='send_to_instrument'
     ),
+    
     path(
         'assignment/<int:assignment_id>/fetch-result/',
         views.fetch_result_from_instrument,
@@ -75,11 +84,7 @@ urlpatterns = [
     ),
     
     # ===== Manual Result Entry =====
-    path(
-        'assignment/<int:assignment_id>/enter-manual-result/',
-        views.enter_manual_result,
-        name='enter_manual_result'
-    ),
+    path('assignment/<int:assignment_id>/enter-manual-result/',views.enter_manual_result,name='enter_test_result'),
     
     # ===== Result Verification & Release =====
     path(
@@ -107,6 +112,34 @@ urlpatterns = [
     #     views.pending_results_dashboard,
     #     name='pending_results_dashboard'
     # ),
+
+
+#       # ===== RESULT MANAGEMENT =====
+    
+#     # Result List & Detail
+    path('results/', views.result_list, name='result_list'),
+    
+#     path('result/<int:result_id>/', views.result_detail, name='result_detail'),
+    
+#     # Result Edit (before verification)
+#     path('result/<int:result_id>/edit/', views.edit_result, name='edit_result'),
+    
+#     # Result Verification
+#     path('result/<int:result_id>/verify/', views.verify_result, name='verify_result'),
+    
+#     # Result Release
+#     path('result/<int:result_id>/release/', views.release_result, name='release_result'),
+    
+#     # Result Amendment (after release)
+#     path('result/<int:result_id>/amend/', views.amend_result, name='amend_result'),
+    
+#     # Bulk Actions
+#     path('results/bulk-verify/', views.bulk_verify_results, name='bulk_verify_results'),
+    
+#     # Print/Export
+#     path('result/<int:result_id>/print/', views.print_result, name='print_result'),
+
+
 
     # ==== Quality Control ====
     path('qc/lots/', views.qc_lot_list, name='qclot_list'),

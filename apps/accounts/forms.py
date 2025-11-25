@@ -124,16 +124,6 @@ class EquipmentForm(forms.ModelForm):
             "api_key",
             "supports_auto_fetch",
         ]
-        widgets = {
-            "name": forms.TextInput(attrs={"class": "input"}),
-            "model": forms.TextInput(attrs={"class": "input"}),
-            "serial_number": forms.TextInput(attrs={"class": "input"}),
-            "department": forms.Select(attrs={"class": "input"}),
-            "api_endpoint": forms.URLInput(attrs={"class": "input"}),
-            "api_key": forms.TextInput(attrs={"class": "input"}),
-            "supports_auto_fetch": forms.CheckboxInput(attrs={"class": "checkbox"}),
-        }
-
     def __init__(self, *args, **kwargs):
         vendor = kwargs.pop("vendor", None)
         super().__init__(*args, **kwargs)

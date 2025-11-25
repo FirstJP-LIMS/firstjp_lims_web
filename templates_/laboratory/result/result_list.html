@@ -1,0 +1,514 @@
+{% extends "laboratory/assets/base.html" %}
+{% load static %}
+
+{% block title %}Test Results - {{ vendor.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h1 class="page-title fw-bold text-dark mb-1">
+                <i class="bi bi-clipboard-data me-2 text-primary"></i>Test Results
+            </h1>
+            <p class="page-subtitle text-muted mb-0">Manage and review laboratory test results</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'labs:result_list' %}?{{ request.GET.urlencode }}" class="btn btn-primary">
+                <i class="bi bi-download me-2"></i>Export CSV
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-content">
+    <!-- Statistics Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-xl-2 col-md-4 col-6">
+            <div class="stat-card card border-0 shadow-sm h-100" onclick="filterByStatus('')" style="cursor: pointer;">
+                <div class="card-body text-center">
+                    <div class="stat-value h3 fw-bold text-primary mb-1">{{ stats.total }}</div>
+                    <div class="stat-label text-muted small">Total Results</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-2 col-md-4 col-6">
+            <div class="stat-card card border-0 shadow-sm h-100" onclick="filterByStatus('pending')" style="cursor: pointer;">
+                <div class="card-body text-center">
+                    <div class="stat-value h3 fw-bold text-warning mb-1">{{ stats.pending_verification }}</div>
+                    <div class="stat-label text-muted small">Pending Verification</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-2 col-md-4 col-6">
+            <div class="stat-card card border-0 shadow-sm h-100" onclick="filterByStatus('verified')" style="cursor: pointer;">
+                <div class="card-body text-center">
+                    <div class="stat-value h3 fw-bold text-info mb-1">{{ stats.verified }}</div>
+                    <div class="stat-label text-muted small">Verified</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-2 col-md-4 col-6">
+            <div class="stat-card card border-0 shadow-sm h-100" onclick="filterByStatus('released')" style="cursor: pointer;">
+                <div class="card-body text-center">
+                    <div class="stat-value h3 fw-bold text-success mb-1">{{ stats.released }}</div>
+                    <div class="stat-label text-muted small">Released</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-2 col-md-4 col-6">
+            <div class="stat-card card border-0 shadow-sm h-100" onclick="filterByStatus('critical')" style="cursor: pointer;">
+                <div class="card-body text-center">
+                    <div class="stat-value h3 fw-bold text-danger mb-1">{{ stats.critical }}</div>
+                    <div class="stat-label text-muted small">Critical</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-2 col-md-4 col-6">
+            <div class="stat-card card border-0 shadow-sm h-100" onclick="filterBySource('instrument')" style="cursor: pointer;">
+                <div class="card-body text-center">
+                    <div class="stat-value h3 fw-bold text-secondary mb-1">{{ stats.instrument }}</div>
+                    <div class="stat-label text-muted small">From Instruments</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-0 py-3">
+            <h5 class="card-title mb-0 fw-semibold text-dark">
+                <i class="bi bi-funnel me-2"></i>Filters & Search
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="get" id="filterForm">
+                <div class="row g-3">
+                    <!-- Search -->
+                    <div class="col-lg-3 col-md-6">
+                        <label class="form-label small fw-semibold">Search</label>
+                        <input type="text" 
+                               name="search" 
+                               class="form-control" 
+                               placeholder="Request, patient, test, result..." 
+                               value="{{ search_query }}">
+                    </div>
+
+                    <!-- Status Filter -->
+                    <div class="col-lg-2 col-md-6">
+                        <label class="form-label small fw-semibold">Status</label>
+                        <select name="status" class="form-select" id="statusFilter">
+                            <option value="">All Statuses</option>
+                            <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending Verification</option>
+                            <option value="verified" {% if status_filter == 'verified' %}selected{% endif %}>Verified</option>
+                            <option value="released" {% if status_filter == 'released' %}selected{% endif %}>Released</option>
+                            <option value="critical" {% if status_filter == 'critical' %}selected{% endif %}>Critical</option>
+                            <option value="amended" {% if status_filter == 'amended' %}selected{% endif %}>Amended</option>
+                        </select>
+                    </div>
+
+                    <!-- Flag Filter -->
+                    <div class="col-lg-2 col-md-6">
+                        <label class="form-label small fw-semibold">Flag</label>
+                        <select name="flag" class="form-select">
+                            <option value="">All Flags</option>
+                            <option value="N" {% if flag_filter == 'N' %}selected{% endif %}>Normal</option>
+                            <option value="H" {% if flag_filter == 'H' %}selected{% endif %}>High</option>
+                            <option value="L" {% if flag_filter == 'L' %}selected{% endif %}>Low</option>
+                            <option value="C" {% if flag_filter == 'C' %}selected{% endif %}>Critical</option>
+                            <option value="A" {% if flag_filter == 'A' %}selected{% endif %}>Abnormal</option>
+                        </select>
+                    </div>
+
+                    <!-- Source Filter -->
+                    <div class="col-lg-2 col-md-6">
+                        <label class="form-label small fw-semibold">Data Source</label>
+                        <select name="source" class="form-select">
+                            <option value="">All Sources</option>
+                            <option value="manual" {% if source_filter == 'manual' %}selected{% endif %}>Manual Entry</option>
+                            <option value="instrument" {% if source_filter == 'instrument' %}selected{% endif %}>Instrument</option>
+                            <option value="import" {% if source_filter == 'import' %}selected{% endif %}>Imported</option>
+                        </select>
+                    </div>
+
+                    <!-- Filter Button -->
+                    <div class="col-lg-1 col-md-6">
+                        <label class="form-label small fw-semibold d-none d-md-block">&nbsp;</label>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-funnel"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Date Range -->
+                <div class="row g-3 mt-3">
+                    <div class="col-lg-2 col-md-4">
+                        <label class="form-label small fw-semibold">Date From</label>
+                        <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+                    </div>
+                    <div class="col-lg-2 col-md-4">
+                        <label class="form-label small fw-semibold">Date To</label>
+                        <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+                    </div>
+                    <div class="col-lg-2 col-md-4">
+                        <label class="form-label small fw-semibold d-none d-md-block">&nbsp;</label>
+                        <a href="{% url 'labs:result_list' %}" class="btn btn-outline-secondary w-100">
+                            Clear Filters
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Results Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-0 py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0 fw-semibold text-dark">
+                    <i class="bi bi-clipboard-data me-2"></i>Test Results
+                </h5>
+                <div class="text-muted small">
+                    Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }}
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            {% if page_obj.object_list %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="border-0 ps-4">Request ID</th>
+                            <th class="border-0">Patient</th>
+                            <th class="border-0">Test</th>
+                            <th class="border-0">Result</th>
+                            <th class="border-0">Flag</th>
+                            <th class="border-0">Status</th>
+                            <th class="border-0">Source</th>
+                            <th class="border-0">Entered</th>
+                            <th class="border-0 pe-4 text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for result in page_obj.object_list %}
+                        <tr class="border-top">
+                            <td class="ps-4">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-primary bg-opacity-10 rounded-2 p-2 me-3">
+                                        <i class="bi bi-clipboard-check text-primary"></i>
+                                    </div>
+                                    <div>
+                                        <strong class="text-primary d-block">{{ result.assignment.request.request_id }}</strong>
+                                        <small class="text-muted">Lab Result</small>
+                                    </div>
+                                </div>
+                            </td>
+                            
+                            <td>
+                                <strong class="text-dark d-block">
+                                    {{ result.assignment.request.patient.first_name }} {{ result.assignment.request.patient.last_name }}
+                                </strong>
+                                <small class="text-muted">
+                                    {{ result.assignment.request.patient.patient_id }}
+                                    {% if result.assignment.request.patient.date_of_birth %}
+                                    • {{ result.assignment.request.patient.date_of_birth|date:"M d, Y" }}
+                                    {% endif %}
+                                </small>
+                            </td>
+                            
+                            <td>
+                                <strong class="text-dark d-block">{{ result.assignment.lab_test.name }}</strong>
+                                <small class="text-muted">{{ result.assignment.lab_test.code }}</small>
+                            </td>
+                            
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <strong class="text-dark fs-6 me-2">{{ result.value }}</strong>
+                                    {% if result.units %}
+                                    <small class="text-muted">{{ result.units }}</small>
+                                    {% endif %}
+                                </div>
+                                {% if result.reference_range %}
+                                <small class="text-muted">Ref: {{ result.reference_range }}</small>
+                                {% endif %}
+                            </td>
+                            
+                            <td>
+                                {% if result.flag == 'H' %}
+                                    <span class="badge bg-warning bg-opacity-15 text-warning border-0">
+                                        <i class="bi bi-arrow-up me-1"></i>High
+                                    </span>
+                                {% elif result.flag == 'L' %}
+                                    <span class="badge bg-info bg-opacity-15 text-info border-0">
+                                        <i class="bi bi-arrow-down me-1"></i>Low
+                                    </span>
+                                {% elif result.flag == 'C' %}
+                                    <span class="badge bg-danger bg-opacity-15 text-danger border-0">
+                                        <i class="bi bi-exclamation-triangle me-1"></i>Critical
+                                    </span>
+                                {% elif result.flag == 'A' %}
+                                    <span class="badge bg-warning bg-opacity-15 text-warning border-0">
+                                        <i class="bi bi-exclamation-circle me-1"></i>Abnormal
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-success bg-opacity-15 text-success border-0">
+                                        <i class="bi bi-check-circle me-1"></i>Normal
+                                    </span>
+                                {% endif %}
+                            </td>
+                            
+                            <td>
+                                {% if result.released %}
+                                    <span class="badge bg-success bg-opacity-15 text-success border-0">
+                                        <i class="bi bi-send-check me-1"></i>Released
+                                    </span>
+                                {% elif result.verified_at %}
+                                    <span class="badge bg-info bg-opacity-15 text-info border-0">
+                                        <i class="bi bi-shield-check me-1"></i>Verified
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-warning bg-opacity-15 text-warning border-0">
+                                        <i class="bi bi-clock me-1"></i>Pending
+                                    </span>
+                                {% endif %}
+                                
+                                {% if result.is_amended %}
+                                <br>
+                                <span class="badge bg-secondary bg-opacity-15 text-secondary border-0 mt-1">
+                                    <i class="bi bi-pencil me-1"></i>Amended
+                                </span>
+                                {% endif %}
+                            </td>
+                            
+                            <td>
+                                {% if result.data_source == 'instrument' %}
+                                    <span class="badge bg-primary bg-opacity-15 text-primary border-0">
+                                        <i class="bi bi-cpu me-1"></i>Instrument
+                                    </span>
+                                {% elif result.data_source == 'manual' %}
+                                    <span class="badge bg-secondary bg-opacity-15 text-secondary border-0">
+                                        <i class="bi bi-pencil me-1"></i>Manual
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-info bg-opacity-15 text-info border-0">
+                                        <i class="bi bi-download me-1"></i>Imported
+                                    </span>
+                                {% endif %}
+                            </td>
+                            
+                            <td>
+                                <small class="text-dark fw-medium d-block">{{ result.entered_at|date:"M d, Y" }}</small>
+                                <small class="text-muted">{{ result.entered_at|time:"H:i" }}</small>
+                                <br>
+                                <small class="text-muted">by {{ result.entered_by.get_full_name|default:result.entered_by.username }}</small>
+                            </td>
+                            
+                            <td class="pe-4 text-end">
+                                <div class="d-flex gap-1 justify-content-end">
+                                    <!-- View Details -->
+                                    <a href="{% url 'labs:test_assignment_detail' result.assignment.id %}" 
+                                       class="btn btn-outline-primary btn-sm rounded-2 px-3"
+                                       data-bs-toggle="tooltip" title="View Assignment">
+                                        <i class="bi bi-eye me-1"></i>View
+                                    </a>
+                                    
+                                    <!-- Verify Button -->
+                                    {% if not result.verified_at and not result.released %}
+                                    <form method="post" action="{% url 'labs:verify_test_result' result.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-outline-success btn-sm rounded-2 px-3"
+                                                data-bs-toggle="tooltip" title="Verify Result">
+                                            <i class="bi bi-check-circle me-1"></i>Verify
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                    
+                                    <!-- Release Button -->
+                                    {% if result.verified_at and not result.released %}
+                                    <form method="post" action="{% url 'labs:release_test_result' result.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-outline-info btn-sm rounded-2 px-3"
+                                                data-bs-toggle="tooltip" title="Release to Patient">
+                                            <i class="bi bi-send me-1"></i>Release
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                    
+                                    <!-- Amend Button -->
+                                    {% if not result.released %}
+                                    <a href="{% url 'labs:amend_test_result' result.id %}" 
+                                       class="btn btn-outline-warning btn-sm rounded-2 px-3"
+                                       data-bs-toggle="tooltip" title="Amend Result">
+                                        <i class="bi bi-pencil me-1"></i>Amend
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <div class="py-5">
+                    <i class="bi bi-clipboard-x fs-1 text-muted mb-3 opacity-50"></i>
+                    <h5 class="text-muted mb-2">No Test Results Found</h5>
+                    <p class="text-muted mb-4">No test results match your current filters.</p>
+                    <a href="{% url 'labs:result_list' %}" class="btn btn-primary">
+                        <i class="bi bi-arrow-clockwise me-2"></i>Clear Filters
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <div class="card-footer bg-white border-0">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="text-muted small">
+                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                </div>
+                <nav aria-label="Page navigation">
+                    <ul class="pagination pagination-sm mb-0">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1&{{ request.GET.urlencode }}">First</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}&{{ request.GET.urlencode }}">Previous</a>
+                            </li>
+                        {% endif %}
+
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ num }}</span>
+                                </li>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}&{{ request.GET.urlencode }}">{{ num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}&{{ request.GET.urlencode }}">Next</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&{{ request.GET.urlencode }}">Last</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.stat-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.table tbody tr {
+    transition: background-color 0.3s ease;
+}
+
+.table tbody tr:hover {
+    background-color: rgba(44, 90, 160, 0.02);
+}
+
+.btn-group-sm .btn {
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    .page-header .d-flex {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 1rem;
+    }
+    
+    .table-responsive {
+        font-size: 0.875rem;
+    }
+    
+    .btn-group {
+        flex-wrap: wrap;
+    }
+    
+    .d-flex.gap-1 {
+        flex-direction: column;
+        gap: 0.5rem !important;
+    }
+    
+    .d-flex.gap-1 .btn {
+        width: 100%;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Filter by status (click on stat card)
+    function filterByStatus(status) {
+        document.getElementById('statusFilter').value = status;
+        document.getElementById('filterForm').submit();
+    }
+
+    // Filter by source (click on stat card)
+    function filterBySource(source) {
+        const form = document.getElementById('filterForm');
+        const sourceSelect = form.querySelector('select[name="source"]');
+        if (sourceSelect) {
+            sourceSelect.value = source;
+            form.submit();
+        }
+    }
+
+    // Make functions global for onclick events
+    window.filterByStatus = filterByStatus;
+    window.filterBySource = filterBySource;
+
+    // Add confirmation for critical actions
+    const verifyButtons = document.querySelectorAll('form[action*="verify_test_result"] button');
+    verifyButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            if (!confirm('Verify this test result? This action cannot be undone.')) {
+                e.preventDefault();
+            }
+        });
+    });
+    
+    const releaseButtons = document.querySelectorAll('form[action*="release_test_result"] button');
+    releaseButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            if (!confirm('Release this result to the patient? This will make the result available.')) {
+                e.preventDefault();
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -23,6 +23,11 @@ admin.site.register(Sample)
 admin.site.register(TestRequest)
 
 
+@admin.register(TestResult)
+class TestResultAdmin(admin.ModelAdmin):
+    list_display = ['id', 'assignment', 'result_value', 'flag', 'entered_by', 'verified_at']
+    # Permissions will automatically appear in user/group admin
+
 
 @admin.register(QCLot)
 class QCLotAdmin(admin.ModelAdmin):

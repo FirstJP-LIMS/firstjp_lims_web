@@ -30,8 +30,9 @@ class VendorLabTestForm(forms.ModelForm):
         fields = [
             'code', 'name', 'assigned_department', 
             'price', 'turnaround_override', 'enabled', 
-            'specimen_type', 'default_units', 'default_reference_text', 
-            'result_type', 'min_reference_value', 'max_reference_value', 'general_comment_template'
+            'specimen_type', 'default_units',
+            #   'default_reference_text', 
+            'result_type', 'amr_low', 'amr_high', 'reportable_low', 'reportable_high','panic_low_value', 'panic_high_value', 'min_reference_value', 'max_reference_value', 'general_comment_template'
         ]
         widgets = {
             'code': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., HGB'}),
@@ -40,9 +41,22 @@ class VendorLabTestForm(forms.ModelForm):
             'turnaround_override': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., 2:00:00 (HH:MM:SS)'}),
             'specimen_type': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Whole Blood'}),
             'default_units': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., g/dL'}),
-            'default_reference_text': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., 12.0 - 16.0'}),
+            # 'default_reference_text': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., 12.0 - 16.0'}),
+
+            'amr_low': forms.NumberInput(attrs={'class': 'form-control','placeholder': 'e.g., 12.02'}),
+            
+            'amr_high': forms.NumberInput(attrs={'class': 'form-control','placeholder': 'e.g., 12.02'}),
+            
+            'reportable_low': forms.NumberInput(attrs={'class': 'form-control','placeholder': 'e.g., 12.02'}),
+
+            'reportable_high': forms.NumberInput(attrs={'class': 'form-control','placeholder': 'e.g., 12.02'}),
+
             'min_reference_value': forms.NumberInput(attrs={'class': 'form-control','placeholder': 'e.g., 12.02'}),
             'max_reference_value': forms.NumberInput(attrs={'class': 'form-control','placeholder': 'e.g., 15.02'}),
+            
+            'panic_low_value': forms.NumberInput(attrs={'class': 'form-control','placeholder': 'e.g., 12.02'}),
+            'panic_high_value': forms.NumberInput(attrs={'class': 'form-control','placeholder': 'e.g., 12.02'}),
+
             'general_comment_template': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         }
 
@@ -53,6 +67,7 @@ class VendorLabTestForm(forms.ModelForm):
             self.fields['assigned_department'].queryset = Department.objects.filter(vendor=vendor)
         
         self.fields['assigned_department'].widget.attrs.update({'class': 'form-select'})
+
 
 class PatientForm(forms.ModelForm):
     class Meta:

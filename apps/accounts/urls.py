@@ -19,7 +19,21 @@ urlpatterns = [
     # Laboratory profile 
     path("profile/", views.vendor_profile, name="laboratory_profile"),
     
-    path("profile/equipment/", views.equipment_list, name="laboratory_equipment"),
+    # Euipment Management
+    path("profile/equipment/", views.equipment_list, name="equipment_list"),
+
+    path("profile/equipment/create/", views.equipment_create, name="equipment_create"),
+
+    path("profile/equipment/detail/<int:equipment_id>/", views.equipment_detail, name="equipment_detail"),
+
+    path("profile/equipment/<int:equipment_id>/edit/", views.equipment_update, name="equipment_update"),
+
+    path("profile/equipment/<int:equipment_id>/calibrate/", views.equipment_calibrate, name="equipment_calibrate"),
+    
+    path('profile/equipment/<int:equipment_id>/deactivate/', views.equipment_deactivate, name='equipment_deactivate'),
+
+    path('profile/equipment/<int:equipment_id>/test-connection/', views.equipment_test_connection, name='equipment_test_connection'),
+    
 
     # path('profile/equipment/', views.manage_equipment, name='manage_equipment'),
 

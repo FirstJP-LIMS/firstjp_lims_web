@@ -110,8 +110,21 @@
                         </div>
 
                         <!-- Reference Ranges -->
-                        <div class="mb-3">
-                            {{ form.default_reference_text|as_crispy_field }}
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.amr_low|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.amr_high|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.reportable_low|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.reportable_high|as_crispy_field }}
+                            </div>
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
@@ -119,6 +132,14 @@
                             </div>
                             <div class="col-md-6 mb-3">
                                 {{ form.max_reference_value|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.panic_low_value|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.panic_high_value|as_crispy_field }}
                             </div>
                         </div>
                         <!-- Comments -->

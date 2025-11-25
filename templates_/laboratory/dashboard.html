@@ -1,5 +1,6 @@
 {% load static %}
 {% load static tailwind_tags %}
+
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
@@ -15,6 +16,90 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="{% static 'assets/css/dashboard.css' %}">
     
+    <style>
+        /* Shared Styles for All Variations */
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            position: relative;
+        }
+
+        .status-indicator::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+
+        .status-active {
+            background-color: #28a745;
+        }
+
+        .status-active::before {
+            background-color: rgba(40, 167, 69, 0.5);
+        }
+
+        .status-maintenance {
+            background-color: #ffc107;
+        }
+
+        .status-maintenance::before {
+            background-color: rgba(255, 193, 7, 0.5);
+        }
+
+        .status-inactive {
+            background-color: #6c757d;
+        }
+
+        @keyframes pulse-ring {
+            0% {
+                transform: scale(0.8);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(2);
+                opacity: 0;
+            }
+        }
+
+        .equipment-card {
+            transition: all 0.2s;
+        }
+
+        .equipment-card:hover {
+            background-color: #f8f9fa;
+            border-color: #dee2e6 !important;
+            transform: translateY(-2px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .metric {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+
+        .alert-sm {
+            font-size: 0.875rem;
+        }
+
+        .stat-card {
+            transition: transform 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .test-connection-quick:hover {
+            transform: scale(1.1);
+            transition: transform 0.2s;
+        }
+        </style>
+
     <script>
         tailwind.config = {
             theme: {
@@ -327,34 +412,179 @@
                     <!-- Right Column - 1/3 width -->
                     <div class="space-y-6">
                         <!-- Instrument Status -->
-                        <div class="card bg-white shadow-lg border border-gray-100">
-                            <div class="card-body">
-                                <h2 class="card-title text-navy mb-4">
-                                    <i class="bi bi-cpu text-medvuno-red"></i>
-                                    Instrument Status
-                                </h2>
-                                <div class="space-y-4">
-                                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                        <div>
-                                            <p class="font-semibold text-navy">Siemens IMMULITE</p>
-                                            <p class="text-sm text-gray-600">Chemistry Analyzer</p>
-                                        </div>
-                                        <span class="badge badge-success">Online</span>
+                        <div class="card bg-white shadow-lg border border-gray-100">     
+                            <div class="card shadow-sm">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h5 class="card-title mb-0">
+                                            <i class="bi bi-cpu text-medvuno-red"></i>
+                                            Equipment Status
+                                        </h5>
                                     </div>
-                                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                        <div>
-                                            <p class="font-semibold text-navy">Abbott Cell-Dyn</p>
-                                            <p class="text-sm text-gray-600">Hematology</p>
+                                    {% if dashboard_equipment %}
+                                        <!-- Equipment List with Details -->
+                                        <div class="equipment-list mb-4">
+                                            {% for equipment in dashboard_equipment %}
+                                            <div class="equipment-card p-3 mb-3 border rounded">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <div class="flex-grow-1">
+                                                        <!-- Equipment Header -->
+                                                        <div class="d-flex align-items-center gap-2 mb-2">
+                                                            <!-- Animated Status Indicator -->
+                                                            {% if equipment.status == 'active' %}
+                                                                <span class="status-indicator status-active"></span>
+                                                            {% elif equipment.status == 'maintenance' %}
+                                                                <span class="status-indicator status-maintenance"></span>
+                                                            {% else %}
+                                                                <span class="status-indicator status-inactive"></span>
+                                                            {% endif %}
+                                                            
+                                                            <div>
+                                                                <h6 class="mb-0">
+                                                                    <a href="{% url 'account:equipment_detail' equipment.id %}" 
+                                                                    class="text-dark text-decoration-none">
+                                                                        {{ equipment.name }}
+                                                                    </a>
+                                                                </h6>
+                                                                <small class="text-muted">
+                                                                    {{ equipment.department.name }} · {{ equipment.model }}
+                                                                </small>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <!-- Equipment Metrics -->
+                                                        <div class="d-flex gap-3 mt-2">
+                                                            {% if equipment.pending_tests > 0 %}
+                                                            <div class="metric">
+                                                                <i class="bi bi-hourglass-split text-warning"></i>
+                                                                <span class="ms-1">{{ equipment.pending_tests }} pending</span>
+                                                            </div>
+                                                            {% endif %}
+                                                            
+                                                            {% if equipment.total_tests_today > 0 %}
+                                                            <div class="metric">
+                                                                <i class="bi bi-graph-up text-info"></i>
+                                                                <span class="ms-1">{{ equipment.total_tests_today }} today</span>
+                                                            </div>
+                                                            {% endif %}
+                                                            
+                                                            {% if equipment.last_calibrated %}
+                                                            <div class="metric">
+                                                                <i class="bi bi-check-circle text-success"></i>
+                                                                <span class="ms-1">Calibrated {{ equipment.last_calibrated|timesince }} ago</span>
+                                                            </div>
+                                                            {% endif %}
+                                                        </div>
+                                                        
+                                                        <!-- API Status -->
+                                                        {% if not equipment.api_endpoint %}
+                                                        <div class="alert alert-warning alert-sm mt-2 mb-0 py-1 px-2">
+                                                            <i class="bi bi-exclamation-triangle"></i>
+                                                            <small>API not configured - Manual entry only</small>
+                                                        </div>
+                                                        {% endif %}
+                                                    </div>
+                                                    
+                                                    <!-- Status Badge & Quick Actions -->
+                                                    <div class="text-end">
+                                                        {% if equipment.status == 'active' %}
+                                                            <span class="badge bg-success">Active</span>
+                                                        {% elif equipment.status == 'maintenance' %}
+                                                            <span class="badge bg-warning">Maintenance</span>
+                                                        {% else %}
+                                                            <span class="badge bg-secondary">Offline</span>
+                                                        {% endif %}
+                                                        
+                                                        {% if equipment.api_endpoint and equipment.status == 'active' %}
+                                                            <button class="btn btn-sm btn-outline-info mt-2 test-connection-quick" 
+                                                                    data-equipment-id="{{ equipment.id }}"
+                                                                    title="Test Connection">
+                                                                <i class="bi bi-plug"></i>
+                                                            </button>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {% endfor %}
                                         </div>
-                                        <span class="badge badge-warning">Maintenance</span>
-                                    </div>
-                                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                        <div>
-                                            <p class="font-semibold text-navy">Roche Cobas</p>
-                                            <p class="text-sm text-gray-600">Immunoassay</p>
+                                        
+                                        <!-- Summary Statistics Grid -->
+                                        <!-- <div class="row g-2 mb-3">
+                                            <div class="col-6">
+                                                <div class="stat-card bg-success-subtle p-3 rounded text-center">
+                                                    <h4 class="mb-0 text-success">{{ equipment_stats.active }}</h4>
+                                                    <small class="text-muted">Active Equipment</small>
+                                                    <div class="progress mt-2" style="height: 4px;">
+                                                        <div class="progress-bar bg-success" 
+                                                            style="width: {% widthratio equipment_stats.active equipment_stats.total 100 %}%"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-6">
+                                                <div class="stat-card bg-warning-subtle p-3 rounded text-center">
+                                                    <h4 class="mb-0 text-warning">{{ equipment_stats.maintenance }}</h4>
+                                                    <small class="text-muted">Under Maintenance</small>
+                                                    <div class="progress mt-2" style="height: 4px;">
+                                                        <div class="progress-bar bg-warning" 
+                                                            style="width: {% widthratio equipment_stats.maintenance equipment_stats.total 100 %}%"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-6">
+                                                <div class="stat-card bg-info-subtle p-3 rounded text-center">
+                                                    <h4 class="mb-0 text-info">{{ equipment_stats.configured }}</h4>
+                                                    <small class="text-muted">API Connected</small>
+                                                    <div class="progress mt-2" style="height: 4px;">
+                                                        <div class="progress-bar bg-info" 
+                                                            style="width: {% widthratio equipment_stats.configured equipment_stats.total 100 %}%"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-6">
+                                                <div class="stat-card bg-danger-subtle p-3 rounded text-center">
+                                                    <h4 class="mb-0 text-danger">{{ equipment_stats.unconfigured }}</h4>
+                                                    <small class="text-muted">Need Setup</small>
+                                                    <div class="progress mt-2" style="height: 4px;">
+                                                        <div class="progress-bar bg-danger" 
+                                                            style="width: {% widthratio equipment_stats.unconfigured equipment_stats.total 100 %}%"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <span class="badge badge-success">Online</span>
-                                    </div>
+                                         -->
+                                        <!-- Action Buttons -->
+                                        <div class="d-grid gap-2">
+                                            <div class="row d-flex">
+                                                <a href="{% url 'account:equipment_list' %}" class="btn btn-outline-primary">
+                                                    <i class="bi bi-list-ul"></i> View All
+                                                </a>
+                                                <a href="{% url 'account:equipment_create' %}" class="btn btn-outline-primary">
+                                                    <i class="bi bi-list-ul"></i> Add
+                                                </a>
+                                            </div>
+                                            {% if equipment_stats.unconfigured > 0 %}
+                                            <a href="{% url 'account:equipment_list' %}" class="btn btn-outline-warning">
+                                                <i class="bi bi-wrench"></i> Configure {{ equipment_stats.unconfigured }} Equipment
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                        
+                                    {% else %}
+                                        <!-- Empty State with Call-to-Action -->
+                                        <div class="text-center py-5">
+                                            <div class="mb-3">
+                                                <i class="bi bi-cpu text-muted" style="font-size: 4rem;"></i>
+                                            </div>
+                                            <h5 class="text-muted">No Equipment Configured</h5>
+                                            <p class="text-muted mb-4">
+                                                Start by adding your laboratory instruments and analyzers to enable automated workflows.
+                                            </p>
+                                            <a href="{% url 'account:equipment_create' %}" class="btn btn-primary">
+                                                <i class="bi bi-plus-circle"></i> Add Your First Equipment
+                                            </a>
+                                        </div>
+                                    {% endif %}
+                                    
                                 </div>
                             </div>
                         </div>
@@ -399,8 +629,15 @@
                 <div class="p-6 border-b border-white/10">
                     <div class="flex items-center justify-between">
                         <div class="text-2xl font-bold">
-                            <span class="text-white">MEDVUNO</span>
-                            <!-- <span class="text-medvuno-red">LIMS</span> -->
+                            <!-- <span class="text-white">MEDVUNO</span> -->
+                            {% if vendor_profile.logo %}
+                            <img src="{{ vendor_profile.logo.url }}" alt="{{ vendor.name }}" class="header-logo me-2">
+                            {% else %}
+                            <div class="brand-icon me-2">
+                            </div>
+                            {% endif %}
+                            <div class="brand-text">
+                            <strong class="text-brand-blue">{{ vendor.name|default:"MEDVUNO" }}</strong>
                         </div>
                     </div>
                 </div>
@@ -436,6 +673,12 @@
                             <a href="{% url 'labs:test_assignment_list' %}" class="hover:bg-white/10">
                                 <i class="bi bi-list-task"></i>
                                 Test Assignment
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'labs:result_list' %}" class="hover:bg-white/10">
+                                <i class="bi bi-bar-chart"></i>
+                                Test Results
                             </a>
                         </li>
                         <li>
@@ -492,6 +735,45 @@
                 });
             });
         });
+
+
+
+        // Quick connection test from dashboard -- Equipment
+document.querySelectorAll('.test-connection-quick').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const equipmentId = this.dataset.equipmentId;
+        const originalHtml = this.innerHTML;
+        
+        // Show loading
+        this.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        this.disabled = true;
+        
+        fetch(`/laboratory/instrument/${equipmentId}/status/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.is_online) {
+                    this.innerHTML = '<i class="bi bi-check-circle text-success"></i>';
+                    setTimeout(() => {
+                        this.innerHTML = originalHtml;
+                        this.disabled = false;
+                    }, 2000);
+                } else {
+                    this.innerHTML = '<i class="bi bi-x-circle text-danger"></i>';
+                    setTimeout(() => {
+                        this.innerHTML = originalHtml;
+                        this.disabled = false;
+                    }, 2000);
+                }
+            })
+            .catch(() => {
+                this.innerHTML = '<i class="bi bi-exclamation-circle text-warning"></i>';
+                setTimeout(() => {
+                    this.innerHTML = originalHtml;
+                    this.disabled = false;
+                }, 2000);
+            });
+    });
+});
     </script>
     <script src="{% static 'assets/js/dashboard.js' %}"></script>
 

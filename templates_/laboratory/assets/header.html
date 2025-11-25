@@ -13,7 +13,7 @@
                 </div>
                 {% endif %}
                 <div class="brand-text">
-                    <strong class="text-brand-blue">{{ vendor.name|default:"FirstJP LIMS" }}</strong>
+                    <strong class="text-brand-blue">{{ vendor.name|default:"MEDVUNO" }}</strong>
                     <small class="d-block text-muted" style="font-size: 0.75rem; line-height: 1;">Laboratory Management System</small>
                 </div>
             </a>
@@ -68,10 +68,16 @@
                                 <i class="bi bi-building me-2"></i>Departments
                             </a></li>
                             <!-- <li><hr class="dropdown-divider"></li> -->
-                            <li><a class="dropdown-item" href="{% url 'account:laboratory_equipment' %}">
+                            <li><a class="dropdown-item" href="{% url 'account:equipment_list' %}">
                                 <i class="bi bi-sliders me-2"></i>Equipment Set Up
                             </a></li>
                         </ul>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'result' in request.resolver_match.url_name %}active{% endif %}" 
+                            href="{% url 'labs:result_list' %}">
+                            <i class="bi bi-bar-chart me-1"></i>Results
+                        </a>
                     </li>
                 </ul>
 

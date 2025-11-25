@@ -252,7 +252,6 @@ def equipment_create(request):
 
         else:
             messages.error(request, "Please correct the errors below.")
-
     return render(request, "laboratory/equipment/equipment_form.html", {
         "form": form,
         "action": "Create"
@@ -313,7 +312,7 @@ def equipment_update(request, equipment_id):
         # Validation
         if not all([name, model, department_id, status]):
             messages.error(request, "Please fill in all required fields.")
-            return redirect('equipment_update', equipment_id=equipment.id)
+            return redirect('account:equipment_update', equipment_id=equipment.id)
         
         try:
             department = Department.objects.get(
@@ -354,7 +353,7 @@ def equipment_update(request, equipment_id):
                 )
             
             messages.success(request, "Equipment updated successfully.")
-            return redirect('equipment_detail', equipment_id=equipment.id)
+            return redirect('account:equipment_detail', equipment_id=equipment.id)
             
         except Department.DoesNotExist:
             messages.error(request, "Invalid department selected.")
@@ -394,7 +393,7 @@ def equipment_calibrate(request, equipment_id):
     )
     
     messages.success(request, f"Equipment '{equipment.name}' marked as calibrated.")
-    return redirect('equipment_detail', equipment_id=equipment.id)
+    return redirect('account:equipment_detail', equipment_id=equipment.id)
 
 
 @login_required
@@ -419,7 +418,7 @@ def equipment_deactivate(request, equipment_id):
     )
     
     messages.success(request, f"Equipment status changed to {equipment.get_status_display()}.")
-    return redirect('equipment_detail', equipment_id=equipment.id)
+    return redirect('account:equipment_detail', equipment_id=equipment.id)
 
 
 @login_required
@@ -438,7 +437,7 @@ def equipment_test_connection(request, equipment_id):
         })
     
     # Import your instrument service
-    from .services import InstrumentService
+    from app.labs.services import InstrumentService
     
     try:
         service = InstrumentService(equipment)
@@ -454,3 +453,4 @@ def equipment_test_connection(request, equipment_id):
             'success': False,
             'message': f'Connection failed: {str(e)}'
         })
+    
