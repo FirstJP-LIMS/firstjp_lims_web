@@ -10,6 +10,10 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+"""
+Django settings for lims_auth project.
+"""
+
 from pathlib import Path
 from dotenv import load_dotenv
 import os
@@ -20,28 +24,27 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 SECRET_KEY = os.getenv("SECRET_KEY")
-DEBUG = False  # overridden in dev.py
+DEBUG = False  # Default to False for safety
 
-ALLOWED_HOSTS = [
-    'localhost', '127.0.0.1', "firstjp-lims-web.onrender.com"
-]
+ALLOWED_HOSTS = []  # Will be set below based on environment
 
+# Base installed apps (always included)
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",    
-    "django.contrib.staticfiles",   # to be also used with the django degug toolbar
+    "django.contrib.staticfiles",
 
     # created apps 
     "apps.accounts",
     "apps.tenants",
     "apps.core",
-    "apps.labs", # manages CRM and lab operations
+    "apps.labs",
     "apps.inventory",
     "apps.billing",
-    "apps.lms", # Learning Management System
+    "apps.lms",
 
     # installed apps 
     'phonenumber_field',
@@ -49,7 +52,6 @@ INSTALLED_APPS = [
     # styling 
     'tailwind',
     'theme',
-    'django_browser_reload',
     'crispy_forms',
     'crispy_bootstrap5',
     'widget_tweaks',
@@ -71,23 +73,19 @@ NPM_BIN_PATH = r"C:\Program Files\nodejs\npm.cmd"
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
-if DEBUG:
-    # Add django_browser_reload only in DEBUG mode
-    INSTALLED_APPS += ["django_browser_reload"]
-
 AUTH_USER_MODEL = 'accounts.User'
 
+# Base middleware (always included)
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "apps.core.middleware.TenantMiddleware", # created middleware
+    "whitenoise.middleware.WhiteNoiseMiddleware",  # MUST be after SecurityMiddleware
+    "apps.core.middleware.TenantMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "django_browser_reload.middleware.BrowserReloadMiddleware", # tailwind
-    "whitenoise.middleware.WhiteNoiseMiddleware", # Whitenoise
 ]
 
 ROOT_URLCONF = "lims_auth.urls"
@@ -95,7 +93,6 @@ ROOT_URLCONF = "lims_auth.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        # "DIRS": [BASE_DIR / "templates"],
         "DIRS": [BASE_DIR / "templates_"],
         "APP_DIRS": True,
         "OPTIONS": {
@@ -123,21 +120,22 @@ TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 
+# Static files
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-
+# Media files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = '/'
 
-# gmail settings
+# Email settings
 EMAIL_BACKEND = os.getenv("EMAIL_BACKEND")
 EMAIL_HOST = os.getenv("EMAIL_HOST")
 EMAIL_PORT = os.getenv("EMAIL_PORT")
@@ -147,15 +145,29 @@ EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 PLATFORM_ADMIN_EMAIL = os.getenv("PLATFORM_ADMIN_EMAIL")
 SITE_NAME = "mednovu.com"
 
-# set production 
+# ========================================
+# ENVIRONMENT-SPECIFIC SETTINGS
+# ========================================
+
 if ENVIRONMENT == "production":
-    DEBUG = True
-
-    # ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",")
+    # Production settings
+    DEBUG = False
+    
     ALLOWED_HOSTS = [
-        "firstjp-lims-web.onrender.com"
+        "firstjp-lims-web.onrender.com",
+        "mednovu.com",
+        "www.mednovu.com",
+        # Add your Namecheap domain here
     ]
-
+    
+    # CSRF trusted origins for production
+    CSRF_TRUSTED_ORIGINS = [
+        "https://firstjp-lims-web.onrender.com",
+        "https://mednovu.com",
+        "https://www.mednovu.com",
+    ]
+    
+    # Database
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
@@ -166,33 +178,55 @@ if ENVIRONMENT == "production":
             "PORT": os.getenv("POSTGRES_PORT", "5432"),
         }
     }
-
+    
     GLOBAL_HOSTS = [os.getenv("PLATFORM_BASE_DOMAIN", "firstjplims.com")]
+    
+    # Security settings for production
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
 else:
-
+    # Development settings
     DEBUG = True
-
-    INSTALLED_APPS += ["debug_toolbar"]
-
-    MIDDLEWARE += ["debug_toolbar.middleware.DebugToolbarMiddleware"]
-
-    INTERNAL_IPS = ["127.0.0.1"]
-
+    
+    ALLOWED_HOSTS = [
+        "127.0.0.1",
+        "localhost",
+        ".localhost.test",
+    ]
+    
+    # Database
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": BASE_DIR / "db.sqlite3",
         }
     }
-
-
-    PLATFORM_BASE_DOMAIN = "localhost.test"  # Used for domain generation
+    
+    PLATFORM_BASE_DOMAIN = "localhost.test"
     GLOBAL_HOSTS = [
         "127.0.0.1",
         "localhost",
         ".localhost.test",
     ]
-
-    ALLOWED_HOSTS = GLOBAL_HOSTS
-
-
+    
+    # Add development-only apps
+    INSTALLED_APPS += [
+        "debug_toolbar",
+        "django_browser_reload",
+    ]
+    
+    # Add development-only middleware
+    MIDDLEWARE += [
+        "debug_toolbar.middleware.DebugToolbarMiddleware",
+        "django_browser_reload.middleware.BrowserReloadMiddleware",
+    ]
+    
+    INTERNAL_IPS = ["127.0.0.1"]

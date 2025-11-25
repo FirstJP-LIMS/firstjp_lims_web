@@ -28,15 +28,23 @@ urlpatterns = [
     path("lms/", include("apps.lms.urls", namespace="lms")),
 ]
 
-# Static & media files (dev only)
+# Static & media files (always included)
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
-# Debug Toolbar (development only)
+# Debug Toolbar & Browser Reload (development only)
 if settings.DEBUG:
-    import debug_toolbar
-
-    urlpatterns += [
-        path("__debug__/", include(debug_toolbar.urls)),
-        path("__reload__/", include("django_browser_reload.urls")),
-    ]
+    try:
+        import debug_toolbar
+        urlpatterns += [
+            path("__debug__/", include(debug_toolbar.urls)),
+        ]
+    except ImportError:
+        pass
+    
+    try:
+        urlpatterns += [
+            path("__reload__/", include("django_browser_reload.urls")),
+        ]
+    except:
+        pass
