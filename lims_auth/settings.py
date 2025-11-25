@@ -151,7 +151,7 @@ SITE_NAME = "mednovu.com"
 
 if ENVIRONMENT == "production":
     # Production settings
-    DEBUG = False
+    DEBUG = True
     
     ALLOWED_HOSTS = [
         "firstjp-lims-web.onrender.com",
