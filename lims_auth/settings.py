@@ -158,6 +158,7 @@ SITE_NAME = "mednovu.com"
 # SESSION_ENGINE = "django.contrib.sessions.backends.cache"
 # SESSION_CACHE_ALIAS = "default"
 
+PLATFORM_BASE_DOMAIN = "medvuno"
 
 # ========================================
 # ENVIRONMENT-SPECIFIC SETTINGS
@@ -165,7 +166,8 @@ SITE_NAME = "mednovu.com"
 
 if ENVIRONMENT == "production":
     # Production settings
-    DEBUG = False
+    # DEBUG = False
+    DEBUG = True
     
     ALLOWED_HOSTS = [
         "firstjp-lims-web-ytsi.onrender.com",
