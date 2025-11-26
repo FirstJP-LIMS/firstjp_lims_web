@@ -160,6 +160,12 @@ SITE_NAME = "mednovu.com"
 # SESSION_ENGINE = "django.contrib.sessions.backends.cache"
 # SESSION_CACHE_ALIAS = "default"
 
+ALLOWED_HOSTS = [
+    "medvuno.com",
+    "www.medvuno.com",
+    ".medvuno.com",
+    "firstjp-lims-web-ytsi.onrender.com",
+]
 
 # ========================================
 # ENVIRONMENT-SPECIFIC SETTINGS
@@ -169,13 +175,12 @@ if ENVIRONMENT == "production":
     # Production settings
     # DEBUG = False
     DEBUG = True
-    
+
     ALLOWED_HOSTS = [
-        "firstjp-lims-web-ytsi.onrender.com",
-        # Namecheap domain
-        "medvuno.com",
-        "www.medvuno.com",
-        "*.medvuno.com",
+    "medvuno.com",
+    "www.medvuno.com",
+    ".medvuno.com",
+    "firstjp-lims-web-ytsi.onrender.com",
     ]
 
     PLATFORM_BASE_DOMAIN = "medvuno"
@@ -185,7 +190,7 @@ if ENVIRONMENT == "production":
         "https://firstjp-lims-web-ytsi.onrender.com",
         "https://medvuno.com",
         "https://www.medvuno.com",
-        "*.medvuno.com",
+        ".medvuno.com",
     ]
     PLATFORM_BASE_DOMAIN = os.getenv("PLATFORM_BASE_DOMAIN", "medvuno.com",)
 
