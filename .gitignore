@@ -26,3 +26,5 @@ __pycache__/
 /apps/labs/m.py
 
 # git rm -r --cached templates_old
+
+/test_cache.py/

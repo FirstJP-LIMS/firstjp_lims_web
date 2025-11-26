@@ -25,6 +25,7 @@ Django==5.2.7
 django-cors-headers==4.9.0
 django-crispy-forms==2.4
 # django-debug-toolbar==6.0.0
+django-redis
 django-phonenumber-field==8.3.0
 django-tailwind==4.4.1
 dj-database-url
