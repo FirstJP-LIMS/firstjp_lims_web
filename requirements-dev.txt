@@ -22,7 +22,7 @@ cryptography==46.0.3
 cssselect2==0.8.0
 dj-database-url==3.0.1
 Django==5.2.7
-# django-browser-reload==1.21.0
+django-browser-reload==1.21.0
 django-cors-headers==4.9.0
 django-crispy-forms==2.4
 django-debug-toolbar==6.0.0

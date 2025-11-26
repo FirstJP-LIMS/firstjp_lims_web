@@ -10,17 +10,14 @@ import os
 import dj_database_url
 
 load_dotenv()
+
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 
 # BASE_DIR = Path(__file__).resolve().parent.parent.parent
 BASE_DIR = Path(__file__).resolve().parent.parent
-# BASE_DIR = Path(__file__).resolve().parent.parent.parent
-
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 DEBUG = False  # Default to False for safety
-
-ALLOWED_HOSTS = []  # Will be set below based on environment
 
 # Base installed apps (always included)
 INSTALLED_APPS = [
@@ -155,17 +152,6 @@ SITE_NAME = "mednovu.com"
 #         }
 #     }
 # }
-
-# # Optional — Use Redis for Django sessions also:
-# SESSION_ENGINE = "django.contrib.sessions.backends.cache"
-# SESSION_CACHE_ALIAS = "default"
-
-ALLOWED_HOSTS = [
-    "medvuno.com",
-    "www.medvuno.com",
-    ".medvuno.com",
-    "firstjp-lims-web-ytsi.onrender.com",
-]
 
 # ========================================
 # ENVIRONMENT-SPECIFIC SETTINGS
