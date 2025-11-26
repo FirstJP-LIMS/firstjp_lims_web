@@ -17,7 +17,7 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv("SECRET_KEY")
-DEBUG = False  # Default to False for safety
+DEBUG = True  # Default to False for safety
 
 # Base installed apps (always included)
 INSTALLED_APPS = [
