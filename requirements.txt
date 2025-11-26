@@ -27,6 +27,7 @@ django-crispy-forms==2.4
 # django-debug-toolbar==6.0.0
 django-phonenumber-field==8.3.0
 django-tailwind==4.4.1
+dj-database-url
 # django-tenant-schemas==2.0.0
 django-widget-tweaks==1.5.0
 djangorestframework==3.16.1

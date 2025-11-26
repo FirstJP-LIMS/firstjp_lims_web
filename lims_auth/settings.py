@@ -159,16 +159,20 @@ if ENVIRONMENT == "production":
     ]
     
     # Database
+    # DATABASES = {
+    #     "default": {
+    #         "ENGINE": "django.db.backends.postgresql",
+    #         "NAME": os.getenv("POSTGRES_DB"),
+    #         "USER": os.getenv("POSTGRES_USER"),
+    #         "PASSWORD": os.getenv("POSTGRES_PASSWORD"),
+    #         "HOST": os.getenv("POSTGRES_HOST"),
+    #         "PORT": os.getenv("POSTGRES_PORT", "5432"),
+    #     }
+    # }
+    import dj_database_url
     DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": os.getenv("POSTGRES_DB"),
-            "USER": os.getenv("POSTGRES_USER"),
-            "PASSWORD": os.getenv("POSTGRES_PASSWORD"),
-            "HOST": os.getenv("POSTGRES_HOST"),
-            "PORT": os.getenv("POSTGRES_PORT", "5432"),
+        'default': dj_database_url.parse(os.get('DATABASE_URL'))
         }
-    }
     
     GLOBAL_HOSTS = [os.getenv("PLATFORM_BASE_DOMAIN", "medvuno.com",)]
     
