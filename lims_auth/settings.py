@@ -159,7 +159,6 @@ SITE_NAME = "mednovu.com"
 # SESSION_ENGINE = "django.contrib.sessions.backends.cache"
 # SESSION_CACHE_ALIAS = "default"
 
-PLATFORM_BASE_DOMAIN = "medvuno"
 
 # ========================================
 # ENVIRONMENT-SPECIFIC SETTINGS
@@ -177,12 +176,15 @@ if ENVIRONMENT == "production":
         "www.medvuno.com",
         "*.medvuno.com",
     ]
+
+    PLATFORM_BASE_DOMAIN = "medvuno"
     
     # CSRF trusted origins for production
     CSRF_TRUSTED_ORIGINS = [
         "https://firstjp-lims-web-ytsi.onrender.com",
         "https://medvuno.com",
         "https://www.medvuno.com",
+        "*.medvuno.com",
     ]
     PLATFORM_BASE_DOMAIN = os.getenv("PLATFORM_BASE_DOMAIN", "medvuno.com",)
 
@@ -248,6 +250,7 @@ else:
     }
     
     PLATFORM_BASE_DOMAIN = "localhost.test"
+
     GLOBAL_HOSTS = [
         "127.0.0.1",
         "localhost",
