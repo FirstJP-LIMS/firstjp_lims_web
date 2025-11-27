@@ -98,7 +98,7 @@
             transform: scale(1.1);
             transition: transform 0.2s;
         }
-        </style>
+    </style>
 
     <script>
         tailwind.config = {
@@ -113,6 +113,7 @@
             }
         }
     </script>
+
 </head>
 <body class="bg-gray-50">
     <div class="drawer lg:drawer-open">
@@ -629,7 +630,6 @@
                 <div class="p-6 border-b border-white/10">
                     <div class="flex items-center justify-between">
                         <div class="text-2xl font-bold">
-                            <!-- <span class="text-white">MEDVUNO</span> -->
                             {% if vendor_profile.logo %}
                             <img src="{{ vendor_profile.logo.url }}" alt="{{ vendor.name }}" class="header-logo me-2">
                             {% else %}
@@ -638,9 +638,9 @@
                             {% endif %}
                             <div class="brand-text">
                             <strong class="text-brand-blue">{{ vendor.name|default:"MEDVUNO" }}</strong>
+                            </div>
                         </div>
                     </div>
-                </div>
 
                 <!-- Navigation Menu -->
                 <nav class="p-4">
