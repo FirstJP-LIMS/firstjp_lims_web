@@ -1,0 +1,635 @@
+{% extends "laboratory/assets/base_qc.html" %}
+{% load static %}
+
+{# 
+  Cleaned Monthly QC Report template
+  - All calculations removed from template.
+  - Use variables supplied by the view (see summary above).
+  - Inline comments mark corrected sections.
+#}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- Header Section -->
+    <div class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-6">
+                <div class="flex items-center space-x-4">
+                    <div class="flex-shrink-0">
+                        <div class="w-12 h-12 bg-gradient-to-r from-red-600 to-red-700 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-chart-pie text-white text-xl"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <h1 class="text-3xl font-bold text-navy-800">Monthly QC Report</h1>
+                        <p class="text-gray-600 mt-1">Comprehensive quality control performance analysis for {{ month_name }}</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <a href="{% url 'labs:qc_dashboard' %}" class="btn btn-outline border-gray-300 text-gray-700">
+                        <i class="fas fa-tachometer-alt mr-2"></i>Dashboard
+                    </a>
+                    <button onclick="window.print()" class="btn bg-red-600 hover:bg-red-700 border-red-600 text-white">
+                        <i class="fas fa-print mr-2"></i>Print Report
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Report Controls -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+            <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
+                    <!-- Month Selection -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-semibold text-navy-700">Month</span>
+                        </label>
+                        <select id="monthSelect" class="select select-bordered w-full bg-white">
+                            {# months provided by view: list of {"num": m, "name": name} #}
+                            {% for m in months %}
+                                <option value="{{ m.num }}" {% if m.num == month %}selected{% endif %}>
+                                    {{ m.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Year Selection -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-semibold text-navy-700">Year</span>
+                        </label>
+                        <select id="yearSelect" class="select select-bordered w-full bg-white">
+                            {# years provided by view (e.g. range) #}
+                            {% for y in years %}
+                                <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Report Type -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-semibold text-navy-700">Report Type</span>
+                        </label>
+                        <select class="select select-bordered w-full bg-white">
+                            <option selected>Summary Report</option>
+                            <option>Detailed Analysis</option>
+                            <option>Compliance Report</option>
+                            <option>Trend Analysis</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-3">
+                    <button id="generateReport" class="btn bg-red-600 hover:bg-red-700 border-red-600 text-white">
+                        <i class="fas fa-sync mr-2"></i>Generate Report
+                    </button>
+                    <button class="btn btn-outline border-gray-300 text-gray-700">
+                        <i class="fas fa-download mr-2"></i>Export PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Executive Summary -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Total Runs -->
+            <div class="stats bg-white shadow-sm border border-gray-200">
+                <div class="stat">
+                    <div class="stat-figure text-red-600">
+                        <i class="fas fa-vial text-2xl"></i>
+                    </div>
+                    <div class="stat-title text-navy-700">Total QC Runs</div>
+                    <div class="stat-value text-navy-800">{{ total_runs }}</div>
+                    <div class="stat-desc text-gray-600">{{ month_name }}</div>
+                </div>
+            </div>
+
+            <!-- Pass Rate -->
+            <div class="stats bg-white shadow-sm border border-gray-200">
+                <div class="stat">
+                    <div class="stat-figure text-green-600">
+                        <i class="fas fa-check-circle text-2xl"></i>
+                    </div>
+                    <div class="stat-title text-navy-700">Pass Rate</div>
+                    <div class="stat-value text-navy-800">{{ pass_rate|floatformat:1 }}%</div>
+                    <div class="stat-desc text-gray-600">{{ passed }} of {{ total_runs }} passed</div>
+                </div>
+            </div>
+
+            <!-- Failed Runs -->
+            <div class="stats bg-white shadow-sm border border-gray-200">
+                <div class="stat">
+                    <div class="stat-figure text-red-600">
+                        <i class="fas fa-times-circle text-2xl"></i>
+                    </div>
+                    <div class="stat-title text-navy-700">Failed Runs</div>
+                    <div class="stat-value text-navy-800">{{ failed }}</div>
+                    {# We removed invalid percentage math; use fail_rate passed from view #}
+                    <div class="stat-desc text-gray-600">{{ fail_rate|floatformat:1 }}% of total</div>
+                </div>
+            </div>
+
+            <!-- Warning Runs -->
+            <div class="stats bg-white shadow-sm border border-gray-200">
+                <div class="stat">
+                    <div class="stat-figure text-amber-500">
+                        <i class="fas fa-exclamation-triangle text-2xl"></i>
+                    </div>
+                    <div class="stat-title text-navy-700">Warning Runs</div>
+                    <div class="stat-value text-navy-800">{{ warnings }}</div>
+                    <div class="stat-desc text-gray-600">{{ warning_rate|floatformat:1 }}% of total</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Main Content -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Performance Overview -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-navy-700 to-navy-800">
+                        <h2 class="text-xl font-semibold text-white flex items-center">
+                            <i class="fas fa-chart-bar mr-3"></i>
+                            Performance Overview
+                        </h2>
+                    </div>
+                    <div class="p-6">
+                        <!-- Status Distribution -->
+                        <div class="mb-6">
+                            <h3 class="text-lg font-semibold text-navy-700 mb-4">QC Run Distribution</h3>
+                            <div class="w-full bg-gray-200 rounded-full h-6 mb-4">
+                                <div class="flex h-6 rounded-full overflow-hidden">
+                                    {# Use pass_rate, warning_rate, fail_rate from view to set widths #}
+                                    <div class="bg-green-500" style="width: {{ pass_rate }}%">
+                                        <div class="text-xs text-white font-semibold text-center h-6 leading-6">
+                                            {% if pass_rate > 0 %}{{ pass_rate|floatformat:1 }}%{% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="bg-amber-500" style="width: {{ warning_rate }}%">
+                                        <div class="text-xs text-white font-semibold text-center h-6 leading-6">
+                                            {% if warning_rate > 0 %}{{ warning_rate|floatformat:1 }}%{% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="bg-red-500" style="width: {{ fail_rate }}%">
+                                        <div class="text-xs text-white font-semibold text-center h-6 leading-6">
+                                            {% if fail_rate > 0 %}{{ fail_rate|floatformat:1 }}%{% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-between text-sm text-gray-600">
+                                <div class="flex items-center">
+                                    <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                                    <span>Passed: {{ passed }}</span>
+                                </div>
+                                <div class="flex items-center">
+                                    <div class="w-3 h-3 bg-amber-500 rounded-full mr-2"></div>
+                                    <span>Warning: {{ warnings }}</span>
+                                </div>
+                                <div class="flex items-center">
+                                    <div class="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+                                    <span>Failed: {{ failed }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Daily Trend (placeholder) -->
+                        <div>
+                            <h3 class="text-lg font-semibold text-navy-700 mb-4">Daily Performance Trend</h3>
+                            <div class="bg-gray-50 rounded-lg border border-gray-200 p-4 h-64 flex items-center justify-center">
+                                <div class="text-center text-gray-500">
+                                    <i class="fas fa-chart-line text-4xl mb-3 text-gray-300"></i>
+                                    <p>Daily trend chart would be displayed here</p>
+                                    <p class="text-sm mt-2">Showing performance across {{ month_name }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Test Performance Breakdown -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700">
+                        <h2 class="text-xl font-semibold text-white flex items-center">
+                            <i class="fas fa-flask mr-3"></i>
+                            Test Performance Breakdown
+                        </h2>
+                    </div>
+                    <div class="p-6">
+                        <div class="overflow-x-auto">
+                            <table class="table table-zebra w-full">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="text-navy-700 font-semibold">Test</th>
+                                        <th class="text-navy-700 font-semibold text-center">Total Runs</th>
+                                        <th class="text-navy-700 font-semibold text-center">Passed</th>
+                                        <th class="text-navy-700 font-semibold text-center">Warnings</th>
+                                        <th class="text-navy-700 font-semibold text-center">Failed</th>
+                                        <th class="text-navy-700 font-semibold text-center">Pass Rate</th>
+                                        <th class="text-navy-700 font-semibold text-center">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {# tests_summary is produced by view; iterate items #}
+                                    {% for test_code, summary in tests_summary.items %}
+                                    <tr class="hover:bg-gray-50 transition-colors duration-150">
+                                        <td>
+                                            <div class="font-semibold text-navy-800">{{ summary.test.name }}</div>
+                                            <div class="text-sm text-gray-600">{{ test_code }}</div>
+                                        </td>
+                                        <td class="text-center font-semibold text-navy-800">{{ summary.total }}</td>
+                                        <td class="text-center">
+                                            <span class="badge badge-success text-white">{{ summary.passed }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge badge-warning text-white">{{ summary.warnings }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge badge-error text-white">{{ summary.failed }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            {# Use precomputed pass_rate for the test (percent) #}
+                                            <span class="font-semibold
+                                                {% if summary.pass_rate >= 95 %}
+                                                    text-green-600
+                                                {% elif summary.pass_rate >= 90 %}
+                                                    text-amber-600
+                                                {% else %}
+                                                    text-red-600
+                                                {% endif %}">
+                                                {{ summary.pass_rate|floatformat:1 }}%
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            {% if summary.pass_rate >= 95 %}
+                                                <span class="badge badge-success text-white">Excellent</span>
+                                            {% elif summary.pass_rate >= 90 %}
+                                                <span class="badge badge-warning text-white">Good</span>
+                                            {% else %}
+                                                <span class="badge badge-error text-white">Needs Review</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="7" class="text-center py-8 text-gray-500">
+                                            <i class="fas fa-inbox text-3xl mb-3 text-gray-300"></i>
+                                            <p>No QC results found for {{ month_name }}</p>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quality Indicators -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-purple-600 to-purple-700">
+                        <h2 class="text-xl font-semibold text-white flex items-center">
+                            <i class="fas fa-award mr-3"></i>
+                            Quality Indicators
+                        </h2>
+                    </div>
+            
+                    <div class="p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                            <!-- Sigma Metrics -->
+                            <div class="space-y-4">
+                                <h3 class="text-lg font-semibold text-navy-700">Sigma Metrics</h3>
+
+                                <div class="space-y-3">
+                                    {% for test_code, summary in tests_summary.items %}
+                                        {% if summary.total > 10 %}
+                                        <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                            <span class="text-gray-700 font-medium">{{ summary.test.name }}</span>
+
+                                            <!-- Sigma already calculated in the view -->
+                                            <span class="font-bold 
+                                                {% if summary.sigma >= 4 %}
+                                                    text-green-600
+                                                {% elif summary.sigma >= 3 %}
+                                                    text-amber-600
+                                                {% else %}
+                                                    text-red-600
+                                                {% endif %}
+                                            ">
+                                                {{ summary.sigma }} σ
+                                            </span>
+                                        </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- Compliance Status -->
+                            <div class="space-y-4">
+                                <h3 class="text-lg font-semibold text-navy-700">Compliance Status</h3>
+
+                                <div class="space-y-3">
+
+                                    <!-- Overall Pass Rate -->
+                                    <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-200">
+                                        <span class="text-green-800 font-medium">Overall Pass Rate</span>
+                                        <span class="font-bold text-green-900">{{ pass_rate|floatformat:1 }}%</span>
+                                    </div>
+
+                                    <!-- Overall Sigma -->
+                                    <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                        <span class="text-gray-700 font-medium">Overall Sigma</span>
+                                        <span class="font-bold text-navy-800">{{ overall_sigma }} σ</span>
+                                    </div>
+
+                                    <!-- Failed Runs -->
+                                    <div class="flex justify-between items-center p-3 
+                                        {% if failed == 0 %}
+                                            bg-green-50 border-green-200
+                                        {% else %}
+                                            bg-amber-50 border-amber-200
+                                        {% endif %}
+                                        rounded-lg border">
+                                        <span class="{% if failed == 0 %}text-green-800{% else %}text-amber-800{% endif %} font-medium">
+                                            Failed Runs
+                                        </span>
+                                        <span class="font-bold 
+                                            {% if failed == 0 %}text-green-900{% else %}text-amber-900{% endif %}
+                                        ">{{ failed }}</span>
+                                    </div>
+
+                                    <!-- Warning Rate -->
+                                    <div class="flex justify-between items-center p-3 
+                                        {% if warning_rate <= 5 %}
+                                            bg-green-50 border-green-200
+                                        {% else %}
+                                            bg-amber-50 border-amber-200
+                                        {% endif %}
+                                        rounded-lg border">
+                                        <span class="{% if warning_rate <= 5 %}text-green-800{% else %}text-amber-800{% endif %} font-medium">
+                                            Warning Rate
+                                        </span>
+                                        <span class="font-bold 
+                                            {% if warning_rate <= 5 %}text-green-900{% else %}text-amber-900{% endif %}
+                                        ">
+                                            {{ warning_rate|floatformat:1 }}%
+                                        </span>
+                                    </div>
+
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="space-y-6">
+                <!-- Report Summary -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-green-600 to-green-700">
+                        <h3 class="text-lg font-semibold text-white flex items-center">
+                            <i class="fas fa-file-alt mr-2"></i>
+                            Report Summary
+                        </h3>
+                    </div>
+                    <div class="p-4 space-y-4">
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">Report Period:</span>
+                                <span class="font-semibold text-navy-800">{{ month_name }}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">Date Range:</span>
+                                <span class="font-semibold text-navy-800">
+                                    {{ start_date|date:"M d" }} - {{ end_date|date:"M d, Y" }}
+                                </span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">Tests Monitored:</span>
+                                <span class="font-semibold text-navy-800">{{ tests_summary|length }}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">Report Generated:</span>
+                                {# use {% now %} so we don't need timezone in view #}
+                                <span class="font-semibold text-navy-800">{% now "M d, Y H:i" %}</span>
+                            </div>
+                        </div>
+
+                        <!-- Overall Rating -->
+                        <div class="border-t border-gray-200 pt-4">
+                            <h4 class="font-semibold text-navy-700 mb-3">Overall Rating</h4>
+                            <div class="text-center p-4 bg-gradient-to-r 
+                                {% if pass_rate >= 95 %}from-green-500 to-green-600
+                                {% elif pass_rate >= 90 %}from-amber-500 to-amber-600
+                                {% else %}from-red-500 to-red-600{% endif %} 
+                                rounded-lg text-white">
+                                <div class="text-3xl font-bold mb-2">{{ pass_rate|floatformat:1 }}%</div>
+                                <div class="text-sm font-semibold">
+                                    {% if pass_rate >= 95 %}EXCELLENT
+                                    {% elif pass_rate >= 90 %}GOOD
+                                    {% elif pass_rate >= 85 %}ACCEPTABLE
+                                    {% else %}NEEDS IMPROVEMENT{% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Key Findings -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-amber-600 to-amber-700">
+                        <h3 class="text-lg font-semibold text-white flex items-center">
+                            <i class="fas fa-binoculars mr-2"></i>
+                            Key Findings
+                        </h3>
+                    </div>
+                    <div class="p-4 space-y-4">
+                        {% if failed > 0 %}
+                        <div class="flex items-start space-x-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <i class="fas fa-exclamation-circle text-red-600 mt-1"></i>
+                            <div>
+                                <h4 class="font-semibold text-red-800 mb-1">Failed Runs Detected</h4>
+                                <p class="text-red-700 text-sm">{{ failed }} runs failed QC criteria this month</p>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if warnings > 0 %}
+                        <div class="flex items-start space-x-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                            <i class="fas fa-exclamation-triangle text-amber-600 mt-1"></i>
+                            <div>
+                                <h4 class="font-semibold text-amber-800 mb-1">Warning Runs</h4>
+                                <p class="text-amber-700 text-sm">{{ warnings }} runs showed warning signs</p>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if pass_rate >= 95 %}
+                        <div class="flex items-start space-x-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <i class="fas fa-check-circle text-green-600 mt-1"></i>
+                            <div>
+                                <h4 class="font-semibold text-green-800 mb-1">Excellent Performance</h4>
+                                <p class="text-green-700 text-sm">Pass rate exceeds 95% target</p>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if total_runs == 0 %}
+                        <div class="flex items-start space-x-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <i class="fas fa-info-circle text-blue-600 mt-1"></i>
+                            <div>
+                                <h4 class="font-semibold text-blue-800 mb-1">No Data Available</h4>
+                                <p class="text-blue-700 text-sm">No QC runs recorded for this period</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Recommendations -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700">
+                        <h3 class="text-lg font-semibold text-white flex items-center">
+                            <i class="fas fa-lightbulb mr-2"></i>
+                            Recommendations
+                        </h3>
+                    </div>
+                    <div class="p-4 space-y-3">
+                        {% if failed > 0 %}
+                        <div class="text-sm text-gray-700">
+                            <i class="fas fa-vial text-red-600 mr-2"></i>
+                            Review failed runs and implement corrective actions
+                        </div>
+                        {% endif %}
+
+                        {% if pass_rate < 90 %}
+                        <div class="text-sm text-gray-700">
+                            <i class="fas fa-chart-line text-amber-600 mr-2"></i>
+                            Consider recalibration or maintenance for underperforming tests
+                        </div>
+                        {% endif %}
+
+                        {% if warning_rate > 10 %}
+                        <div class="text-sm text-gray-700">
+                            <i class="fas fa-radiation text-purple-600 mr-2"></i>
+                            Investigate systematic trends in warning runs
+                        </div>
+                        {% endif %}
+
+                        <div class="text-sm text-gray-700">
+                            <i class="fas fa-calendar-check text-green-600 mr-2"></i>
+                            Continue daily monitoring and documentation
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-navy-700 to-navy-800">
+                        <h3 class="text-lg font-semibold text-white flex items-center">
+                            <i class="fas fa-bolt mr-2"></i>
+                            Quick Actions
+                        </h3>
+                    </div>
+                    <div class="p-4 space-y-3">
+                        <a href="{% url 'labs:qc_results_list' %}" class="btn btn-outline btn-block justify-start border-gray-300 text-gray-700">
+                            <i class="fas fa-list mr-3 text-blue-600"></i>
+                            View All Results
+                        </a>
+                        <a href="{% url 'labs:qc_entry' %}" class="btn btn-outline btn-block justify-start border-gray-300 text-gray-700">
+                            <i class="fas fa-plus mr-3 text-green-600"></i>
+                            Enter New QC
+                        </a>
+                        <a href="{% url 'labs:qc_dashboard' %}" class="btn btn-outline btn-block justify-start border-gray-300 text-gray-700">
+                            <i class="fas fa-tachometer-alt mr-3 text-purple-600"></i>
+                            QC Dashboard
+                        </a>
+                        <button class="btn btn-outline btn-block justify-start border-gray-300 text-gray-700">
+                            <i class="fas fa-envelope mr-3 text-amber-600"></i>
+                            Email Report
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for Report Interactivity -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const monthSelect = document.getElementById('monthSelect');
+    const yearSelect = document.getElementById('yearSelect');
+    const generateButton = document.getElementById('generateReport');
+
+    // Generate report with selected month/year
+    generateButton.addEventListener('click', function() {
+        const month = monthSelect.value;
+        const year = yearSelect.value;
+        window.location.href = `{% url 'labs:qc_monthly_report' %}?month=${month}&year=${year}`;
+    });
+
+    // Auto-generate report when selections change
+    monthSelect.addEventListener('change', function() {
+        generateButton.click();
+    });
+
+    yearSelect.addEventListener('change', function() {
+        generateButton.click();
+    });
+
+    // Add print styles
+    const style = document.createElement('style');
+    style.textContent = `
+        @media print {
+            .btn, .no-print, .form-control, select {
+                display: none !important;
+            }
+            .bg-white {
+                background: white !important;
+                border: 1px solid #000 !important;
+            }
+            .text-navy-800 {
+                color: #000 !important;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+});
+</script>
+
+<style>
+    .text-navy-700 { color: #1e3a8a; }
+    .text-navy-800 { color: #1e40af; }
+    .bg-navy-700 { background-color: #1e3a8a; }
+    .bg-navy-800 { background-color: #1e40af; }
+    
+    .bg-red-600 { background-color: #dc2626; }
+    .border-red-600 { border-color: #dc2626; }
+    
+    /* Smooth transitions */
+    .btn, .select, .stats {
+        transition: all 0.2s ease-in-out;
+    }
+    
+    /* Progress bar animations */
+    .bg-green-500, .bg-amber-500, .bg-red-500 {
+        transition: width 0.5s ease-in-out;
+    }
+    
+    /* Hover effects */
+    .stats:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,643 @@
+{% extends "laboratory/assets/base_qc.html" %}
+{% load static %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- Header Section -->
+    <div class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-6">
+                <div class="flex items-center space-x-4">
+                    <div class="flex-shrink-0">
+                        <div class="w-12 h-12 bg-gradient-to-r from-red-600 to-red-700 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-chart-line text-white text-xl"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <h1 class="text-3xl font-bold text-navy-800">Levey-Jennings Chart</h1>
+                        <p class="text-gray-600 mt-1">Monitor QC performance and detect shifts or trends</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <a href="{% url 'labs:qc_results_list' %}" class="btn btn-outline border-gray-300 text-gray-700">
+                        <i class="fas fa-list mr-2"></i>View All Results
+                    </a>
+                    <a href="{% url 'labs:qc_dashboard' %}" class="btn bg-navy-700 hover:bg-navy-800 border-navy-700 text-white">
+                        <i class="fas fa-tachometer-alt mr-2"></i>QC Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <!-- Left Sidebar - Controls & Info -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- Lot Selection Card -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-navy-700 to-navy-800">
+                        <h3 class="text-lg font-semibold text-white flex items-center">
+                            <i class="fas fa-vial mr-2"></i>
+                            Select QC Lot
+                        </h3>
+                    </div>
+                    <div class="p-4">
+                        <select id="lotSelector" class="select select-bordered w-full bg-white">
+                            <option value="">Choose a QC Lot...</option>
+                            {% for lot in active_lots %}
+                            <option value="{{ lot.id }}" 
+                                    {% if qc_lot and lot.id == qc_lot.id %}selected{% endif %}
+                                    data-target="{{ lot.target_value|default:0 }}"
+                                    data-sd="{{ lot.sd|default:0 }}"
+                                    data-units="{{ lot.units }}"
+                                    data-test="{{ lot.test.name }}"
+                                    data-level="{{ lot.get_level_display }}">
+                                {{ lot.test.name }} - {{ lot.get_level_display }} ({{ lot.lot_number }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                        
+                        <!-- Quick Navigation -->
+                        <div class="mt-4 space-y-2">
+                            <a href="{% url 'labs:qclot_list' %}" class="btn btn-outline btn-sm btn-block justify-start border-gray-300 text-gray-700">
+                                <i class="fas fa-cog mr-2 text-blue-600"></i>
+                                Manage QC Lots
+                            </a>
+                            <a href="{% url 'labs:qc_entry' %}" class="btn btn-outline btn-sm btn-block justify-start border-gray-300 text-gray-700">
+                                <i class="fas fa-edit mr-2 text-green-600"></i>
+                                Enter QC Results
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- QC Lot Information -->
+                {% if qc_lot %}
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700">
+                        <h3 class="text-lg font-semibold text-white flex items-center">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            Lot Information
+                        </h3>
+                    </div>
+                    <div class="p-4 space-y-4">
+                        <!-- Basic Info -->
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">Test:</span>
+                                <span class="font-semibold text-navy-800">{{ qc_lot.test.name }}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">Level:</span>
+                                <span class="font-semibold text-navy-800">{{ qc_lot.get_level_display }}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">Lot Number:</span>
+                                <span class="font-semibold text-navy-800">{{ qc_lot.lot_number }}</span>
+                            </div>
+                            {% if qc_lot.manufacturer %}
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">Manufacturer:</span>
+                                <span class="font-semibold text-navy-800">{{ qc_lot.manufacturer }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Target Specifications -->
+                        <div class="border-t border-gray-200 pt-4">
+                            <h4 class="font-semibold text-navy-700 mb-3">Specifications</h4>
+                            {% if qc_lot.target_value %}
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Target:</span>
+                                    <span class="font-semibold text-navy-800">{{ qc_lot.target_value }} {{ qc_lot.units }}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Standard Deviation:</span>
+                                    <span class="font-semibold text-navy-800">{{ qc_lot.sd }}</span>
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Acceptable Range:</span>
+                                    <span class="font-semibold text-navy-800">{{ qc_lot.explicit_low }} - {{ qc_lot.explicit_high }} {{ qc_lot.units }}</span>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Control Limits -->
+                        <div class="border-t border-gray-200 pt-4">
+                            <h4 class="font-semibold text-navy-700 mb-3">Control Limits</h4>
+                            <div class="space-y-2 text-sm">
+                                {% if qc_lot.limit_1sd_low %}
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">±1 SD:</span>
+                                    <span class="font-semibold text-navy-800">{{ qc_lot.limit_1sd_low|floatformat:3 }} - {{ qc_lot.limit_1sd_high|floatformat:3 }}</span>
+                                </div>
+                                {% endif %}
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">±2 SD:</span>
+                                    <span class="font-semibold text-navy-800">{{ qc_lot.limit_2sd_low|floatformat:3 }} - {{ qc_lot.limit_2sd_high|floatformat:3 }}</span>
+                                </div>
+                                {% if qc_lot.limit_3sd_low %}
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">±3 SD:</span>
+                                    <span class="font-semibold text-navy-800">{{ qc_lot.limit_3sd_low|floatformat:3 }} - {{ qc_lot.limit_3sd_high|floatformat:3 }}</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Dates -->
+                        <div class="border-t border-gray-200 pt-4">
+                            <h4 class="font-semibold text-navy-700 mb-3">Dates</h4>
+                            <div class="space-y-2 text-sm">
+                                {% if qc_lot.received_date %}
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Received:</span>
+                                    <span class="font-semibold text-navy-800">{{ qc_lot.received_date|date:"M d, Y" }}</span>
+                                </div>
+                                {% endif %}
+                                {% if qc_lot.expiry_date %}
+                                <div class="flex justify-between {% if qc_lot.is_expired %}text-red-600{% endif %}">
+                                    <span class="{% if qc_lot.is_expired %}text-red-600{% else %}text-gray-600{% endif %}">Expires:</span>
+                                    <span class="font-semibold {% if qc_lot.is_expired %}text-red-600{% else %}text-navy-800{% endif %}">
+                                        {{ qc_lot.expiry_date|date:"M d, Y" }}
+                                        {% if qc_lot.is_expired %}
+                                        <span class="badge badge-error badge-sm ml-2">Expired</span>
+                                        {% endif %}
+                                    </span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Chart Controls -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-purple-600 to-purple-700">
+                        <h3 class="text-lg font-semibold text-white flex items-center">
+                            <i class="fas fa-sliders-h mr-2"></i>
+                            Chart Settings
+                        </h3>
+                    </div>
+                    <div class="p-4 space-y-4">
+                        <!-- Date Range -->
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text font-semibold text-navy-700">Date Range</span>
+                            </label>
+                            <select id="dateRange" class="select select-bordered w-full bg-white">
+                                <option value="30">Last 30 Days</option>
+                                <option value="60">Last 60 Days</option>
+                                <option value="90">Last 90 Days</option>
+                                <option value="180">Last 6 Months</option>
+                                <option value="365">Last 12 Months</option>
+                                <option value="all">All Time</option>
+                            </select>
+                        </div>
+
+                        <!-- Show Limits -->
+                        <div class="form-control">
+                            <label class="cursor-pointer label justify-start space-x-3">
+                                <input type="checkbox" id="show1SD" class="checkbox checkbox-primary" checked>
+                                <span class="label-text text-gray-700">Show ±1 SD limits</span>
+                            </label>
+                        </div>
+                        <div class="form-control">
+                            <label class="cursor-pointer label justify-start space-x-3">
+                                <input type="checkbox" id="show2SD" class="checkbox checkbox-primary" checked>
+                                <span class="label-text text-gray-700">Show ±2 SD limits</span>
+                            </label>
+                        </div>
+                        <div class="form-control">
+                            <label class="cursor-pointer label justify-start space-x-3">
+                                <input type="checkbox" id="show3SD" class="checkbox checkbox-primary" checked>
+                                <span class="label-text text-gray-700">Show ±3 SD limits</span>
+                            </label>
+                        </div>
+
+                        <!-- Trend Line -->
+                        <div class="form-control">
+                            <label class="cursor-pointer label justify-start space-x-3">
+                                <input type="checkbox" id="showTrend" class="checkbox checkbox-primary">
+                                <span class="label-text text-gray-700">Show trend line</span>
+                            </label>
+                        </div>
+
+                        <button id="updateChart" class="btn bg-red-600 hover:bg-red-700 border-red-600 text-white w-full">
+                            <i class="fas fa-sync mr-2"></i>Update Chart
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Chart Area -->
+            <div class="lg:col-span-3 space-y-6">
+                {% if qc_lot %}
+                <!-- Chart Header -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h2 class="text-2xl font-bold text-navy-800" id="chartTitle">
+                                {{ qc_lot.test.name }} - {{ qc_lot.get_level_display }}
+                            </h2>
+                            <p class="text-gray-600 mt-1" id="chartSubtitle">
+                                Lot {{ qc_lot.lot_number }} • Target: {{ qc_lot.target_value|default:qc_lot.explicit_low }} {{ qc_lot.units }}
+                            </p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm text-gray-500">Last Updated</div>
+                            <div class="text-lg font-semibold text-navy-800" id="lastUpdate">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chart Container -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-lg font-semibold text-navy-700">Levey-Jennings Control Chart</h3>
+                            <div class="flex items-center space-x-2">
+                                <button id="exportChart" class="btn btn-outline btn-sm border-gray-300 text-gray-700">
+                                    <i class="fas fa-download mr-2"></i>Export
+                                </button>
+                                <button id="fullscreenChart" class="btn btn-outline btn-sm border-gray-300 text-gray-700">
+                                    <i class="fas fa-expand mr-2"></i>Fullscreen
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <div id="chartContainer" class="w-full h-96">
+                            <div class="flex items-center justify-center h-full">
+                                <div class="text-center">
+                                    <i class="fas fa-spinner fa-spin text-4xl text-gray-400 mb-4"></i>
+                                    <p class="text-gray-600">Loading chart data...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Statistics & Analysis -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Performance Stats -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h3 class="text-lg font-semibold text-navy-700 mb-4 flex items-center">
+                            <i class="fas fa-chart-bar mr-2 text-blue-600"></i>
+                            Performance Statistics
+                        </h3>
+                        <div class="space-y-3" id="performanceStats">
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">Data Points:</span>
+                                <span class="font-semibold text-navy-800">-</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">Current Mean:</span>
+                                <span class="font-semibold text-navy-800">-</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">Current SD:</span>
+                                <span class="font-semibold text-navy-800">-</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">CV (%):</span>
+                                <span class="font-semibold text-navy-800">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Rule Violations -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h3 class="text-lg font-semibold text-navy-700 mb-4 flex items-center">
+                            <i class="fas fa-exclamation-triangle mr-2 text-amber-600"></i>
+                            Rule Violations
+                        </h3>
+                        <div class="space-y-3" id="ruleViolations">
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">1-3s:</span>
+                                <span class="font-semibold text-navy-800">-</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">2-2s:</span>
+                                <span class="font-semibold text-navy-800">-</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">R-4s:</span>
+                                <span class="font-semibold text-navy-800">-</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">10x:</span>
+                                <span class="font-semibold text-navy-800">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quality Indicators -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h3 class="text-lg font-semibold text-navy-700 mb-4 flex items-center">
+                            <i class="fas fa-award mr-2 text-green-600"></i>
+                            Quality Indicators
+                        </h3>
+                        <div class="space-y-3" id="qualityIndicators">
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">In Control:</span>
+                                <span class="font-semibold text-navy-800">-</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">Warning:</span>
+                                <span class="font-semibold text-navy-800">-</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">Out of Control:</span>
+                                <span class="font-semibold text-navy-800">-</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">Sigma Metric:</span>
+                                <span class="font-semibold text-navy-800">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <!-- Empty State -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+                    <div class="max-w-md mx-auto">
+                        <i class="fas fa-chart-line text-6xl text-gray-300 mb-6"></i>
+                        <h3 class="text-2xl font-bold text-gray-700 mb-4">No QC Lot Selected</h3>
+                        <p class="text-gray-600 mb-6">
+                            Please select a QC lot from the sidebar to view its Levey-Jennings chart and performance analysis.
+                        </p>
+                        {% if not active_lots %}
+                        <div class="alert alert-warning bg-amber-50 border border-amber-200 rounded-lg p-4">
+                            <div class="flex items-center space-x-3">
+                                <i class="fas fa-exclamation-triangle text-amber-600"></i>
+                                <div>
+                                    <h4 class="font-semibold text-amber-800">No Active QC Lots</h4>
+                                    <p class="text-amber-700 text-sm mt-1">
+                                        You need to create and activate QC lots before viewing charts.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <a href="{% url 'labs:qclot_create' %}" class="btn bg-red-600 hover:bg-red-700 border-red-600 text-white mt-4">
+                            <i class="fas fa-plus mr-2"></i>Create QC Lot
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for Interactive Chart -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let currentChart = null;
+    const lotSelector = document.getElementById('lotSelector');
+    const dateRange = document.getElementById('dateRange');
+    const updateButton = document.getElementById('updateChart');
+    
+    // Initialize if a lot is selected
+    {% if qc_lot %}
+    loadChartData({{ qc_lot.id }}, dateRange.value);
+    {% endif %}
+
+    // Event listeners
+    lotSelector.addEventListener('change', function() {
+        const lotId = this.value;
+        if (lotId) {
+            window.location.href = "{% url 'labs:levey_jennings_chart' 0 %}".replace('0', lotId);
+        }
+    });
+
+    updateButton.addEventListener('click', function() {
+        const lotId = lotSelector.value;
+        const days = dateRange.value;
+        if (lotId) {
+            loadChartData(lotId, days);
+        }
+    });
+
+    // Export functionality
+    document.getElementById('exportChart')?.addEventListener('click', function() {
+        if (currentChart) {
+            const link = document.createElement('a');
+            link.download = `levey-jennings-${new Date().toISOString().split('T')[0]}.png`;
+            link.href = currentChart.toBase64Image();
+            link.click();
+        }
+    });
+
+    // Fullscreen functionality
+    document.getElementById('fullscreenChart')?.addEventListener('click', function() {
+        const container = document.getElementById('chartContainer');
+        if (!document.fullscreenElement) {
+            container.requestFullscreen?.();
+        } else {
+            document.exitFullscreen?.();
+        }
+    });
+
+    async function loadChartData(lotId, days) {
+        try {
+            // Show loading state
+            document.getElementById('lastUpdate').textContent = 'Loading...';
+            
+            const response = await fetch(`{% url 'labs:levey_jennings_data' 0 %}`.replace('0', lotId) + `?days=${days}`);
+            const data = await response.json();
+            
+            renderChart(data);
+            updateStatistics(data);
+            
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+        } catch (error) {
+            console.error('Error loading chart data:', error);
+            document.getElementById('lastUpdate').textContent = 'Error loading data';
+        }
+    }
+
+    function renderChart(data) {
+        const ctx = document.getElementById('chartContainer').getContext('2d');
+        
+        if (currentChart) {
+            currentChart.destroy();
+        }
+
+        const target = parseFloat('{{ qc_lot.target_value|default:0 }}');
+        const sd = parseFloat('{{ qc_lot.sd|default:0 }}');
+        
+        currentChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.labels,
+                datasets: [
+                    {
+                        label: 'QC Results',
+                        data: data.values,
+                        borderColor: '#1e3a8a',
+                        backgroundColor: 'rgba(30, 58, 138, 0.1)',
+                        tension: 0.1,
+                        pointBackgroundColor: '#1e3a8a',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    },
+                    {
+                        label: 'Target',
+                        data: Array(data.values.length).fill(target),
+                        borderColor: '#10b981',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        fill: false
+                    },
+                    {
+                        label: '+1 SD',
+                        data: Array(data.values.length).fill(target + sd),
+                        borderColor: '#f59e0b',
+                        borderWidth: 1,
+                        pointRadius: 0,
+                        fill: false
+                    },
+                    {
+                        label: '-1 SD',
+                        data: Array(data.values.length).fill(target - sd),
+                        borderColor: '#f59e0b',
+                        borderWidth: 1,
+                        pointRadius: 0,
+                        fill: false
+                    },
+                    {
+                        label: '+2 SD',
+                        data: Array(data.values.length).fill(target + (2 * sd)),
+                        borderColor: '#dc2626',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        fill: false
+                    },
+                    {
+                        label: '-2 SD',
+                        data: Array(data.values.length).fill(target - (2 * sd)),
+                        borderColor: '#dc2626',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        fill: false
+                    },
+                    {
+                        label: '+3 SD',
+                        data: Array(data.values.length).fill(target + (3 * sd)),
+                        borderColor: '#7c2d12',
+                        borderWidth: 3,
+                        pointRadius: 0,
+                        fill: false
+                    },
+                    {
+                        label: '-3 SD',
+                        data: Array(data.values.length).fill(target - (3 * sd)),
+                        borderColor: '#7c2d12',
+                        borderWidth: 3,
+                        pointRadius: 0,
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'day'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Date'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: '{{ qc_lot.units }}'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    legend: {
+                        position: 'top',
+                    }
+                }
+            }
+        });
+    }
+
+    function updateStatistics(data) {
+        // Update performance stats
+        document.querySelector('#performanceStats').innerHTML = `
+            <div class="flex justify-between items-center">
+                <span class="text-gray-600">Data Points:</span>
+                <span class="font-semibold text-navy-800">${data.values.length}</span>
+            </div>
+            <div class="flex justify-between items-center">
+                <span class="text-gray-600">Current Mean:</span>
+                <span class="font-semibold text-navy-800">${data.stats?.mean?.toFixed(3) || '-'}</span>
+            </div>
+            <div class="flex justify-between items-center">
+                <span class="text-gray-600">Current SD:</span>
+                <span class="font-semibold text-navy-800">${data.stats?.sd?.toFixed(4) || '-'}</span>
+            </div>
+            <div class="flex justify-between items-center">
+                <span class="text-gray-600">CV (%):</span>
+                <span class="font-semibold text-navy-800">${data.stats?.cv?.toFixed(2) || '-'}</span>
+            </div>
+        `;
+    }
+});
+</script>
+
+<style>
+    .text-navy-700 { color: #1e3a8a; }
+    .text-navy-800 { color: #1e40af; }
+    .bg-navy-700 { background-color: #1e3a8a; }
+    .bg-navy-800 { background-color: #1e40af; }
+    
+    .bg-red-600 { background-color: #dc2626; }
+    .border-red-600 { border-color: #dc2626; }
+    
+    /* Smooth transitions */
+    .btn, .select, .checkbox {
+        transition: all 0.2s ease-in-out;
+    }
+    
+    /* Custom scrollbar */
+    .overflow-y-auto::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    .overflow-y-auto::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 3px;
+    }
+    
+    .overflow-y-auto::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 3px;
+    }
+</style>
+{% endblock %}

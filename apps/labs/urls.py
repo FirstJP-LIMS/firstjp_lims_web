@@ -154,6 +154,7 @@ urlpatterns = [
 
     # Levey-Jennings Chart
     path("qc/chart/<int:qc_lot_id>/", views.levey_jennings_chart, name="levey_jennings_chart"),
+    
     path("qc/chart/data/<int:qc_lot_id>/", views.levey_jennings_data, name="levey_jennings_data"),
 
     path("qc/monthly/", views.qc_monthly_report, name="qc_monthly_report"),

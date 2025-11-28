@@ -1,33 +1,485 @@
 {% extends "laboratory/assets/base_qc.html" %}
-
+{% load static %}
 
 {% block content %}
-<h2>QC Results History</h2>
 
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Date</th>
-            <th>Test</th>
-            <th>Level</th>
-            <th>Value</th>
-            <th>Status</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-    {% for r in results %}
-        <tr>
-            <td>{{ r.run_date }}</td>
-            <td>{{ r.qc_lot.test.name }}</td>
-            <td>{{ r.qc_lot.get_level_display }}</td>
-            <td>{{ r.result_value }}</td>
-            <td>{{ r.status }}</td>
-            <td>
-                <a class="btn btn-sm btn-primary" href="{% url 'qc_result_detail' r.pk %}">View</a>
-            </td>
-        </tr>
-    {% endfor %}
-    </tbody>
-</table>
+<div class="min-h-screen bg-gray-50">
+    <!-- Header Section -->
+    <div class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-6">
+                <div class="flex items-center space-x-4">
+                    <div class="flex-shrink-0">
+                        <div class="w-12 h-12 bg-gradient-to-r from-red-600 to-red-700 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-database text-white text-xl"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <h1 class="text-3xl font-bold text-navy-800">QC Results History</h1>
+                        <p class="text-gray-600 mt-1">Comprehensive overview of all quality control results</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <a href="{% url 'labs:qc_entry' %}" class="btn bg-red-600 hover:bg-red-700 border-red-600 text-white">
+                        <i class="fas fa-plus mr-2"></i>New QC Entry
+                    </a>
+                    <a href="{% url 'labs:qc_dashboard' %}" class="btn btn-outline border-gray-300 text-gray-700">
+                        <i class="fas fa-tachometer-alt mr-2"></i>Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Quick Stats & Filters -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Statistics Cards -->
+            <div class="stats bg-white shadow-sm border border-gray-200">
+                <div class="stat">
+                    <div class="stat-figure text-red-600">
+                        <i class="fas fa-vial text-2xl"></i>
+                    </div>
+                    <div class="stat-title text-navy-700">Total Results</div>
+                    <div class="stat-value text-navy-800">{{ total_runs }}</div>
+                </div>
+            </div>
+
+            <div class="stats bg-white shadow-sm border border-gray-200">
+                <div class="stat">
+                    <div class="stat-figure text-green-600">
+                        <i class="fas fa-check-circle text-2xl"></i>
+                    </div>
+                    <div class="stat-title text-navy-700">Passed</div>
+                    <div class="stat-value text-navy-800">{{ passed }}</div>
+                </div>
+            </div>
+
+            <div class="stats bg-white shadow-sm border border-gray-200">
+                <div class="stat">
+                    <div class="stat-figure text-amber-500">
+                        <i class="fas fa-exclamation-triangle text-2xl"></i>
+                    </div>
+                    <div class="stat-title text-navy-700">With Violations</div>
+                    <div class="stat-value text-navy-800">{{ violations }}</div>
+                </div>
+            </div>
+
+            <div class="stats bg-white shadow-sm border border-gray-200">
+                <div class="stat">
+                    <div class="stat-figure text-blue-600">
+                        <i class="fas fa-chart-line text-2xl"></i>
+                    </div>
+                    <div class="stat-title text-navy-700">Approved</div>
+                    <div class="stat-value text-navy-800">{{ approved }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters Card -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+            <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1">
+                    <!-- Date Range -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-semibold text-navy-700">Date Range</span>
+                        </label>
+                        <select class="select select-bordered w-full bg-white">
+                            <option>Last 7 Days</option>
+                            <option selected>Last 30 Days</option>
+                            <option>Last 90 Days</option>
+                            <option>Last Year</option>
+                            <option>All Time</option>
+                        </select>
+                    </div>
+
+                    <!-- Status Filter -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-semibold text-navy-700">Status</span>
+                        </label>
+                        <select class="select select-bordered w-full bg-white">
+                            <option value="">All Status</option>
+                            <option value="PASS">Pass</option>
+                            <option value="WARNING">Warning</option>
+                            <option value="FAIL">Fail</option>
+                        </select>
+                    </div>
+
+                    <!-- Test Filter -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-semibold text-navy-700">Test</span>
+                        </label>
+                        <select class="select select-bordered w-full bg-white">
+                            <option value="">All Tests</option>
+                            <!-- Dynamically populated -->
+                        </select>
+                    </div>
+
+                    <!-- Instrument Filter -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-semibold text-navy-700">Instrument</span>
+                        </label>
+                        <select class="select select-bordered w-full bg-white">
+                            <option value="">All Instruments</option>
+                            <!-- Dynamically populated -->
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-3">
+                    <button class="btn bg-red-600 hover:bg-red-700 border-red-600 text-white">
+                        <i class="fas fa-filter mr-2"></i>Apply Filters
+                    </button>
+                    <button class="btn btn-outline border-gray-300 text-gray-700">
+                        <i class="fas fa-refresh mr-2"></i>Reset
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quick Status Toggles -->
+            <div class="flex flex-wrap gap-2 mt-4">
+                <div class="form-control">
+                    <label class="cursor-pointer label justify-start space-x-2">
+                        <input type="checkbox" checked class="checkbox checkbox-sm checkbox-primary">
+                        <span class="label-text text-sm text-gray-700">Show Approved Only</span>
+                    </label>
+                </div>
+                <div class="form-control">
+                    <label class="cursor-pointer label justify-start space-x-2">
+                        <input type="checkbox" class="checkbox checkbox-sm checkbox-primary">
+                        <span class="label-text text-sm text-gray-700">Show Violations Only</span>
+                    </label>
+                </div>
+                <div class="form-control">
+                    <label class="cursor-pointer label justify-start space-x-2">
+                        <input type="checkbox" checked class="checkbox checkbox-sm checkbox-primary">
+                        <span class="label-text text-sm text-gray-700">Group by Date</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Table -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <!-- Table Header -->
+            <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-navy-700 to-navy-800">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-semibold text-white">QC Results</h2>
+                    <div class="flex items-center space-x-3">
+                        <button class="btn btn-ghost btn-sm text-white hover:bg-navy-600">
+                            <i class="fas fa-download mr-2"></i>Export
+                        </button>
+                        <div class="text-sm text-navy-200">
+                            Showing {{ total_runs }} result{{ total_runs|pluralize }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if results %}
+            <div class="overflow-x-auto">
+                <table class="table table-zebra w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="text-navy-700 font-semibold">Date & Time</th>
+                            <th class="text-navy-700 font-semibold">QC Lot & Test</th>
+                            <th class="text-navy-700 font-semibold">Result</th>
+                            <th class="text-navy-700 font-semibold">Instrument</th>
+                            <th class="text-navy-700 font-semibold">Status</th>
+                            <th class="text-navy-700 font-semibold">Violations</th>
+                            <th class="text-navy-700 font-semibold">Approval</th>
+                            <th class="text-navy-700 font-semibold text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for result in results %}
+                        <tr class="hover:bg-gray-50 transition-colors duration-150 group">
+                            <!-- Date & Time -->
+                            <td>
+                                <div class="space-y-1">
+                                    <div class="font-semibold text-navy-800">{{ result.run_date|date:"M d, Y" }}</div>
+                                    <div class="text-sm text-gray-600">{{ result.run_time|time:"H:i" }}</div>
+                                    <div class="text-xs text-gray-500">Run #{{ result.run_number }}</div>
+                                </div>
+                            </td>
+
+                            <!-- QC Lot & Test -->
+                            <td>
+                                <div class="space-y-1">
+                                    <div class="font-semibold text-navy-800">{{ result.qc_lot.lot_number }}</div>
+                                    <div class="text-sm text-gray-600">{{ result.qc_lot.test.name }}</div>
+                                    <div class="flex items-center space-x-2">
+                                        <span class="badge badge-outline badge-sm border-navy-200 text-navy-700">
+                                            {{ result.qc_lot.get_level_display }}
+                                        </span>
+                                        {% if result.qc_lot.manufacturer %}
+                                        <span class="text-xs text-gray-500">{{ result.qc_lot.manufacturer }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+
+                            <!-- Result Value -->
+                            <td>
+                                <div class="space-y-1">
+                                    <div class="font-bold text-lg text-navy-800">
+                                        {{ result.result_value }}
+                                        <span class="text-sm text-gray-600">{{ result.qc_lot.units }}</span>
+                                    </div>
+                                    {% if result.z_score_abs %}
+                                    <div class="text-sm text-gray-600">
+                                        Z-score: <span class="font-semibold {% if result.z_score_abs > 2 %}text-amber-600{% endif %}">
+                                            {{ result.z_score_abs|floatformat:2 }}
+                                        </span>
+                                    </div>
+                                    {% endif %}
+                                    <div class="text-xs text-gray-500">
+                                        Target: {{ result.qc_lot.target_value|default:result.qc_lot.explicit_low }} {{ result.qc_lot.units }}
+                                    </div>
+                                </div>
+                            </td>
+
+                            <!-- Instrument -->
+                            <td>
+                                {% if result.instrument %}
+                                <div class="space-y-1">
+                                    <div class="font-semibold text-navy-800">{{ result.instrument.name }}</div>
+                                    <div class="text-sm text-gray-600">{{ result.instrument.model }}</div>
+                                </div>
+                                {% else %}
+                                <span class="text-gray-400">-</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Status -->
+                            <td>
+                                <div class="flex flex-col space-y-2">
+                                    {% if result.status == 'PASS' %}
+                                    <span class="badge badge-success gap-2 text-white"><i class="fas fa-check"></i>Pass</span>
+                                    {% elif result.status == 'WARNING' %}
+                                    <span class="badge badge-warning gap-2 text-white"><i class="fas fa-exclamation-triangle"></i>Warning</span>
+                                    {% else %}
+                                    <span class="badge badge-error gap-2 text-white"><i class="fas fa-times"></i>Fail</span>
+                                    {% endif %}
+                                    {% if result.entered_by %}
+                                    <div class="text-xs text-gray-500">
+                                        By {{ result.entered_by.get_full_name|default:result.entered_by.username }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </td>
+
+                            <!-- Rule Violations -->
+                            <td>
+                                {% if result.rule_violations %}
+                                <div class="space-y-1">
+                                    {% for violation in result.rule_violations %}
+                                    <span class="badge badge-warning badge-sm text-white block text-xs mb-1">
+                                        <i class="fas fa-radiation mr-1"></i>{{ violation }}
+                                    </span>
+                                    {% endfor %}
+                                </div>
+                                {% else %}
+                                <span class="text-gray-400 text-sm">-</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Approval Status -->
+                            <td>
+                                <div class="flex flex-col space-y-2">
+                                    {% if result.is_approved %}
+                                    <span class="badge badge-success gap-2 text-white"><i class="fas fa-check-circle"></i>Approved</span>
+                                    {% if result.approved_by %}
+                                    <div class="text-xs text-gray-500">By {{ result.approved_by.get_full_name|default:result.approved_by.username }}</div>
+                                    {% endif %}
+                                    {% if result.approved_at %}
+                                    <div class="text-xs text-gray-500">{{ result.approved_at|date:"M d, H:i" }}</div>
+                                    {% endif %}
+                                    {% else %}
+                                    <span class="badge badge-error gap-2 text-white"><i class="fas fa-times-circle"></i>Not Approved</span>
+                                    {% if result.status == 'PASS' %}
+                                    <button class="btn btn-success btn-xs text-white">
+                                        <i class="fas fa-check mr-1"></i>Approve
+                                    </button>
+                                    {% endif %}
+                                    {% endif %}
+                                </div>
+                            </td>
+
+                            <!-- Actions -->
+                            <td>
+                                <div class="flex justify-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                    <a href="{% url 'labs:qc_result_detail' result.pk %}" class="btn btn-ghost btn-sm text-blue-600 tooltip" data-tip="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'labs:levey_jennings_chart' result.qc_lot.id %}" class="btn btn-ghost btn-sm text-purple-600 tooltip" data-tip="View Chart">
+                                        <i class="fas fa-chart-line"></i>
+                                    </a>
+                                    {% if result.comments %}
+                                    <button class="btn btn-ghost btn-sm text-amber-600 tooltip" onclick="document.getElementById('comments_modal_{{ result.id }}').showModal()" data-tip="View Comments">
+                                        <i class="fas fa-comment"></i>
+                                    </button>
+
+                                    <dialog id="comments_modal_{{ result.id }}" class="modal">
+                                        <div class="modal-box">
+                                            <h3 class="font-bold text-lg text-navy-800">QC Run Comments</h3>
+                                            <div class="py-4">
+                                                <p class="text-gray-700">{{ result.comments }}</p>
+                                                {% if result.corrective_action %}
+                                                <div class="mt-4 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                                                    <h4 class="font-semibold text-amber-800 mb-2">Corrective Action</h4>
+                                                    <p class="text-amber-700 text-sm">{{ result.corrective_action }}</p>
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="modal-action">
+                                                <button onclick="document.getElementById('comments_modal_{{ result.id }}').close()" class="btn">Close</button>
+                                            </div>
+                                        </div>
+                                    </dialog>
+                                    {% endif %}
+
+                                    <button class="btn btn-ghost btn-sm text-green-600 tooltip" data-tip="Edit Result">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="flex justify-between items-center px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <div class="text-sm text-gray-600">
+                    Showing {{ total_runs }} of {{ total_runs }} result{{ total_runs|pluralize }}
+                </div>
+                <div class="join">
+                    <button class="join-item btn btn-outline btn-sm">Previous</button>
+                    <button class="join-item btn btn-active bg-navy-700 border-navy-700 text-white btn-sm">1</button>
+                    <button class="join-item btn btn-outline btn-sm">Next</button>
+                </div>
+            </div>
+
+            {% else %}
+            <!-- Empty State -->
+            <div class="text-center py-12">
+                <div class="flex justify-center mb-4">
+                    <i class="fas fa-inbox text-gray-300 text-6xl"></i>
+                </div>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">No QC Results Found</h3>
+                <p class="text-gray-500 mb-6">Start by entering your first QC result.</p>
+                <a href="{% url 'labs:qc_entry' %}" class="btn bg-red-600 hover:bg-red-700 border-red-600 text-white">
+                    <i class="fas fa-plus mr-2"></i>Enter QC Result
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Bulk Actions Card -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mt-6">
+            <h3 class="text-lg font-semibold text-navy-700 mb-4">Bulk Actions</h3>
+            <div class="flex flex-wrap gap-3">
+                <button class="btn btn-outline btn-sm">
+                    <i class="fas fa-download mr-1"></i>Export Selected
+                </button>
+                <button class="btn btn-outline btn-sm">
+                    <i class="fas fa-trash-alt mr-1"></i>Delete Selected
+                </button>
+                <button class="btn btn-outline btn-sm">
+                    <i class="fas fa-check mr-1"></i>Approve Selected
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- JavaScript for Enhanced Interactivity -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Quick filter functionality
+    const statusFilter = document.querySelector('select[value="status"]');
+    const approvedToggle = document.querySelector('input[type="checkbox"]');
+    
+    // Add row selection for bulk actions
+    const tableRows = document.querySelectorAll('tbody tr');
+    tableRows.forEach(row => {
+        row.addEventListener('click', function(e) {
+            if (!e.target.closest('a') && !e.target.closest('button')) {
+                this.classList.toggle('bg-blue-50');
+                this.classList.toggle('border-l-4');
+                this.classList.toggle('border-l-blue-500');
+            }
+        });
+    });
+
+    // Export functionality
+    document.querySelector('button:contains("Export")').addEventListener('click', function() {
+        // Implement export logic
+        console.log('Export functionality to be implemented');
+    });
+
+    // Real-time search (could be enhanced with AJAX)
+    const searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.placeholder = 'Search results...';
+    searchInput.className = 'input input-bordered w-full max-w-xs';
+    
+    // Add search to header
+    const tableHeader = document.querySelector('.px-6.py-4.border-b');
+    tableHeader.appendChild(searchInput);
+});
+</script>
+
+<style>
+    .text-navy-700 { color: #1e3a8a; }
+    .text-navy-800 { color: #1e40af; }
+    .bg-navy-700 { background-color: #1e3a8a; }
+    .bg-navy-800 { background-color: #1e40af; }
+    
+    .bg-red-600 { background-color: #dc2626; }
+    .border-red-600 { border-color: #dc2626; }
+    
+    /* Smooth transitions */
+    .btn, .select, .checkbox, .badge {
+        transition: all 0.2s ease-in-out;
+    }
+    
+    /* Custom table row hover effects */
+    tbody tr {
+        border-left: 4px solid transparent;
+        transition: all 0.2s ease-in-out;
+    }
+    
+    tbody tr:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+    
+    /* Tooltip styles */
+    .tooltip {
+        position: relative;
+    }
+    
+    .tooltip:hover::before {
+        content: attr(data-tip);
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #1e3a8a;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        white-space: nowrap;
+        z-index: 1000;
+    }
+</style>
 {% endblock %}

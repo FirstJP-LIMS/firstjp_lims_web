@@ -2171,16 +2171,16 @@ def assignment_quick_stats(request):
 """
 QUALITY CONTROL...
 """
-# File: apps/qc/views.py  (FBV CRUD for QCLot)
-# -----------------------------------------------------------------------------
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.urls import reverse
-from .models import QCLot
-from .forms import QCLotForm
 from django.utils import timezone
-
+from datetime import datetime, timedelta
+from .forms import QCLotForm, QCActionForm, QCEntryForm
+from .models import QCLot, QCAction, QCResult
+import calendar
 
 # ==========================================
 # QC LOT MANAGEMENT
@@ -2282,7 +2282,6 @@ def qclot_delete(request, pk):
         messages.success(request, 'QC Lot deleted')
         return redirect('qc:qclot_list')
     return render(request, 'laboratory/qc/qclot_confirm_delete.html', {'qclot': q})
-
 
 
 @login_required
@@ -2445,8 +2444,8 @@ def levey_jennings_chart(request, qc_lot_id=None):
         'qc_lot': qc_lot,
         'active_lots': active_lots,
     }
-    
-    return render(request, 'laboratory/qc/levey_jennings.html', context)
+    return render(request, 'laboratory/qc/levey/levey_jennings.html', context)
+
 
 @login_required
 def qc_results_list(request):
@@ -2454,10 +2453,61 @@ def qc_results_list(request):
 
     results = QCResult.objects.filter(
         vendor=vendor
-    ).select_related("qc_lot", "qc_lot__test", "instrument")
+    ).select_related("qc_lot", "qc_lot__test", "instrument", "entered_by", "approved_by")
 
-    context = {"results": results}
+    # Summary stats
+    total_runs = results.count()
+    passed = results.filter(status='PASS').count()
+    failed = results.filter(status='FAIL').count()
+    warnings = results.filter(status='WARNING').count()
+    approved = results.filter(is_approved=True).count()
+    violations = results.filter(rule_violations__len__gt=0).count()  # if rule_violations is list-like
+
+    # Optional: compute per-test metrics
+    tests_summary = {}
+    for r in results:
+        if hasattr(r, 'z_score') and r.z_score is not None:
+            r.z_score_abs = abs(r.z_score)
+        else:
+            r.z_score_abs = None
+
+        test_code = r.qc_lot.test.code
+        if test_code not in tests_summary:
+            tests_summary[test_code] = {
+                "test": r.qc_lot.test,
+                "total": 0,
+                "passed": 0,
+                "failed": 0,
+                "warnings": 0,
+            }
+        tests_summary[test_code]["total"] += 1
+        if r.status == "PASS":
+            tests_summary[test_code]["passed"] += 1
+        elif r.status == "FAIL":
+            tests_summary[test_code]["failed"] += 1
+        else:
+            tests_summary[test_code]["warnings"] += 1
+
+    # Final per-test computation
+    for item in tests_summary.values():
+        t = item["total"]
+        item["pass_rate"] = (item["passed"] / t * 100) if t else 0
+        item["fail_rate"] = (item["failed"] / t * 100) if t else 0
+        item["warning_rate"] = (item["warnings"] / t * 100) if t else 0
+
+    context = {
+        "results": results,
+        "total_runs": total_runs,
+        "passed": passed,
+        "failed": failed,
+        "warnings": warnings,
+        "approved": approved,
+        "violations": violations,
+        "tests_summary": tests_summary,
+    }
+
     return render(request, "laboratory/qc/entry/qc_results_list.html", context)
+
 
 @login_required
 def qc_result_detail(request, pk):
@@ -2475,21 +2525,29 @@ def qc_result_detail(request, pk):
     return render(request, "laboratory/qc/entry/qc_result_detail.html", context)
 
 
-
 # ==========================================
 # QC REPORTS
 # ==========================================
-from datetime import datetime
 
 @login_required
 def qc_monthly_report(request):
     """Monthly QC summary report."""
     vendor = request.user.vendor
     
-    # Get month and year from request or default to current
+    # Get month and year from request
     year = int(request.GET.get('year', timezone.now().year))
     month = int(request.GET.get('month', timezone.now().month))
     
+    # Month dropdown list
+    months = [
+        {"num": m, "name": calendar.month_name[m]}
+        for m in range(1, 13)
+    ]
+
+    # Year dropdown list (current year ± 2)
+    current_year = timezone.now().year
+    years = list(range(current_year - 2, current_year + 1))
+
     # Calculate date range
     start_date = datetime(year, month, 1).date()
     if month == 12:
@@ -2497,56 +2555,93 @@ def qc_monthly_report(request):
     else:
         end_date = datetime(year, month + 1, 1).date() - timedelta(days=1)
     
-    # Get all QC results for the month
+    # Query QC results
     results = QCResult.objects.filter(
         vendor=vendor,
         run_date__gte=start_date,
         run_date__lte=end_date
     ).select_related('qc_lot__test')
     
-    # Summary statistics
     total_runs = results.count()
     passed = results.filter(status='PASS').count()
     failed = results.filter(status='FAIL').count()
     warnings = results.filter(status='WARNING').count()
-    
-    pass_rate = (passed / total_runs * 100) if total_runs > 0 else 0
-    
-    # Group by test
+
+    # Compute overall rates
+    pass_rate = (passed / total_runs * 100) if total_runs else 0
+    warning_rate = (warnings / total_runs * 100) if total_runs else 0
+    fail_rate = (failed / total_runs * 100) if total_runs else 0
+
+    # Group by test + compute test-level percentages
     tests_summary = {}
-    for result in results:
-        test_code = result.qc_lot.test.code
-        if test_code not in tests_summary:
-            tests_summary[test_code] = {
-                'test': result.qc_lot.test,
-                'total': 0,
-                'passed': 0,
-                'failed': 0,
-                'warnings': 0,
-            }
-        tests_summary[test_code]['total'] += 1
-        if result.status == 'PASS':
-            tests_summary[test_code]['passed'] += 1
-        elif result.status == 'FAIL':
-            tests_summary[test_code]['failed'] += 1
-        else:
-            tests_summary[test_code]['warnings'] += 1
     
+    for result in results:
+        test = result.qc_lot.test
+        code = test.code
+        
+        if code not in tests_summary:
+            tests_summary[code] = {
+                "test": test,
+                "total": 0,
+                "passed": 0,
+                "failed": 0,
+                "warnings": 0,
+                "pass_rate": 0,
+                "warning_rate": 0,
+                "fail_rate": 0,
+            }
+        
+        tests_summary[code]["total"] += 1
+        
+        if result.status == "PASS":
+            tests_summary[code]["passed"] += 1
+        elif result.status == "FAIL":
+            tests_summary[code]["failed"] += 1
+        else:
+            tests_summary[code]["warnings"] += 1
+
+    # Final computation for each test + sigma conversion
+    for item in tests_summary.values():
+        t = item["total"]
+
+        if t > 0:
+            item["pass_rate"] = item["passed"] / t * 100
+            item["warning_rate"] = item["warnings"] / t * 100
+            item["fail_rate"] = item["failed"] / t * 100
+            # Sigma approximation: pass rate expressed on sigma scale (0–6)
+            item["sigma"] = round((item["pass_rate"] / 100) * 6, 2)
+        else:
+            item["pass_rate"] = 0
+            item["warning_rate"] = 0
+            item["fail_rate"] = 0
+            item["sigma"] = 0
+
+    overall_sigma = round((pass_rate / 100) * 6, 2)
+
     context = {
-        'year': year,
-        'month': month,
-        'month_name': datetime(year, month, 1).strftime('%B %Y'),
-        'start_date': start_date,
-        'end_date': end_date,
-        'total_runs': total_runs,
-        'passed': passed,
-        'failed': failed,
-        'warnings': warnings,
-        'pass_rate': round(pass_rate, 1),
-        'tests_summary': tests_summary,
+        "year": year,
+        "month": month,
+        "years": years,
+        "months": months,
+        "month_name": datetime(year, month, 1).strftime("%B %Y"),
+
+        "start_date": start_date,
+        "end_date": end_date,
+
+        "total_runs": total_runs,
+        "passed": passed,
+        "failed": failed,
+        "warnings": warnings,
+
+        "pass_rate": round(pass_rate, 1),
+        "warning_rate": round(warning_rate, 1),
+        "fail_rate": round(fail_rate, 1),
+        "overall_sigma": overall_sigma,
+        "tests_summary": tests_summary,
     }
     
-    return render(request, 'laboratory/qc/metric/monthly_report.html', context)
+    return render(request, "laboratory/qc/metric/monthly_report.html", context)
+
 
 # ==========================================
 # QC DASHBOARD - Overview of QC Status
@@ -2633,55 +2728,121 @@ def qc_dashboard(request):
 
 
 # ==========================================
-# QC ENTRY - Enter Daily QC Results
+# QC ACTIONS
 # ==========================================
-from .forms import QCEntryForm
-from .models import QCResult, QCTestApproval
 
-# def qc_entry_view(request):
-#     vendor = request.user.vendor  # get vendor from user profile
+@login_required
+def qc_action_create(request, result_pk):
+    """
+    Create corrective action for a failed QC result.
+    """
+    vendor = request.user.vendor
+    qc_result = get_object_or_404(QCResult, pk=result_pk, vendor=vendor)
+    
+    # Only allow actions for failed/warning QC
+    if qc_result.status == 'PASS':
+        messages.warning(request, "Cannot create action for passing QC.")
+        return redirect('labs:qc_result_detail', pk=result_pk)
+    
+    if request.method == 'POST':
+        form = QCActionForm(request.POST)
+        if form.is_valid():
+            action = form.save(commit=False)
+            action.qc_result = qc_result
+            action.performed_by = request.user
+            action.save()
+            
+            # Update QC result with corrective action taken
+            if not qc_result.corrective_action:
+                qc_result.corrective_action = action.description
+                qc_result.save(update_fields=['corrective_action'])
+            
+            messages.success(request, f"Corrective action '{action.get_action_type_display()}' recorded.")
+            return redirect('labs:qc_result_detail', pk=result_pk)
+    else:
+        form = QCActionForm()
+    
+    context = {
+        'form': form,
+        'qc_result': qc_result,
+    }
+    return render(request, 'laboratory/qc/actions/qc_action_form.html', context)
 
-#     if request.method == 'POST':
-#         form = QCEntryForm(vendor, request.POST)
-        
-#         if form.is_valid():
-#             qc_result = form.save(commit=False)
-#             qc_result.vendor = vendor
-#             qc_result.entered_by = request.user
 
-#             # Calculate run number (number of QC runs today)
-#             today = timezone.now().date()
-#             count_today = QCResult.objects.filter(
-#                 vendor=vendor,
-#                 run_date=today,
-#                 qc_lot=qc_result.qc_lot,
-#             ).count()
+@login_required
+def qc_action_list(request):
+    """
+    List all corrective actions with filtering.
+    """
+    vendor = request.user.vendor
+    
+    actions = QCAction.objects.filter(
+        qc_result__vendor=vendor
+    ).select_related(
+        'qc_result__qc_lot__test',
+        'performed_by'
+    ).order_by('-performed_at')
+    
+    # Filters
+    resolved_filter = request.GET.get('resolved')
+    if resolved_filter == 'true':
+        actions = actions.filter(resolved=True)
+    elif resolved_filter == 'false':
+        actions = actions.filter(resolved=False)
+    
+    action_type_filter = request.GET.get('action_type')
+    if action_type_filter:
+        actions = actions.filter(action_type=action_type_filter)
+    
+    # Statistics
+    stats = {
+        'total': actions.count(),
+        'resolved': actions.filter(resolved=True).count(),
+        'pending': actions.filter(resolved=False).count(),
+    }
+    
+    # Action type choices for filter dropdown
+    action_types = QCAction.ACTION_TYPE_CHOICES
+    
+    context = {
+        'actions': actions,
+        'stats': stats,
+        'action_types': action_types,
+    }
+    return render(request, 'laboratory/qc/actions/qc_action_list.html', context)
 
-#             qc_result.run_number = count_today + 1
-#             qc_result.save()  # triggers Westgard rules
 
-#             # Update daily approval record
-#             approval, _ = QCTestApproval.objects.get_or_create(
-#                 vendor=vendor,
-#                 test=qc_result.qc_lot.test,
-#                 date=today
-#             )
-#             approval.qc_results.add(qc_result)
-
-#             if qc_result.status == 'PASS':
-#                 approval.is_approved = True
-
-#             approval.save()
-
-#             messages.success(request,
-#                 f"QC saved. Status: {qc_result.status}. "
-#                 f"Westgard: {len(qc_result.rule_violations)} issues.")
-
-#             return redirect('qc_entry')
-#     else:
-#         form = QCEntryForm(vendor)
-
-#     return render(request, 'laboratory/qc/qc_entry.html', {
-#         'form': form,
-#     })
-
+@login_required
+def qc_action_detail(request, pk):
+    """
+    View and update a single corrective action.
+    """
+    vendor = request.user.vendor
+    action = get_object_or_404(
+        QCAction.objects.select_related('qc_result__qc_lot__test', 'performed_by'),
+        pk=pk,
+        qc_result__vendor=vendor
+    )
+    
+    if request.method == 'POST':
+        form = QCActionForm(request.POST, instance=action)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Action updated successfully.")
+            return redirect('labs:qc_action_detail', pk=pk)
+    else:
+        form = QCActionForm(instance=action)
+    
+    # Get follow-up QC results after this action
+    follow_up_results = QCResult.objects.filter(
+        vendor=vendor,
+        qc_lot=action.qc_result.qc_lot,
+        run_date__gte=action.performed_at.date()
+    ).order_by('run_date', 'run_time')[:5]
+    
+    context = {
+        'action': action,
+        'form': form,
+        'follow_up_results': follow_up_results,
+    }
+    return render(request, 'laboratory/qc/actions/qc_action_detail.html', context)

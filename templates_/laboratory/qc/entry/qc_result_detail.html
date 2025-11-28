@@ -1,27 +1,577 @@
 {% extends "laboratory/assets/base_qc.html" %}
+{% load static %}
 
 {% block content %}
-<h2>QC Result Detail</h2>
+<div class="min-h-screen bg-gray-50">
+    <!-- Header Section -->
+    <div class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-6">
+                <div class="flex items-center space-x-4">
+                    <div class="flex-shrink-0">
+                        <div class="w-12 h-12 bg-gradient-to-r from-red-600 to-red-700 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-clipboard-check text-white text-xl"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <h1 class="text-3xl font-bold text-navy-800">QC Result Details</h1>
+                        <p class="text-gray-600 mt-1">Comprehensive analysis of quality control run</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <a href="{% url 'labs:qc_results_list' %}" class="btn btn-outline border-gray-300 text-gray-700">
+                        <i class="fas fa-arrow-left mr-2"></i>Back to Results
+                    </a>
+                    <a href="{% url 'labs:levey_jennings_chart' result.qc_lot.id %}" class="btn bg-navy-700 hover:bg-navy-800 border-navy-700 text-white">
+                        <i class="fas fa-chart-line mr-2"></i>View Chart
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 
-<div class="card p-4">
-    <h4>{{ result.qc_lot.test.name }} ({{ result.qc_lot.get_level_display }})</h4>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Main Content -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Result Overview Card -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-navy-700 to-navy-800">
+                        <h2 class="text-xl font-semibold text-white flex items-center">
+                            <i class="fas fa-vial mr-3"></i>
+                            QC Run Overview
+                        </h2>
+                    </div>
+                    <div class="p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Basic Information -->
+                            <div class="space-y-4">
+                                <h3 class="text-lg font-semibold text-navy-700 border-b border-gray-200 pb-2">Run Information</h3>
+                                
+                                <div class="space-y-3">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-gray-600 font-medium">Date & Time:</span>
+                                        <span class="font-semibold text-navy-800">
+                                            {{ result.run_date|date:"F j, Y" }} at {{ result.run_time|time:"H:i" }}
+                                        </span>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-gray-600 font-medium">Run Number:</span>
+                                        <span class="font-semibold text-navy-800">#{{ result.run_number }}</span>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-gray-600 font-medium">Entered By:</span>
+                                        <span class="font-semibold text-navy-800">
+                                            {{ result.entered_by.get_full_name|default:result.entered_by.username }}
+                                        </span>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-gray-600 font-medium">Instrument:</span>
+                                        <span class="font-semibold text-navy-800">
+                                            {% if result.instrument %}
+                                                {{ result.instrument.name }} ({{ result.instrument.model }})
+                                            {% else %}
+                                                <span class="text-gray-400">Not specified</span>
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
 
-    <p><strong>Value:</strong> {{ result.result_value }}</p>
-    <p><strong>Status:</strong> {{ result.status }}</p>
-    <p><strong>Z-Score:</strong> {{ result.z_score }}</p>
-    <p><strong>Rule Violations:</strong> {{ result.rule_violations|join:", " }}</p>
+                            <!-- Status & Approval -->
+                            <div class="space-y-4">
+                                <h3 class="text-lg font-semibold text-navy-700 border-b border-gray-200 pb-2">Status & Approval</h3>
+                                
+                                <div class="space-y-3">
+                                    <!-- Status Badge -->
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-gray-600 font-medium">Status:</span>
+                                        {% if result.status == 'PASS' %}
+                                        <span class="badge badge-success gap-2 text-white text-lg py-2 px-4">
+                                            <i class="fas fa-check"></i>
+                                            Pass - In Control
+                                        </span>
+                                        {% elif result.status == 'WARNING' %}
+                                        <span class="badge badge-warning gap-2 text-white text-lg py-2 px-4">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            Warning - Near Limit
+                                        </span>
+                                        {% else %}
+                                        <span class="badge badge-error gap-2 text-white text-lg py-2 px-4">
+                                            <i class="fas fa-times"></i>
+                                            Fail - Out of Control
+                                        </span>
+                                        {% endif %}
+                                    </div>
 
-    <p><strong>Run Number:</strong> {{ result.run_number }}</p>
-    <p><strong>Run Date:</strong> {{ result.run_date }} {{ result.run_time }}</p>
+                                    <!-- Approval Status -->
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-gray-600 font-medium">Approval:</span>
+                                        {% if result.is_approved %}
+                                        <span class="badge badge-success gap-2 text-white">
+                                            <i class="fas fa-check-circle"></i>
+                                            Approved for Testing
+                                        </span>
+                                        {% else %}
+                                        <span class="badge badge-error gap-2 text-white">
+                                            <i class="fas fa-times-circle"></i>
+                                            Not Approved
+                                        </span>
+                                        {% endif %}
+                                    </div>
 
-    <p><strong>Instrument:</strong> {{ result.instrument }}</p>
+                                    {% if result.is_approved and result.approved_by %}
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-gray-600 font-medium">Approved By:</span>
+                                        <span class="font-semibold text-navy-800">
+                                            {{ result.approved_by.get_full_name|default:result.approved_by.username }}
+                                        </span>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-gray-600 font-medium">Approved At:</span>
+                                        <span class="font-semibold text-navy-800">
+                                            {{ result.approved_at|date:"M j, Y H:i" }}
+                                        </span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-    <h5>Comments</h5>
-    <p>{{ result.comments|default:"No comments" }}</p>
+                <!-- Result Analysis Card -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700">
+                        <h2 class="text-xl font-semibold text-white flex items-center">
+                            <i class="fas fa-chart-bar mr-3"></i>
+                            Result Analysis
+                        </h2>
+                    </div>
+                    <div class="p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Result Value & Comparison -->
+                            <div class="space-y-4">
+                                <h3 class="text-lg font-semibold text-navy-700 border-b border-gray-200 pb-2">Measured Result</h3>
+                                
+                                <div class="text-center p-6 bg-gray-50 rounded-lg border border-gray-200">
+                                    <div class="text-4xl font-bold text-navy-800 mb-2">
+                                        {{ result.result_value }}
+                                        <span class="text-2xl text-gray-600">{{ result.qc_lot.units }}</span>
+                                    </div>
+                                    <div class="text-sm text-gray-600">
+                                        Measured Value
+                                    </div>
+                                </div>
 
-    {% if result.corrective_action %}
-        <h5>Corrective Action</h5>
-        <p>{{ result.corrective_action }}</p>
-    {% endif %}
+                                <!-- Z-Score Display -->
+                                {% if result.z_score %}
+                                <div class="text-center p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200">
+                                    <div class="text-2xl font-bold {% if result.z_score|abs > 2 %}text-amber-600{% else %}text-purple-600{% endif %} mb-1">
+                                        Z = {{ result.z_score|floatformat:2 }}
+                                    </div>
+                                    <div class="text-sm text-gray-600">
+                                        Standard Deviations from Mean
+                                    </div>
+                                    {% if result.z_score|abs > 2 %}
+                                    <div class="mt-2 text-xs text-amber-600 font-semibold">
+                                        <i class="fas fa-exclamation-triangle mr-1"></i>
+                                        Outside ±2SD warning limits
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Target Comparison -->
+                            <div class="space-y-4">
+                                <h3 class="text-lg font-semibold text-navy-700 border-b border-gray-200 pb-2">Target Specifications</h3>
+                                
+                                <div class="space-y-3">
+                                    {% if result.qc_lot.target_value %}
+                                    <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-200">
+                                        <span class="text-green-800 font-medium">Target Value:</span>
+                                        <span class="font-bold text-green-900">
+                                            {{ result.qc_lot.target_value }} {{ result.qc_lot.units }}
+                                        </span>
+                                    </div>
+                                    <div class="flex justify-between items-center p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                        <span class="text-blue-800 font-medium">Standard Deviation:</span>
+                                        <span class="font-bold text-blue-900">{{ result.qc_lot.sd }}</span>
+                                    </div>
+                                    {% else %}
+                                    <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-200">
+                                        <span class="text-green-800 font-medium">Acceptable Range:</span>
+                                        <span class="font-bold text-green-900">
+                                            {{ result.qc_lot.explicit_low }} - {{ result.qc_lot.explicit_high }} {{ result.qc_lot.units }}
+                                        </span>
+                                    </div>
+                                    {% endif %}
+
+                                    <!-- Deviation Calculation -->
+                                    {% if result.qc_lot.target_value %}
+                                    {% with deviation=result.result_value|sub:result.qc_lot.target_value %}
+                                    <div class="flex justify-between items-center p-3 {% if deviation >= 0 %}bg-blue-50 border-blue-200{% else %}bg-amber-50 border-amber-200{% endif %} rounded-lg border">
+                                        <span class="{% if deviation >= 0 %}text-blue-800{% else %}text-amber-800{% endif %} font-medium">
+                                            Deviation from Target:
+                                        </span>
+                                        <span class="font-bold {% if deviation >= 0 %}text-blue-900{% else %}text-amber-900{% endif %}">
+                                            {{ deviation|floatformat:3 }} {{ result.qc_lot.units }}
+                                        </span>
+                                    </div>
+                                    {% endwith %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Control Limits Visualization -->
+                        <div class="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                            <h4 class="font-semibold text-navy-700 mb-3">Control Limits</h4>
+                            <div class="space-y-2 text-sm">
+                                {% if result.qc_lot.limit_1sd_low %}
+                                <div class="flex justify-between items-center p-2 hover:bg-white rounded">
+                                    <span class="text-gray-600">±1 SD (Warning):</span>
+                                    <span class="font-semibold text-amber-600">
+                                        {{ result.qc_lot.limit_1sd_low|floatformat:3 }} - {{ result.qc_lot.limit_1sd_high|floatformat:3 }} {{ result.qc_lot.units }}
+                                    </span>
+                                </div>
+                                {% endif %}
+                                <div class="flex justify-between items-center p-2 hover:bg-white rounded">
+                                    <span class="text-gray-600">±2 SD (Warning):</span>
+                                    <span class="font-semibold text-orange-600">
+                                        {{ result.qc_lot.limit_2sd_low|floatformat:3 }} - {{ result.qc_lot.limit_2sd_high|floatformat:3 }} {{ result.qc_lot.units }}
+                                    </span>
+                                </div>
+                                {% if result.qc_lot.limit_3sd_low %}
+                                <div class="flex justify-between items-center p-2 hover:bg-white rounded">
+                                    <span class="text-gray-600">±3 SD (Reject):</span>
+                                    <span class="font-semibold text-red-600">
+                                        {{ result.qc_lot.limit_3sd_low|floatformat:3 }} - {{ result.qc_lot.limit_3sd_high|floatformat:3 }} {{ result.qc_lot.units }}
+                                    </span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Westgard Rules Analysis -->
+                {% if result.rule_violations %}
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-amber-600 to-amber-700">
+                        <h2 class="text-xl font-semibold text-white flex items-center">
+                            <i class="fas fa-radiation mr-3"></i>
+                            Westgard Rule Violations
+                        </h2>
+                    </div>
+                    <div class="p-6">
+                        <div class="space-y-3">
+                            {% for violation in result.rule_violations %}
+                            <div class="flex items-start space-x-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                                <i class="fas fa-exclamation-triangle text-amber-600 mt-1"></i>
+                                <div>
+                                    <h4 class="font-semibold text-amber-800">{{ violation }}</h4>
+                                    <p class="text-amber-700 text-sm mt-1">
+                                        This indicates a potential systematic error or shift in the testing process.
+                                    </p>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Comments & Notes -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-600 to-gray-700">
+                        <h2 class="text-xl font-semibold text-white flex items-center">
+                            <i class="fas fa-comments mr-3"></i>
+                            Comments & Notes
+                        </h2>
+                    </div>
+                    <div class="p-6">
+                        <div class="space-y-6">
+                            <!-- Comments -->
+                            <div>
+                                <h3 class="text-lg font-semibold text-navy-700 mb-3">Run Comments</h3>
+                                {% if result.comments %}
+                                <div class="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                    <p class="text-blue-800">{{ result.comments }}</p>
+                                </div>
+                                {% else %}
+                                <div class="p-4 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                                    <p class="text-gray-500">No comments provided for this run</p>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Corrective Actions -->
+                            {% if result.corrective_action %}
+                            <div>
+                                <h3 class="text-lg font-semibold text-navy-700 mb-3">Corrective Actions</h3>
+                                <div class="p-4 bg-green-50 rounded-lg border border-green-200">
+                                    <p class="text-green-800">{{ result.corrective_action }}</p>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="space-y-6">
+                <!-- QC Lot Information -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-green-600 to-green-700">
+                        <h3 class="text-lg font-semibold text-white flex items-center">
+                            <i class="fas fa-vial mr-2"></i>
+                            QC Lot Details
+                        </h3>
+                    </div>
+                    <div class="p-4 space-y-4">
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">Lot Number:</span>
+                                <span class="font-semibold text-navy-800">{{ result.qc_lot.lot_number }}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">Test:</span>
+                                <span class="font-semibold text-navy-800">{{ result.qc_lot.test.name }}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">Level:</span>
+                                <span class="font-semibold text-navy-800">{{ result.qc_lot.get_level_display }}</span>
+                            </div>
+                            {% if result.qc_lot.manufacturer %}
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">Manufacturer:</span>
+                                <span class="font-semibold text-navy-800">{{ result.qc_lot.manufacturer }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Lot Dates -->
+                        <div class="border-t border-gray-200 pt-4">
+                            <h4 class="font-semibold text-navy-700 mb-3">Lot Information</h4>
+                            <div class="space-y-2 text-sm">
+                                {% if result.qc_lot.received_date %}
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-600">Received:</span>
+                                    <span class="font-semibold text-navy-800">{{ result.qc_lot.received_date|date:"M d, Y" }}</span>
+                                </div>
+                                {% endif %}
+                                {% if result.qc_lot.expiry_date %}
+                                <div class="flex justify-between items-center {% if result.qc_lot.is_expired %}text-red-600{% endif %}">
+                                    <span class="{% if result.qc_lot.is_expired %}text-red-600{% else %}text-gray-600{% endif %}">Expires:</span>
+                                    <span class="font-semibold {% if result.qc_lot.is_expired %}text-red-600{% else %}text-navy-800{% endif %}">
+                                        {{ result.qc_lot.expiry_date|date:"M d, Y" }}
+                                        {% if result.qc_lot.is_expired %}
+                                        <span class="badge badge-error badge-sm ml-2">Expired</span>
+                                        {% endif %}
+                                    </span>
+                                </div>
+                                {% endif %}
+                                {% if result.qc_lot.opened_date %}
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-600">Opened:</span>
+                                    <span class="font-semibold text-navy-800">{{ result.qc_lot.opened_date|date:"M d, Y" }}</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Quick Actions -->
+                        <div class="border-t border-gray-200 pt-4">
+                            <div class="space-y-2">
+                                <a href="{% url 'labs:levey_jennings_chart' result.qc_lot.id %}" 
+                                   class="btn btn-outline btn-block justify-start border-gray-300 text-gray-700">
+                                    <i class="fas fa-chart-line mr-3 text-purple-600"></i>
+                                    View Levey-Jennings Chart
+                                </a>
+                                <a href="{% url 'labs:qclot_list' %}" 
+                                   class="btn btn-outline btn-block justify-start border-gray-300 text-gray-700">
+                                    <i class="fas fa-list mr-3 text-blue-600"></i>
+                                    View All QC Lots
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Results -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-purple-600 to-purple-700">
+                        <h3 class="text-lg font-semibold text-white flex items-center">
+                            <i class="fas fa-history mr-2"></i>
+                            Recent Runs
+                        </h3>
+                    </div>
+                    <div class="p-4">
+                        <div class="space-y-3 max-h-80 overflow-y-auto">
+                            <!-- This would be populated with recent results for the same QC lot -->
+                            <div class="text-center py-8 text-gray-500">
+                                <i class="fas fa-clock text-3xl mb-3 text-gray-300"></i>
+                                <p class="text-sm">Recent runs would appear here</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quality Indicators -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-red-600 to-red-700">
+                        <h3 class="text-lg font-semibold text-white flex items-center">
+                            <i class="fas fa-award mr-2"></i>
+                            Quality Metrics
+                        </h3>
+                    </div>
+                    <div class="p-4 space-y-4">
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">Overall Status:</span>
+                                {% if result.status == 'PASS' %}
+                                <span class="badge badge-success text-white">In Control</span>
+                                {% elif result.status == 'WARNING' %}
+                                <span class="badge badge-warning text-white">Warning</span>
+                                {% else %}
+                                <span class="badge badge-error text-white">Out of Control</span>
+                                {% endif %}
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">Testing Approved:</span>
+                                {% if result.is_approved %}
+                                <span class="badge badge-success text-white">Yes</span>
+                                {% else %}
+                                <span class="badge badge-error text-white">No</span>
+                                {% endif %}
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">Rule Violations:</span>
+                                <span class="font-semibold text-navy-800">{{ result.rule_violations|length }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-navy-700 to-navy-800">
+                        <h3 class="text-lg font-semibold text-white flex items-center">
+                            <i class="fas fa-bolt mr-2"></i>
+                            Quick Actions
+                        </h3>
+                    </div>
+                    <div class="p-4 space-y-3">
+                        {% if not result.is_approved and result.status == 'PASS' %}
+                        <button class="btn btn-success btn-block text-white">
+                            <i class="fas fa-check-circle mr-2"></i>
+                            Approve for Testing
+                        </button>
+                        {% endif %}
+                        <button class="btn btn-outline btn-block border-gray-300 text-gray-700">
+                            <i class="fas fa-edit mr-2"></i>
+                            Edit Result
+                        </button>
+                        <button class="btn btn-outline btn-block border-gray-300 text-gray-700">
+                            <i class="fas fa-print mr-2"></i>
+                            Print Report
+                        </button>
+                        <button class="btn btn-outline btn-block border-gray-300 text-gray-700">
+                            <i class="fas fa-envelope mr-2"></i>
+                            Email Results
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+<!-- JavaScript for Enhanced Interactivity -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add interactive elements
+    const statusBadge = document.querySelector('.badge');
+    
+    // Add hover effects to cards
+    const cards = document.querySelectorAll('.bg-white.rounded-xl');
+    cards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px)';
+            this.style.transition = 'all 0.2s ease-in-out';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+
+    // Print functionality
+    document.querySelector('button:contains("Print Report")').addEventListener('click', function() {
+        window.print();
+    });
+
+    // Approve functionality
+    const approveButton = document.querySelector('button:contains("Approve for Testing")');
+    if (approveButton) {
+        approveButton.addEventListener('click', function() {
+            if (confirm('Are you sure you want to approve this QC result for patient testing?')) {
+                // Implement approval logic
+                console.log('Approving result...');
+            }
+        });
+    }
+});
+</script>
+
+<style>
+    .text-navy-700 { color: #1e3a8a; }
+    .text-navy-800 { color: #1e40af; }
+    .bg-navy-700 { background-color: #1e3a8a; }
+    .bg-navy-800 { background-color: #1e40af; }
+    
+    .bg-red-600 { background-color: #dc2626; }
+    .border-red-600 { border-color: #dc2626; }
+    
+    /* Custom badge sizes */
+    .badge.text-lg {
+        font-size: 1.125rem;
+        padding: 0.5rem 1rem;
+    }
+    
+    /* Smooth transitions */
+    .btn, .badge, .card {
+        transition: all 0.2s ease-in-out;
+    }
+    
+    /* Custom scrollbar for recent results */
+    .overflow-y-auto::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    .overflow-y-auto::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 3px;
+    }
+    
+    .overflow-y-auto::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 3px;
+    }
+    
+    /* Print styles */
+    @media print {
+        .btn, .no-print {
+            display: none !important;
+        }
+        
+        .bg-white {
+            background: white !important;
+            border: 1px solid #000 !important;
+        }
+    }
+</style>
 {% endblock %}

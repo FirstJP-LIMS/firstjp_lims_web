@@ -239,7 +239,7 @@ class SampleForm(forms.ModelForm):
 """
 QUALITY CONTROL...
 """
-from .models import QCResult, QCLot
+from .models import QCResult, QCLot, QCAction
 
 class QCLotForm(forms.ModelForm):
     class Meta:
@@ -275,7 +275,6 @@ class QCLotForm(forms.ModelForm):
         # Otherwise ensure target+sd are provided together
         if (target is None) ^ (sd is None):
             raise forms.ValidationError('Provide either explicit range or both target value and SD')
-
         return cleaned
 
 
@@ -308,3 +307,35 @@ class QCEntryForm(forms.ModelForm):
             is_active=True
         )
         self.fields['instrument'].queryset = vendor.equipment_set.all()
+
+
+class QCActionForm(forms.ModelForm):
+    class Meta:
+        model = QCAction
+        fields = [
+            'action_type',
+            'description',
+            'resolved',
+            'resolution_notes',
+        ]
+        widgets = {
+            'action_type': forms.Select(attrs={'class': 'form-select'}),
+            'description': forms.Textarea(attrs={
+                'rows': 4,
+                'class': 'form-textarea',
+                'placeholder': 'Describe the corrective action taken in detail...'
+            }),
+            'resolved': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
+            'resolution_notes': forms.Textarea(attrs={
+                'rows': 3,
+                'class': 'form-textarea',
+                'placeholder': 'Outcome after taking action...'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['resolved'].initial = False
+        # Make resolution_notes required if resolved is checked
+        if self.data.get('resolved'):
+            self.fields['resolution_notes'].required = True

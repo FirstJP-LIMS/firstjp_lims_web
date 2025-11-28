@@ -1,147 +1,437 @@
 {% extends "laboratory/assets/base_qc.html" %}
-
-{% block title %}
-    MEDVUNO - Daily QC Run
-{% endblock %}
+{% load static %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-    
-    <header class="mb-8">
-        <h1 class="text-3xl font-extrabold text-gray-900 flex items-center">
-            <i class="fas fa-vial text-indigo-500 mr-3"></i>
-            Run Daily Quality Control
-        </h1>
-        <p class="mt-2 text-sm text-gray-500">
-            Enter the results for the control materials to ensure instrument precision and accuracy.
-        </p>
-    </header>
-
-    <div class="lg:grid lg:grid-cols-3 lg:gap-8 mb-12">
-        <div class="lg:col-span-1">
-            <h2 class="text-xl font-semibold text-gray-900 mb-2">New QC Entry</h2>
-            <p class="text-sm text-gray-500">
-                Submit a single QC result. All Westgard rules will be evaluated automatically.
-            </p>
+<div class="min-h-screen bg-gray-50">
+    <!-- Header Section -->
+    <div class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-6">
+                <div class="flex items-center space-x-4">
+                    <div class="flex-shrink-0">
+                        <div class="w-12 h-12 bg-gradient-to-r from-red-600 to-red-700 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-clipboard-check text-white text-xl"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <h1 class="text-3xl font-bold text-navy-800">Quality Control Entry</h1>
+                        <p class="text-gray-600 mt-1">Enter daily QC results and monitor performance</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <div class="text-right">
+                        <div class="text-sm text-gray-500">Today's Date</div>
+                        <div class="text-lg font-semibold text-navy-800">{{ today|date:"F j, Y" }}</div>
+                    </div>
+                    <div class="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center border border-green-200">
+                        <i class="fas fa-calendar-day text-green-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
         </div>
+    </div>
 
-        <div class="mt-5 lg:mt-0 lg:col-span-2">
-            <form method="POST" class="bg-white p-6 shadow-lg rounded-lg border border-gray-100">
-                {% csrf_token %}
-                
-                <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                    {% for field in form %}
-                        <div class="col-span-1">
-                            <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700">
-                                {{ field.label }}
-                            </label>
-                            
-                            <div class="mt-1">
-                                {{ field|add_class:"block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" }}
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Left Column - Entry Form -->
+            <div class="lg:col-span-2">
+                <!-- Quick Stats -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="stats bg-white shadow-sm border border-gray-200">
+                        <div class="stat">
+                            <div class="stat-figure text-red-600">
+                                <i class="fas fa-vial text-2xl"></i>
                             </div>
-                            
-                            {% if field.help_text %}
-                                <p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>
+                            <div class="stat-title text-navy-700">Today's Runs</div>
+                            <div class="stat-value text-navy-800">{{ todays_runs.count }}</div>
+                        </div>
+                    </div>
+
+                    <div class="stats bg-white shadow-sm border border-gray-200">
+                        <div class="stat">
+                            <div class="stat-figure text-green-600">
+                                <i class="fas fa-check-circle text-2xl"></i>
+                            </div>
+                            <div class="stat-title text-navy-700">Passed</div>
+                            <div class="stat-value text-navy-800">{{ todays_runs.filter.status='PASS'|length }}</div>
+                        </div>
+                    </div>
+
+                    <div class="stats bg-white shadow-sm border border-gray-200">
+                        <div class="stat">
+                            <div class="stat-figure text-amber-500">
+                                <i class="fas fa-exclamation-triangle text-2xl"></i>
+                            </div>
+                            <div class="stat-title text-navy-700">With Violations</div>
+                            <div class="stat-value text-navy-800">{{ todays_runs.filter.rule_violations__isnull=False|length }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Entry Form Card -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-navy-700 to-navy-800">
+                        <h2 class="text-xl font-semibold text-white flex items-center">
+                            <i class="fas fa-edit mr-3"></i>
+                            New QC Result Entry
+                        </h2>
+                    </div>
+
+                    <form method="POST" class="p-6 space-y-6">
+                        {% csrf_token %}
+
+                        {% if form.errors %}
+                        <div class="alert alert-error bg-red-50 border border-red-200 rounded-lg p-4">
+                            <div class="flex items-center space-x-3">
+                                <i class="fas fa-exclamation-circle text-red-600 text-lg"></i>
+                                <div>
+                                    <h3 class="font-semibold text-red-800">Please correct the errors below</h3>
+                                    <ul class="mt-1 text-sm text-red-700 list-disc list-inside">
+                                        {% for field in form %}
+                                            {% for error in field.errors %}
+                                                <li>{{ field.label }}: {{ error }}</li>
+                                            {% endfor %}
+                                        {% endfor %}
+                                        {% for error in form.non_field_errors %}
+                                            <li>{{ error }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- QC Lot Selection -->
+                        <div class="form-control">
+                            <label class="label" for="{{ form.qc_lot.id_for_label }}">
+                                <span class="label-text font-semibold text-navy-700 text-lg">QC Lot *</span>
+                            </label>
+                            <select name="{{ form.qc_lot.name }}" id="{{ form.qc_lot.id_for_label }}" 
+                                    class="select select-bordered w-full bg-white text-lg py-4 {% if form.qc_lot.errors %}select-error{% endif %}">
+                                <option value="">Select QC Lot...</option>
+                                {% for lot in form.qc_lot.field.queryset %}
+                                <option value="{{ lot.id }}" {% if form.qc_lot.value == lot.id %}selected{% endif %}
+                                        data-target="{{ lot.target_value|default:0 }}"
+                                        data-sd="{{ lot.sd|default:0 }}"
+                                        data-explicit-low="{{ lot.explicit_low|default:0 }}"
+                                        data-explicit-high="{{ lot.explicit_high|default:0 }}"
+                                        data-units="{{ lot.units|default:'' }}">
+                                    {{ lot.lot_number }} - {{ lot.test.name }} (Level {{ lot.level }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                            {% if form.qc_lot.errors %}
+                            <label class="label">
+                                <span class="label-text-alt text-red-600">{{ form.qc_lot.errors.0 }}</span>
+                            </label>
+                            {% endif %}
+                        </div>
+
+                        <!-- Instrument Selection -->
+                        <div class="form-control">
+                            <label class="label" for="{{ form.instrument.id_for_label }}">
+                                <span class="label-text font-semibold text-navy-700 text-lg">Instrument *</span>
+                            </label>
+                            <select name="{{ form.instrument.name }}" id="{{ form.instrument.id_for_label }}"
+                                    class="select select-bordered w-full bg-white text-lg py-4 {% if form.instrument.errors %}select-error{% endif %}">
+                                <option value="">Select Instrument...</option>
+                                {% for instrument in form.instrument.field.queryset %}
+                                <option value="{{ instrument.id }}" {% if form.instrument.value == instrument.id %}selected{% endif %}>
+                                    {{ instrument.name }} ({{ instrument.model }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                            {% if form.instrument.errors %}
+                            <label class="label">
+                                <span class="label-text-alt text-red-600">{{ form.instrument.errors.0 }}</span>
+                            </label>
+                            {% endif %}
+                        </div>
+
+                        <!-- Result Value with Target Range Display -->
+                        <div class="form-control">
+                            <label class="label" for="{{ form.result_value.id_for_label }}">
+                                <span class="label-text font-semibold text-navy-700 text-lg">Result Value *</span>
+                                <span id="targetRange" class="label-text-alt text-gray-500 font-medium"></span>
+                            </label>
+                            <div class="relative">
+                                <input type="number" step="0.01" name="{{ form.result_value.name }}" 
+                                       id="{{ form.result_value.id_for_label }}"
+                                       value="{{ form.result_value.value|default:'' }}"
+                                       class="input input-bordered w-full bg-white text-lg py-4 pr-24 {% if form.result_value.errors %}input-error{% endif %}"
+                                       placeholder="0.00">
+                                <span id="unitsDisplay" class="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium"></span>
+                            </div>
+                            {% if form.result_value.errors %}
+                            <label class="label">
+                                <span class="label-text-alt text-red-600">{{ form.result_value.errors.0 }}</span>
+                            </label>
                             {% endif %}
                             
-                            {% for error in field.errors %}
-                                <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                            <!-- Range Visualization -->
+                            <div id="rangeVisualization" class="mt-3 hidden">
+                                <div class="flex items-center justify-between text-sm text-gray-600 mb-2">
+                                    <span id="rangeLow"></span>
+                                    <span id="rangeTarget" class="font-semibold text-navy-700"></span>
+                                    <span id="rangeHigh"></span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div id="rangeBar" class="bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 h-2 rounded-full relative">
+                                        <div id="resultMarker" class="absolute w-4 h-4 bg-navy-800 rounded-full border-2 border-white -top-1 transform -translate-x-2 shadow-lg"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Comments -->
+                        <div class="form-control">
+                            <label class="label" for="{{ form.comments.id_for_label }}">
+                                <span class="label-text font-semibold text-navy-700 text-lg">Comments</span>
+                            </label>
+                            <textarea name="{{ form.comments.name }}" id="{{ form.comments.id_for_label }}"
+                                      rows="3"
+                                      class="textarea textarea-bordered w-full bg-white {% if form.comments.errors %}textarea-error{% endif %}"
+                                      placeholder="Any observations or notes about this QC run...">{{ form.comments.value|default:'' }}</textarea>
+                            {% if form.comments.errors %}
+                            <label class="label">
+                                <span class="label-text-alt text-red-600">{{ form.comments.errors.0 }}</span>
+                            </label>
+                            {% endif %}
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="flex justify-end pt-4">
+                            <button type="submit" 
+                                    class="btn bg-red-600 hover:bg-red-700 border-red-600 text-white text-lg px-8 py-3 min-h-0 h-auto">
+                                <i class="fas fa-save mr-2"></i>
+                                Save QC Result
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Right Column - Today's Runs -->
+            <div class="space-y-6">
+                <!-- Today's Summary Card -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-green-600 to-green-700">
+                        <h3 class="text-lg font-semibold text-white flex items-center">
+                            <i class="fas fa-list-check mr-2"></i>
+                            Today's QC Runs
+                        </h3>
+                    </div>
+                    <div class="p-4">
+                        {% if todays_runs %}
+                        <div class="space-y-3 max-h-96 overflow-y-auto">
+                            {% for run in todays_runs %}
+                            <div class="p-3 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors duration-150 {% if run.status == 'PASS' %}bg-green-50{% else %}bg-red-50{% endif %}">
+                                <div class="flex justify-between items-start mb-2">
+                                    <div>
+                                        <div class="font-semibold text-navy-800">{{ run.qc_lot.lot_number }}</div>
+                                        <div class="text-sm text-gray-600">{{ run.qc_lot.test.name }}</div>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="badge {% if run.status == 'PASS' %}badge-success{% else %}badge-error{% endif %} text-xs">
+                                            {{ run.status }}
+                                        </span>
+                                        <div class="text-xs text-gray-500 mt-1">Run #{{ run.run_number }}</div>
+                                    </div>
+                                </div>
+                                <div class="flex justify-between items-center text-sm">
+                                    <span class="font-medium text-navy-700">{{ run.result_value }} {{ run.qc_lot.units }}</span>
+                                    <span class="text-gray-600">{{ run.instrument.name }}</span>
+                                </div>
+                                {% if run.rule_violations %}
+                                <div class="mt-2">
+                                    <span class="badge badge-warning text-xs">
+                                        <i class="fas fa-exclamation-triangle mr-1"></i>
+                                        {{ run.rule_violations|length }} violation{{ run.rule_violations|length|pluralize }}
+                                    </span>
+                                </div>
+                                {% endif %}
+                            </div>
                             {% endfor %}
                         </div>
-                    {% endfor %}
+                        {% else %}
+                        <div class="text-center py-8 text-gray-500">
+                            <i class="fas fa-inbox text-4xl mb-3 text-gray-300"></i>
+                            <p>No QC runs entered today</p>
+                        </div>
+                        {% endif %}
+                    </div>
                 </div>
 
-                <div class="mt-6 pt-4 border-t border-gray-200">
-                    <button type="submit" class="w-full justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition duration-150 ease-in-out">
-                        <i class="fas fa-check-circle mr-2"></i> Submit QC Run
-                    </button>
+                <!-- Quick Actions Card -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-navy-700 to-navy-800">
+                        <h3 class="text-lg font-semibold text-white flex items-center">
+                            <i class="fas fa-bolt mr-2"></i>
+                            Quick Actions
+                        </h3>
+                    </div>
+                    <div class="p-4 space-y-3">
+                        <a href="{% url 'labs:qc_results_list' %}" class="btn btn-outline btn-block justify-start border-gray-300 text-gray-700">
+                            <i class="fas fa-chart-bar mr-3 text-blue-600"></i>
+                            View All Results
+                        </a>
+                        <a href="{% url 'labs:qclot_list' %}" class="btn btn-outline btn-block justify-start border-gray-300 text-gray-700">
+                            <i class="fas fa-vial mr-3 text-red-600"></i>
+                            Manage QC Lots
+                        </a>
+                        <a href="{% url 'labs:qc_dashboard' %}" class="btn btn-outline btn-block justify-start border-gray-300 text-gray-700">
+                            <i class="fas fa-tachometer-alt mr-3 text-gold-600"></i>
+                            QC Dashboard
+                        </a>
+                    </div>
                 </div>
-            </form>
+
+                <!-- System Status Card -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700">
+                        <h3 class="text-lg font-semibold text-white flex items-center">
+                            <i class="fas fa-heartbeat mr-2"></i>
+                            System Status
+                        </h3>
+                    </div>
+                    <div class="p-4 space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700">Active QC Lots</span>
+                            <span class="font-semibold text-navy-800">{{ form.qc_lot.field.queryset.count }}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700">Available Instruments</span>
+                            <span class="font-semibold text-navy-800">{{ form.instrument.field.queryset.count }}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700">Daily Approval Rate</span>
+                            <span class="font-semibold text-green-600">{% widthratio todays_runs.filter.status='PASS'|length todays_runs.count 100 %}%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-
-
-    <h2 class="text-2xl font-bold text-gray-900 mb-4">
-        Today's QC Runs 
-        <span class="text-indigo-600 ml-2">({{ today }})</span>
-    </h2>
-
-    <div class="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 rounded-lg bg-white">
-        <table class="min-w-full divide-y divide-gray-300">
-            <thead class="bg-gray-50">
-                <tr>
-                    <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Test</th>
-                    <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Level</th>
-                    <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Result (Value)</th>
-                    <th scope="col" class="px-3 py-3.5 text-center text-sm font-semibold text-gray-900">Status</th>
-                    <th scope="col" class="px-3 py-3.5 text-center text-sm font-semibold text-gray-900">Rules Failed</th>
-                    <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 hidden lg:table-cell">Instrument</th>
-                    <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 hidden sm:table-cell">Run #</th>
-                    <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Time</th>
-                    <th scope="col" class="relative py-3.5 pl-3 pr-4 sm:pr-6">
-                        <span class="sr-only">View</span>
-                    </th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200 bg-white">
-            {% for r in todays_runs %}
-                <tr class="hover:bg-indigo-50/50">
-                    <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
-                        {{ r.qc_lot.test.name }}
-                    </td>
-                    <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                        {{ r.qc_lot.get_level_display }}
-                    </td>
-                    <td class="whitespace-nowrap px-3 py-4 text-sm font-bold text-gray-800">
-                        {{ r.result_value }}
-                    </td>
-                    <td class="whitespace-nowrap px-3 py-4 text-sm text-center">
-                        {% if r.status == "FAIL" %}
-                            <span class="inline-flex items-center rounded-md bg-red-100 px-2 py-1 text-xs font-medium text-red-800 ring-1 ring-inset ring-red-600/20">
-                                <i class="fas fa-times-circle mr-1"></i> {{ r.status }}
-                            </span>
-                        {% elif r.status == "WARNING" %}
-                            <span class="inline-flex items-center rounded-md bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-800 ring-1 ring-inset ring-yellow-600/20">
-                                <i class="fas fa-exclamation-triangle mr-1"></i> {{ r.status }}
-                            </span>
-                        {% else %}
-                            <span class="inline-flex items-center rounded-md bg-green-100 px-2 py-1 text-xs font-medium text-green-800 ring-1 ring-inset ring-green-600/20">
-                                <i class="fas fa-check-circle mr-1"></i> {{ r.status }}
-                            </span>
-                        {% endif %}
-                    </td>
-                    <td class="whitespace-nowrap px-3 py-4 text-sm text-center text-gray-500">
-                        {% if r.rule_violations|length > 0 %}
-                            <span class="font-bold text-red-600">{{ r.rule_violations|length }}</span>
-                        {% else %}
-                            0
-                        {% endif %}
-                    </td>
-                    <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 hidden lg:table-cell">
-                        {{ r.instrument }}
-                    </td>
-                    <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500 hidden sm:table-cell">
-                        #{{ r.run_number }}
-                    </td>
-                    <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                        {{ r.run_time|date:"H:i" }}
-                    </td>
-                    <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                        <a href="{% url 'qc_result_detail' r.pk %}" class="text-indigo-600 hover:text-indigo-900 transition duration-150 ease-in-out">
-                            View<span class="sr-only">, {{ r.qc_lot.test.name }}</span>
-                        </a>
-                    </td>
-                </tr>
-            {% empty %}
-                <tr>
-                    <td colspan="9" class="py-8 text-center text-sm text-gray-500 bg-gray-50">
-                        <i class="fas fa-calendar-check mr-2"></i> No QC runs recorded today. Let's start one!
-                    </td>
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-    </div>
-
 </div>
+
+<!-- JavaScript for Enhanced Form Interaction -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const qcLotSelect = document.getElementById('{{ form.qc_lot.id_for_label }}');
+    const resultValueInput = document.getElementById('{{ form.result_value.id_for_label }}');
+    const unitsDisplay = document.getElementById('unitsDisplay');
+    const targetRange = document.getElementById('targetRange');
+    const rangeVisualization = document.getElementById('rangeVisualization');
+    const rangeLow = document.getElementById('rangeLow');
+    const rangeTarget = document.getElementById('rangeTarget');
+    const rangeHigh = document.getElementById('rangeHigh');
+    const rangeBar = document.getElementById('rangeBar');
+    const resultMarker = document.getElementById('resultMarker');
+
+    function updateRangeDisplay() {
+        const selectedOption = qcLotSelect.options[qcLotSelect.selectedIndex];
+        const target = parseFloat(selectedOption.getAttribute('data-target'));
+        const sd = parseFloat(selectedOption.getAttribute('data-sd'));
+        const explicitLow = parseFloat(selectedOption.getAttribute('data-explicit-low'));
+        const explicitHigh = parseFloat(selectedOption.getAttribute('data-explicit-high'));
+        const units = selectedOption.getAttribute('data-units');
+
+        // Update units
+        unitsDisplay.textContent = units || '';
+        
+        if (target && sd) {
+            // Target + SD mode
+            const low = target - (2 * sd);
+            const high = target + (2 * sd);
+            
+            targetRange.textContent = `Target: ${target} ± ${sd} ${units}`;
+            rangeLow.textContent = low.toFixed(2);
+            rangeTarget.textContent = target.toFixed(2);
+            rangeHigh.textContent = high.toFixed(2);
+            
+            rangeVisualization.classList.remove('hidden');
+        } else if (explicitLow && explicitHigh) {
+            // Explicit range mode
+            targetRange.textContent = `Range: ${explicitLow} - ${explicitHigh} ${units}`;
+            rangeLow.textContent = explicitLow.toFixed(2);
+            rangeTarget.textContent = ((explicitLow + explicitHigh) / 2).toFixed(2);
+            rangeHigh.textContent = explicitHigh.toFixed(2);
+            
+            rangeVisualization.classList.remove('hidden');
+        } else {
+            rangeVisualization.classList.add('hidden');
+            targetRange.textContent = '';
+        }
+    }
+
+    function updateResultMarker() {
+        const selectedOption = qcLotSelect.options[qcLotSelect.selectedIndex];
+        const target = parseFloat(selectedOption.getAttribute('data-target'));
+        const sd = parseFloat(selectedOption.getAttribute('data-sd'));
+        const explicitLow = parseFloat(selectedOption.getAttribute('data-explicit-low'));
+        const explicitHigh = parseFloat(selectedOption.getAttribute('data-explicit-high'));
+        const resultValue = parseFloat(resultValueInput.value);
+
+        if (!resultValue || (!target && !explicitLow)) return;
+
+        let low, high;
+        if (target && sd) {
+            low = target - (3 * sd);
+            high = target + (3 * sd);
+        } else {
+            low = explicitLow;
+            high = explicitHigh;
+        }
+
+        const range = high - low;
+        const position = ((resultValue - low) / range) * 100;
+        const clampedPosition = Math.max(0, Math.min(100, position));
+
+        resultMarker.style.left = `${clampedPosition}%`;
+    }
+
+    // Event listeners
+    qcLotSelect.addEventListener('change', updateRangeDisplay);
+    resultValueInput.addEventListener('input', updateResultMarker);
+
+    // Initialize on page load
+    updateRangeDisplay();
+});
+
+// Auto-focus on result value when lot is selected
+document.getElementById('{{ form.qc_lot.id_for_label }}').addEventListener('change', function() {
+    document.getElementById('{{ form.result_value.id_for_label }}').focus();
+});
+</script>
+
+<style>
+    .text-navy-700 { color: #1e3a8a; }
+    .text-navy-800 { color: #1e40af; }
+    .bg-navy-700 { background-color: #1e3a8a; }
+    .bg-navy-800 { background-color: #1e40af; }
+    
+    .bg-red-600 { background-color: #dc2626; }
+    .border-red-600 { border-color: #dc2626; }
+    
+    .text-gold-600 { color: #d4af37; }
+    
+    /* Custom scrollbar for today's runs */
+    .overflow-y-auto::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    .overflow-y-auto::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 3px;
+    }
+    
+    .overflow-y-auto::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 3px;
+    }
+    
+    .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+</style>
 {% endblock %}
