@@ -2,7 +2,7 @@
 
 Test Request ✔✔✔
 download of test request filled form ✔✔✔
-Barcode generation 
+Barcode generation ✔✔✔
 
-**examination** -- Sample processing
-**post-examination** -- Reporting
+**examination** -- Sample processing ✔✔✔ 
+**post-examination** -- Reporting ✔✔✔
