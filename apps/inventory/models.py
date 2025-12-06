@@ -387,145 +387,145 @@ class PurchaseOrderItem(models.Model):
 # SAMPLE STORAGE MANAGEMENT
 # ==========================================
 
-# class StorageUnit(models.Model):
-#     """
-#     Physical storage units (Freezers, Fridges, Cabinets).
-#     """
-#     UNIT_TYPES = [
-#         ('FREEZER_-80', 'Ultra-Low Freezer (-80°C)'),
-#         ('FREEZER_-20', 'Freezer (-20°C)'),
-#         ('FRIDGE', 'Refrigerator (2-8°C)'),
-#         ('ROOM_TEMP', 'Room Temperature Storage'),
-#         ('INCUBATOR', 'Incubator'),
-#     ]
+class StorageUnit(models.Model):
+    """
+    Physical storage units (Freezers, Fridges, Cabinets).
+    """
+    UNIT_TYPES = [
+        ('FREEZER_-80', 'Ultra-Low Freezer (-80°C)'),
+        ('FREEZER_-20', 'Freezer (-20°C)'),
+        ('FRIDGE', 'Refrigerator (2-8°C)'),
+        ('ROOM_TEMP', 'Room Temperature Storage'),
+        ('INCUBATOR', 'Incubator'),
+    ]
     
-#     vendor = models.ForeignKey('tenants.Vendor', on_delete=models.CASCADE, related_name='storage_units')
+    vendor = models.ForeignKey('tenants.Vendor', on_delete=models.CASCADE, related_name='storage_units')
     
-#     name = models.CharField(max_length=100, help_text="e.g., 'Freezer A', 'Fridge 2'")
-#     unit_type = models.CharField(max_length=20, choices=UNIT_TYPES)
-#     location = models.CharField(max_length=200, help_text="Physical location in lab")
+    name = models.CharField(max_length=100, help_text="e.g., 'Freezer A', 'Fridge 2'")
+    unit_type = models.CharField(max_length=20, choices=UNIT_TYPES)
+    location = models.CharField(max_length=200, help_text="Physical location in lab")
     
-#     # Capacity
-#     total_shelves = models.IntegerField(default=1)
-#     total_racks = models.IntegerField(default=1, help_text="Racks per shelf")
-#     total_boxes = models.IntegerField(default=1, help_text="Boxes per rack")
+    # Capacity
+    total_shelves = models.IntegerField(default=1)
+    total_racks = models.IntegerField(default=1, help_text="Racks per shelf")
+    total_boxes = models.IntegerField(default=1, help_text="Boxes per rack")
     
-#     # Temperature monitoring
-#     target_temperature = models.DecimalField(max_digits=5, decimal_places=2, 
-#                                              help_text="Target temperature in °C")
-#     current_temperature = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
-#     last_temp_check = models.DateTimeField(null=True, blank=True)
+    # Temperature monitoring
+    target_temperature = models.DecimalField(max_digits=5, decimal_places=2, 
+                                             help_text="Target temperature in °C")
+    current_temperature = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    last_temp_check = models.DateTimeField(null=True, blank=True)
     
-#     # Status
-#     is_active = models.BooleanField(default=True)
+    # Status
+    is_active = models.BooleanField(default=True)
     
-#     class Meta:
-#         unique_together = ('vendor', 'name')
+    class Meta:
+        unique_together = ('vendor', 'name')
     
-#     def __str__(self):
-#         return f"{self.name} ({self.get_unit_type_display()})"
+    def __str__(self):
+        return f"{self.name} ({self.get_unit_type_display()})"
 
 
-# class StorageLocation(models.Model):
-#     """
-#     Specific storage locations within a unit.
-#     Hierarchy: Unit → Shelf → Rack → Box → Position
-#     """
-#     storage_unit = models.ForeignKey(StorageUnit, on_delete=models.CASCADE, related_name='locations')
+class StorageLocation(models.Model):
+    """
+    Specific storage locations within a unit.
+    Hierarchy: Unit → Shelf → Rack → Box → Position
+    """
+    storage_unit = models.ForeignKey(StorageUnit, on_delete=models.CASCADE, related_name='locations')
     
-#     shelf_number = models.IntegerField()
-#     rack_number = models.IntegerField(default=1)
-#     box_number = models.IntegerField(default=1)
-#     position = models.CharField(max_length=10, blank=True, help_text="Position within box (e.g., A1, B3)")
+    shelf_number = models.IntegerField()
+    rack_number = models.IntegerField(default=1)
+    box_number = models.IntegerField(default=1)
+    position = models.CharField(max_length=10, blank=True, help_text="Position within box (e.g., A1, B3)")
     
-#     # Full location code
-#     location_code = models.CharField(max_length=50, unique=True,
-#                                      help_text="Auto-generated: FRZ-A-S2-R1-B3-A1")
+    # Full location code
+    location_code = models.CharField(max_length=50, unique=True,
+                                     help_text="Auto-generated: FRZ-A-S2-R1-B3-A1")
     
-#     is_occupied = models.BooleanField(default=False)
+    is_occupied = models.BooleanField(default=False)
     
-#     class Meta:
-#         unique_together = ('storage_unit', 'shelf_number', 'rack_number', 'box_number', 'position')
-#         ordering = ['storage_unit', 'shelf_number', 'rack_number', 'box_number', 'position']
+    class Meta:
+        unique_together = ('storage_unit', 'shelf_number', 'rack_number', 'box_number', 'position')
+        ordering = ['storage_unit', 'shelf_number', 'rack_number', 'box_number', 'position']
     
-#     def save(self, *args, **kwargs):
-#         """Auto-generate location code"""
-#         if not self.location_code:
-#             unit_code = self.storage_unit.name[:3].upper()
-#             self.location_code = f"{unit_code}-S{self.shelf_number}-R{self.rack_number}-B{self.box_number}"
-#             if self.position:
-#                 self.location_code += f"-{self.position}"
-#         super().save(*args, **kwargs)
+    def save(self, *args, **kwargs):
+        """Auto-generate location code"""
+        if not self.location_code:
+            unit_code = self.storage_unit.name[:3].upper()
+            self.location_code = f"{unit_code}-S{self.shelf_number}-R{self.rack_number}-B{self.box_number}"
+            if self.position:
+                self.location_code += f"-{self.position}"
+        super().save(*args, **kwargs)
     
-#     def __str__(self):
-#         return self.location_code
+    def __str__(self):
+        return self.location_code
 
 
-# class StoredSample(models.Model):
-#     """
-#     Tracks samples stored in freezers/fridges.
-#     """
-#     SAMPLE_STATUS = [
-#         ('STORED', 'Stored'),
-#         ('RETRIEVED', 'Retrieved'),
-#         ('DISPOSED', 'Disposed'),
-#     ]
+class StoredSample(models.Model):
+    """
+    Tracks samples stored in freezers/fridges.
+    """
+    SAMPLE_STATUS = [
+        ('STORED', 'Stored'),
+        ('RETRIEVED', 'Retrieved'),
+        ('DISPOSED', 'Disposed'),
+    ]
     
-#     # Link to original test request
-#     test_request = models.ForeignKey('labs.TestRequest', on_delete=models.CASCADE, 
-#                                      related_name='stored_samples')
+    # Link to original test request
+    test_request = models.ForeignKey('labs.TestRequest', on_delete=models.CASCADE, 
+                                     related_name='stored_samples')
     
-#     sample_id = models.CharField(max_length=100, unique=True)
-#     sample_type = models.CharField(max_length=100, help_text="Serum, Plasma, Whole Blood")
+    sample_id = models.CharField(max_length=100, unique=True)
+    sample_type = models.CharField(max_length=100, help_text="Serum, Plasma, Whole Blood")
     
-#     # Storage location
-#     storage_location = models.ForeignKey(StorageLocation, on_delete=models.PROTECT, 
-#                                          related_name='stored_samples')
+    # Storage location
+    storage_location = models.ForeignKey(StorageLocation, on_delete=models.PROTECT, 
+                                         related_name='stored_samples')
     
-#     # Storage details
-#     stored_date = models.DateTimeField(default=timezone.now)
-#     stored_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    # Storage details
+    stored_date = models.DateTimeField(default=timezone.now)
+    stored_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     
-#     # Retention
-#     retention_days = models.IntegerField(default=30, help_text="Days to keep sample")
-#     disposal_date = models.DateField(null=True, blank=True)
+    # Retention
+    retention_days = models.IntegerField(default=30, help_text="Days to keep sample")
+    disposal_date = models.DateField(null=True, blank=True)
     
-#     status = models.CharField(max_length=20, choices=SAMPLE_STATUS, default='STORED')
+    status = models.CharField(max_length=20, choices=SAMPLE_STATUS, default='STORED')
     
-#     # Retrieval tracking
-#     retrieved_date = models.DateTimeField(null=True, blank=True)
-#     retrieved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, 
-#                                      null=True, blank=True, related_name='retrieved_samples')
-#     retrieval_reason = models.TextField(blank=True)
+    # Retrieval tracking
+    retrieved_date = models.DateTimeField(null=True, blank=True)
+    retrieved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, 
+                                     null=True, blank=True, related_name='retrieved_samples')
+    retrieval_reason = models.TextField(blank=True)
     
-#     notes = models.TextField(blank=True)
+    notes = models.TextField(blank=True)
     
-#     class Meta:
-#         ordering = ['-stored_date']
-#         indexes = [
-#             models.Index(fields=['storage_location', 'status']),
-#         ]
+    class Meta:
+        ordering = ['-stored_date']
+        indexes = [
+            models.Index(fields=['storage_location', 'status']),
+        ]
     
-#     def save(self, *args, **kwargs):
-#         """Calculate disposal date and update location occupancy"""
-#         if not self.disposal_date and self.retention_days:
-#             self.disposal_date = (self.stored_date + timezone.timedelta(days=self.retention_days)).date()
+    def save(self, *args, **kwargs):
+        """Calculate disposal date and update location occupancy"""
+        if not self.disposal_date and self.retention_days:
+            self.disposal_date = (self.stored_date + timezone.timedelta(days=self.retention_days)).date()
         
-#         # Mark location as occupied/free
-#         if self.status == 'STORED':
-#             self.storage_location.is_occupied = True
-#         else:
-#             self.storage_location.is_occupied = False
-#         self.storage_location.save()
+        # Mark location as occupied/free
+        if self.status == 'STORED':
+            self.storage_location.is_occupied = True
+        else:
+            self.storage_location.is_occupied = False
+        self.storage_location.save()
         
-#         super().save(*args, **kwargs)
+        super().save(*args, **kwargs)
     
-#     def is_due_for_disposal(self):
-#         """Check if sample should be disposed"""
-#         return self.disposal_date and timezone.now().date() >= self.disposal_date
+    def is_due_for_disposal(self):
+        """Check if sample should be disposed"""
+        return self.disposal_date and timezone.now().date() >= self.disposal_date
     
-#     def __str__(self):
-#         return f"{self.sample_id} - {self.storage_location.location_code}"
+    def __str__(self):
+        return f"{self.sample_id} - {self.storage_location.location_code}"
 
 
 """

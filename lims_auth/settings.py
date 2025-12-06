@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",    
     "django.contrib.staticfiles",
+    "django.contrib.humanize",  # for Data 
 
     # created apps 
     "apps.accounts",
@@ -69,8 +70,8 @@ AUTH_USER_MODEL = 'accounts.User'
 # Base middleware (always included)
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",  # MUST be after SecurityMiddleware
-    "apps.core.middleware.TenantMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+    "apps.core.middleware.TenantMiddleware", # Tenant middleware
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -78,6 +79,16 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+
+AUTHENTICATION_BACKENDS = [
+    'apps.accounts.backend.VendorEmailBackend',   # tenant-aware
+    # 'django.contrib.auth.backends.ModelBackend',  # fallback
+]
+
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = '/'
+
 
 ROOT_URLCONF = "lims_auth.urls"
 
@@ -122,9 +133,6 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
-LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = '/'
 
 # Email settings
 EMAIL_BACKEND = os.getenv("EMAIL_BACKEND")

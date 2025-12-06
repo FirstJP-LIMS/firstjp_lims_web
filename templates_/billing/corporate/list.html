@@ -1,0 +1,376 @@
+{% extends 'laboratory/assets/base.html' %}
+
+{% load static %}
+{% load humanize %}
+
+{% block title %}Corporate Clients{% endblock %}
+
+{% block extra_css %}
+<style>
+    .client-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        cursor: pointer;
+        border-radius: 10px;
+    }
+    .client-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+    }
+    .status-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 0.5rem;
+    }
+    .status-active { background-color: #10b981; }
+    .status-inactive { background-color: #9ca3af; }
+    .credit-progress {
+        height: 8px;
+        border-radius: 4px;
+        overflow: hidden;
+        background-color: #e5e7eb;
+    }
+    .credit-bar {
+        height: 100%;
+        transition: width 0.3s;
+    }
+    .credit-warning { border-left: 4px solid #f59e0b; }
+    .credit-danger { border-left: 4px solid #ef4444; }
+    .company-logo {
+        width: 48px;
+        height: 48px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 1.25rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">
+                <i class="fas fa-building me-2 text-primary"></i>
+                Corporate Clients
+            </h2>
+            <p class="text-muted mb-0">Manage corporate accounts and company billing</p>
+        </div>
+        <div>
+            <a href="{% url 'billing:corporate_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Add Client
+            </a>
+            <a href="{% url 'billing:dashboard' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Bar -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted mb-1 small">Total Clients</p>
+                            <h3 class="mb-0">{{ total_clients|intcomma }}</h3>
+                        </div>
+                        <div class="rounded-circle bg-primary bg-opacity-10 p-3">
+                            <i class="fas fa-building text-primary fa-lg"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted mb-1 small">Active</p>
+                            <h3 class="mb-0 text-success">{{ active_count|intcomma }}</h3>
+                        </div>
+                        <div class="rounded-circle bg-success bg-opacity-10 p-3">
+                            <i class="fas fa-check-circle text-success fa-lg"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted mb-1 small">Total Credit Limit</p>
+                            <h3 class="mb-0 text-info">₦{{ total_credit_limit|floatformat:0|intcomma }}</h3>
+                        </div>
+                        <div class="rounded-circle bg-info bg-opacity-10 p-3">
+                            <i class="fas fa-coins text-info fa-lg"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted mb-1 small">Inactive</p>
+                            <h3 class="mb-0 text-secondary">{{ total_clients|add:"-"|add:active_count|intcomma }}</h3>
+                        </div>
+                        <div class="rounded-circle bg-secondary bg-opacity-10 p-3">
+                            <i class="fas fa-pause-circle text-secondary fa-lg"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search & Filters -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-5">
+                    <label class="form-label small text-muted">Search</label>
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" name="q" class="form-control" 
+                               placeholder="Company name, contact, account number..." 
+                               value="{{ q }}">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">Status</label>
+                    <select name="active" class="form-select">
+                        <option value="">All</option>
+                        <option value="yes" {% if is_active == 'yes' %}selected{% endif %}>Active</option>
+                        <option value="no" {% if is_active == 'no' %}selected{% endif %}>Inactive</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted">Sort By</label>
+                    <select name="sort" class="form-select">
+                        <option value="name" {% if sort == 'name' %}selected{% endif %}>Company Name</option>
+                        <option value="credit" {% if sort == 'credit' %}selected{% endif %}>Credit Limit</option>
+                        <option value="recent" {% if sort == 'recent' %}selected{% endif %}>Recently Added</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter"></i> Filter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Clients Grid -->
+    <div class="row g-3">
+        {% for client in clients %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card client-card shadow-sm h-100 
+                        {% if client.over_limit %}credit-danger{% elif client.credit_used_pct > 80 %}credit-warning{% endif %}"
+                 onclick="window.location='{% url 'billing:corporate_detail' client.pk %}'">
+                <div class="card-body">
+                    <!-- Header with Logo -->
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="company-logo me-3">
+                            {{ client.company_name|slice:":1"|upper }}
+                        </div>
+                        <div class="flex-grow-1">
+                            <h5 class="card-title mb-1">
+                                <span class="status-indicator status-{% if client.is_active %}active{% else %}inactive{% endif %}"></span>
+                                {{ client.company_name }}
+                            </h5>
+                            {% if client.bank_account_number %}
+                                <small class="text-muted">
+                                    <i class="fas fa-university"></i> {{ client.bank_name|default:"Bank" }}: {{ client.bank_account_number }}
+                                </small>
+                            {% endif %}
+                        </div>
+                        <div class="dropdown" onclick="event.stopPropagation()">
+                            <button class="btn btn-sm btn-link text-muted" data-bs-toggle="dropdown">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'billing:corporate_detail' client.pk %}">
+                                        <i class="fas fa-eye"></i> View Details
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'billing:corporate_update' client.pk %}">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <form method="post" action="{% url 'billing:corporate_toggle_active' client.pk %}" style="display: inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="dropdown-item">
+                                            <i class="fas fa-{% if client.is_active %}pause{% else %}play{% endif %}"></i>
+                                            {% if client.is_active %}Deactivate{% else %}Activate{% endif %}
+                                        </button>
+                                    </form>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item text-danger" href="{% url 'billing:corporate_delete' client.pk %}">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Contact Info -->
+                    <div class="mb-3">
+                        <small class="text-muted d-block">
+                            <i class="fas fa-user me-1"></i> {{ client.contact_person }}
+                        </small>
+                        <small class="text-muted d-block">
+                            <i class="fas fa-envelope me-1"></i> {{ client.email|truncatechars:30 }}
+                        </small>
+                        <small class="text-muted d-block">
+                            <i class="fas fa-phone me-1"></i> {{ client.phone }}
+                        </small>
+                    </div>
+
+                    <!-- Financial Summary -->
+                    <div class="border-top pt-3 mb-3">
+                        <div class="row g-2 mb-2">
+                            <div class="col-6">
+                                <small class="text-muted d-block">Credit Limit</small>
+                                <strong class="text-primary">₦{{ client.credit_limit|floatformat:0|intcomma }}</strong>
+                            </div>
+                            <div class="col-6 text-end">
+                                <small class="text-muted d-block">Outstanding</small>
+                                <strong class="{% if client.over_limit %}text-danger{% elif client.credit_used_pct > 80 %}text-warning{% else %}text-success{% endif %}">
+                                    ₦{{ client.outstanding|floatformat:0|intcomma }}
+                                </strong>
+                            </div>
+                        </div>
+
+                        <!-- Credit Progress Bar -->
+                        <div class="credit-progress mb-2">
+                            <div class="credit-bar 
+                                        {% if client.credit_used_pct >= 100 %}bg-danger
+                                        {% elif client.credit_used_pct >= 80 %}bg-warning
+                                        {% else %}bg-success{% endif %}"
+                                 style="width: {% if client.credit_used_pct > 100 %}100{% else %}{{ client.credit_used_pct|floatformat:0 }}{% endif %}%">
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                {{ client.credit_used_pct|floatformat:0 }}% utilized
+                            </small>
+                            {% if client.over_limit %}
+                                <span class="badge bg-danger">OVER LIMIT</span>
+                            {% elif client.credit_used_pct > 80 %}
+                                <span class="badge bg-warning text-dark">HIGH</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Discount Info -->
+                    {% if client.special_discount_percentage > 0 %}
+                    <div class="border-top pt-3 mb-3">
+                        <small class="text-muted d-block">Special Discount</small>
+                        <strong class="text-success">{{ client.special_discount_percentage }}%</strong>
+                        {% if client.max_discount_amount %}
+                            <small class="text-muted">(Max: ₦{{ client.max_discount_amount|floatformat:0|intcomma }})</small>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Footer Info -->
+                    <div class="border-top pt-3 d-flex justify-content-between align-items-center">
+                        <small class="text-muted">
+                            <i class="fas fa-calendar"></i> {{ client.payment_terms_days }} days terms
+                        </small>
+                        {% if client.invoice_count > 0 %}
+                        <span class="badge bg-info">
+                            {{ client.invoice_count }} pending
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-building fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No corporate clients found</h5>
+                    <p class="text-muted mb-3">
+                        {% if q %}
+                            Try adjusting your search or filters.
+                        {% else %}
+                            Get started by adding your first corporate client.
+                        {% endif %}
+                    </p>
+                    <a href="{% url 'billing:corporate_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add Corporate Client
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if paginator.num_pages > 1 %}
+    <div class="d-flex justify-content-center mt-4">
+        <nav>
+            <ul class="pagination">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if q %}&q={{ q }}{% endif %}{% if is_active %}&active={{ is_active }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
+                            <i class="fas fa-angle-double-left"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if is_active %}&active={{ is_active }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
+                            <i class="fas fa-angle-left"></i>
+                        </a>
+                    </li>
+                {% endif %}
+
+                <li class="page-item active">
+                    <span class="page-link">
+                        Page {{ page_obj.number }} of {{ paginator.num_pages }}
+                    </span>
+                </li>
+
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if is_active %}&active={{ is_active }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
+                            <i class="fas fa-angle-right"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ paginator.num_pages }}{% if q %}&q={{ q }}{% endif %}{% if is_active %}&active={{ is_active }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
+                            <i class="fas fa-angle-double-right"></i>
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

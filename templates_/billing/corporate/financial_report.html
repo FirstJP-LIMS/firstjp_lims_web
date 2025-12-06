@@ -1,0 +1,235 @@
+{% extends 'laboratory/assets/base.html' %}
+
+{% load static %}
+{% load humanize %}
+
+{% block title %}Financial Report - {{ client.company_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .report-header {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px 10px 0 0;
+    }
+    .aging-chart {
+        height: 300px;
+        position: relative;
+    }
+    .aging-bar {
+        height: 100%;
+        display: flex;
+        align-items: flex-end;
+        gap: 1rem;
+        padding: 1rem;
+    }
+    .aging-item {
+        flex: 1;
+        background: linear-gradient(to top, var(--color), transparent);
+        border-radius: 8px 8px 0 0;
+        min-height: 50px;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        align-items: center;
+        padding: 1rem;
+        transition: transform 0.3s;
+    }
+    .aging-item:hover {
+        transform: translateY(-5px);
+    }
+    .aging-amount {
+        font-size: 0.9rem;
+        font-weight: bold;
+        color: white;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        margin-bottom: 0.5rem;
+    }
+    @media print {
+        .no-print { display: none !important; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb" class="mb-3 no-print">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'billing:dashboard' %}">Billing</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'billing:corporate_list' %}">Corporate Clients</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'billing:corporate_detail' client.pk %}">{{ client.company_name }}</a></li>
+            <li class="breadcrumb-item active">Financial Report</li>
+        </ol>
+    </nav>
+
+    <div class="card shadow-lg">
+        <div class="report-header">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h2 class="mb-2"><i class="fas fa-chart-line me-2"></i>Financial Report</h2>
+                    <h4 class="mb-3 opacity-75">{{ client.company_name }}</h4>
+                    <div class="d-flex gap-4">
+                        <div>
+                            <small class="opacity-75 d-block">Report Period</small>
+                            <strong>{{ date_from|date:"d M Y" }} - {{ date_to|date:"d M Y" }}</strong>
+                        </div>
+                        <div>
+                            <small class="opacity-75 d-block">Generated</small>
+                            <strong>{{ "now"|date:"d M Y, H:i" }}</strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 text-end no-print">
+                    <button onclick="window.print()" class="btn btn-light">
+                        <i class="fas fa-print"></i> Print
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-4">
+            <!-- Date Filter -->
+            <div class="card mb-4 no-print">
+                <div class="card-body">
+                    <form method="get" class="row g-3 align-items-end">
+                        <div class="col-md-5">
+                            <label class="form-label">From Date</label>
+                            <input type="date" name="date_from" class="form-control" value="{{ date_from|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label">To Date</label>
+                            <input type="date" name="date_to" class="form-control" value="{{ date_to|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100">Update</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Summary -->
+            <h5 class="mb-3"><i class="fas fa-chart-bar me-2"></i>Financial Summary</h5>
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <div class="card border-primary">
+                        <div class="card-body text-center">
+                            <small class="text-muted">Total Invoices</small>
+                            <h3 class="mb-0 text-primary">{{ invoice_summary.total_invoices|default:0|intcomma }}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-success">
+                        <div class="card-body text-center">
+                            <small class="text-muted">Total Invoiced</small>
+                            <h3 class="mb-0 text-success">₦{{ invoice_summary.total_amount|floatformat:0|intcomma|default:"0" }}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-warning">
+                        <div class="card-body text-center">
+                            <small class="text-muted">Total Paid</small>
+                            <h3 class="mb-0 text-warning">₦{{ invoice_summary.total_paid|floatformat:0|intcomma|default:"0" }}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-danger">
+                        <div class="card-body text-center">
+                            <small class="text-muted">Outstanding</small>
+                            <h3 class="mb-0 text-danger">₦{{ outstanding|floatformat:0|intcomma }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Aging Analysis -->
+            <h5 class="mb-3"><i class="fas fa-clock me-2"></i>Aging Analysis</h5>
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="aging-chart">
+                        <div class="aging-bar">
+                            <div class="aging-item" style="--color: #10b981; height: {% widthratio aging.current outstanding|add:1 100 %}%;">
+                                <div class="aging-amount">₦{{ aging.current|floatformat:0|intcomma }}</div>
+                                <div class="text-center">
+                                    <div class="badge bg-success">Current</div>
+                                    <div class="small text-muted mt-1">0-30 days</div>
+                                </div>
+                            </div>
+                            <div class="aging-item" style="--color: #3b82f6; height: {% widthratio aging.days_30_60 outstanding|add:1 100 %}%;">
+                                <div class="aging-amount">₦{{ aging.days_30_60|floatformat:0|intcomma }}</div>
+                                <div class="text-center">
+                                    <div class="badge bg-primary">30-60</div>
+                                    <div class="small text-muted mt-1">30-60 days</div>
+                                </div>
+                            </div>
+                            <div class="aging-item" style="--color: #f59e0b; height: {% widthratio aging.days_60_90 outstanding|add:1 100 %}%;">
+                                <div class="aging-amount">₦{{ aging.days_60_90|floatformat:0|intcomma }}</div>
+                                <div class="text-center">
+                                    <div class="badge bg-warning text-dark">60-90</div>
+                                    <div class="small text-muted mt-1">60-90 days</div>
+                                </div>
+                            </div>
+                            <div class="aging-item" style="--color: #ef4444; height: {% widthratio aging.over_90 outstanding|add:1 100 %}%;">
+                                <div class="aging-amount">₦{{ aging.over_90|floatformat:0|intcomma }}</div>
+                                <div class="text-center">
+                                    <div class="badge bg-danger">90+</div>
+                                    <div class="small text-muted mt-1">Over 90 days</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Invoice Details -->
+            <h5 class="mb-3"><i class="fas fa-file-invoice me-2"></i>Invoice Details</h5>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Invoice #</th>
+                            <th>Date</th>
+                            <th>Due Date</th>
+                            <th class="text-end">Amount</th>
+                            <th class="text-end">Paid</th>
+                            <th class="text-end">Balance</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for invoice in invoices %}
+                        <tr>
+                            <td><a href="{% url 'billing:invoice_detail' invoice.pk %}" class="no-print">{{ invoice.invoice_number }}</a></td>
+                            <td>{{ invoice.invoice_date|date:"d M Y" }}</td>
+                            <td>{{ invoice.due_date|date:"d M Y" }}</td>
+                            <td class="text-end">₦{{ invoice.total_amount|floatformat:0|intcomma }}</td>
+                            <td class="text-end text-success">₦{{ invoice.amount_paid|floatformat:0|intcomma }}</td>
+                            <td class="text-end fw-bold">₦{{ invoice.balance_due|floatformat:0|intcomma }}</td>
+                            <td>
+                                {% if invoice.status == 'PAID' %}<span class="badge bg-success">Paid</span>
+                                {% elif invoice.status == 'OVERDUE' %}<span class="badge bg-danger">Overdue</span>
+                                {% else %}<span class="badge bg-info">{{ invoice.get_status_display }}</span>{% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="7" class="text-center py-4 text-muted">No invoices for this period</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center mt-4 no-print">
+        <a href="{% url 'billing:corporate_detail' client.pk %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+

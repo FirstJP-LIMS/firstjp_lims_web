@@ -1,0 +1,368 @@
+{% extends 'laboratory/assets/base.html' %}
+
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+    .form-section h5 {
+        color: #2d3748;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    .required-field::after {
+        content: " *";
+        color: #e53e3e;
+    }
+    .help-box {
+        background: #e0f2fe;
+        border-left: 4px solid #0284c7;
+        padding: 1rem;
+        border-radius: 4px;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'billing:dashboard' %}">Billing</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'billing:insurance_list' %}">Insurance Providers</a></li>
+            {% if provider %}
+                <li class="breadcrumb-item"><a href="{% url 'billing:insurance_detail' provider.pk %}">{{ provider.name }}</a></li>
+                <li class="breadcrumb-item active">Edit</li>
+            {% else %}
+                <li class="breadcrumb-item active">Create</li>
+            {% endif %}
+        </ol>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>{{ title }}</h2>
+            <p class="text-muted">Configure insurance/HMO provider details and financial terms.</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'billing:insurance_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to List
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Form Column -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- Display Non-Field Errors -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+
+                        <!-- Basic Information -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-info-circle me-2"></i>Basic Information</h5>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.name.id_for_label }}" class="form-label required-field">
+                                        {{ form.name.label }}
+                                    </label>
+                                    {{ form.name }}
+                                    {% if form.name.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.name.errors }}</div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">Full HMO/Insurance company name</small>
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.code.id_for_label }}" class="form-label required-field">
+                                        {{ form.code.label }}
+                                    </label>
+                                    {{ form.code }}
+                                    {% if form.code.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.code.errors }}</div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">Short code (e.g., AVON, HYG)</small>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <div class="form-check">
+                                        {{ form.is_active }}
+                                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                            {{ form.is_active.label }}
+                                        </label>
+                                    </div>
+                                    <small class="form-text text-muted">Allow new billing for this provider</small>
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <div class="form-check">
+                                        {{ form.requires_preauth }}
+                                        <label class="form-check-label" for="{{ form.requires_preauth.id_for_label }}">
+                                            {{ form.requires_preauth.label }}
+                                        </label>
+                                    </div>
+                                    <small class="form-text text-muted">Require authorization code</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Contact Details -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-address-card me-2"></i>Contact Details</h5>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.contact_person.id_for_label }}" class="form-label">
+                                    {{ form.contact_person.label }}
+                                </label>
+                                {{ form.contact_person }}
+                                {% if form.contact_person.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.contact_person.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.phone.id_for_label }}" class="form-label">
+                                        {{ form.phone.label }}
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                                        {{ form.phone }}
+                                    </div>
+                                    {% if form.phone.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.phone.errors }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.email.id_for_label }}" class="form-label">
+                                        {{ form.email.label }}
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                                        {{ form.email }}
+                                    </div>
+                                    {% if form.email.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.email.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="{{ form.address.id_for_label }}" class="form-label">
+                                    {{ form.address.label }}
+                                </label>
+                                {{ form.address }}
+                                {% if form.address.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.address.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Financial Terms -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-dollar-sign me-2"></i>Financial Terms</h5>
+                            
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.payment_terms_days.id_for_label }}" class="form-label required-field">
+                                        {{ form.payment_terms_days.label }}
+                                    </label>
+                                    <div class="input-group">
+                                        {{ form.payment_terms_days }}
+                                        <span class="input-group-text">days</span>
+                                    </div>
+                                    {% if form.payment_terms_days.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.payment_terms_days.errors }}</div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">{{ form.payment_terms_days.help_text }}</small>
+                                </div>
+
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.credit_limit.id_for_label }}" class="form-label required-field">
+                                        {{ form.credit_limit.label }}
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">₦</span>
+                                        {{ form.credit_limit }}
+                                    </div>
+                                    {% if form.credit_limit.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.credit_limit.errors }}</div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">Maximum outstanding balance</small>
+                                </div>
+
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.default_copay_percentage.id_for_label }}" class="form-label required-field">
+                                        {{ form.default_copay_percentage.label }}
+                                    </label>
+                                    <div class="input-group">
+                                        {{ form.default_copay_percentage }}
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                    {% if form.default_copay_percentage.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.default_copay_percentage.errors }}</div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">{{ form.default_copay_percentage.help_text }}</small>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="{{ form.price_list.id_for_label }}" class="form-label">
+                                    {{ form.price_list.label }}
+                                </label>
+                                {{ form.price_list }}
+                                {% if form.price_list.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.price_list.errors }}</div>
+                                {% endif %}
+                                <small class="form-text text-muted">
+                                    Select the price list that applies to this provider
+                                    {% if not form.price_list.field.queryset %}
+                                        <a href="{% url 'billing:pricelist_create' %}" class="ms-2">Create a price list first</a>
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                            <a href="{% url 'billing:insurance_list' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-save"></i> {{ submit_text }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Help Sidebar -->
+        <div class="col-lg-4">
+            <div class="help-box">
+                <h6 class="fw-bold mb-2">
+                    <i class="fas fa-lightbulb me-2"></i>Quick Tips
+                </h6>
+                <ul class="small mb-0">
+                    <li>Use short, unique codes (3-5 characters)</li>
+                    <li>Credit limits help manage risk</li>
+                    <li>Co-pay is the patient's portion (e.g., 0.10 = 10%)</li>
+                    <li>Payment terms affect invoice due dates</li>
+                </ul>
+            </div>
+
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-question-circle me-2"></i>Field Guide</h6>
+                </div>
+                <div class="card-body">
+                    <h6 class="fw-bold">Co-pay Percentage</h6>
+                    <p class="small">The portion patient pays directly. Enter as decimal:</p>
+                    <ul class="small">
+                        <li>0.10 = 10% patient, 90% insurance</li>
+                        <li>0.20 = 20% patient, 80% insurance</li>
+                        <li>0.00 = Insurance pays 100%</li>
+                    </ul>
+
+                    <h6 class="fw-bold mt-3">Credit Limit</h6>
+                    <p class="small mb-2">
+                        Maximum amount the provider can owe before payment is required. 
+                        Set based on trust and contract terms.
+                    </p>
+
+                    <h6 class="fw-bold mt-3">Pre-Authorization</h6>
+                    <p class="small mb-0">
+                        If enabled, staff must enter an authorization code for each test request.
+                    </p>
+                </div>
+            </div>
+
+            {% if provider %}
+            <div class="card shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Current Status</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <small class="text-muted">Outstanding Balance</small>
+                        <h5 class="mb-0 text-danger">₦{{ provider.get_outstanding_balance|floatformat:2 }}</h5>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">Active Invoices</small>
+                        <p class="mb-0">{{ provider.invoices.filter.count }} invoice(s)</p>
+                    </div>
+                    <div>
+                        <small class="text-muted">Created</small>
+                        <p class="mb-0">{{ provider.created_at|date:"d M Y" }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Validate co-pay percentage (0-1)
+        const copayInput = document.querySelector('input[name="default_copay_percentage"]');
+        if (copayInput) {
+            copayInput.addEventListener('input', function() {
+                const value = parseFloat(this.value);
+                if (value > 1) {
+                    this.value = 1;
+                }
+                if (value < 0) {
+                    this.value = 0;
+                }
+            });
+        }
+
+        // Validate payment terms
+        const termsInput = document.querySelector('input[name="payment_terms_days"]');
+        if (termsInput) {
+            termsInput.addEventListener('input', function() {
+                const value = parseInt(this.value);
+                if (value < 0) {
+                    this.value = 0;
+                }
+            });
+        }
+
+        // Validate credit limit
+        const creditInput = document.querySelector('input[name="credit_limit"]');
+        if (creditInput) {
+            creditInput.addEventListener('input', function() {
+                const value = parseFloat(this.value);
+                if (value < 0) {
+                    this.value = 0;
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

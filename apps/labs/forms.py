@@ -255,11 +255,13 @@ class QCLotForm(forms.ModelForm):
             'opened_date': forms.DateInput(attrs={'type': 'date'}),
         }
 
-    def __init__(self, vendor=None, *args, **kwargs):
+    def __init__(self, *args, vendor=None, **kwargs):
         super().__init__(*args, **kwargs)
         # Limit tests to vendor's tests if vendor provided
         if vendor is not None:
-            self.fields['test'].queryset = self.fields['test'].queryset.filter(vendor=vendor)
+            self.fields['test'].queryset = (
+                self.fields['test'].queryset.filter(vendor=vendor)
+            )
 
     def clean(self):
         cleaned = super().clean()
@@ -274,39 +276,48 @@ class QCLotForm(forms.ModelForm):
 
         # Otherwise ensure target+sd are provided together
         if (target is None) ^ (sd is None):
-            raise forms.ValidationError('Provide either explicit range or both target value and SD')
+            raise forms.ValidationError(
+                'Provide either explicit range or both target value and SD'
+            )
         return cleaned
 
+        # Auto-calculation of low/high from target ± SD
+        # Validation that expiry_date > received_date
+        # Prevent opened_date > expiry_date
+        # Highlight invalid SD ranges
+        # Pre-populate units based on test
 
+from decimal import Decimal, InvalidOperation
 class QCEntryForm(forms.ModelForm):
     class Meta:
         model = QCResult
-        fields = [
-            'qc_lot',
-            'result_value',
-            'instrument',
-            'comments',
-        ]
+        fields = ['qc_lot', 'result_value', 'instrument', 'comments']
         widgets = {
             'qc_lot': forms.Select(attrs={'class': 'form-select'}),
-            'result_value': forms.NumberInput(attrs={
-                'class': 'form-input',
-                'step': '0.01'
-            }),
+            'result_value': forms.NumberInput(attrs={'class': 'form-input', 'step': '0.01'}),
             'instrument': forms.Select(attrs={'class': 'form-select'}),
             'comments': forms.Textarea(attrs={'rows': 3, 'class': 'form-textarea'}),
         }
 
     def __init__(self, vendor, *args, **kwargs):
-        """
-        Filter QC lots and instruments to vendor only.
-        """
         super().__init__(*args, **kwargs)
-        self.fields['qc_lot'].queryset = QCLot.objects.filter(
-            vendor=vendor,
-            is_active=True
-        )
+        self.fields['qc_lot'].queryset = QCLot.objects.filter(vendor=vendor, is_active=True)
         self.fields['instrument'].queryset = vendor.equipment_set.all()
+
+    # def clean_result_value(self):
+    #     value = self.cleaned_data.get("result_value")
+    #     if value in (None, ''):
+    #         raise forms.ValidationError("Result value is required")
+    #     return value
+
+    def clean_result_value(self):
+        value = self.cleaned_data.get("result_value")
+        if value in (None, '',):
+            raise forms.ValidationError("Result value is required")
+        try:
+            return Decimal(str(value))
+        except InvalidOperation:
+            raise forms.ValidationError("Invalid numeric value")
 
 
 class QCActionForm(forms.ModelForm):

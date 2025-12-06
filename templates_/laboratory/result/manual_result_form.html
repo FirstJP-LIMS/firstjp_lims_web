@@ -79,7 +79,8 @@
                         <div class="alert alert-info mb-4">
                             <i class="bi bi-info-circle"></i>
                             <strong>Reference Range:</strong> {{ reference_range }}
-                            {% if is_quantitative and default_unit %}({{ default_unit }}){% endif %}
+                            {% if is_quantitative and default_unit %}   ({{ default_unit }})
+                            {% endif %}
                         </div>
                         {% endif %}
 

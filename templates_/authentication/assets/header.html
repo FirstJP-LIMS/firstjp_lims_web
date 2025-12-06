@@ -1,0 +1,119 @@
+{% load static %}
+<!-- Laboratory Header - Redesigned to Match Dashboard -->
+<header class="laboratory-header">
+    <nav class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <!-- Brand Logo & Name - Aligned with Dashboard Colors -->
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <a class="flex items-center" href="{% url 'labs:vendor_dashboard' %}">
+                        {% if vendor_profile.logo %}
+                        <img src="{{ vendor_profile.logo.url }}" alt="{{ vendor.name }}" class="h-8 w-auto mr-2">
+                        {% else %}
+                        <div class="mr-2">
+                            <div class="h-8 w-8 flex items-center justify-center">
+                                <svg class="h-6 w-6 text-red-600 fill-current" viewBox="0 0 24 24">
+                                    <path d="M12 2L2 7L12 12L22 7L12 2Z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        {% endif %}
+                        <div class="flex flex-col">
+                            <strong class="text-blue-700 font-semibold text-lg leading-tight">{{ vendor.name|default:"MEDVUNO" }}</strong>
+                            <small class="text-gray-500 text-xs leading-tight">Laboratory Management System</small>
+                        </div>
+                    </a>
+                </div>
+
+                <!-- Desktop Navigation Menu -->
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="#" class="text-gray-700 hover:text-blue-700 px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
+                            </svg>
+                            Patients
+                        </a>
+                        
+                        <a href="#" class="text-gray-700 hover:text-blue-700 px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
+                            </svg>
+                            Clinician
+                        </a>
+                        
+                        <a href="#" class="text-gray-700 hover:text-blue-700 px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/>
+                            </svg>
+                            Lab Staff
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Mobile menu button -->
+                <div class="md:hidden">
+                    <button type="button" 
+                            class="mobile-menu-button inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-blue-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+                            aria-controls="mobile-menu"
+                            aria-expanded="false">
+                        <span class="sr-only">Open main menu</span>
+                        <!-- Icon when menu is closed -->
+                        <svg class="block h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                        </svg>
+                        <!-- Icon when menu is open -->
+                        <svg class="hidden h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile menu, show/hide based on menu state -->
+        <div class="md:hidden hidden" id="mobile-menu">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <a href="#" class="text-gray-700 hover:text-blue-700 hover:bg-gray-100 block px-3 py-2 rounded-md text-base font-medium flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
+                    </svg>
+                    Patients
+                </a>
+                
+                <a href="#" class="text-gray-700 hover:text-blue-700 hover:bg-gray-100 block px-3 py-2 rounded-md text-base font-medium flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
+                    </svg>
+                    Clinician
+                </a>
+                
+                <a href="#" class="text-gray-700 hover:text-blue-700 hover:bg-gray-100 block px-3 py-2 rounded-md text-base font-medium flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/>
+                    </svg>
+                    Lab Staff
+                </a>
+            </div>
+        </div>
+    </nav>
+</header>
+
+<script>
+// Mobile menu toggle functionality
+document.querySelector('.mobile-menu-button').addEventListener('click', function() {
+    const mobileMenu = document.getElementById('mobile-menu');
+    const isHidden = mobileMenu.classList.contains('hidden');
+    
+    // Toggle mobile menu visibility
+    mobileMenu.classList.toggle('hidden');
+    
+    // Toggle hamburger menu icon
+    const menuIcons = this.querySelectorAll('svg');
+    menuIcons.forEach(icon => icon.classList.toggle('hidden'));
+    menuIcons.forEach(icon => icon.classList.toggle('block'));
+    
+    // Update aria-expanded attribute
+    this.setAttribute('aria-expanded', !isHidden);
+});
+</script>

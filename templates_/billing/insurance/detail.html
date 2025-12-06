@@ -1,0 +1,409 @@
+{% extends 'laboratory/assets/base.html' %}
+
+{% load static %}
+
+{% block title %}{{ provider.name }} - Insurance Provider{% endblock %}
+
+{% block extra_css %}
+<style>
+    .info-card {
+        border-left: 4px solid;
+        transition: transform 0.2s;
+    }
+    .info-card:hover {
+        transform: translateX(4px);
+    }
+    .info-card.primary { border-color: #3b82f6; }
+    .info-card.success { border-color: #10b981; }
+    .info-card.warning { border-color: #f59e0b; }
+    .info-card.danger { border-color: #ef4444; }
+    
+    .stat-box {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'billing:dashboard' %}">Billing</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'billing:insurance_list' %}">Insurance Providers</a></li>
+            <li class="breadcrumb-item active">{{ provider.name }}</li>
+        </ol>
+    </nav>
+
+    <!-- Header with Actions -->
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h2 class="mb-2">
+                <i class="fas fa-hospital me-2 text-primary"></i>
+                {{ provider.name }}
+                {% if provider.is_active %}
+                    <span class="badge bg-success ms-2">Active</span>
+                {% else %}
+                    <span class="badge bg-secondary ms-2">Inactive</span>
+                {% endif %}
+                {% if is_over_limit %}
+                    <span class="badge bg-danger ms-2">
+                        <i class="fas fa-exclamation-triangle"></i> Over Limit
+                    </span>
+                {% endif %}
+            </h2>
+            <p class="text-muted mb-0">
+                Code: <strong>{{ provider.code }}</strong> | 
+                Payment Terms: <strong>{{ provider.payment_terms_days }} days</strong>
+                {% if provider.requires_preauth %}
+                    | <span class="text-warning"><i class="fas fa-check-square"></i> Pre-Authorization Required</span>
+                {% endif %}
+            </p>
+        </div>
+        <div class="btn-group">
+            <a href="{% url 'billing:insurance_update' provider.pk %}" class="btn btn-primary">
+                <i class="fas fa-edit"></i> Edit
+            </a>
+            <a href="{% url 'billing:invoice_create' %}?provider={{ provider.pk }}" class="btn btn-success">
+                <i class="fas fa-file-invoice"></i> Create Invoice
+            </a>
+            <button type="button" class="btn btn-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+                <span class="visually-hidden">Toggle Dropdown</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li>
+                    <a class="dropdown-item" href="{% url 'billing:insurance_financial_report' provider.pk %}">
+                        <i class="fas fa-chart-line"></i> Financial Report
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <form method="post" action="{% url 'billing:insurance_toggle_active' provider.pk %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="dropdown-item">
+                            <i class="fas fa-{% if provider.is_active %}pause{% else %}play{% endif %}"></i>
+                            {% if provider.is_active %}Deactivate{% else %}Activate{% endif %}
+                        </button>
+                    </form>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <a class="dropdown-item text-danger" href="{% url 'billing:insurance_delete' provider.pk %}">
+                        <i class="fas fa-trash"></i> Delete Provider
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Financial Summary -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="stat-box">
+                <div class="mb-2 opacity-75">Credit Limit</div>
+                <h3 class="mb-0">₦{{ provider.credit_limit|floatformat:2 }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-box" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                <div class="mb-2 opacity-75">Outstanding Balance</div>
+                <h3 class="mb-0">₦{{ outstanding_balance|floatformat:2 }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-box" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                <div class="mb-2 opacity-75">Available Credit</div>
+                <h3 class="mb-0">₦{{ credit_available|floatformat:2 }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-box" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">
+                <div class="mb-2 opacity-75">Co-pay Rate</div>
+                <h3 class="mb-0">{{ provider.default_copay_percentage|floatformat:2 }}%</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Column: Provider Info -->
+        <div class="col-lg-4 mb-4">
+            <!-- Contact Information -->
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-address-card me-2"></i>Contact Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="small text-muted">Contact Person</label>
+                        <p class="mb-0 fw-semibold">{{ provider.contact_person }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="small text-muted">Email</label>
+                        <p class="mb-0">
+                            {% if provider.email %}
+                                <a href="mailto:{{ provider.email }}">{{ provider.email }}</a>
+                            {% else %}
+                                <span class="text-muted">Not provided</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="small text-muted">Phone</label>
+                        <p class="mb-0">
+                            {% if provider.phone %}
+                                <a href="tel:{{ provider.phone }}">{{ provider.phone }}</a>
+                            {% else %}
+                                <span class="text-muted">Not provided</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="mb-0">
+                        <label class="small text-muted">Address</label>
+                        <p class="mb-0">
+                            {{ provider.address|default:"Not provided" }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Financial Settings -->
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-dollar-sign me-2"></i>Financial Settings</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="small text-muted">Price List</label>
+                        <p class="mb-0 fw-semibold">
+                            {% if provider.price_list %}
+                                <a href="{% url 'billing:pricelist_detail' provider.price_list.pk %}">
+                                    {{ provider.price_list.name }}
+                                </a>
+                            {% else %}
+                                <span class="text-warning">No price list assigned</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="small text-muted">Payment Terms</label>
+                        <p class="mb-0">{{ provider.payment_terms_days }} days</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="small text-muted">Credit Limit</label>
+                        <p class="mb-0 fw-bold text-primary">₦{{ provider.credit_limit|floatformat:2 }}</p>
+                    </div>
+                    <div class="mb-0">
+                        <label class="small text-muted">Default Co-pay</label>
+                        <p class="mb-0">{{ provider.default_copay_percentage|floatformat:2 }}%</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3 pb-3 border-bottom">
+                        <label class="small text-muted">Total Invoices</label>
+                        <p class="mb-0 h4">{{ invoice_stats.total_invoices|default:0 }}</p>
+                    </div>
+                    <div class="mb-3 pb-3 border-bottom">
+                        <label class="small text-muted">Total Invoiced Amount</label>
+                        <p class="mb-0 h5 text-primary">₦{{ invoice_stats.total_amount|floatformat:2|default:"0.00" }}</p>
+                    </div>
+                    <div class="mb-3 pb-3 border-bottom">
+                        <label class="small text-muted">Total Paid</label>
+                        <p class="mb-0 h5 text-success">₦{{ invoice_stats.paid_amount|floatformat:2|default:"0.00" }}</p>
+                    </div>
+                    <div class="mb-3 pb-3 border-bottom">
+                        <label class="small text-muted">Unpaid Invoices</label>
+                        <p class="mb-0">
+                            <span class="badge bg-warning">{{ invoice_stats.unpaid_count|default:0 }}</span>
+                        </p>
+                    </div>
+                    <div class="mb-0">
+                        <label class="small text-muted">Total Billing Records</label>
+                        <p class="mb-0 h5">{{ billing_stats.total_billings|default:0 }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Invoices & Activity -->
+        <div class="col-lg-8">
+            <!-- Invoices Section -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-file-invoice me-2"></i>Invoices</h5>
+                    <div class="btn-group btn-group-sm">
+                        <a href="?invoice_status=" class="btn {% if not invoice_status_filter %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                            All
+                        </a>
+                        <a href="?invoice_status=SENT" class="btn {% if invoice_status_filter == 'SENT' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                            Sent
+                        </a>
+                        <a href="?invoice_status=OVERDUE" class="btn {% if invoice_status_filter == 'OVERDUE' %}btn-danger{% else %}btn-outline-danger{% endif %}">
+                            Overdue
+                        </a>
+                        <a href="?invoice_status=PAID" class="btn {% if invoice_status_filter == 'PAID' %}btn-success{% else %}btn-outline-success{% endif %}">
+                            Paid
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    {% if invoices %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Invoice #</th>
+                                        <th>Date</th>
+                                        <th>Due Date</th>
+                                        <th class="text-end">Amount</th>
+                                        <th class="text-end">Paid</th>
+                                        <th class="text-end">Balance</th>
+                                        <th>Status</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for invoice in invoices %}
+                                    <tr>
+                                        <td>
+                                            <a href="{% url 'billing:invoice_detail' invoice.pk %}" class="text-decoration-none fw-semibold">
+                                                {{ invoice.invoice_number }}
+                                            </a>
+                                        </td>
+                                        <td>{{ invoice.invoice_date|date:"d M Y" }}</td>
+                                        <td>
+                                            {{ invoice.due_date|date:"d M Y" }}
+                                            {% if invoice.is_overdue %}
+                                                <small class="text-danger">({{ invoice.due_date|timesince }} ago)</small>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">₦{{ invoice.total_amount|floatformat:2 }}</td>
+                                        <td class="text-end text-success">₦{{ invoice.amount_paid|floatformat:2 }}</td>
+                                        <td class="text-end fw-bold">₦{{ invoice.balance_due|floatformat:2 }}</td>
+                                        <td>
+                                            {% if invoice.status == 'PAID' %}
+                                                <span class="badge bg-success">Paid</span>
+                                            {% elif invoice.status == 'OVERDUE' %}
+                                                <span class="badge bg-danger">Overdue</span>
+                                            {% elif invoice.status == 'PARTIAL' %}
+                                                <span class="badge bg-warning">Partial</span>
+                                            {% elif invoice.status == 'SENT' %}
+                                                <span class="badge bg-info">Sent</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">{{ invoice.get_status_display }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'billing:invoice_detail' invoice.pk %}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Invoice Pagination -->
+                        {% if invoice_paginator.num_pages > 1 %}
+                        <div class="card-footer">
+                            <nav>
+                                <ul class="pagination pagination-sm mb-0 justify-content-center">
+                                    {% if invoice_page_obj.has_previous %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?invoice_page={{ invoice_page_obj.previous_page_number }}">Previous</a>
+                                        </li>
+                                    {% endif %}
+                                    <li class="page-item active">
+                                        <span class="page-link">Page {{ invoice_page_obj.number }} of {{ invoice_paginator.num_pages }}</span>
+                                    </li>
+                                    {% if invoice_page_obj.has_next %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?invoice_page={{ invoice_page_obj.next_page_number }}">Next</a>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-file-invoice fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No invoices found</p>
+                            <a href="{% url 'billing:invoice_create' %}?provider={{ provider.pk }}" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Create First Invoice
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Recent Billing Records -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0"><i class="fas fa-receipt me-2"></i>Recent Billing Records</h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if recent_billings %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Request ID</th>
+                                        <th>Patient</th>
+                                        <th>Date</th>
+                                        <th class="text-end">Amount</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for billing in recent_billings %}
+                                    <tr>
+                                        <td>
+                                            <a href="{% url 'billing:billing_detail' billing.pk %}">
+                                                {{ billing.request.request_id }}
+                                            </a>
+                                        </td>
+                                        <td>
+                                            {% if billing.request.patient %}
+                                                {{ billing.request.patient.first_name }} {{ billing.request.patient.last_name }}
+                                            {% else %}
+                                                N/A
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ billing.created_at|date:"d M Y" }}</td>
+                                        <td class="text-end">₦{{ billing.total_amount|floatformat:2 }}</td>
+                                        <td>
+                                            <span class="badge 
+                                                {% if billing.payment_status == 'PAID' %}bg-success
+                                                {% elif billing.payment_status == 'UNPAID' %}bg-danger
+                                                {% elif billing.payment_status == 'PARTIAL' %}bg-warning
+                                                {% else %}bg-secondary{% endif %}">
+                                                {{ billing.get_payment_status_display }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <p class="text-muted mb-0">No billing records yet</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

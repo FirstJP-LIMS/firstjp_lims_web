@@ -44,6 +44,7 @@ class TenantMiddleware(MiddlewareMixin):
         # 5️⃣ Redirect vendor root to vendor login
         if tenant and request.path == "/":
             return HttpResponseRedirect(reverse('account:login'))
+            # return HttpResponseRedirect(reverse('account:auth_landing'))
 
         return None
 

@@ -1,0 +1,331 @@
+{% extends 'laboratory/assets/base.html' %}
+
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+    .form-section h5 {
+        color: #2d3748;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    .required-field::after {
+        content: " *";
+        color: #e53e3e;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'billing:dashboard' %}">Billing</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'billing:pricelist_list' %}">Price Lists</a></li>
+            {% if pricelist %}
+                <li class="breadcrumb-item"><a href="{% url 'billing:pricelist_detail' pricelist.pk %}">{{ pricelist.name }}</a></li>
+                <li class="breadcrumb-item active">Edit</li>
+            {% else %}
+                <li class="breadcrumb-item active">Create</li>
+            {% endif %}
+        </ol>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>{{ title }}</h2>
+            <p class="text-muted">Configure pricing rules and discounts for different client types.</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'billing:pricelist_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to List
+            </a>
+        </div>
+    </div>
+
+    <!-- Form Card -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- Display Non-Field Errors -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+
+                        <!-- Basic Information Section -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-info-circle me-2"></i>Basic Information</h5>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.name.id_for_label }}" class="form-label required-field">
+                                        {{ form.name.label }}
+                                    </label>
+                                    {{ form.name }}
+                                    {% if form.name.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.name.errors }}
+                                        </div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">{{ form.name.help_text }}</small>
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.price_type.id_for_label }}" class="form-label required-field">
+                                        {{ form.price_type.label }}
+                                    </label>
+                                    {{ form.price_type }}
+                                    {% if form.price_type.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.price_type.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.client_name.id_for_label }}" class="form-label">
+                                        {{ form.client_name.label }}
+                                    </label>
+                                    {{ form.client_name }}
+                                    {% if form.client_name.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.client_name.errors }}
+                                        </div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">{{ form.client_name.help_text }}</small>
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.contract_number.id_for_label }}" class="form-label">
+                                        {{ form.contract_number.label }}
+                                    </label>
+                                    {{ form.contract_number }}
+                                    {% if form.contract_number.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.contract_number.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pricing Rules Section -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-percent me-2"></i>Pricing Rules</h5>
+                            
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.discount_percentage.id_for_label }}" class="form-label">
+                                        {{ form.discount_percentage.label }}
+                                    </label>
+                                    <div class="input-group">
+                                        {{ form.discount_percentage }}
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                    {% if form.discount_percentage.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.discount_percentage.errors }}
+                                        </div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">{{ form.discount_percentage.help_text }}</small>
+                                </div>
+
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.tax_percentage.id_for_label }}" class="form-label">
+                                        {{ form.tax_percentage.label }}
+                                    </label>
+                                    <div class="input-group">
+                                        {{ form.tax_percentage }}
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                    {% if form.tax_percentage.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.tax_percentage.errors }}
+                                        </div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">{{ form.tax_percentage.help_text }}</small>
+                                </div>
+
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.max_discount_amount.id_for_label }}" class="form-label">
+                                        {{ form.max_discount_amount.label }}
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">₦</span>
+                                        {{ form.max_discount_amount }}
+                                    </div>
+                                    {% if form.max_discount_amount.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.max_discount_amount.errors }}
+                                        </div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">{{ form.max_discount_amount.help_text }}</small>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    {{ form.allow_overrides }}
+                                    <label class="form-check-label" for="{{ form.allow_overrides.id_for_label }}">
+                                        {{ form.allow_overrides.label }}
+                                    </label>
+                                </div>
+                                <small class="form-text text-muted">{{ form.allow_overrides.help_text }}</small>
+                            </div>
+                        </div>
+
+                        <!-- Validity Period Section -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-calendar-alt me-2"></i>Validity Period</h5>
+                            
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.effective_date.id_for_label }}" class="form-label required-field">
+                                        {{ form.effective_date.label }}
+                                    </label>
+                                    {{ form.effective_date }}
+                                    {% if form.effective_date.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.effective_date.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.expiry_date.id_for_label }}" class="form-label">
+                                        {{ form.expiry_date.label }}
+                                    </label>
+                                    {{ form.expiry_date }}
+                                    {% if form.expiry_date.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.expiry_date.errors }}
+                                        </div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">Leave blank for no expiry</small>
+                                </div>
+
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Status</label>
+                                    <div class="form-check">
+                                        {{ form.is_active }}
+                                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                            {{ form.is_active.label }}
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                            <a href="{% url 'billing:pricelist_list' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-save"></i> {{ submit_text }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Help Sidebar -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-question-circle me-2"></i>Help</h5>
+                </div>
+                <div class="card-body">
+                    <h6 class="fw-bold">Price List Types:</h6>
+                    <ul class="small">
+                        <li><strong>Retail:</strong> Standard cash patient pricing</li>
+                        <li><strong>HMO:</strong> Insurance/HMO provider rates</li>
+                        <li><strong>Corporate:</strong> Corporate client pricing</li>
+                        <li><strong>NHIS:</strong> Government scheme rates</li>
+                        <li><strong>Staff:</strong> Internal staff discounts</li>
+                    </ul>
+
+                    <h6 class="fw-bold mt-3">Discount Rules:</h6>
+                    <ul class="small">
+                        <li>Discount percentage applies to all tests</li>
+                        <li>Max discount amount caps total discount</li>
+                        <li>Allow overrides lets staff adjust prices</li>
+                    </ul>
+
+                    <h6 class="fw-bold mt-3">Tax:</h6>
+                    <ul class="small">
+                        <li>Applied AFTER discounts</li>
+                        <li>Common rate: 7.5% (VAT in Nigeria)</li>
+                    </ul>
+                </div>
+            </div>
+
+            {% if pricelist %}
+            <div class="card shadow-sm mt-3">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Current Stats</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Tests in this list:</span>
+                        <strong>{{ pricelist.test_prices.count }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Status:</span>
+                        <span class="badge {% if pricelist.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+                            {% if pricelist.is_active %}Active{% else %}Inactive{% endif %}
+                        </span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Last updated:</span>
+                        <small>{{ pricelist.updated_at|date:"d M Y" }}</small>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-calculate discount percentage preview
+    document.addEventListener('DOMContentLoaded', function() {
+        const discountInput = document.querySelector('input[name="discount_percentage"]');
+        const maxDiscountInput = document.querySelector('input[name="max_discount_amount"]');
+        
+        if (discountInput) {
+            discountInput.addEventListener('input', function() {
+                const value = parseFloat(this.value) || 0;
+                if (value > 100) {
+                    this.value = 100;
+                }
+                if (value < 0) {
+                    this.value = 0;
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

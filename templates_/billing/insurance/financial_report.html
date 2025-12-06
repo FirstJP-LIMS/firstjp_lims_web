@@ -1,0 +1,489 @@
+{% extends 'laboratory/assets/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Financial Report - {{ provider.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .report-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px 10px 0 0;
+    }
+    
+    .stat-card {
+        border-left: 4px solid;
+        transition: transform 0.2s;
+    }
+    .stat-card:hover {
+        transform: translateX(4px);
+    }
+    .stat-card.primary { border-color: #3b82f6; }
+    .stat-card.success { border-color: #10b981; }
+    .stat-card.warning { border-color: #f59e0b; }
+    .stat-card.danger { border-color: #ef4444; }
+    
+    .aging-chart {
+        height: 300px;
+        position: relative;
+    }
+    
+    .aging-bar {
+        height: 100%;
+        display: flex;
+        align-items: flex-end;
+        gap: 1rem;
+        padding: 1rem;
+    }
+    
+    .aging-item {
+        flex: 1;
+        background: linear-gradient(to top, var(--color), transparent);
+        border-radius: 8px 8px 0 0;
+        min-height: 50px;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        align-items: center;
+        padding: 1rem;
+        transition: transform 0.3s;
+    }
+    
+    .aging-item:hover {
+        transform: translateY(-5px);
+    }
+    
+    .aging-amount {
+        font-size: 0.9rem;
+        font-weight: bold;
+        color: white;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        margin-bottom: 0.5rem;
+    }
+    
+    .aging-label {
+        font-size: 0.75rem;
+        color: #64748b;
+        font-weight: 600;
+        margin-top: 0.5rem;
+    }
+    
+    .invoice-table {
+        font-size: 0.9rem;
+    }
+    
+    .print-button {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        z-index: 1000;
+    }
+    
+    @media print {
+        .no-print { display: none !important; }
+        .report-header { background: #667eea !important; }
+        .card { page-break-inside: avoid; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3 no-print">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'billing:dashboard' %}">Billing</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'billing:insurance_list' %}">Insurance Providers</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'billing:insurance_detail' provider.pk %}">{{ provider.name }}</a></li>
+            <li class="breadcrumb-item active">Financial Report</li>
+        </ol>
+    </nav>
+
+    <!-- Report Card -->
+    <div class="card shadow-lg">
+        <!-- Header -->
+        <div class="report-header">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h2 class="mb-2">
+                        <i class="fas fa-chart-line me-2"></i>
+                        Financial Report
+                    </h2>
+                    <h4 class="mb-3 opacity-75">{{ provider.name }}</h4>
+                    <div class="d-flex gap-4">
+                        <div>
+                            <small class="opacity-75 d-block">Report Period</small>
+                            <strong>{{ date_from|date:"d M Y" }} - {{ date_to|date:"d M Y" }}</strong>
+                        </div>
+                        <div>
+                            <small class="opacity-75 d-block">Generated</small>
+                            <strong>{{ "now"|date:"d M Y, H:i" }}</strong>
+                        </div>
+                        <div>
+                            <small class="opacity-75 d-block">Days Range</small>
+                            <strong>{{ date_to|timesince:date_from }}</strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="btn-group no-print">
+                        <button onclick="window.print()" class="btn btn-light">
+                            <i class="fas fa-print"></i> Print
+                        </button>
+                        <button onclick="exportToPDF()" class="btn btn-light">
+                            <i class="fas fa-file-pdf"></i> PDF
+                        </button>
+                        <button onclick="exportToExcel()" class="btn btn-light">
+                            <i class="fas fa-file-excel"></i> Excel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-4">
+            <!-- Date Range Filter -->
+            <div class="card mb-4 no-print">
+                <div class="card-body">
+                    <form method="get" class="row g-3 align-items-end">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">From Date</label>
+                            <input type="date" name="date_from" class="form-control" 
+                                   value="{{ date_from|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">To Date</label>
+                            <input type="date" name="date_to" class="form-control" 
+                                   value="{{ date_to|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-sync"></i> Update Report
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Summary Statistics -->
+            <h5 class="mb-3">
+                <i class="fas fa-chart-bar me-2 text-primary"></i>
+                Financial Summary
+            </h5>
+            
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <div class="card stat-card primary h-100">
+                        <div class="card-body">
+                            <small class="text-muted d-block mb-2">Total Invoices</small>
+                            <h3 class="mb-0 text-primary">
+                                {{ invoice_summary.total_invoices|default:0|intcomma }}
+                            </h3>
+                            <small class="text-muted">
+                                in {{ date_to|timesince:date_from }}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="card stat-card success h-100">
+                        <div class="card-body">
+                            <small class="text-muted d-block mb-2">Total Invoiced</small>
+                            <h3 class="mb-0 text-success">
+                                ₦{{ invoice_summary.total_amount|default:0|floatformat:2|intcomma }}
+                            </h3>
+                            <small class="text-muted">
+                                Avg: ₦{{ invoice_summary.total_amount|default:0|div:invoice_summary.total_invoices|default:1|floatformat:0|intcomma }}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="card stat-card warning h-100">
+                        <div class="card-body">
+                            <small class="text-muted d-block mb-2">Total Paid</small>
+                            <h3 class="mb-0 text-warning">
+                                ₦{{ invoice_summary.total_paid|default:0|floatformat:2|intcomma }}
+                            </h3>
+                            <small class="text-muted">
+                                {% widthratio invoice_summary.total_paid|default:0 invoice_summary.total_amount|default:1 100 as paid_pct %}
+                                {{ paid_pct }}% collected
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="card stat-card danger h-100">
+                        <div class="card-body">
+                            <small class="text-muted d-block mb-2">Outstanding</small>
+                            <h3 class="mb-0 text-danger">
+                                ₦{{ outstanding|floatformat:2|intcomma }}
+                            </h3>
+                            <small class="text-muted">
+                                {% widthratio outstanding invoice_summary.total_amount|default:1 100 as outstanding_pct %}
+                                {{ outstanding_pct }}% unpaid
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Aging Analysis -->
+            <h5 class="mb-3">
+                <i class="fas fa-clock me-2 text-primary"></i>
+                Aging Analysis
+            </h5>
+            
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="aging-chart">
+                        <div class="aging-bar">
+                            <!-- Current (0-30 days) -->
+                            <div class="aging-item" 
+                                 style="--color: #10b981; height: {% widthratio aging.current outstanding|add:1 100 %}%;">
+                                <div class="aging-amount">
+                                    ₦{{ aging.current|floatformat:0|intcomma }}
+                                </div>
+                                <div class="text-center">
+                                    <div class="badge bg-success">Current</div>
+                                    <div class="aging-label">0-30 days</div>
+                                </div>
+                            </div>
+
+                            <!-- 30-60 days -->
+                            <div class="aging-item" 
+                                 style="--color: #3b82f6; height: {% widthratio aging.days_30_60 outstanding|add:1 100 %}%;">
+                                <div class="aging-amount">
+                                    ₦{{ aging.days_30_60|floatformat:0|intcomma }}
+                                </div>
+                                <div class="text-center">
+                                    <div class="badge bg-primary">30-60</div>
+                                    <div class="aging-label">30-60 days</div>
+                                </div>
+                            </div>
+
+                            <!-- 60-90 days -->
+                            <div class="aging-item" 
+                                 style="--color: #f59e0b; height: {% widthratio aging.days_60_90 outstanding|add:1 100 %}%;">
+                                <div class="aging-amount">
+                                    ₦{{ aging.days_60_90|floatformat:0|intcomma }}
+                                </div>
+                                <div class="text-center">
+                                    <div class="badge bg-warning text-dark">60-90</div>
+                                    <div class="aging-label">60-90 days</div>
+                                </div>
+                            </div>
+
+                            <!-- Over 90 days -->
+                            <div class="aging-item" 
+                                 style="--color: #ef4444; height: {% widthratio aging.over_90 outstanding|add:1 100 %}%;">
+                                <div class="aging-amount">
+                                    ₦{{ aging.over_90|floatformat:0|intcomma }}
+                                </div>
+                                <div class="text-center">
+                                    <div class="badge bg-danger">90+</div>
+                                    <div class="aging-label">Over 90 days</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Aging Table -->
+                    <div class="table-responsive mt-4">
+                        <table class="table table-sm">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Age Bracket</th>
+                                    <th class="text-end">Amount</th>
+                                    <th class="text-end">% of Total</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><span class="badge bg-success">Current (0-30 days)</span></td>
+                                    <td class="text-end">₦{{ aging.current|floatformat:2|intcomma }}</td>
+                                    <td class="text-end">
+                                        {% widthratio aging.current outstanding|add:1 100 %}%
+                                    </td>
+                                    <td><span class="text-success">✓ Good</span></td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge bg-primary">30-60 days</span></td>
+                                    <td class="text-end">₦{{ aging.days_30_60|floatformat:2|intcomma }}</td>
+                                    <td class="text-end">
+                                        {% widthratio aging.days_30_60 outstanding|add:1 100 %}%
+                                    </td>
+                                    <td><span class="text-primary">⚠ Monitor</span></td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge bg-warning text-dark">60-90 days</span></td>
+                                    <td class="text-end">₦{{ aging.days_60_90|floatformat:2|intcomma }}</td>
+                                    <td class="text-end">
+                                        {% widthratio aging.days_60_90 outstanding|add:1 100 %}%
+                                    </td>
+                                    <td><span class="text-warning">⚠ Follow Up</span></td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge bg-danger">Over 90 days</span></td>
+                                    <td class="text-end">₦{{ aging.over_90|floatformat:2|intcomma }}</td>
+                                    <td class="text-end">
+                                        {% widthratio aging.over_90 outstanding|add:1 100 %}%
+                                    </td>
+                                    <td><span class="text-danger">✗ Critical</span></td>
+                                </tr>
+                                <tr class="table-active fw-bold">
+                                    <td>Total Outstanding</td>
+                                    <td class="text-end">₦{{ outstanding|floatformat:2|intcomma }}</td>
+                                    <td class="text-end">100%</td>
+                                    <td></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Invoice Details -->
+            <h5 class="mb-3">
+                <i class="fas fa-file-invoice me-2 text-primary"></i>
+                Invoice Details
+            </h5>
+
+            <div class="card">
+                <div class="table-responsive">
+                    <table class="table table-hover invoice-table mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Invoice #</th>
+                                <th>Date</th>
+                                <th>Due Date</th>
+                                <th>Days</th>
+                                <th class="text-end">Amount</th>
+                                <th class="text-end">Paid</th>
+                                <th class="text-end">Balance</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for invoice in invoices %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'billing:invoice_detail' invoice.pk %}" class="text-decoration-none no-print">
+                                        {{ invoice.invoice_number }}
+                                    </a>
+                                    <span class="d-none d-print-inline">{{ invoice.invoice_number }}</span>
+                                </td>
+                                <td>{{ invoice.invoice_date|date:"d M Y" }}</td>
+                                <td>
+                                    {{ invoice.due_date|date:"d M Y" }}
+                                    {% if invoice.is_overdue and invoice.status != 'PAID' %}
+                                        <small class="text-danger d-block">
+                                            {{ invoice.due_date|timesince }} overdue
+                                        </small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% with days_old=invoice.invoice_date|timesince:date_to %}
+                                        <small class="text-muted">{{ days_old }}</small>
+                                    {% endwith %}
+                                </td>
+                                <td class="text-end">₦{{ invoice.total_amount|floatformat:2|intcomma }}</td>
+                                <td class="text-end text-success">₦{{ invoice.amount_paid|floatformat:2|intcomma }}</td>
+                                <td class="text-end fw-bold">₦{{ invoice.balance_due|floatformat:2|intcomma }}</td>
+                                <td>
+                                    {% if invoice.status == 'PAID' %}
+                                        <span class="badge bg-success">Paid</span>
+                                    {% elif invoice.status == 'OVERDUE' %}
+                                        <span class="badge bg-danger">Overdue</span>
+                                    {% elif invoice.status == 'PARTIAL' %}
+                                        <span class="badge bg-warning text-dark">Partial</span>
+                                    {% elif invoice.status == 'SENT' %}
+                                        <span class="badge bg-info">Sent</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ invoice.get_status_display }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center py-4 text-muted">
+                                    No invoices found for this period
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        {% if invoices %}
+                        <tfoot class="table-light fw-bold">
+                            <tr>
+                                <td colspan="4" class="text-end">Totals:</td>
+                                <td class="text-end">₦{{ invoice_summary.total_amount|default:0|floatformat:2|intcomma }}</td>
+                                <td class="text-end">₦{{ invoice_summary.total_paid|default:0|floatformat:2|intcomma }}</td>
+                                <td class="text-end">₦{{ outstanding|floatformat:2|intcomma }}</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+
+            <!-- Report Footer -->
+            <div class="mt-4 pt-4 border-top">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="fw-bold mb-2">Provider Information</h6>
+                        <p class="mb-1"><strong>{{ provider.name }}</strong></p>
+                        <p class="mb-1 small text-muted">{{ provider.contact_person }}</p>
+                        <p class="mb-1 small text-muted">{{ provider.email }}</p>
+                        <p class="mb-0 small text-muted">{{ provider.phone }}</p>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <h6 class="fw-bold mb-2">Payment Terms</h6>
+                        <p class="mb-1">{{ provider.payment_terms_days }} days</p>
+                        <p class="mb-1 small text-muted">Credit Limit: ₦{{ provider.credit_limit|floatformat:2|intcomma }}</p>
+                        <p class="mb-0 small text-muted">Co-pay: {{ provider.default_copay_percentage|floatformat:2 }}%</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Back Button -->
+    <div class="text-center mt-4 no-print">
+        <a href="{% url 'billing:insurance_detail' provider.pk %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Provider Details
+        </a>
+    </div>
+</div>
+
+<!-- Floating Print Button -->
+<button onclick="window.print()" class="btn btn-primary btn-lg print-button no-print shadow">
+    <i class="fas fa-print"></i>
+</button>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function exportToPDF() {
+        window.print();
+        // Or integrate with a PDF library
+    }
+    
+    function exportToExcel() {
+        // Future: Export table data to Excel
+        alert('Excel export coming soon!');
+    }
+    
+    // Auto-adjust aging chart on window resize
+    window.addEventListener('resize', function() {
+        // Chart adjustments if needed
+    });
+</script>
+{% endblock %}

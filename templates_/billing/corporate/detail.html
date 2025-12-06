@@ -1,0 +1,437 @@
+{% extends 'laboratory/assets/base.html' %}
+
+{% load static %}
+{% load humanize %}
+
+{% block title %}{{ client.company_name }} - Corporate Client{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-box {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+    }
+    .info-section {
+        border-left: 4px solid #3b82f6;
+        padding-left: 1rem;
+    }
+    .employee-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'billing:dashboard' %}">Billing</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'billing:corporate_list' %}">Corporate Clients</a></li>
+            <li class="breadcrumb-item active">{{ client.company_name }}</li>
+        </ol>
+    </nav>
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h2 class="mb-2">
+                <i class="fas fa-building me-2 text-primary"></i>
+                {{ client.company_name }}
+                {% if client.is_active %}
+                    <span class="badge bg-success ms-2">Active</span>
+                {% else %}
+                    <span class="badge bg-secondary ms-2">Inactive</span>
+                {% endif %}
+                {% if credit_used_pct >= 100 %}
+                    <span class="badge bg-danger ms-2">
+                        <i class="fas fa-exclamation-triangle"></i> Over Limit
+                    </span>
+                {% elif credit_used_pct >= 80 %}
+                    <span class="badge bg-warning text-dark ms-2">
+                        <i class="fas fa-exclamation-circle"></i> High Utilization
+                    </span>
+                {% endif %}
+            </h2>
+            <p class="text-muted mb-0">
+                Account: <strong>{{ client.bank_account_number }}</strong> | 
+                Payment Terms: <strong>{{ client.payment_terms_days }} days</strong>
+                {% if client.special_discount_percentage > 0 %}
+                    | Discount: <span class="text-success"><strong>{{ client.special_discount_percentage }}%</strong></span>
+                {% endif %}
+            </p>
+        </div>
+        <div class="btn-group">
+            <a href="{% url 'billing:corporate_update' client.pk %}" class="btn btn-primary">
+                <i class="fas fa-edit"></i> Edit
+            </a>
+            <a href="{% url 'billing:invoice_create' %}?client={{ client.pk }}" class="btn btn-success">
+                <i class="fas fa-file-invoice"></i> Create Invoice
+            </a>
+            <button type="button" class="btn btn-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+                <span class="visually-hidden">Toggle Dropdown</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li>
+                    <a class="dropdown-item" href="{% url 'billing:corporate_employee_report' client.pk %}">
+                        <i class="fas fa-users"></i> Employee Report
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="{% url 'billing:corporate_financial_report' client.pk %}">
+                        <i class="fas fa-chart-line"></i> Financial Report
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <form method="post" action="{% url 'billing:corporate_toggle_active' client.pk %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="dropdown-item">
+                            <i class="fas fa-{% if client.is_active %}pause{% else %}play{% endif %}"></i>
+                            {% if client.is_active %}Deactivate{% else %}Activate{% endif %}
+                        </button>
+                    </form>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <a class="dropdown-item text-danger" href="{% url 'billing:corporate_delete' client.pk %}">
+                        <i class="fas fa-trash"></i> Delete Client
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Financial Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="stat-box">
+                <div class="mb-2 opacity-75">Credit Limit</div>
+                <h3 class="mb-0">₦{{ client.credit_limit|floatformat:0|intcomma }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-box" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                <div class="mb-2 opacity-75">Outstanding</div>
+                <h3 class="mb-0">₦{{ outstanding_balance|floatformat:0|intcomma }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-box" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                <div class="mb-2 opacity-75">Available Credit</div>
+                <h3 class="mb-0">₦{{ credit_available|floatformat:0|intcomma }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-box" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">
+                <div class="mb-2 opacity-75">Credit Usage</div>
+                <h3 class="mb-0">{{ credit_used_pct|floatformat:0 }}%</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Column: Client Info -->
+        <div class="col-lg-4 mb-4">
+            <!-- Contact Information -->
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-address-card me-2"></i>Contact Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="small text-muted">Contact Person</label>
+                        <p class="mb-0 fw-semibold">{{ client.contact_person }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="small text-muted">Email</label>
+                        <p class="mb-0">
+                            <a href="mailto:{{ client.email }}">{{ client.email }}</a>
+                        </p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="small text-muted">Phone</label>
+                        <p class="mb-0">
+                            <a href="tel:{{ client.phone }}">{{ client.phone }}</a>
+                        </p>
+                    </div>
+                    <div class="mb-0">
+                        <label class="small text-muted">Billing Address</label>
+                        <p class="mb-0">{{ client.billing_address }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Financial Settings -->
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-dollar-sign me-2"></i>Financial Settings</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="small text-muted">Bank Details</label>
+                        <p class="mb-0 fw-semibold">{{ client.bank_name }}</p>
+                        <p class="mb-0"><small>Acct: {{ client.bank_account_number }}</small></p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="small text-muted">Price List</label>
+                        <p class="mb-0 fw-semibold">
+                            {% if client.price_list %}
+                                <a href="{% url 'billing:pricelist_detail' client.price_list.pk %}">
+                                    {{ client.price_list.name }}
+                                </a>
+                            {% else %}
+                                <span class="text-warning">No price list assigned</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="small text-muted">Payment Terms</label>
+                        <p class="mb-0">{{ client.payment_terms_days }} days</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="small text-muted">Special Discount</label>
+                        <p class="mb-0 fw-bold text-success">{{ client.special_discount_percentage }}%</p>
+                        {% if client.max_discount_amount %}
+                            <small class="text-muted">Max: ₦{{ client.max_discount_amount|floatformat:0|intcomma }}</small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3 pb-3 border-bottom">
+                        <label class="small text-muted">Total Employees</label>
+                        <p class="mb-0 h4">{{ billing_stats.total_employees|default:0|intcomma }}</p>
+                    </div>
+                    <div class="mb-3 pb-3 border-bottom">
+                        <label class="small text-muted">Total Invoices</label>
+                        <p class="mb-0 h4">{{ invoice_stats.total_invoices|default:0|intcomma }}</p>
+                    </div>
+                    <div class="mb-3 pb-3 border-bottom">
+                        <label class="small text-muted">Total Invoiced</label>
+                        <p class="mb-0 h5 text-primary">₦{{ invoice_stats.total_amount|floatformat:0|intcomma|default:"0" }}</p>
+                    </div>
+                    <div class="mb-3 pb-3 border-bottom">
+                        <label class="small text-muted">Total Paid</label>
+                        <p class="mb-0 h5 text-success">₦{{ invoice_stats.paid_amount|floatformat:0|intcomma|default:"0" }}</p>
+                    </div>
+                    <div class="mb-0">
+                        <label class="small text-muted">Total Billing Records</label>
+                        <p class="mb-0 h5">{{ billing_stats.total_billings|default:0|intcomma }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Invoices & Activity -->
+        <div class="col-lg-8">
+            <!-- Top Employees -->
+            {% if employee_summary %}
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-users me-2"></i>Top Employees (By Billing)</h5>
+                    <a href="{% url 'billing:corporate_employee_report' client.pk %}" class="btn btn-sm btn-outline-primary">
+                        View Full Report
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Employee ID</th>
+                                    <th class="text-end">Tests</th>
+                                    <th class="text-end">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for emp in employee_summary %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="employee-avatar me-2">
+                                                {{ emp.employee_id|slice:":1"|upper }}
+                                            </div>
+                                            <strong>{{ emp.employee_id }}</strong>
+                                        </div>
+                                    </td>
+                                    <td class="text-end">{{ emp.total_tests|intcomma }}</td>
+                                    <td class="text-end fw-bold">₦{{ emp.total_amount|floatformat:0|intcomma }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Invoices Section -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-file-invoice me-2"></i>Invoices</h5>
+                    <div class="btn-group btn-group-sm">
+                        <a href="?" class="btn {% if not invoice_status_filter %}btn-primary{% else %}btn-outline-primary{% endif %}">All</a>
+                        <a href="?invoice_status=SENT" class="btn {% if invoice_status_filter == 'SENT' %}btn-primary{% else %}btn-outline-primary{% endif %}">Sent</a>
+                        <a href="?invoice_status=OVERDUE" class="btn {% if invoice_status_filter == 'OVERDUE' %}btn-danger{% else %}btn-outline-danger{% endif %}">Overdue</a>
+                        <a href="?invoice_status=PAID" class="btn {% if invoice_status_filter == 'PAID' %}btn-success{% else %}btn-outline-success{% endif %}">Paid</a>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    {% if invoices %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Invoice #</th>
+                                        <th>Date</th>
+                                        <th>Due Date</th>
+                                        <th class="text-end">Amount</th>
+                                        <th class="text-end">Paid</th>
+                                        <th class="text-end">Balance</th>
+                                        <th>Status</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for invoice in invoices %}
+                                    <tr>
+                                        <td>
+                                            <a href="{% url 'billing:invoice_detail' invoice.pk %}" class="text-decoration-none fw-semibold">
+                                                {{ invoice.invoice_number }}
+                                            </a>
+                                        </td>
+                                        <td>{{ invoice.invoice_date|date:"d M Y" }}</td>
+                                        <td>
+                                            {{ invoice.due_date|date:"d M Y" }}
+                                            {% if invoice.is_overdue %}
+                                                <small class="text-danger d-block">{{ invoice.due_date|timesince }} overdue</small>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">₦{{ invoice.total_amount|floatformat:0|intcomma }}</td>
+                                        <td class="text-end text-success">₦{{ invoice.amount_paid|floatformat:0|intcomma }}</td>
+                                        <td class="text-end fw-bold">₦{{ invoice.balance_due|floatformat:0|intcomma }}</td>
+                                        <td>
+                                            {% if invoice.status == 'PAID' %}
+                                                <span class="badge bg-success">Paid</span>
+                                            {% elif invoice.status == 'OVERDUE' %}
+                                                <span class="badge bg-danger">Overdue</span>
+                                            {% elif invoice.status == 'PARTIAL' %}
+                                                <span class="badge bg-warning">Partial</span>
+                                            {% else %}
+                                                <span class="badge bg-info">{{ invoice.get_status_display }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'billing:invoice_detail' invoice.pk %}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {% if invoice_paginator.num_pages > 1 %}
+                        <div class="card-footer">
+                            <nav>
+                                <ul class="pagination pagination-sm mb-0 justify-content-center">
+                                    {% if invoice_page_obj.has_previous %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?invoice_page={{ invoice_page_obj.previous_page_number }}">Previous</a>
+                                        </li>
+                                    {% endif %}
+                                    <li class="page-item active">
+                                        <span class="page-link">Page {{ invoice_page_obj.number }} of {{ invoice_paginator.num_pages }}</span>
+                                    </li>
+                                    {% if invoice_page_obj.has_next %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?invoice_page={{ invoice_page_obj.next_page_number }}">Next</a>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-file-invoice fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No invoices found</p>
+                            <a href="{% url 'billing:invoice_create' %}?client={{ client.pk }}" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Create First Invoice
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Recent Billing Records -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0"><i class="fas fa-receipt me-2"></i>Recent Billing Records</h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if recent_billings %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Request ID</th>
+                                        <th>Employee ID</th>
+                                        <th>Date</th>
+                                        <th class="text-end">Amount</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for billing in recent_billings %}
+                                    <tr>
+                                        <td>
+                                            <a href="{% url 'billing:billing_detail' billing.pk %}">
+                                                {{ billing.request.request_id }}
+                                            </a>
+                                        </td>
+                                        <td>{{ billing.employee_id|default:"N/A" }}</td>
+                                        <td>{{ billing.created_at|date:"d M Y" }}</td>
+                                        <td class="text-end">₦{{ billing.total_amount|floatformat:0|intcomma }}</td>
+                                        <td>
+                                            <span class="badge 
+                                                {% if billing.payment_status == 'PAID' %}bg-success
+                                                {% elif billing.payment_status == 'UNPAID' %}bg-danger
+                                                {% else %}bg-warning{% endif %}">
+                                                {{ billing.get_payment_status_display }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <p class="text-muted mb-0">No billing records yet</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

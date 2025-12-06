@@ -6,7 +6,6 @@ from django.db import models
 from django.db import transaction
 # from django.db.models import Max
 
-
 PLAN_CHOICES = [
     ("1", "BASIC"), # 1 - 20 users
     ("2", "STANDARD"), # 21 - 50 users

@@ -28,3 +28,9 @@ __pycache__/
 # git rm -r --cached templates_old
 
 /test_cache.py/
+/lims_document_control_db_schema.sql
+
+db.sqlite3
+
+billing.md
+.env.local

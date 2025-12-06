@@ -176,6 +176,26 @@ class VendorTest(models.Model):
         """Return list of normalized normal qualitative strings"""
         return list(self.qlt_options.filter(is_normal=True).values_list("normalized", flat=True))
 
+    def get_price_from_price_list(self, price_list):
+        """
+        Get test price from a specific price list.
+        Returns default price if not found in price list.
+        """
+        from apps.billing.models import TestPrice
+        
+        if not price_list:
+            return self.price
+        
+        try:
+            test_price = TestPrice.objects.get(
+                price_list=price_list,
+                test=self
+            )
+            return test_price.price
+        except TestPrice.DoesNotExist:
+            # Price not defined for this price list, use default
+            return self.price
+        
     def __str__(self):
         return f"[{self.vendor.name}] {self.code} — {self.name}"
 
@@ -887,6 +907,7 @@ class TestResult(models.Model):
             self.flag = flag_to_set
             self.save(update_fields=['flag'])
 
+
 class Equipment(models.Model):
     """Lab instruments/analyzers"""
     EQUIPMENT_STATUS = [
@@ -895,7 +916,7 @@ class Equipment(models.Model):
         ('inactive', 'Inactive'),
     ]
     
-    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="equipment")  # ✅ Direct reference
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="equipment_set")  # ✅ Direct reference
     name = models.CharField(max_length=150)
     model = models.CharField(max_length=100)
     serial_number = models.CharField(max_length=100, unique=True)
@@ -967,8 +988,7 @@ from django.conf import settings
 from django.utils import timezone
 from django.core.validators import MinValueValidator
 from django.core.exceptions import ValidationError
-from decimal import Decimal
-
+from decimal import Decimal, InvalidOperation
 
 class QCLot(models.Model):
     """
@@ -980,6 +1000,21 @@ class QCLot(models.Model):
         ('L2', 'Level 2 - Normal'),
         ('L3', 'Level 3 - High'),
     ]
+
+    UNIT_TYPE = [
+        ('mg/dL', 'mg/dL'),
+        ('mmol/L', 'mmol/L'),
+        ('g/L', 'g/L'),
+        ('g/dL', 'g/dL'),
+        ('ng/mL', 'ng/mL'),
+        ('µg/L', 'µg/L'),
+        ('U/L', 'U/L'),
+        ('IU/L', 'IU/L'),
+        ('pg/mL', 'pg/mL'),
+        ('mEq/L', 'mEq/L'),
+        ('%','Percent (%)'),
+    ]
+
     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='qc_lots')
     test = models.ForeignKey(VendorTest, on_delete=models.CASCADE, related_name='qc_lots', help_text="Which test this QC lot is for")
     
@@ -999,7 +1034,8 @@ class QCLot(models.Model):
     explicit_low = models.DecimalField(max_digits=12, decimal_places=4, null=True, blank=True)
     explicit_high = models.DecimalField(max_digits=12, decimal_places=4, null=True, blank=True)
 
-    units = models.CharField(max_length=50, help_text="mg/dL, mmol/L, etc.")
+    units = models.CharField(max_length=20, choices=UNIT_TYPE, default="mg/dL")
+    # units = models.CharField(max_length=50, help_text="mg/dL, mmol/L, etc.")
      
     # Calculated limits (auto-calculated on save)
     mean = models.DecimalField(max_digits=10, decimal_places=3, null=True, blank=True, help_text="Mean value (same as target initially)")
@@ -1102,57 +1138,73 @@ class QCLot(models.Model):
         return f"{self.test.code} - {self.get_level_display()} - Lot {self.lot_number}"
 
 
+
+def to_decimal(value):
+    """Safely convert any value into Decimal."""
+    if value is None:
+        return None
+    try:
+        return Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError):
+        return None
+
+
 class QCResult(models.Model):
-    """
-    Daily QC Result Entry - Records each QC run.
-    This is what gets plotted on the Levey-Jennings chart.
-    """
     QC_STATUS_CHOICES = [
         ('PASS', 'Pass - In Control'),
         ('WARNING', 'Warning - Near Limit'),
         ('FAIL', 'Fail - Out of Control'),
     ]
-    
-    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='qc_results')
-    qc_lot = models.ForeignKey(QCLot, on_delete=models.CASCADE, related_name='results')
-    
-    # Result Data
-    result_value = models.DecimalField(max_digits=10, decimal_places=3, help_text="Measured QC value")
-    
-    # Run Information
-    run_date = models.DateField(default=timezone.now, db_index=True, help_text="Date QC was run")
-    run_time = models.TimeField(default=timezone.now, help_text="Time QC was run")
-    run_number = models.IntegerField(default=1, help_text="Run number for the day (1st run, 2nd run, etc.)")
-    
-    # Instrument used
-    instrument = models.ForeignKey(Equipment, null=True, blank=True, on_delete=models.SET_NULL, related_name='qc_results')
-    
-    # Status (auto-calculated)
-    status = models.CharField(max_length=10, choices=QC_STATUS_CHOICES, default='PASS')
-    z_score = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, help_text="Number of SDs from mean")
-    
-    # Westgard Rule Violations
-    rule_violations = models.JSONField(default=list, blank=True,help_text="List of violated Westgard rules")
-    
-    # Comments
-    comments = models.TextField(blank=True, 
-                                help_text="Comments about this QC run")
-    corrective_action = models.TextField(blank=True,
-                                         help_text="Action taken if QC failed")
-    
-    # User tracking
-    entered_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='qc_entries')
-    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='qc_reviews')
-    
-    # Approval (prevents patient testing if QC fails)
-    is_approved = models.BooleanField(default=False,help_text="Approved for patient testing")
-    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='qc_approvals')
 
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='qc_results')
+    qc_lot = models.ForeignKey("QCLot", on_delete=models.CASCADE, related_name='results')
+
+    result_value = models.DecimalField(max_digits=10, decimal_places=3)
+    z_score = models.DecimalField(max_digits=6, decimal_places=3, null=True, blank=True)
+
+    run_date = models.DateField(default=timezone.now, db_index=True)
+    run_time = models.TimeField(default=timezone.now)
+    run_number = models.IntegerField(default=1)
+
+    instrument = models.ForeignKey(
+        "Equipment",
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='qc_results'
+    )
+
+    status = models.CharField(max_length=10, choices=QC_STATUS_CHOICES, default='PASS')
+    rule_violations = models.JSONField(default=list, blank=True)
+
+    comments = models.TextField(blank=True)
+    corrective_action = models.TextField(blank=True)
+
+    entered_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='qc_entries'
+    )
+
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='qc_reviews'
+    )
+
+    is_approved = models.BooleanField(default=False)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='qc_approvals'
+    )
     approved_at = models.DateTimeField(null=True, blank=True)
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         ordering = ['-run_date', '-run_time']
         indexes = [
@@ -1160,109 +1212,108 @@ class QCResult(models.Model):
             models.Index(fields=['qc_lot', 'run_date']),
             models.Index(fields=['status', 'is_approved']),
         ]
-        verbose_name = "QC Result"
-        verbose_name_plural = "QC Results"
-    
-    def save(self, *args, **kwargs):
-        """Auto-calculate status and z-score on save"""
-        if self.result_value and self.qc_lot:
-            # Calculate z-score (how many SDs from mean)
-            if self.qc_lot.sd and self.qc_lot.mean:
-                self.z_score = (self.result_value - self.qc_lot.mean) / self.qc_lot.sd
-            
-            # Determine status based on control limits
-            # Handle both SD-based and explicit limits
-            if self.qc_lot.limit_3sd_low and self.qc_lot.limit_3sd_high:
-                # SD-based limits
-                if self.result_value < self.qc_lot.limit_3sd_low or \
-                self.result_value > self.qc_lot.limit_3sd_high:
-                    self.status = 'FAIL'
-                elif self.result_value < self.qc_lot.limit_2sd_low or \
-                    self.result_value > self.qc_lot.limit_2sd_high:
-                    self.status = 'WARNING'
-                else:
-                    self.status = 'PASS'
-            elif self.qc_lot.limit_2sd_low and self.qc_lot.limit_2sd_high:
-                # Explicit limits (stored in 2sd fields)
-                if self.result_value < self.qc_lot.limit_2sd_low or \
-                self.result_value > self.qc_lot.limit_2sd_high:
-                    self.status = 'FAIL'
-                else:
-                    self.status = 'PASS'
-            
-            # Auto-approve if PASS
-            if self.status == 'PASS' and not self.is_approved:
-                self.is_approved = True
-                self.approved_at = timezone.now()
-        
-        super().save(*args, **kwargs)
-        
-        # Check Westgard Rules after saving
-        if self.pk:
-            self.check_westgard_rules()
-    
-    def check_westgard_rules(self):
-        """
-        Apply Westgard Rules to detect out-of-control situations.
-        Updates rule_violations field.
-        """
-        violations = []
-        
-        # Get recent results (last 10)
-        recent_results = QCResult.objects.filter(
-            qc_lot=self.qc_lot,
-            run_date__lte=self.run_date
-        ).order_by('-run_date', '-run_time')[:10]
-        
-        if recent_results.count() < 2:
-            return  # Need at least 2 results
-        
-        values = [float(r.result_value) for r in recent_results]
-        z_scores = [float(r.z_score) if r.z_score else 0 for r in recent_results]
-        
-        # Rule 1₃ₛ: Single value exceeds ±3SD
-        if abs(z_scores[0]) > 3:
-            violations.append("1₃ₛ: Single value exceeds ±3SD")
-        
-        # Rule 2₂ₛ: Two consecutive values exceed ±2SD (same side)
-        if len(z_scores) >= 2:
-            if (z_scores[0] > 2 and z_scores[1] > 2) or \
-               (z_scores[0] < -2 and z_scores[1] < -2):
-                violations.append("2₂ₛ: Two consecutive values exceed ±2SD")
-        
-        # Rule R₄ₛ: Range between two consecutive values > 4SD
-        if len(values) >= 2:
-            range_diff = abs(values[0] - values[1])
-            if self.qc_lot.sd and range_diff > (4 * float(self.qc_lot.sd)):
-                violations.append("R₄ₛ: Range exceeds 4SD")
-        
-        # Rule 4₁ₛ: Four consecutive values all >1SD or all <-1SD
-        if len(z_scores) >= 4:
-            if all(z > 1 for z in z_scores[:4]) or all(z < -1 for z in z_scores[:4]):
-                violations.append("4₁ₛ: Four consecutive values exceed ±1SD (same side)")
-        
-        # Rule 10x: Ten consecutive values all above or below mean
-        if len(z_scores) >= 10:
-            if all(z > 0 for z in z_scores[:10]) or all(z < 0 for z in z_scores[:10]):
-                violations.append("10x: Ten consecutive values on same side of mean")
-        
-        # Update violations and status
-        if violations:
-            self.rule_violations = violations
-            if self.status == 'PASS':
-                self.status = 'WARNING'  # Upgrade to warning if rules violated
-            self.save(update_fields=['rule_violations', 'status'])
-    
-    def approve_for_testing(self, user):
-        """Approve QC result for patient testing"""
-        self.is_approved = True
-        self.approved_by = user
-        self.approved_at = timezone.now()
-        self.save(update_fields=['is_approved', 'approved_by', 'approved_at'])
-    
-    def __str__(self):
-        return f"{self.qc_lot.test.code} - {self.run_date} - {self.result_value} {self.qc_lot.units}"
 
+    # ---------------------------
+    # MAIN SAVE: ALWAYS SAFE
+    # ---------------------------
+    def save(self, *args, **kwargs):
+        # Validate result_value
+        result = to_decimal(self.result_value)
+        if result is None:
+            raise ValidationError("Invalid QC result value.")
+        self.result_value = result
+
+        # Calculate z-score
+        mean = to_decimal(self.qc_lot.mean)
+        sd = to_decimal(self.qc_lot.sd)
+
+        if mean is not None and sd not in (None, 0):
+            self.z_score = (result - mean) / sd
+        else:
+            self.z_score = None
+
+        # Determine PASS / WARNING / FAIL
+        self.status = self.determine_status(result)
+
+        # Auto-approve PASS
+        if self.status == 'PASS' and not self.is_approved:
+            self.is_approved = True
+            self.approved_at = timezone.now()
+
+        # Save the QC result
+        super().save(*args, **kwargs)
+
+        # Only AFTER saving: apply Westgard rules
+        self.apply_westgard()
+
+    # ---------------------------
+    # STATUS DECISION
+    # ---------------------------
+    def determine_status(self, result):
+        l3_low = to_decimal(self.qc_lot.limit_3sd_low)
+        l3_high = to_decimal(self.qc_lot.limit_3sd_high)
+        l2_low = to_decimal(self.qc_lot.limit_2sd_low)
+        l2_high = to_decimal(self.qc_lot.limit_2sd_high)
+
+        if l3_low is not None and l3_high is not None:
+            if result < l3_low or result > l3_high:
+                return 'FAIL'
+            if l2_low is not None and l2_high is not None:
+                if result < l2_low or result > l2_high:
+                    return 'WARNING'
+
+        elif l2_low is not None and l2_high is not None:
+            if result < l2_low or result > l2_high:
+                return 'FAIL'
+
+        return 'PASS'
+
+    # ---------------------------
+    # WESTGARD RULES
+    # ---------------------------
+    def apply_westgard(self):
+        recent = QCResult.objects.filter(
+            qc_lot=self.qc_lot
+        ).order_by('-run_date', '-run_time')[:10]
+
+        if len(recent) < 2:
+            return
+
+        values = [to_decimal(r.result_value) for r in recent if to_decimal(r.result_value) is not None]
+        z = [to_decimal(r.z_score) or Decimal(0) for r in recent]
+
+        v = []
+
+        # 1-3s
+        if abs(z[0]) > 3:
+            v.append("1₃ₛ: |Z| > 3")
+
+        # 2-2s
+        if len(z) >= 2 and ((z[0] > 2 and z[1] > 2) or (z[0] < -2 and z[1] < -2)):
+            v.append("2₂ₛ: Two values > ±2")
+
+        # R-4s
+        sd = to_decimal(self.qc_lot.sd)
+        if len(values) >= 2 and sd:
+            if abs(values[0] - values[1]) > 4 * sd:
+                v.append("R₄ₛ: Range > 4SD")
+
+        # 4-1s
+        if len(z) >= 4:
+            if all(x > 1 for x in z[:4]) or all(x < -1 for x in z[:4]):
+                v.append("4₁ₛ: Four values > ±1 (same side)")
+
+        # 10x
+        if len(z) >= 10:
+            if all(x > 0 for x in z[:10]) or all(x < 0 for x in z[:10]):
+                v.append("10x: Ten on same side of mean")
+
+        if v != self.rule_violations:
+            self.rule_violations = v
+            super().save(update_fields=['rule_violations'])
+
+    def __str__(self):
+        return f"{self.qc_lot} – {self.result_value}"
 
 class QCAction(models.Model):
     """

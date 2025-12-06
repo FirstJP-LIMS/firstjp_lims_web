@@ -133,9 +133,9 @@
                             <select name="{{ form.level.name }}" id="{{ form.level.id_for_label }}"
                                     class="select select-bordered w-full bg-white {% if form.level.errors %}select-error{% endif %}">
                                 <option value="">Select level...</option>
-                                <option value="1" {% if form.level.value == "1" %}selected{% endif %}>Level 1</option>
-                                <option value="2" {% if form.level.value == "2" %}selected{% endif %}>Level 2</option>
-                                <option value="3" {% if form.level.value == "3" %}selected{% endif %}>Level 3</option>
+                                <option value="L1" {% if form.level.value == "L1" %}selected{% endif %}>Level 1</option>
+                                <option value="L2" {% if form.level.value == "L2" %}selected{% endif %}>Level 2</option>
+                                <option value="L3" {% if form.level.value == "L3" %}selected{% endif %}>Level 3</option>
                             </select>
                             {% if form.level.errors %}
                             <label class="label">
@@ -275,15 +275,44 @@
                         </div>
 
                         <!-- Units (for explicit range) -->
-                        <div class="form-control">
-                            <label class="label" for="{{ form.units.id_for_label }}_range">
+                        <!-- <div class="form-control">
+                            <label class="label" for="{{ form.units.id_for_label }}">
                                 <span class="label-text font-semibold text-navy-700">Units</span>
                             </label>
-                            <input type="text" name="{{ form.units.name }}" id="{{ form.units.id_for_label }}_range"
-                                   value="{{ form.units.value|default:'' }}"
-                                   class="input input-bordered w-full bg-white {% if form.units.errors %}input-error{% endif %}"
-                                   placeholder="e.g., mg/dL, U/L">
+                            <input type="text"
+                                name="{{ form.units.name }}"
+                                id="{{ form.units.id_for_label }}"
+                                value="{{ form.units.value|default:'' }}"
+                                class="input input-bordered w-full bg-white {% if form.units.errors %}input-error{% endif %}"
+                                placeholder="e.g., mg/dL, U/L">
+                        </div> -->
+
+                        <div class="form-control">
+                            <label class="label" for="{{ form.units.id_for_label }}">
+                                <span class="label-text font-semibold text-navy-700">Units *</span>
+                            </label>
+
+                            <select name="{{ form.units.name }}"
+                                    id="{{ form.units.id_for_label }}"
+                                    class="select select-bordered w-full bg-white {% if form.units.errors %}select-error{% endif %}">
+                                
+                                <option value="">Select unit...</option>
+
+                                {% for value, label in form.fields.units.choices %}
+                                <option value="{{ value }}"
+                                    {% if form.units.value == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endfor %}
+                            </select>
+
+                            {% if form.units.errors %}
+                            <label class="label">
+                                <span class="label-text-alt text-red-600">{{ form.units.errors.0 }}</span>
+                            </label>
+                            {% endif %}
                         </div>
+
                     </div>
 
                     <!-- Specification Help Text -->

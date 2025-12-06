@@ -1,3 +1,4 @@
+
 from .models import VendorProfile
 
 def vendor_context(request):

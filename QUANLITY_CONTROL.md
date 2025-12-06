@@ -106,6 +106,7 @@ Multi-rule system for detecting systematic and random errors:
 
 | Rule | Description | Interpretation |
 |------|-------------|----------------|
+| **1₂ₛ** | Single value exceeds ±2SD | Random error - acceptable run |
 | **1₃ₛ** | Single value exceeds ±3SD | Random error - reject run |
 | **2₂ₛ** | Two consecutive values exceed ±2SD (same side) | Systematic error - recalibrate |
 | **R₄ₛ** | Range between consecutive values > 4SD | Random error - check precision |

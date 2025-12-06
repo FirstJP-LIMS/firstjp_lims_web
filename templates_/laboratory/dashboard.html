@@ -694,13 +694,19 @@
                             </a>
                         </li>
                         <li>
+                            <a href="{% url 'billing:dashboard' %}" class="hover:bg-white/10">
+                                <i class="bi bi-cash-stack"></i>
+                                Accounting & Billing
+                            </a>
+                        </li>
+                        <li>
                             <a href="#" class="hover:bg-white/10">
                                 <i class="bi bi-gear"></i>
                                 Settings
                             </a>
                         </li>
                         <li class="mt-8 pt-4 border-t border-white/10">
-                            <a href="/logout" class="hover:bg-white/10 text-medvuno-red bg-white/5">
+                            <a href="{% url 'account:logout' %}" class="hover:bg-white/10 text-medvuno-red bg-white/5">
                                 <i class="bi bi-box-arrow-right"></i>
                                 Logout
                             </a>

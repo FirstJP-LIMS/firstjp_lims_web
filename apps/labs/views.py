@@ -680,7 +680,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from django.db.models import Sum
 from django.conf import settings
-import weasyprint  # Import the new library
+import weasyprint
 
 from .models import TestRequest
 from .utils import generate_barcode_base64
@@ -690,10 +690,12 @@ from .utils import generate_barcode_base64
 
 @login_required
 def download_test_request(request, pk=None, blank=False):
-    """Download a filled or blank Test Request form as PDF using WeasyPrint."""
+    """
+    Download a filled or blank Test Request form as PDF using WeasyPrint...
+    """
     vendor = getattr(request.user, "vendor", None)
     vendor_profile = getattr(vendor, "profile", None)
-
+    
     # Handle missing logo gracefully
     if vendor_profile and not vendor_profile.logo:
         vendor_profile.logo = None
@@ -2179,8 +2181,9 @@ from django.urls import reverse
 from django.utils import timezone
 from datetime import datetime, timedelta
 from .forms import QCLotForm, QCActionForm, QCEntryForm
-from .models import QCLot, QCAction, QCResult
+from .models import QCLot, QCAction, QCResult, QCTestApproval
 import calendar
+from django.db.models import Count, Q
 
 # ==========================================
 # QC LOT MANAGEMENT
@@ -2229,7 +2232,6 @@ def qc_lot_create(request):
             messages.success(request, f"QC Lot {qc_lot.lot_number} created successfully.")
             return redirect('labs:qclot_list')
     else:
-        from .forms import QCLotForm
         form = QCLotForm(vendor=vendor)
     
     return render(request, 'laboratory/qc/lots/qclot_form.html', {'form': form})
@@ -2286,62 +2288,51 @@ def qclot_delete(request, pk):
 
 @login_required
 def qc_entry_view(request):
-    vendor = request.user.vendor  
+    vendor = request.user.vendor
     today = timezone.now().date()
 
-    if request.method == 'POST':
+    if request.method == "POST":
         form = QCEntryForm(vendor, request.POST)
-
         if form.is_valid():
-            qc_result = form.save(commit=False)
-            qc_result.vendor = vendor
-            qc_result.entered_by = request.user
+            qc = form.save(commit=False)
+            qc.vendor = vendor
+            qc.entered_by = request.user
 
-            # Determine run number for the same lot on the same day
-            qc_result.run_number = QCResult.objects.filter(
-                vendor=vendor,
-                qc_lot=qc_result.qc_lot,
-                run_date=today
-            ).count() + 1
-
-            # Save QC result (status + Westgard happens inside model/save)
-            qc_result.save()
-
-            # Update daily test approval
-            approval, _ = QCTestApproval.objects.get_or_create(
-                vendor=vendor,
-                test=qc_result.qc_lot.test,
-                date=today
-            )
-            approval.qc_results.add(qc_result)
-
-            # If last result passed, mark approved
-            if qc_result.status == 'PASS' and not qc_result.rule_violations:
-                approval.is_approved = True
-            else:
-                approval.is_approved = False
-
-            approval.save()
-
-            messages.success(request,
-                f"QC Run Saved — Status: {qc_result.status}, "
-                f"Violations: {len(qc_result.rule_violations)}"
+            qc.run_date = today
+            qc.run_number = (
+                QCResult.objects.filter(
+                    vendor=vendor,
+                    qc_lot=qc.qc_lot,
+                    run_date=today
+                ).count() + 1
             )
 
+            qc.save()
+            messages.success(request, f"QC saved — Status: {qc.status}")
             return redirect("qc_entry")
     else:
         form = QCEntryForm(vendor)
 
-    # List today's QC
     todays_runs = QCResult.objects.filter(
-        vendor=vendor, run_date=today
-    ).select_related("qc_lot", "instrument", "entered_by")
+        vendor=vendor,
+        run_date=today
+    ).select_related("qc_lot", "instrument")
+
+    total_runs = todays_runs.count()
+    passed_runs = todays_runs.filter(status="PASS").count()
+    runs_with_violations = todays_runs.exclude(rule_violations=[]).count()
 
     context = {
         "form": form,
         "todays_runs": todays_runs,
+        "total_runs": total_runs,
+        "passed_runs": passed_runs,
+        "runs_with_violations": runs_with_violations,
+        "daily_approval_rate": round((passed_runs / total_runs * 100), 2) if total_runs else 0,
+        "active_lots": QCLot.objects.filter(vendor=vendor, is_active=True).count(),
         "today": today,
     }
+
     return render(request, "laboratory/qc/entry/qc_entry.html", context)
 
 # ==========================================

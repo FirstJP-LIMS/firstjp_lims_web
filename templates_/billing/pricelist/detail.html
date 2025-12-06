@@ -1,0 +1,969 @@
+{% extends 'laboratory/assets/base.html' %}
+{% load price_filters %}
+{% load humanize %}
+{% load static %}
+
+{% block title %}{{ pricelist.name }} - Price List Details{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Price List Detail Styles */
+    .price-list-detail-header {
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+    }
+
+    .header-info {
+        flex: 1;
+        min-width: 300px;
+    }
+
+    .header-actions {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .price-list-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        margin-bottom: 0.5rem;
+    }
+
+    .price-list-subtitle {
+        color: var(--secondary-color);
+        font-size: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .price-list-meta-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+
+    .meta-item {
+        padding: 0.75rem;
+        background: #f8f9fa;
+        border-radius: 0.5rem;
+    }
+
+    .meta-label {
+        font-size: 0.875rem;
+        color: var(--secondary-color);
+        margin-bottom: 0.25rem;
+    }
+
+    .meta-value {
+        font-weight: 600;
+        color: #333;
+        font-size: 1rem;
+    }
+
+    /* Stats Cards */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        padding: 1.25rem;
+        text-align: center;
+    }
+
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+        font-size: 1.5rem;
+    }
+
+    .stat-icon.tests {
+        background: rgba(44, 90, 160, 0.1);
+        color: var(--primary-color);
+    }
+
+    .stat-icon.avg {
+        background: rgba(25, 135, 84, 0.1);
+        color: var(--success-color);
+    }
+
+    .stat-icon.total {
+        background: rgba(253, 126, 20, 0.1);
+        color: #fd7e14;
+    }
+
+    .stat-icon.discount {
+        background: rgba(32, 201, 151, 0.1);
+        color: #20c997;
+    }
+
+    .stat-number {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #333;
+        margin-bottom: 0.25rem;
+    }
+
+    .stat-label {
+        font-size: 0.875rem;
+        color: var(--secondary-color);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* Test Prices Table */
+    .table-container {
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .table-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .table-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #333;
+    }
+
+    .search-box {
+        position: relative;
+        min-width: 250px;
+    }
+
+    .search-box input {
+        padding-left: 2.5rem;
+    }
+
+    .search-box i {
+        position: absolute;
+        left: 0.875rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--secondary-color);
+    }
+
+    .test-price-table {
+        margin: 0;
+    }
+
+    .test-price-table th {
+        background-color: #f8f9fa;
+        border-top: none;
+        font-weight: 600;
+        color: #495057;
+        padding: 1rem;
+        border-bottom: 2px solid #e9ecef;
+        white-space: nowrap;
+    }
+
+    .test-price-table td {
+        padding: 1rem;
+        vertical-align: middle;
+        border-color: #e9ecef;
+    }
+
+    .test-price-table tr:hover {
+        background-color: #f8f9fa;
+    }
+
+    .test-code {
+        font-family: 'Courier New', monospace;
+        background: #f8f9fa;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.875rem;
+    }
+
+    .price-cell {
+        font-weight: 600;
+        color: var(--primary-color);
+    }
+
+    .discount-cell {
+        color: var(--success-color);
+        font-weight: 500;
+    }
+
+    .tax-cell {
+        color: var(--warning-color);
+        font-weight: 500;
+    }
+
+    .action-cell {
+        width: 100px;
+        text-align: center;
+    }
+
+    /* Status Badges */
+    .status-badge-large {
+        padding: 0.5rem 1rem;
+        border-radius: 50px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .status-active {
+        background: rgba(25, 135, 84, 0.1);
+        color: var(--success-color);
+    }
+
+    .status-inactive {
+        background: rgba(108, 117, 125, 0.1);
+        color: var(--secondary-color);
+    }
+
+    .status-expired {
+        background: rgba(220, 53, 69, 0.1);
+        color: var(--danger-color);
+    }
+
+    .type-badge-large {
+        padding: 0.5rem 1rem;
+        border-radius: 50px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .type-retail {
+        background: rgba(44, 90, 160, 0.1);
+        color: var(--primary-color);
+    }
+
+    .type-hmo {
+        background: rgba(32, 201, 151, 0.1);
+        color: #20c997;
+    }
+
+    .type-corporate {
+        background: rgba(253, 126, 20, 0.1);
+        color: #fd7e14;
+    }
+
+    .type-nhis {
+        background: rgba(111, 66, 193, 0.1);
+        color: #6f42c1;
+    }
+
+    .type-staff {
+        background: rgba(214, 51, 132, 0.1);
+        color: #d63384;
+    }
+
+    /* Empty State */
+    .empty-test-prices {
+        text-align: center;
+        padding: 3rem 1rem;
+    }
+
+    .empty-icon {
+        font-size: 3rem;
+        color: var(--secondary-color);
+        opacity: 0.3;
+        margin-bottom: 1rem;
+    }
+
+    /* Tabs */
+    .detail-tabs {
+        margin-bottom: 1.5rem;
+    }
+
+    .nav-tabs .nav-link {
+        border: none;
+        color: var(--secondary-color);
+        font-weight: 500;
+        padding: 0.75rem 1.5rem;
+        border-bottom: 3px solid transparent;
+    }
+
+    .nav-tabs .nav-link:hover {
+        color: var(--primary-color);
+        border-bottom-color: rgba(44, 90, 160, 0.3);
+    }
+
+    .nav-tabs .nav-link.active {
+        color: var(--primary-color);
+        border-bottom-color: var(--primary-color);
+        background: transparent;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .header-content {
+            flex-direction: column;
+        }
+        
+        .header-actions {
+            width: 100%;
+            justify-content: flex-start;
+        }
+        
+        .price-list-title {
+            font-size: 1.5rem;
+        }
+        
+        .price-list-meta-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .table-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .search-box {
+            width: 100%;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .header-actions .btn {
+            flex: 1;
+            min-width: 120px;
+        }
+    }
+</style>
+{% endblock %}
+
+<!-- main block -->
+{% block content %}
+<div class="price-list-detail-page">
+    <!-- Back Navigation -->
+    <div class="mb-3">
+        <a href="{% url 'billing:pricelist_list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Back to Price Lists
+        </a>
+    </div>
+
+    <!-- Main Header -->
+    <div class="price-list-detail-header">
+        <div class="header-content">
+            <div class="header-info">
+                <h1 class="price-list-title">{{ pricelist.name }}</h1>
+                <div class="price-list-subtitle">
+                    <span class="type-badge-large type-{{ pricelist.price_type|lower }}">
+                        <i class="bi bi-tag"></i>
+                        {{ pricelist.get_price_type_display }}
+                    </span>
+                    <span class="ms-3 status-badge-large status-{{ pricelist.status|lower }}">
+                        <i class="bi bi-circle-fill"></i>
+                        {{ pricelist.status }}
+                    </span>
+                </div>
+                
+                {% if pricelist.client_name %}
+                <div class="mt-3">
+                    <h5 class="h6 mb-1">Client/Provider</h5>
+                    <p class="mb-0">
+                        <i class="bi bi-building me-2"></i>
+                        {{ pricelist.client_name }}
+                        {% if pricelist.contract_number %}
+                        <span class="text-muted ms-3">
+                            <i class="bi bi-file-text me-1"></i>
+                            Contract: {{ pricelist.contract_number }}
+                        </span>
+                        {% endif %}
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="header-actions">
+                <a href="{% url 'billing:pricelist_update' pricelist.id %}" class="btn btn-warning">
+                    <i class="bi bi-pencil me-2"></i>Edit
+                </a>
+                <a href="{% url 'billing:pricelist_update' pricelist.id %}" class="btn btn-success">
+                    <i class="bi bi-currency-exchange me-2"></i>Manage Prices
+                </a>
+                <a href="{% url 'billing:pricelist_delete' pricelist.id %}" class="btn btn-danger">
+                    <i class="bi bi-trash me-2"></i>Delete
+                </a>
+                <div class="dropdown">
+                    <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-gear me-2"></i>Actions
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <a class="dropdown-item" href="#">
+                                <i class="bi bi-copy me-2"></i>Duplicate
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="#">
+                                <i class="bi bi-download me-2"></i>Export Prices
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="#">
+                                <i class="bi bi-printer me-2"></i>Print
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        {% if pricelist.is_active %}
+                        <li>
+                            <a class="dropdown-item text-warning" href="#">
+                                <i class="bi bi-pause-circle me-2"></i>Deactivate
+                            </a>
+                        </li>
+                        {% else %}
+                        <li>
+                            <a class="dropdown-item text-success" href="#">
+                                <i class="bi bi-play-circle me-2"></i>Activate
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Meta Information Grid -->
+        <div class="price-list-meta-grid">
+            <div class="meta-item">
+                <div class="meta-label">Discount Percentage</div>
+                <div class="meta-value">{{ pricelist.discount_percentage }}%</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Tax Percentage</div>
+                <div class="meta-value">{{ pricelist.tax_percentage }}%</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Effective Date</div>
+                <div class="meta-value">{{ pricelist.effective_date|date:"M d, Y" }}</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Expiry Date</div>
+                <div class="meta-value">
+                    {% if pricelist.expiry_date %}
+                    {{ pricelist.expiry_date|date:"M d, Y" }}
+                    {% else %}
+                    No expiry
+                    {% endif %}
+                </div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Max Discount Amount</div>
+                <div class="meta-value">
+                    {% if pricelist.max_discount_amount %}
+                    ₦{{ pricelist.max_discount_amount|intcomma }}
+                    {% else %}
+                    No limit
+                    {% endif %}
+                </div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Overrides Allowed</div>
+                <div class="meta-value">
+                    {% if pricelist.allow_overrides %}
+                    <span class="text-success">Yes</span>
+                    {% else %}
+                    <span class="text-danger">No</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon tests">
+                <i class="bi bi-list-check"></i>
+            </div>
+            <div class="stat-number">{{ stats.total_tests|default:"0" }}</div>
+            <div class="stat-label">Total Tests</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon avg">
+                <i class="bi bi-graph-up"></i>
+            </div>
+            <div class="stat-number">₦{{ stats.avg_price|default:0|floatformat:0|intcomma }}</div>
+            <div class="stat-label">Average Price</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon total">
+                <i class="bi bi-calculator"></i>
+            </div>
+            <div class="stat-number">₦{{ stats.total_value|default:0|floatformat:0|intcomma }}</div>
+            <div class="stat-label">Total Value</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon discount">
+                <i class="bi bi-percent"></i>
+            </div>
+            <div class="stat-number">{{ pricelist.discount_percentage }}%</div>
+            <div class="stat-label">Standard Discount</div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="detail-tabs">
+        <ul class="nav nav-tabs" id="priceListTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="prices-tab" data-bs-toggle="tab" data-bs-target="#prices" type="button">
+                    <i class="bi bi-currency-exchange me-2"></i>Test Prices
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="usage-tab" data-bs-toggle="tab" data-bs-target="#usage" type="button">
+                    <i class="bi bi-graph-up me-2"></i>Usage Statistics
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button">
+                    <i class="bi bi-clock-history me-2"></i>History
+                </button>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="priceListTabsContent">
+        <!-- Test Prices Tab -->
+        <div class="tab-pane fade show active" id="prices" role="tabpanel">
+            <div class="table-container">
+                <div class="table-header">
+                    <h3 class="table-title">Test Prices</h3>
+                    <form method="get" class="search-box">
+                        <i class="bi bi-search"></i>
+                        <input type="text" 
+                               name="q" 
+                               class="form-control" 
+                               placeholder="Search tests..."
+                               value="{{ q }}"
+                               onchange="this.form.submit()">
+                    </form>
+                </div>
+
+                {% if test_prices %}
+                <div class="table-responsive">
+                    <table class="table test-price-table">
+                        <thead>
+                            <tr>
+                                <th>Test Code</th>
+                                <th>Test Name</th>
+                                <th>Category</th>
+                                <th>Price</th>
+                                <th>Discount %</th>
+                                <th>Final Price</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for test_price in test_prices %}
+                            <tr>
+                                <td>
+                                    <span class="test-code">{{ test_price.test.code|default:"N/A" }}</span>
+                                </td>
+                                <td>
+                                    <strong>{{ test_price.test.name }}</strong>
+                                    {% if test_price.test.description %}
+                                    <br>
+                                    <small class="text-muted">{{ test_price.test.description|truncatechars:50 }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if test_price.test.category %}
+                                    <span class="badge bg-light text-dark">
+                                        {{ test_price.test.category.name }}
+                                    </span>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="price-cell">
+                                    ₦{{ test_price.price|intcomma }}
+                                </td>
+                                <td class="discount-cell">
+                                    {% if test_price.discount_percentage %}
+                                    {{ test_price.discount_percentage }}%
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="price-cell">
+                                    {% with final_price=test_price.price|calculate_discount:test_price.discount_percentage %}
+                                    ₦{{ final_price|floatformat:0|intcomma }}
+                                    {% endwith %}
+                                </td>
+                                <td class="action-cell">
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
+                                                data-bs-toggle="dropdown">
+                                            <i class="bi bi-three-dots-vertical"></i>
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li>
+                                                <a class="dropdown-item" href="#">
+                                                    <i class="bi bi-eye me-2"></i>View Test
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item" href="#">
+                                                    <i class="bi bi-pencil me-2"></i>Edit Price
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item text-danger" href="#">
+                                                    <i class="bi bi-trash me-2"></i>Remove
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if page_obj.has_other_pages %}
+                <div class="pagination-container">
+                    <nav aria-label="Test prices pagination">
+                        <ul class="pagination justify-content-center">
+                            {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1{% if q %}&q={{ q }}{% endif %}">
+                                    <i class="bi bi-chevron-double-left"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+
+                            {% for num in page_obj.paginator.page_range %}
+                                {% if page_obj.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ num }}</span>
+                                </li>
+                                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}{% if q %}&q={{ q }}{% endif %}">{{ num }}</a>
+                                </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if q %}&q={{ q }}{% endif %}">
+                                    <i class="bi bi-chevron-double-right"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    <div class="text-center text-muted mt-2">
+                        Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ paginator.count }} test prices
+                    </div>
+                </div>
+                {% endif %}
+
+                {% else %}
+                <!-- Empty State -->
+                <div class="empty-test-prices">
+                    <div class="empty-icon">
+                        <i class="bi bi-currency-exchange"></i>
+                    </div>
+                    <h3 class="h5 mb-2">No Test Prices Found</h3>
+                    <p class="text-muted mb-4">
+                        {% if q %}
+                        No test prices match your search "{{ q }}"
+                        {% else %}
+                        This price list doesn't have any test prices yet.
+                        {% endif %}
+                    </p>
+
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Usage Statistics Tab -->
+        <div class="tab-pane fade" id="usage" role="tabpanel">
+            <div class="table-container">
+                <h3 class="table-title mb-4">Usage Statistics</h3>
+                <div class="row">
+                    <div class="col-md-8">
+                        <div style="height: 300px; position: relative;">
+                            <canvas id="usageChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mt-3">
+                            <h5 class="h6 mb-3">Quick Stats</h5>
+                            <div class="list-group list-group-flush">
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>Total Billing Records</span>
+                                    <span class="badge bg-primary rounded-pill">0</span>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>Last Used</span>
+                                    <span class="text-muted">Never</span>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>Active Patients</span>
+                                    <span class="badge bg-success rounded-pill">0</span>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>Revenue Generated</span>
+                                    <span class="text-success fw-bold">₦0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Tab -->
+        <div class="tab-pane fade" id="history" role="tabpanel">
+            <div class="table-container">
+                <h3 class="table-title mb-4">Activity History</h3>
+                <div class="list-group">
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">Price List Created</h6>
+                            <small class="text-muted">{{ pricelist.created_at|date:"M d, Y H:i" }}</small>
+                        </div>
+                        <p class="mb-1">Price list was created by system</p>
+                        <small class="text-muted">Initial creation</small>
+                    </div>
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">Last Updated</h6>
+                            <small class="text-muted">{{ pricelist.updated_at|date:"M d, Y H:i" }}</small>
+                        </div>
+                        <p class="mb-1">Details were last modified</p>
+                        <small class="text-muted">Automatic update</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize tabs
+        const triggerTabList = document.querySelectorAll('#priceListTabs button')
+        triggerTabList.forEach(triggerEl => {
+            const tabTrigger = new bootstrap.Tab(triggerEl)
+            triggerEl.addEventListener('click', event => {
+                event.preventDefault()
+                tabTrigger.show()
+            })
+        });
+
+        // Usage Chart
+        const usageCtx = document.getElementById('usageChart');
+        if (usageCtx) {
+            const usageData = {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
+                datasets: [{
+                    label: 'Usage Count',
+                    data: [0, 0, 0, 0, 0, 0, 0], // Demo data
+                    borderColor: 'rgba(44, 90, 160, 1)',
+                    backgroundColor: 'rgba(44, 90, 160, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                }]
+            };
+            
+            new Chart(usageCtx, {
+                type: 'line',
+                data: usageData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Number of Uses'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Month'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Toggle active status
+        const statusToggle = document.querySelector('.status-toggle');
+        if (statusToggle) {
+            statusToggle.addEventListener('change', function() {
+                const isActive = this.checked;
+                const statusBadge = document.querySelector('.status-badge-large');
+                
+                // Update badge
+                if (isActive) {
+                    statusBadge.className = 'status-badge-large status-active';
+                    statusBadge.innerHTML = '<i class="bi bi-circle-fill"></i> Active';
+                } else {
+                    statusBadge.className = 'status-badge-large status-inactive';
+                    statusBadge.innerHTML = '<i class="bi bi-circle-fill"></i> Inactive';
+                }
+                
+                // Show toast
+                showToast(`Price list ${isActive ? 'activated' : 'deactivated'}`, 'success');
+            });
+        }
+
+        // Search input clear button
+        const searchInput = document.querySelector('input[name="q"]');
+        if (searchInput && searchInput.value) {
+            const clearBtn = document.createElement('button');
+            clearBtn.className = 'btn btn-sm btn-outline-secondary ms-2';
+            clearBtn.innerHTML = '<i class="bi bi-x"></i> Clear';
+            clearBtn.type = 'button';
+            clearBtn.addEventListener('click', function() {
+                searchInput.value = '';
+                searchInput.form.submit();
+            });
+            searchInput.parentNode.appendChild(clearBtn);
+        }
+
+        // Quick export
+        document.querySelectorAll('.export-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const format = this.dataset.format || 'csv';
+                showToast(`Exporting price list in ${format.toUpperCase()} format...`, 'info');
+                
+                // Simulate export
+                setTimeout(() => {
+                    showToast('Export completed successfully!', 'success');
+                }, 1000);
+            });
+        });
+
+        // Print functionality
+        document.querySelector('.print-btn').addEventListener('click', function() {
+            window.print();
+        });
+    });
+
+    // Toast notification
+    function showToast(message, type = 'success') {
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-bg-${type} border-0`;
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+        
+        const container = document.querySelector('.toast-container') || createToastContainer();
+        container.appendChild(toast);
+        
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
+        
+        toast.addEventListener('hidden.bs.toast', () => toast.remove());
+    }
+
+    function createToastContainer() {
+        const container = document.createElement('div');
+        container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        document.body.appendChild(container);
+        return container;
+    }
+
+    // Price calculator for discount
+    function calculateDiscount(price, discountPercent) {
+        if (!discountPercent) return price;
+        return price - (price * (discountPercent / 100));
+    }
+
+    // Apply to all discount cells
+    document.querySelectorAll('.discount-cell').forEach(cell => {
+        const price = parseFloat(cell.previousElementSibling?.textContent?.replace('₦', '').replace(',', ''));
+        const discountPercent = parseFloat(cell.textContent?.replace('%', ''));
+        
+        if (price && discountPercent) {
+            const finalPrice = calculateDiscount(price, discountPercent);
+            cell.nextElementSibling.textContent = `₦${finalPrice.toLocaleString()}`;
+        }
+    });
+</script>
+{% endblock %}

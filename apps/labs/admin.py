@@ -7,20 +7,76 @@ from .models import (
     InstrumentLog, AuditLog,
     VendorTest, Patient, Sample, TestRequest, Department,
     # quality_control
-    QCLot
+    QCLot, QCResult
 )
 
 """
-firstjplabs@gmail.com
+firstjp@gmail.com
 firstjp
+
+wingos.localhost.test
+lastborn.ai1@gmail.com
+password#123
 """
 
 # Register simple models
 admin.site.register(Department)
-admin.site.register(VendorTest)
 admin.site.register(Patient)
 admin.site.register(Sample)
 admin.site.register(TestRequest)
+admin.site.register(QCResult)
+
+
+@admin.register(VendorTest)
+class VendorTestAdmin(admin.ModelAdmin):
+    list_display = ('code', 'name', 'vendor', 'assigned_department', 'price', 'enabled', 'result_type')
+    list_filter = ('vendor', 'assigned_department', 'enabled', 'result_type')
+    search_fields = ('code', 'name', 'specimen_type', 'method')  # This is crucial for autocomplete
+    list_editable = ('price', 'enabled')
+    readonly_fields = ('created_at', 'updated_at', 'slug')
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('vendor', 'code', 'name', 'slug', 'assigned_department')
+        }),
+        ('Pricing & Availability', {
+            'fields': ('price', 'enabled')
+        }),
+        ('Specimen & Method', {
+            'fields': ('specimen_type', 'method', 'platform')
+        }),
+        ('Result Configuration', {
+            'fields': ('result_type', 'default_units')
+        }),
+        ('Analytical & Reportable Ranges', {
+            'fields': ('amr_low', 'amr_high', 'reportable_low', 'reportable_high'),
+            'classes': ('collapse',)
+        }),
+        ('Reference Ranges', {
+            'fields': ('min_reference_value', 'max_reference_value'),
+            'classes': ('collapse',)
+        }),
+        ('Critical Values', {
+            'fields': ('panic_low_value', 'panic_high_value'),
+            'classes': ('collapse',)
+        }),
+        ('Additional Settings', {
+            'fields': ('turnaround_override', 'general_comment_template', 'enabled_for_autoverify'),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if not request.user.is_superuser:
+            # Assuming user has a vendor attribute
+            if hasattr(request.user, 'vendor'):
+                qs = qs.filter(vendor=request.user.vendor)
+        return qs
 
 
 @admin.register(TestResult)

@@ -1,15 +1,10 @@
 from django.contrib import admin
 from apps.accounts.models import User, VendorProfile
 
-# firstjplims@gmail.com
-# firstjp
-
 
 """
-wingslab.localhost.test:8000
-
-lastboarn.ai@gmail.com
-password#12345
+first@gmail.com
+first
 """
 
 # Register your models here.

@@ -16,6 +16,7 @@
     
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{% static 'assets/css/custom.css' %}">
+    <link rel="stylesheet" href="{% static 'assets/css/billing.css' %}">
     
     {% block extra_css %}{% endblock %}
 </head>
@@ -25,9 +26,10 @@
 
     <!-- Main Content -->
     <main class="main-content">
-        <div class="container px-4 py-4">
+        <!-- <div class="container px-4 py-4"> -->
+        <div class="px-4">
             {% block content %}
-            <!-- Page content goes here -->
+            <!-- Page content -->
             {% endblock %}
         </div>
     </main>

@@ -1,0 +1,255 @@
+{% extends 'laboratory/assets/base.html' %}
+
+{% load static %}
+{% load humanize %}
+
+{% block title %}Employee Report - {{ client.company_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .report-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px 10px 0 0;
+    }
+    .employee-row:hover {
+        background-color: #f8f9fa;
+    }
+    @media print {
+        .no-print { display: none !important; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3 no-print">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'billing:dashboard' %}">Billing</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'billing:corporate_list' %}">Corporate Clients</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'billing:corporate_detail' client.pk %}">{{ client.company_name }}</a></li>
+            <li class="breadcrumb-item active">Employee Report</li>
+        </ol>
+    </nav>
+
+    <!-- Report Card -->
+    <div class="card shadow-lg">
+        <!-- Header -->
+        <div class="report-header">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h2 class="mb-2">
+                        <i class="fas fa-users me-2"></i>
+                        Employee Billing Report
+                    </h2>
+                    <h4 class="mb-3 opacity-75">{{ client.company_name }}</h4>
+                    <div class="d-flex gap-4">
+                        <div>
+                            <small class="opacity-75 d-block">Report Period</small>
+                            <strong>{{ date_from|date:"d M Y" }} - {{ date_to|date:"d M Y" }}</strong>
+                        </div>
+                        <div>
+                            <small class="opacity-75 d-block">Generated</small>
+                            <strong>{{ "now"|date:"d M Y, H:i" }}</strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 text-end no-print">
+                    <div class="btn-group">
+                        <button onclick="window.print()" class="btn btn-light">
+                            <i class="fas fa-print"></i> Print
+                        </button>
+                        <button onclick="exportToExcel()" class="btn btn-light">
+                            <i class="fas fa-file-excel"></i> Excel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-4">
+            <!-- Date Range Filter -->
+            <div class="card mb-4 no-print">
+                <div class="card-body">
+                    <form method="get" class="row g-3 align-items-end">
+                        <div class="col-md-5">
+                            <label class="form-label small fw-semibold">From Date</label>
+                            <input type="date" name="date_from" class="form-control" 
+                                   value="{{ date_from|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label small fw-semibold">To Date</label>
+                            <input type="date" name="date_to" class="form-control" 
+                                   value="{{ date_to|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-sync"></i> Update
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Summary Statistics -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <div class="card border-primary">
+                        <div class="card-body text-center">
+                            <h6 class="text-muted mb-2">Total Employees</h6>
+                            <h2 class="mb-0 text-primary">{{ summary.total_employees|default:0|intcomma }}</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-success">
+                        <div class="card-body text-center">
+                            <h6 class="text-muted mb-2">Total Tests</h6>
+                            <h2 class="mb-0 text-success">{{ summary.total_tests|default:0|intcomma }}</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-info">
+                        <div class="card-body text-center">
+                            <h6 class="text-muted mb-2">Total Amount</h6>
+                            <h2 class="mb-0 text-info">₦{{ summary.total_amount|floatformat:0|intcomma|default:"0" }}</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Employee Table -->
+            <h5 class="mb-3">
+                <i class="fas fa-list me-2 text-primary"></i>
+                Employee Breakdown
+            </h5>
+
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Employee ID</th>
+                            <th class="text-center">Total Tests</th>
+                            <th class="text-end">Total Amount</th>
+                            <th class="text-end">Paid Amount</th>
+                            <th class="text-end">Balance</th>
+                            <th>Last Visit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for emp in employee_data %}
+                        <tr class="employee-row">
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-2"
+                                         style="width: 32px; height: 32px; font-weight: bold; font-size: 0.9rem;">
+                                        {{ emp.employee_id|slice:":1"|upper }}
+                                    </div>
+                                    <strong>{{ emp.employee_id }}</strong>
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-secondary">{{ emp.test_count|intcomma }}</span>
+                            </td>
+                            <td class="text-end fw-bold">₦{{ emp.total_amount|floatformat:0|intcomma }}</td>
+                            <td class="text-end text-success">₦{{ emp.paid_amount|floatformat:0|intcomma|default:"0" }}</td>
+                            <td class="text-end">
+                                {% with balance=emp.total_amount|add:"-"|add:emp.paid_amount|default:0 %}
+                                    <span class="{% if balance > 0 %}text-danger{% else %}text-success{% endif %}">
+                                        ₦{{ balance|floatformat:0|intcomma }}
+                                    </span>
+                                {% endwith %}
+                            </td>
+                            <td>
+                                <small class="text-muted">{{ emp.last_visit|date:"d M Y" }}</small>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                No employee billing data found for this period
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    {% if employee_data %}
+                    <tfoot class="table-light fw-bold">
+                        <tr>
+                            <td colspan="2" class="text-end">Totals:</td>
+                            <td class="text-center">{{ summary.total_tests|default:0|intcomma }}</td>
+                            <td class="text-end">₦{{ summary.total_amount|floatformat:0|intcomma|default:"0" }}</td>
+                            <td colspan="3"></td>
+                        </tr>
+                    </tfoot>
+                    {% endif %}
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if paginator.num_pages > 1 %}
+            <div class="d-flex justify-content-center mt-4 no-print">
+                <nav>
+                    <ul class="pagination">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}&date_from={{ date_from|date:'Y-m-d' }}&date_to={{ date_to|date:'Y-m-d' }}">
+                                    Previous
+                                </a>
+                            </li>
+                        {% endif %}
+                        <li class="page-item active">
+                            <span class="page-link">Page {{ page_obj.number }} of {{ paginator.num_pages }}</span>
+                        </li>
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}&date_from={{ date_from|date:'Y-m-d' }}&date_to={{ date_to|date:'Y-m-d' }}">
+                                    Next
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+
+            <!-- Report Footer -->
+            <div class="mt-4 pt-4 border-top">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="fw-bold mb-2">Company Information</h6>
+                        <p class="mb-1"><strong>{{ client.company_name }}</strong></p>
+                        <p class="mb-1 small text-muted">{{ client.contact_person }}</p>
+                        <p class="mb-0 small text-muted">{{ client.email }}</p>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <h6 class="fw-bold mb-2">Report Details</h6>
+                        <p class="mb-1 small">Period: {{ date_from|date:"d M Y" }} to {{ date_to|date:"d M Y" }}</p>
+                        <p class="mb-1 small">Duration: {{ date_to|timesince:date_from }}</p>
+                        <p class="mb-0 small">Generated: {{ "now"|date:"d M Y H:i" }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Back Button -->
+    <div class="text-center mt-4 no-print">
+        <a href="{% url 'billing:corporate_detail' client.pk %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Client Details
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function exportToExcel() {
+        alert('Excel export coming soon!');
+    }
+</script>
+{% endblock %}
