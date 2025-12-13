@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<!-- templates/billing/pdf/receipt_pdf.html -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Payment Receipt</title>
+</head>
+<body>
+    <div class="header">
+        <h1>{{ vendor.name }}</h1>
+        <p>
+            {{ vendor.address }}<br>
+            {% if vendor.phone %}Phone: {{ vendor.phone }}<br>{% endif %}
+            {% if vendor.email %}Email: {{ vendor.email }}{% endif %}
+        </p>
+        
+        <div class="receipt-title">PAYMENT RECEIPT</div>
+    </div>
+
+    <div class="receipt-details">
+        <div class="detail-row">
+            <span class="detail-label">Receipt Date:</span>
+            <span class="detail-value">{{ payment.recorded_at|date:"d M, Y H:i" }}</span>
+        </div>
+        
+        <div class="detail-row">
+            <span class="detail-label">Invoice Number:</span>
+            <span class="detail-value">{{ invoice.invoice_number }}</span>
+        </div>
+        
+        <div class="detail-row">
+            <span class="detail-label">Payment Date:</span>
+            <span class="detail-value">{{ payment.payment_date|date:"d M, Y" }}</span>
+        </div>
+        
+        <div class="detail-row">
+            <span class="detail-label">Payment Method:</span>
+            <span class="detail-value">{{ payment.get_payment_method_display }}</span>
+        </div>
+        
+        {% if payment.reference_number %}
+        <div class="detail-row">
+            <span class="detail-label">Reference Number:</span>
+            <span class="detail-value">{{ payment.reference_number }}</span>
+        </div>
+        {% endif %}
+        
+        <div class="detail-row">
+            <span class="detail-label">Received From:</span>
+            <span class="detail-value">{{ client.name }}</span>
+        </div>
+    </div>
+
+    <div class="amount-section">
+        <div class="amount-paid">
+            Amount Paid: ₦{{ payment.amount|floatformat:2 }}
+        </div>
+    </div>
+
+    <div class="receipt-details">
+        <h3>Invoice Summary</h3>
+        
+        <div class="detail-row">
+            <span class="detail-label">Invoice Date:</span>
+            <span class="detail-value">{{ invoice.invoice_date|date:"d M, Y" }}</span>
+        </div>
+        
+        <div class="detail-row">
+            <span class="detail-label">Invoice Total:</span>
+            <span class="detail-value">₦{{ invoice.total_amount|floatformat:2 }}</span>
+        </div>
+        
+        <div class="detail-row">
+            <span class="detail-label">Total Paid:</span>
+            <span class="detail-value">₦{{ invoice.amount_paid|floatformat:2 }}</span>
+        </div>
+        
+        <div class="detail-row" style="font-weight: bold; font-size: 11pt;">
+            <span class="detail-label">Balance Due:</span>
+            <span class="detail-value">₦{{ balance_due|floatformat:2 }}</span>
+        </div>
+    </div>
+
+    {% if payment.notes %}
+    <div style="margin-top: 20px;">
+        <strong>Notes:</strong><br>
+        {{ payment.notes|linebreaks }}
+    </div>
+    {% endif %}
+
+    <div class="footer">
+        <p>Thank you for your payment!</p>
+        <p>Recorded by: {{ payment.recorded_by.get_full_name|default:payment.recorded_by.username }}</p>
+        <p>This is a computer-generated receipt.</p>
+    </div>
+</body>
+</html>

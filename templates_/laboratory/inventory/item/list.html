@@ -1,0 +1,169 @@
+{% extends "laboratory/assets/base.html" %}
+
+{% block title %}Inventory Items{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2>Inventory Items</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'labs:vendor_dashboard' %}">Home</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">Inventory</a></li>
+                    <li class="breadcrumb-item active">Items</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Search and Filter -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            {{ form.search }}
+                        </div>
+                        <div class="col-md-2">
+                            {{ form.category }}
+                        </div>
+                        <div class="col-md-2">
+                            {{ form.storage_condition }}
+                        </div>
+                        <div class="col-md-2">
+                            {{ form.status }}
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-search"></i> Search
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <a href="{% url 'inventory:item_create' %}" class="btn btn-success">
+                <i class="bi bi-plus-circle"></i> Add New Item
+            </a>
+            <a href="{% url 'inventory:export_csv' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-download"></i> Export CSV
+            </a>
+        </div>
+    </div>
+
+    <!-- Items Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Name</th>
+                                    <th>Category</th>
+                                    <th>Manufacturer</th>
+                                    <th>Current Stock</th>
+                                    <th>Reorder Level</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in items %}
+                                <tr>
+                                    <td><strong>{{ item.item_code }}</strong></td>
+                                    <td>{{ item.name }}</td>
+                                    <td>
+                                        <span class="badge bg-secondary">
+                                            {{ item.category.name }}
+                                        </span>
+                                    </td>
+                                    <td>{{ item.manufacturer }}</td>
+                                    <td>
+                                        {% with current_stock=item.get_current_stock %}
+                                        <span class="badge {% if current_stock == 0 %}bg-danger{% elif current_stock <= item.reorder_level %}bg-warning{% else %}bg-success{% endif %}">
+                                            {{ current_stock }} {{ item.unit_of_measure }}
+                                        </span>
+                                        {% endwith %}
+                                    </td>
+                                    <td>{{ item.reorder_level }} {{ item.unit_of_measure }}</td>
+                                    <td>
+                                        {% if item.is_active %}
+                                        <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'inventory:item_detail' item.pk %}" 
+                                               class="btn btn-outline-primary" title="View">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a href="{% url 'inventory:item_update' item.pk %}" 
+                                               class="btn btn-outline-secondary" title="Edit">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <a href="{% url 'inventory:lot_create_for_item' item.pk %}" 
+                                               class="btn btn-outline-success" title="Add Stock">
+                                                <i class="bi bi-plus"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted">
+                                        No inventory items found. <a href="{% url 'inventory:item_create' %}">Add your first item</a>.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    {% if items.has_other_pages %}
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination justify-content-center">
+                            {% if items.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ items.previous_page_number }}">Previous</a>
+                            </li>
+                            {% endif %}
+
+                            {% for num in items.paginator.page_range %}
+                            {% if items.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                            {% elif num > items.number|add:'-3' and num < items.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                            </li>
+                            {% endif %}
+                            {% endfor %}
+
+                            {% if items.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ items.next_page_number }}">Next</a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,54 @@
+<header class="bg-white border-b shadow-sm">
+    <nav class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+        
+        <!-- Logo -->
+        <a href="{% url 'lms:index' %}" class="flex items-center space-x-2">
+            <div class="h-8 w-8 bg-blue-600 text-white rounded flex items-center justify-center font-bold">
+                L
+            </div>
+            <span class="text-lg font-semibold text-gray-700">
+                Medvuno Learning
+            </span>
+        </a>
+
+        <!-- Registration options -->
+        <div class="hidden md:flex items-center space-x-4">
+            <a href="{% url 'account:learner_register' %}"
+               class="text-gray-700 hover:text-blue-600 text-sm font-medium">
+                Student
+            </a>
+
+            <a href="{% url 'account:facilitator_register' %}"
+               class="text-gray-700 hover:text-blue-600 text-sm font-medium">
+                Facilitator
+            </a>
+        </div>
+
+        <!-- Mobile -->
+        <button class="md:hidden p-2 rounded text-gray-600 mobile-menu-btn">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+        </button>
+    </nav>
+
+    <!-- Mobile menu -->
+    <div id="learning-mobile-menu" class="hidden md:hidden px-4 pb-3 space-y-2">
+        <a href="{% url 'account:learner_register' %}"
+           class="block text-gray-700 hover:text-blue-600">
+            Student
+        </a>
+        <a href="{% url 'account:facilitator_register' %}"
+           class="block text-gray-700 hover:text-blue-600">
+            Facilitator
+        </a>
+    </div>
+</header>
+
+<script>
+document.querySelector('.mobile-menu-btn')?.addEventListener('click', function() {
+    const menu = document.getElementById('learning-mobile-menu');
+    menu.classList.toggle('hidden');
+});
+</script>

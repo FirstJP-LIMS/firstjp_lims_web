@@ -1,0 +1,452 @@
+{% extends "laboratory/assets/base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar Navigation -->
+        <div class="col-md-3 col-lg-2 d-md-block sidebar">
+            <div class="position-sticky pt-3">
+                <div class="sidebar-header mb-4">
+                    <h5 class="text-primary-emphasis">
+                        <i class="fas fa-file-contract me-2"></i>Document Control
+                    </h5>
+                    <hr class="mt-2">
+                </div>
+                
+                <ul class="nav flex-column">
+                    <li class="nav-item mb-2">
+                        <a class="nav-link active" href="{% url 'doc_control:document_control_dashboard' %}">
+                            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'doc_control:document_list' %}">
+                            <i class="fas fa-folder me-2"></i>All Documents
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'doc_control:document_create' %}">
+                            <i class="fas fa-plus-circle me-2"></i>Create Document
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'doc_control:category_list' %}">
+                            <i class="fas fa-tags me-2"></i>Categories
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="#">
+                            <i class="fas fa-history me-2"></i>Revision History
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="#">
+                            <i class="fas fa-chart-bar me-2"></i>Reports
+                        </a>
+                    </li>
+                </ul>
+
+                <!-- Quick Stats -->
+                <div class="card mt-5 border-0" style="background-color: rgba(44, 90, 160, 0.05);">
+                    <div class="card-body p-3">
+                        <h6 class="card-title text-primary mb-3">
+                            <i class="fas fa-chart-line me-2"></i>Quick Stats
+                        </h6>
+                        <div class="d-flex justify-content-between mb-2">
+                            <small>Pending Approval:</small>
+                            <span class="badge bg-warning">{{ pending_approvals.count }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <small>Training Required:</small>
+                            <span class="badge bg-info">{{ required_training.count }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <small>My Drafts:</small>
+                            <span class="badge bg-secondary">{{ my_active_drafts.count }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <small>Due for Review:</small>
+                            <span class="badge bg-danger">{{ documents_due_soon.count }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h2 class="h3" style="color: var(--primary-color);">
+                    <i class="fas fa-tachometer-alt me-2"></i>Document Control Dashboard
+                </h2>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <div class="btn-group me-2">
+                        <a href="{% url 'doc_control:document_create' %}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-plus me-1"></i> New Document
+                        </a>
+                        <a href="{% url 'doc_control:document_list' %}" class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-search me-1"></i> Browse All
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alert Section -->
+            {% if pending_approvals.count > 0 or required_training.count > 0 %}
+            <div class="row mb-4">
+                {% if pending_approvals.count > 0 %}
+                <div class="col-md-6">
+                    <div class="alert alert-warning d-flex align-items-center">
+                        <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+                        <div>
+                            <strong>{{ pending_approvals.count }} document(s) require your approval</strong>
+                            <p class="mb-0">Please review and sign these documents to proceed with their approval process.</p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if required_training.count > 0 %}
+                <div class="col-md-6">
+                    <div class="alert alert-info d-flex align-items-center">
+                        <i class="fas fa-book fa-2x me-3"></i>
+                        <div>
+                            <strong>{{ required_training.count }} training(s) require acknowledgement</strong>
+                            <p class="mb-0">Please review and acknowledge these documents to maintain compliance.</p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Action Items Grid -->
+            <div class="row">
+                <!-- Pending Approvals -->
+                <div class="col-lg-6 mb-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-header bg-warning bg-opacity-10 border-0 d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0 text-warning-emphasis">
+                                <i class="fas fa-clipboard-check me-2"></i>Pending Approvals
+                            </h5>
+                            <span class="badge bg-warning">{{ pending_approvals.count }}</span>
+                        </div>
+                        <div class="card-body p-0">
+                            {% if pending_approvals %}
+                            <div class="list-group list-group-flush">
+                                {% for version in pending_approvals %}
+                                <div class="list-group-item border-0 py-3">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h6 class="mb-1">{{ version.document.title }}</h6>
+                                            <small class="text-muted">
+                                                <i class="fas fa-tag me-1"></i>{{ version.document.category|default:"Uncategorized" }}
+                                                • Version {{ version.version_number }}
+                                                • Created: {{ version.created_at|date:"M d, Y" }}
+                                            </small>
+                                        </div>
+                                        <a href="{% url 'doc_control:version_approve' pk=version.pk %}" 
+                                           class="btn btn-sm btn-warning">
+                                            <i class="fas fa-signature me-1"></i> Review & Sign
+                                        </a>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                                <p class="text-muted">No documents require your immediate approval.</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% if pending_approvals %}
+                        <div class="card-footer bg-transparent border-0 text-end">
+                            <a href="#" class="text-primary text-decoration-none small">
+                                View all pending approvals <i class="fas fa-arrow-right ms-1"></i>
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Required Training -->
+                <div class="col-lg-6 mb-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-header bg-info bg-opacity-10 border-0 d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0 text-info-emphasis">
+                                <i class="fas fa-graduation-cap me-2"></i>Required Training & Acknowledgement
+                            </h5>
+                            <span class="badge bg-info">{{ required_training.count }}</span>
+                        </div>
+                        <div class="card-body p-0">
+                            {% if required_training %}
+                            <div class="list-group list-group-flush">
+                                {% for version in required_training %}
+                                <div class="list-group-item border-0 py-3">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h6 class="mb-1">{{ version.document.title }}</h6>
+                                            <small class="text-muted">
+                                                <i class="fas fa-tag me-1"></i>{{ version.document.category|default:"Uncategorized" }}
+                                                • Version {{ version.version_number }}
+                                                • Effective: {{ version.effective_date|date:"M d, Y"|default:"Not set" }}
+                                            </small>
+                                        </div>
+                                        <a href="{% url 'doc_control:version_acknowledge' pk=version.pk %}" 
+                                           class="btn btn-sm btn-info">
+                                            <i class="fas fa-check me-1"></i> Acknowledge
+                                        </a>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                                <p class="text-muted">You are up-to-date with all required document training.</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% if required_training %}
+                        <div class="card-footer bg-transparent border-0 text-end">
+                            <a href="#" class="text-primary text-decoration-none small">
+                                View all training items <i class="fas fa-arrow-right ms-1"></i>
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lower Section Grid -->
+            <div class="row">
+                <!-- My Active Drafts -->
+                <div class="col-lg-6 mb-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-header bg-light border-0 d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="fas fa-edit me-2"></i>My Active Drafts
+                            </h5>
+                            <span class="badge bg-secondary">{{ my_active_drafts.count }}</span>
+                        </div>
+                        <div class="card-body">
+                            {% if my_active_drafts %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <tbody>
+                                        {% for version in my_active_drafts %}
+                                        <tr>
+                                            <td>
+                                                <a href="{% url 'doc_control:version_detail' pk=version.pk %}" 
+                                                   class="text-decoration-none">
+                                                    <strong>{{ version.document.title }}</strong>
+                                                    <br>
+                                                    <small class="text-muted">
+                                                        Version {{ version.version_number }} • 
+                                                        Last modified: {{ version.created_at|date:"M d, Y H:i" }}
+                                                    </small>
+                                                </a>
+                                            </td>
+                                            <td class="text-end">
+                                                <span class="badge bg-secondary">Draft</span>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+                                <p class="text-muted mb-0">You have no documents currently in draft status.</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% if my_active_drafts %}
+                        <div class="card-footer bg-transparent border-0">
+                            <a href="{% url 'doc_control:document_list' %}?status=draft" 
+                               class="btn btn-sm btn-outline-primary">
+                                View all drafts
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Documents Due for Review -->
+                <div class="col-lg-6 mb-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-header bg-light border-0 d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="fas fa-calendar-alt me-2"></i>Documents Due for Review (30 Days)
+                            </h5>
+                            <span class="badge bg-danger">{{ documents_due_soon.count }}</span>
+                        </div>
+                        <div class="card-body">
+                            {% if documents_due_soon %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <tbody>
+                                        {% for document in documents_due_soon %}
+                                        <tr>
+                                            <td>
+                                                <a href="{% url 'doc_control:document_detail' pk=document.pk %}" 
+                                                   class="text-decoration-none">
+                                                    <strong>{{ document.title }}</strong>
+                                                    <br>
+                                                    <small class="text-muted">
+                                                        Category: {{ document.category|default:"Uncategorized" }}
+                                                    </small>
+                                                </a>
+                                            </td>
+                                            <td class="text-end">
+                                                <span class="badge {% if document.review_due_date < timezone.now.date %}bg-danger{% else %}bg-warning{% endif %}">
+                                                    Due: {{ document.review_due_date|date:"M d, Y" }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                                <p class="text-muted mb-0">No documents are approaching their scheduled review date.</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% if documents_due_soon %}
+                        <div class="card-footer bg-transparent border-0">
+                            <a href="{% url 'doc_control:document_list' %}?due_soon=true" 
+                               class="btn btn-sm btn-outline-danger">
+                                View all due documents
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics Cards -->
+            <div class="row mt-4">
+                <div class="col-md-3 mb-3">
+                    <div class="card border-0 text-white" style="background: linear-gradient(135deg, var(--primary-color), #1a3d7a);">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title mb-1">Total Documents</h6>
+                                    <h3 class="mb-0">{{ documents_due_soon.count|add:my_active_drafts.count|add:10 }}</h3>
+                                </div>
+                                <i class="fas fa-file-alt fa-2x opacity-50"></i>
+                            </div>
+                            <p class="small mb-0 mt-2 opacity-75">Active in system</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="card border-0 bg-success bg-opacity-10">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title text-success mb-1">Approved</h6>
+                                    <h3 class="mb-0 text-success">{{ pending_approvals.count|add:5 }}</h3>
+                                </div>
+                                <i class="fas fa-check-circle fa-2x text-success opacity-50"></i>
+                            </div>
+                            <p class="small mb-0 mt-2 text-muted">Currently effective</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="card border-0 bg-warning bg-opacity-10">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title text-warning mb-1">In Review</h6>
+                                    <h3 class="mb-0 text-warning">{{ pending_approvals.count|add:2 }}</h3>
+                                </div>
+                                <i class="fas fa-clipboard-check fa-2x text-warning opacity-50"></i>
+                            </div>
+                            <p class="small mb-0 mt-2 text-muted">Awaiting approval</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="card border-0 bg-info bg-opacity-10">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title text-info mb-1">Training Due</h6>
+                                    <h3 class="mb-0 text-info">{{ required_training.count|add:3 }}</h3>
+                                </div>
+                                <i class="fas fa-users fa-2x text-info opacity-50"></i>
+                            </div>
+                            <p class="small mb-0 mt-2 text-muted">Users pending training</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .sidebar {
+        background-color: var(--light-bg);
+        border-right: 1px solid #dee2e6;
+        min-height: calc(100vh - 70px);
+        padding-top: 20px;
+    }
+    
+    .nav-link {
+        color: var(--secondary-color);
+        padding: 0.75rem 1rem;
+        border-radius: var(--border-radius);
+        transition: var(--transition);
+    }
+    
+    .nav-link:hover {
+        color: var(--primary-color);
+        background-color: rgba(44, 90, 160, 0.1);
+        transform: translateX(5px);
+    }
+    
+    .nav-link.active {
+        color: var(--primary-color);
+        background-color: rgba(44, 90, 160, 0.1);
+        font-weight: 600;
+        border-left: 3px solid var(--primary-color);
+    }
+    
+    .card {
+        border-radius: var(--border-radius);
+        transition: var(--transition);
+        border: 1px solid #e9ecef;
+    }
+    
+    .card:hover {
+        box-shadow: var(--box-shadow);
+        transform: translateY(-2px);
+    }
+    
+    .list-group-item:hover {
+        background-color: rgba(44, 90, 160, 0.05);
+    }
+    
+    .badge {
+        font-weight: 500;
+        padding: 0.35em 0.65em;
+    }
+    
+    @media (max-width: 768px) {
+        .sidebar {
+            min-height: auto;
+            border-right: none;
+            border-bottom: 1px solid #dee2e6;
+        }
+    }
+</style>
+{% endblock content %}

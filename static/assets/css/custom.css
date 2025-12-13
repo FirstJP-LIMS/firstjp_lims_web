@@ -11,14 +11,21 @@
 }
 
 /* Global Styles */
+
 body {
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-family: "Mulish", sans-serif;
     line-height: 1.6;
 }
 
-.main-content {
+/* nav {
+    font-family: "Montserrat", sans-serif;
+    font-optical-sizing: auto;
+    font-style: normal;
+} */
+
+/* .main-content {
     min-height: calc(100vh - 120px);
-}
+} */
 
 /* Card Enhancements */
 .card {

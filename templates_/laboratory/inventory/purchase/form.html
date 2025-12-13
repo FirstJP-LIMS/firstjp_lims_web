@@ -1,0 +1,361 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .formset-row {
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 15px;
+        margin-bottom: 15px;
+        background-color: #f8f9fa;
+    }
+    .delete-row {
+        background-color: #f8d7da !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2>{{ title }}</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">Inventory</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:po_list' %}">Purchase Orders</a></li>
+                    <li class="breadcrumb-item active">{{ title }}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" novalidate id="po-form">
+                        {% csrf_token %}
+                        
+                        {% if form.errors or formset.errors %}
+                        <div class="alert alert-danger">
+                            <strong>Please correct the errors below:</strong>
+                            <ul class="mb-0">
+                                {% for field, errors in form.errors.items %}
+                                    {% for error in errors %}
+                                    <li>{{ field }}: {{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                                {% for error in formset.non_form_errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+
+                        <!-- PO Header -->
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h5 class="mb-3">Purchase Order Details</h5>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="{{ form.po_number.id_for_label }}" class="form-label">
+                                            PO Number <span class="text-danger">*</span>
+                                        </label>
+                                        {{ form.po_number }}
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="{{ form.supplier.id_for_label }}" class="form-label">
+                                            Supplier <span class="text-danger">*</span>
+                                        </label>
+                                        {{ form.supplier }}
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <label for="{{ form.order_date.id_for_label }}" class="form-label">
+                                            Order Date <span class="text-danger">*</span>
+                                        </label>
+                                        {{ form.order_date }}
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label for="{{ form.expected_delivery.id_for_label }}" class="form-label">
+                                            Expected Delivery
+                                        </label>
+                                        {{ form.expected_delivery }}
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label for="{{ form.status.id_for_label }}" class="form-label">
+                                            Status <span class="text-danger">*</span>
+                                        </label>
+                                        {{ form.status }}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <h5 class="mb-3">Additional Costs</h5>
+                                <div class="mb-3">
+                                    <label for="{{ form.tax.id_for_label }}" class="form-label">
+                                        Tax (₦)
+                                    </label>
+                                    {{ form.tax }}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="{{ form.shipping.id_for_label }}" class="form-label">
+                                        Shipping (₦)
+                                    </label>
+                                    {{ form.shipping }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Line Items -->
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h5 class="mb-0">Order Items</h5>
+                                    <button type="button" class="btn btn-sm btn-success" id="add-item">
+                                        <i class="bi bi-plus-circle"></i> Add Item
+                                    </button>
+                                </div>
+
+                                {{ formset.management_form }}
+                                
+                                <div id="formset-container">
+                                    {% for item_form in formset %}
+                                    <div class="formset-row" data-formset-form>
+                                        <div class="row align-items-end">
+                                            <div class="col-md-5 mb-2">
+                                                <label class="form-label">Item <span class="text-danger">*</span></label>
+                                                {{ item_form.inventory_item }}
+                                                {% if item_form.inventory_item.errors %}
+                                                <div class="text-danger small">{{ item_form.inventory_item.errors }}</div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="col-md-2 mb-2">
+                                                <label class="form-label">Quantity <span class="text-danger">*</span></label>
+                                                {{ item_form.quantity_ordered }}
+                                                {% if item_form.quantity_ordered.errors %}
+                                                <div class="text-danger small">{{ item_form.quantity_ordered.errors }}</div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="col-md-2 mb-2">
+                                                <label class="form-label">Unit Price (₦) <span class="text-danger">*</span></label>
+                                                {{ item_form.unit_price }}
+                                                {% if item_form.unit_price.errors %}
+                                                <div class="text-danger small">{{ item_form.unit_price.errors }}</div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="col-md-2 mb-2">
+                                                <label class="form-label">Total (₦)</label>
+                                                <input type="text" class="form-control item-total" readonly>
+                                            </div>
+                                            <div class="col-md-1 mb-2">
+                                                <label class="form-label d-block">&nbsp;</label>
+                                                {% if formset.can_delete %}
+                                                {{ item_form.DELETE }}
+                                                <button type="button" class="btn btn-danger btn-sm w-100 delete-item">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        {{ item_form.id }}
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Totals -->
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label for="{{ form.notes.id_for_label }}" class="form-label">
+                                        Notes
+                                    </label>
+                                    {{ form.notes }}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <table class="table table-sm">
+                                    <tr>
+                                        <th>Subtotal:</th>
+                                        <td class="text-end" id="po-subtotal">₦0.00</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Tax:</th>
+                                        <td class="text-end" id="po-tax">₦0.00</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Shipping:</th>
+                                        <td class="text-end" id="po-shipping">₦0.00</td>
+                                    </tr>
+                                    <tr class="table-primary">
+                                        <th>Total:</th>
+                                        <th class="text-end" id="po-total">₦0.00</th>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% if po %}{% url 'inventory:po_detail' po.pk %}{% else %}{% url 'inventory:po_list' %}{% endif %}" 
+                               class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Save Purchase Order
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Empty form template for adding new items -->
+<div id="empty-form" style="display:none">
+    {% with item_form=formset.empty_form %}
+    <div class="formset-row" data-formset-form>
+        <div class="row align-items-end">
+            <div class="col-md-5 mb-2">
+                <label class="form-label">Item <span class="text-danger">*</span></label>
+                {{ item_form.inventory_item }}
+            </div>
+            <div class="col-md-2 mb-2">
+                <label class="form-label">Quantity <span class="text-danger">*</span></label>
+                {{ item_form.quantity_ordered }}
+            </div>
+            <div class="col-md-2 mb-2">
+                <label class="form-label">Unit Price (₦) <span class="text-danger">*</span></label>
+                {{ item_form.unit_price }}
+            </div>
+            <div class="col-md-2 mb-2">
+                <label class="form-label">Total (₦)</label>
+                <input type="text" class="form-control item-total" readonly>
+            </div>
+            <div class="col-md-1 mb-2">
+                <label class="form-label d-block">&nbsp;</label>
+                <button type="button" class="btn btn-danger btn-sm w-100 delete-item">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        </div>
+        {{ item_form.id }}
+    </div>
+    {% endwith %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const formsetContainer = document.getElementById('formset-container');
+        const addButton = document.getElementById('add-item');
+        const totalFormsInput = document.querySelector('input[name$="-TOTAL_FORMS"]');
+        
+        // Calculate line item totals
+        function calculateLineTotal(row) {
+            const qtyInput = row.querySelector('input[name$="-quantity_ordered"]');
+            const priceInput = row.querySelector('input[name$="-unit_price"]');
+            const totalDisplay = row.querySelector('.item-total');
+            
+            const qty = parseFloat(qtyInput.value) || 0;
+            const price = parseFloat(priceInput.value) || 0;
+            const total = qty * price;
+            
+            totalDisplay.value = '₦' + total.toFixed(2);
+            calculateGrandTotal();
+        }
+        
+        // Calculate grand total
+        function calculateGrandTotal() {
+            let subtotal = 0;
+            
+            document.querySelectorAll('[data-formset-form]:not(.delete-row)').forEach(row => {
+                const qtyInput = row.querySelector('input[name$="-quantity_ordered"]');
+                const priceInput = row.querySelector('input[name$="-unit_price"]');
+                
+                const qty = parseFloat(qtyInput.value) || 0;
+                const price = parseFloat(priceInput.value) || 0;
+                subtotal += qty * price;
+            });
+            
+            const tax = parseFloat(document.querySelector('input[name="tax"]').value) || 0;
+            const shipping = parseFloat(document.querySelector('input[name="shipping"]').value) || 0;
+            const total = subtotal + tax + shipping;
+            
+            document.getElementById('po-subtotal').textContent = '₦' + subtotal.toFixed(2);
+            document.getElementById('po-tax').textContent = '₦' + tax.toFixed(2);
+            document.getElementById('po-shipping').textContent = '₦' + shipping.toFixed(2);
+            document.getElementById('po-total').textContent = '₦' + total.toFixed(2);
+        }
+        
+        // Add event listeners to existing forms
+        document.querySelectorAll('[data-formset-form]').forEach(row => {
+            const qtyInput = row.querySelector('input[name$="-quantity_ordered"]');
+            const priceInput = row.querySelector('input[name$="-unit_price"]');
+            
+            qtyInput.addEventListener('input', () => calculateLineTotal(row));
+            priceInput.addEventListener('input', () => calculateLineTotal(row));
+            
+            calculateLineTotal(row);
+        });
+        
+        // Delete item
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.delete-item')) {
+                const row = e.target.closest('[data-formset-form]');
+                const deleteCheckbox = row.querySelector('input[name$="-DELETE"]');
+                
+                if (deleteCheckbox) {
+                    deleteCheckbox.checked = true;
+                    row.classList.add('delete-row');
+                } else {
+                    row.remove();
+                }
+                
+                calculateGrandTotal();
+            }
+        });
+        
+        // Add new item
+        addButton.addEventListener('click', function() {
+            const emptyForm = document.getElementById('empty-form').innerHTML;
+            const formCount = parseInt(totalFormsInput.value);
+            const newForm = emptyForm.replace(/__prefix__/g, formCount);
+            
+            formsetContainer.insertAdjacentHTML('beforeend', newForm);
+            totalFormsInput.value = formCount + 1;
+            
+            const newRow = formsetContainer.lastElementChild;
+            const qtyInput = newRow.querySelector('input[name$="-quantity_ordered"]');
+            const priceInput = newRow.querySelector('input[name$="-unit_price"]');
+            
+            qtyInput.addEventListener('input', () => calculateLineTotal(newRow));
+            priceInput.addEventListener('input', () => calculateLineTotal(newRow));
+        });
+        
+        // Tax and shipping listeners
+        document.querySelector('input[name="tax"]').addEventListener('input', calculateGrandTotal);
+        document.querySelector('input[name="shipping"]').addEventListener('input', calculateGrandTotal);
+        
+        // Initial calculation
+        calculateGrandTotal();
+    });
+</script>
+{% endblock %}

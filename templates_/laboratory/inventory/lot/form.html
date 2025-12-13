@@ -1,0 +1,202 @@
+{% extends "laboratory/assets/base.html" %}
+
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2>{{ title }}</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">Inventory</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:lot_list' %}">Stock Lots</a></li>
+                    <li class="breadcrumb-item active">{{ title }}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-10 offset-md-1">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        {% if form.errors %}
+                        <div class="alert alert-danger">
+                            <strong>Please correct the errors below:</strong>
+                            <ul class="mb-0">
+                                {% for field, errors in form.errors.items %}
+                                    {% for error in errors %}
+                                    <li>{{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+
+                        <!-- Item Selection -->
+                        <h5 class="mb-3">Item Information</h5>
+                        <div class="mb-3">
+                            <label for="{{ form.item.id_for_label }}" class="form-label">
+                                Inventory Item <span class="text-danger">*</span>
+                            </label>
+                            {{ form.item }}
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Lot Information -->
+                        <h5 class="mb-3">Lot Information</h5>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.lot_number.id_for_label }}" class="form-label">
+                                    Lot Number <span class="text-danger">*</span>
+                                </label>
+                                {{ form.lot_number }}
+                                {% if form.lot_number.help_text %}
+                                <div class="form-text">{{ form.lot_number.help_text }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.barcode.id_for_label }}" class="form-label">
+                                    Barcode
+                                </label>
+                                {{ form.barcode }}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.quantity_received.id_for_label }}" class="form-label">
+                                    Quantity Received <span class="text-danger">*</span>
+                                </label>
+                                {{ form.quantity_received }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.storage_location.id_for_label }}" class="form-label">
+                                    Storage Location
+                                </label>
+                                {{ form.storage_location }}
+                                {% if form.storage_location.help_text %}
+                                <div class="form-text">{{ form.storage_location.help_text }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Dates -->
+                        <h5 class="mb-3">Important Dates</h5>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.received_date.id_for_label }}" class="form-label">
+                                    Received Date <span class="text-danger">*</span>
+                                </label>
+                                {{ form.received_date }}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.manufacture_date.id_for_label }}" class="form-label">
+                                    Manufacture Date
+                                </label>
+                                {{ form.manufacture_date }}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.expiry_date.id_for_label }}" class="form-label">
+                                    Expiry Date <span class="text-danger">*</span>
+                                </label>
+                                {{ form.expiry_date }}
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Purchase Information -->
+                        <h5 class="mb-3">Purchase Information</h5>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.supplier.id_for_label }}" class="form-label">
+                                    Supplier <span class="text-danger">*</span>
+                                </label>
+                                {{ form.supplier }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.purchase_order.id_for_label }}" class="form-label">
+                                    Purchase Order #
+                                </label>
+                                {{ form.purchase_order }}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.unit_cost.id_for_label }}" class="form-label">
+                                    Unit Cost (₦) <span class="text-danger">*</span>
+                                </label>
+                                {{ form.unit_cost }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Total Cost (₦)</label>
+                                <input type="text" class="form-control" id="total_cost" readonly>
+                                <div class="form-text">Auto-calculated: Quantity × Unit Cost</div>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Notes -->
+                        <h5 class="mb-3">Additional Notes</h5>
+                        <div class="mb-3">
+                            <label for="{{ form.notes.id_for_label }}" class="form-label">
+                                Notes
+                            </label>
+                            {{ form.notes }}
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% if lot %}{% url 'inventory:lot_detail' lot.pk %}{% else %}{% url 'inventory:lot_list' %}{% endif %}" 
+                               class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check-circle"></i> Receive Stock
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-calculate total cost
+    document.addEventListener('DOMContentLoaded', function() {
+        const quantityInput = document.querySelector('input[name="quantity_received"]');
+        const unitCostInput = document.querySelector('input[name="unit_cost"]');
+        const totalCostDisplay = document.getElementById('total_cost');
+
+        function calculateTotal() {
+            const quantity = parseFloat(quantityInput.value) || 0;
+            const unitCost = parseFloat(unitCostInput.value) || 0;
+            const total = quantity * unitCost;
+            totalCostDisplay.value = '₦' + total.toFixed(2);
+        }
+
+        if (quantityInput && unitCostInput) {
+            quantityInput.addEventListener('input', calculateTotal);
+            unitCostInput.addEventListener('input', calculateTotal);
+            calculateTotal(); // Initial calculation
+        }
+    });
+</script>
+{% endblock %}

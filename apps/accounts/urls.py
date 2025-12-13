@@ -7,8 +7,9 @@ app_name = "account"
 
 urlpatterns = [
     
-    path('index/', views.tenant_auth_page, name='auth_landing'),
+     #     path('index/', views.tenant_auth_page, name='auth_landing'),
     # REGISTRATION ROUTES
+     #     tenant roles
     path('register/staff/', 
          views.tenant_register_by_role, 
          {'role_name': 'lab_staff'}, 
@@ -23,6 +24,11 @@ urlpatterns = [
          views.tenant_register_by_role, 
          {'role_name': 'patient'}, 
          name='patient_register'),
+
+     # learning platform registration 
+     path('register/learner/', views.learn_register, {'role_name':'learner'}, name='learner_register'),
+     path('register/facilitator/', views.learn_register, {'role_name':'facilitator'}, name='facilitator_register'),
+
 
     # AUTHENTICATION
     path('login/', views.tenant_login, name='login'),

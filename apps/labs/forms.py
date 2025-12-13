@@ -107,27 +107,37 @@ class PatientForm(forms.ModelForm):
         
 from .models import PRIORITY_STATUS
 
+# PRIORITY_STATUS = [
+#         ("urgent","URGENT"),
+#         ("routine","ROUTINE"),
+#     ]
+
 class TestRequestForm(forms.ModelForm):
     """
     A flexible form for creating Test Requests.
     Handles both new and existing patients.
+    Update to take patients and Clinicians 
     """
 
+    # # Patient selection (for clinicians only)
+    # patient_id = forms.CharField(
+    #     required=False,
+    #     max_length=20,
+    #     widget=forms.TextInput(attrs={
+    #         'class': 'form-control',
+    #         'placeholder': 'Enter Patient ID'
+    #     }),
+    #     label="Patient ID"
+    # )
     # ... (Existing Patient Section Fields) ...
-    existing_patient = forms.ModelChoiceField(
-        queryset=Patient.objects.none(),
-        required=False,
-        label="Select Existing Patient",
-        help_text="Choose an existing patient or enter new patient details below."
-    )
+    existing_patient = forms.ModelChoiceField(queryset=Patient.objects.none(), required=False, label="Select Existing Patient", help_text="Choose an existing patient or enter new patient details below.")
+
     first_name = forms.CharField(required=False, max_length=100, label="First Name")
     last_name = forms.CharField(required=False, max_length=100, label="Last Name")
-    date_of_birth = forms.DateField(
-    required=False,
-    widget=forms.DateInput(attrs={'type': 'date'}),
-    label="Date of Birth",
+    date_of_birth = forms.DateField(required=False, widget=forms.DateInput(attrs={'type': 'date'}), label="Date of Birth",
     input_formats=['%Y-%m-%d'],  # optional
     )
+
 
     gender = forms.ChoiceField(
         required=False,
@@ -151,8 +161,7 @@ class TestRequestForm(forms.ModelForm):
 
     class Meta:
         model = TestRequest
-        fields = ["existing_patient", "first_name", "last_name", "date_of_birth",
-                  "gender", "contact_email", "contact_phone", "tests_to_order",
+        fields = ["existing_patient", "first_name", "last_name", "date_of_birth", "gender", "contact_email", "contact_phone", "tests_to_order",
                   "clinical_history", "priority", "has_informed_consent", "external_referral"]
                   
     def __init__(self, *args, **kwargs):
@@ -160,7 +169,7 @@ class TestRequestForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
         if vendor:
-            self.fields["existing_patient"].queryset = Patient.objects.filter(vendor=vendor)
+            self.fields["existing_patient"].queryset = Patient.objects.filter(vendor=vendor).order_by('first_name')
             self.fields["tests_to_order"].queryset = VendorTest.objects.filter(vendor=vendor).order_by('name')
 
         # Make date_of_birth field accept empty values properly
@@ -213,6 +222,106 @@ class TestRequestForm(forms.ModelForm):
             "contact_email": self.cleaned_data.get("contact_email"),
             "contact_phone": self.cleaned_data.get("contact_phone"),
         }
+
+
+# class TestRequestForm(forms.ModelForm):
+#     """
+#     A flexible form for creating Test Requests.
+#     Handles both new and existing patients.
+#     """
+
+#     # ... (Existing Patient Section Fields) ...
+#     existing_patient = forms.ModelChoiceField(queryset=Patient.objects.none(), required=False, label="Select Existing Patient", help_text="Choose an existing patient or enter new patient details below.")
+
+#     first_name = forms.CharField(required=False, max_length=100, label="First Name")
+#     last_name = forms.CharField(required=False, max_length=100, label="Last Name")
+#     date_of_birth = forms.DateField(required=False, widget=forms.DateInput(attrs={'type': 'date'}), label="Date of Birth",
+#     input_formats=['%Y-%m-%d'],  # optional
+#     )
+
+#     gender = forms.ChoiceField(
+#         required=False,
+#         choices=Patient.GENDER_CHOICE,
+#         label="Gender"
+#     )
+#     contact_email = forms.EmailField(required=False, label="Contact Email")
+#     contact_phone = forms.CharField(required=False, max_length=15, label="Contact Phone")
+
+#     # --- Test Section ---
+#     tests_to_order = forms.ModelMultipleChoiceField(
+#         queryset=VendorTest.objects.none(),
+#         widget=forms.CheckboxSelectMultiple,
+#         label="Select Tests"
+#     )
+#     priority = forms.ChoiceField(
+#         choices=PRIORITY_STATUS,
+#         label="Priority",
+#         initial="routine",
+#     )
+
+#     class Meta:
+#         model = TestRequest
+#         fields = ["existing_patient", "first_name", "last_name", "date_of_birth", 'patient_id', "gender", "contact_email", "contact_phone", "tests_to_order",
+#                   "clinical_history", "priority", "has_informed_consent", "external_referral"]
+                  
+#     def __init__(self, *args, **kwargs):
+#         vendor = kwargs.pop('vendor', None)
+#         super().__init__(*args, **kwargs)
+
+#         if vendor:
+#             self.fields["existing_patient"].queryset = Patient.objects.filter(vendor=vendor).order_by('first_name')
+#             self.fields["tests_to_order"].queryset = VendorTest.objects.filter(vendor=vendor).order_by('name')
+
+#         # Make date_of_birth field accept empty values properly
+#         self.fields['date_of_birth'].empty_value = None
+
+#     def clean_date_of_birth(self):
+#         """Handle empty date values properly."""
+#         dob = self.cleaned_data.get('date_of_birth')
+#         if not dob:
+#             return None
+#         return dob
+
+#     def clean(self):
+#         cleaned_data = super().clean()
+#         existing_patient = cleaned_data.get("existing_patient")
+#         first_name = cleaned_data.get("first_name")
+#         last_name = cleaned_data.get("last_name")
+#         date_of_birth = cleaned_data.get("date_of_birth")  
+
+#         # Require at least one patient option
+#         if not existing_patient and not (first_name and last_name):
+#             raise forms.ValidationError(
+#                 "Please select an existing patient or provide new patient details."
+#             )
+
+#         # Require at least one test
+#         tests_to_order = cleaned_data.get("tests_to_order")
+#         if not tests_to_order or tests_to_order.count() == 0:
+#             raise forms.ValidationError("Please select at least one test to order.")
+
+#         return cleaned_data
+    
+#     @property
+#     def total_order_price(self):
+#         """Calculates the total price of the currently selected tests."""
+#         tests = self.cleaned_data.get('tests_to_order', [])
+#         total = sum(test.price for test in tests)
+#         return total
+
+#     @property
+#     def patient(self):
+#         existing_patient = self.cleaned_data.get("existing_patient")
+#         if existing_patient:
+#             return existing_patient
+#         return {
+#             "first_name": self.cleaned_data.get("first_name"),
+#             "last_name": self.cleaned_data.get("last_name"),
+#             "date_of_birth": self.cleaned_data.get("date_of_birth"),
+#             "gender": self.cleaned_data.get("gender"),
+#             "contact_email": self.cleaned_data.get("contact_email"),
+#             "contact_phone": self.cleaned_data.get("contact_phone"),
+#         }
 
 
 from . models import Sample

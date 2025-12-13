@@ -84,6 +84,17 @@ class VendorTest(models.Model):
     # Cost & availability
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     enabled = models.BooleanField(default=True)
+    
+    # 🆕 PATIENT SELF-ORDERING CONTROL
+    available_for_online_booking = models.BooleanField(
+        default=False,
+        help_text="Can patients request this test online without clinician referral?"
+    )
+    
+    requires_physician_approval = models.BooleanField(
+        default=False,
+        help_text="Patient orders require physician review before processing (used for complex/high-risk tests)"
+    )
 
     # Specimen & method metadata
     specimen_type = models.CharField(max_length=100, blank=True, help_text="e.g. Serum, Plasma, Urine")
@@ -111,6 +122,32 @@ class VendorTest(models.Model):
                                           help_text="Critical low (panic) threshold")
     panic_high_value = models.DecimalField(max_digits=12, decimal_places=6, null=True, blank=True,
                                            help_text="Critical high (panic) threshold")
+    
+    # 🆕 PATIENT PREPARATION & INFORMATION
+    preparation_required = models.BooleanField(
+        default=False,
+        help_text="Does this test require special preparation? (fasting, medication hold, etc.)"
+    )
+    
+    preparation_instructions = models.TextField(
+        blank=True,
+        help_text="Patient-facing instructions (e.g., 'Fast for 8-12 hours', 'Avoid alcohol 48hrs before')"
+    )
+    
+    collection_instructions = models.TextField(
+        blank=True,
+        help_text="How the sample should be collected (e.g., 'First morning urine', 'Avoid recent exercise')"
+    )
+    
+    patient_friendly_description = models.TextField(
+        blank=True,
+        help_text="Layman's explanation of what this test measures and why it's ordered"
+    )
+    
+    typical_reasons = models.TextField(
+        blank=True,
+        help_text="Common clinical indications for this test (for patient education)"
+    )
 
     # Misc
     turnaround_override = models.DurationField(null=True, blank=True)
@@ -129,6 +166,7 @@ class VendorTest(models.Model):
             models.Index(fields=["vendor", "code"]),
             models.Index(fields=["result_type"]),
             models.Index(fields=["amr_low", "amr_high"]),
+            models.Index(fields=["available_for_online_booking"]),  # 🆕 For patient queries
         ]
 
     def save(self, *args, **kwargs):
@@ -138,7 +176,7 @@ class VendorTest(models.Model):
         super().save(*args, **kwargs)
 
     # ---------------------
-    # Helper methods used by TestResult
+    # Helper methods
     # ---------------------
     def has_panic_low(self):
         return self.panic_low_value is not None
@@ -146,17 +184,17 @@ class VendorTest(models.Model):
     def has_panic_high(self):
         return self.panic_high_value is not None
 
-    def in_panic_low(self, value: Decimal):
+    def in_panic_low(self, value):
         if self.panic_low_value is None:
             return False
         return value <= self.panic_low_value
 
-    def in_panic_high(self, value: Decimal):
+    def in_panic_high(self, value):
         if self.panic_high_value is None:
             return False
         return value >= self.panic_high_value
 
-    def in_reference_range(self, value: Decimal):
+    def in_reference_range(self, value):
         """Return -1 if below, 0 if within, +1 if above, None if no refs"""
         if self.min_reference_value is None or self.max_reference_value is None:
             return None
@@ -166,7 +204,7 @@ class VendorTest(models.Model):
             return 1
         return 0
 
-    def is_within_amr(self, value: Decimal):
+    def is_within_amr(self, value):
         """Check analytical measuring range if present"""
         if self.amr_low is None or self.amr_high is None:
             return True
@@ -193,8 +231,36 @@ class VendorTest(models.Model):
             )
             return test_price.price
         except TestPrice.DoesNotExist:
-            # Price not defined for this price list, use default
             return self.price
+    
+    # 🆕 ORDERING HELPERS
+    def can_be_ordered_by_patient(self):
+        """
+        Check if this test is available for patient self-ordering.
+        Simple check - no demographic restrictions.
+        """
+        return self.enabled and self.available_for_online_booking
+    
+    def get_estimated_turnaround(self):
+        """
+        Get estimated turnaround time for this test.
+        Returns hours as integer.
+        """
+        if self.turnaround_override:
+            return int(self.turnaround_override.total_seconds() / 3600)
+        
+        # Default based on department or test complexity
+        if self.assigned_department:
+            return getattr(self.assigned_department, 'default_turnaround_hours', 24)
+        
+        return 24  # Default 24 hours
+    
+    def get_display_price(self, price_list=None):
+        """
+        Get formatted price for display.
+        """
+        price = self.get_price_from_price_list(price_list)
+        return f"₦{price:,.2f}"  # Adjust currency symbol as needed
         
     def __str__(self):
         return f"[{self.vendor.name}] {self.code} — {self.name}"
@@ -398,54 +464,246 @@ PRIORITY_STATUS = [
         ("urgent","URGENT"),
         ("routine","ROUTINE"),
     ]
+# class TestRequest(models.Model):
+#     """Represents a full lab order for a patient, possibly containing multiple tests."""
+
+#     ORDER_STATUS = [
+#         ('P', 'Pending'),     # Created, awaiting sample collection
+#         ('R', 'Received'),    # Sample received/accessioned
+#         ('A', 'Analysis'),    # Tests being analyzed
+#         ('C', 'Complete'),    # Results generated, awaiting verification
+#         ('V', 'Verified'),    # Final report verified and ready for release
+#     ]
+
+#     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="requests")  # ✅ Direct reference
+#     patient = models.ForeignKey('Patient', on_delete=models.PROTECT, related_name="requests")
+#     # requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="ordered_requests")
+
+#     requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="ordered_requests", help_text="User who created this order (clinician or patient)")
+
+#     ordering_clinician = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="clinical_orders", limit_choices_to={'role': 'clinician'}, help_text="Clinician responsible for this order")
+    
+#     request_id = models.CharField(max_length=64, unique=True, help_text="Unique Request/Order ID (auto-generated).")
+
+#     requested_tests = models.ManyToManyField('VendorTest', related_name="test_requests")
+
+#     clinical_history = models.TextField(blank=True, help_text="Relevant clinical notes or history.")
+    
+#     # 🆕 Clinical context
+#     clinical_indication = models.TextField(blank=True, help_text="Reason for ordering tests (ICD codes, symptoms, diagnosis)")
+    
+#     urgency_reason = models.TextField(blank=True, help_text="Justification for urgent/STAT orders")
+
+#     priority = models.CharField(choices=PRIORITY_STATUS, max_length=45, default="routine", help_text="e.g., routine, urgent, stat.")
+#     status = models.CharField(choices=ORDER_STATUS, max_length=1, default="P")
+
+#     # --- New fields ---
+#     has_informed_consent = models.BooleanField(default=False, help_text="Indicates that informed consent was obtained.")
+#     collection_notes = models.TextField(blank=True, help_text="Additional notes on phlebotomy or collection (time deviations, complications, etc.).")
+
+#     external_referral = models.CharField(max_length=255, blank=True, null=True, help_text="Referring doctor or institution, if any.")
+
+#     barcode_image = models.ImageField(upload_to='barcodes/', null=True, blank=True)
+
+#     created_at = models.DateTimeField(auto_now_add=True)
+#     completed_at = models.DateTimeField(null=True, blank=True)
+#     verified_at = models.DateTimeField(null=True, blank=True)
+
+#     # 🆕 Result notification tracking
+#     clinician_notified_at = models.DateTimeField(null=True, blank=True, help_text="When was the ordering clinician notified of results?")
+    
+#     clinician_acknowledged_at = models.DateTimeField(null=True, blank=True, help_text="When did clinician acknowledge reviewing results?")
+
+#     from django.db import models
+#     class Meta:
+#         ordering = ["-created_at"]
+#         verbose_name = "Test Request"
+#         verbose_name_plural = "Test Requests"
+#         indexes = [
+#             models.Index(fields=['ordering_clinician', 'status']),
+#             models.Index(fields=['patient', 'created_at']),
+#         ]
+
+#     def generate_barcode(self):
+#         """Generate a barcode image for this test request."""
+#         barcode_data = f"{self.vendor.tenant_id}-{self.patient.patient_id}-{self.request_id}"
+
+#         buffer = BytesIO()
+#         barcode = Code128(barcode_data, writer=ImageWriter())
+#         barcode.write(buffer)
+
+#         filename = f"barcode_{self.request_id}.png"
+#         self.barcode_image.save(filename, ContentFile(buffer.getvalue()), save=False)
+#         buffer.close()
+#         return self.barcode_image
+
+#     def save(self, *args, **kwargs):
+#         """Auto-generate request ID and barcode on first save."""
+#         if not self.request_id:
+#             self.request_id = get_next_sequence("REQ", vendor=self.vendor)
+        
+#         super().save(*args, **kwargs)
+        
+#         if not self.barcode_image:
+#             self.generate_barcode()
+#             super().save(update_fields=["barcode_image"])
+
+#     def move_to_analysis(self):
+#         self.status = 'A'
+#         self.save(update_fields=['status'])
+
+#     def complete_analysis(self):
+#         self.status = 'C'
+#         self.completed_at = timezone.now()
+#         self.save(update_fields=['status', 'completed_at'])
+
+#     def verify_results(self, user):
+#         self.status = 'V'
+#         self.verified_at = timezone.now()
+#         self.save(update_fields=['status', 'verified_at'])
+        
+#         AuditLog.objects.create(
+#             vendor=self.vendor, 
+#             user=user,
+#             action=f"Request {self.request_id} verified"
+#         )
+
+#     # clinical-clinician properties 
+#     def notify_ordering_clinician(self):
+#         """Mark that clinician has been notified of results."""
+#         self.clinician_notified_at = timezone.now()
+#         self.save(update_fields=['clinician_notified_at'])
+        
+#         # TODO: Send actual notification (email/SMS)
+    
+#     def clinician_acknowledge_results(self, user):
+#         """Record that clinician has reviewed results."""
+#         if user.role == 'clinician':
+#             self.clinician_acknowledged_at = timezone.now()
+#             self.save(update_fields=['clinician_acknowledged_at'])
+
+#     def __str__(self):
+#         return f"{self.request_id} ({self.patient})"
+
+
+# In labs/models.py - UPDATE TestRequest
+
 class TestRequest(models.Model):
     """Represents a full lab order for a patient, possibly containing multiple tests."""
 
     ORDER_STATUS = [
-        ('P', 'Pending'),     # Created, awaiting sample collection
-        ('R', 'Received'),    # Sample received/accessioned
-        ('A', 'Analysis'),    # Tests being analyzed
-        ('C', 'Complete'),    # Results generated, awaiting verification
-        ('V', 'Verified'),    # Final report verified and ready for release
+        ('P', 'Pending'),           # Created, awaiting approval/sample
+        ('W', 'Awaiting Approval'), # 🆕 Patient order needs physician review
+        ('A', 'Approved'),          # 🆕 Physician approved patient order
+        ('R', 'Received'),          # Sample received/accessioned
+        ('N', 'Analysis'),          # Tests being analyzed (changed from 'A' to avoid conflict)
+        ('C', 'Complete'),          # Results generated, awaiting verification
+        ('V', 'Verified'),          # Final report verified and ready for release
+        ('X', 'Rejected'),          # 🆕 Order rejected (insufficient info, contraindicated, etc.)
     ]
 
-    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="requests")  # ✅ Direct reference
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="requests")
     patient = models.ForeignKey('Patient', on_delete=models.PROTECT, related_name="requests")
-    requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="ordered_requests")
-
-    request_id = models.CharField(max_length=64, unique=True, help_text="Unique Request/Order ID (auto-generated).")
-
-    requested_tests = models.ManyToManyField('VendorTest', related_name="test_requests")
-
-    clinical_history = models.TextField(blank=True, help_text="Relevant clinical notes or history.")
     
-    priority = models.CharField(choices=PRIORITY_STATUS, max_length=45, default="routine", help_text="e.g., routine, urgent, stat.")
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="ordered_requests",
+        help_text="User who created this order (clinician or patient)"
+    )
+    
+    ordering_clinician = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="clinical_orders",
+        limit_choices_to={'role': 'clinician'},
+        help_text="Clinician responsible for this order"
+    )
+    
+    # 🆕 Approval workflow for patient orders
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="approved_orders",
+        help_text="Staff/clinician who approved patient self-order"
+    )
+    
+    approved_at = models.DateTimeField(null=True, blank=True)
+    
+    rejection_reason = models.TextField(
+        blank=True,
+        help_text="Why was this order rejected?"
+    )
+
+    request_id = models.CharField(max_length=64, unique=True)
+    requested_tests = models.ManyToManyField('VendorTest', related_name="test_requests")
+    clinical_history = models.TextField(blank=True)
+    clinical_indication = models.TextField(blank=True)
+    urgency_reason = models.TextField(blank=True)
+    
+    priority = models.CharField(
+        choices=[
+            ("urgent", "URGENT"),
+            ("routine", "ROUTINE"),
+        ],
+        max_length=45,
+        default="routine"
+    )
+    
     status = models.CharField(choices=ORDER_STATUS, max_length=1, default="P")
 
-    # --- New fields ---
-    has_informed_consent = models.BooleanField(
-        default=False,
-        help_text="Indicates that informed consent was obtained."
-    )
-    collection_notes = models.TextField(
-        blank=True,
-        help_text="Additional notes on phlebotomy or collection (time deviations, complications, etc.)."
-    )
-    external_referral = models.CharField(max_length=255, blank=True, null=True, help_text="Referring doctor or institution, if any.")
+    has_informed_consent = models.BooleanField(default=False)
+    collection_notes = models.TextField(blank=True)
+    external_referral = models.CharField(max_length=255, blank=True, null=True)
 
     barcode_image = models.ImageField(upload_to='barcodes/', null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     verified_at = models.DateTimeField(null=True, blank=True)
+    clinician_notified_at = models.DateTimeField(null=True, blank=True)
+    clinician_acknowledged_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-created_at"]
         verbose_name = "Test Request"
         verbose_name_plural = "Test Requests"
+        indexes = [
+            models.Index(fields=['ordering_clinician', 'status']),
+            models.Index(fields=['patient', 'created_at']),
+            models.Index(fields=['status', 'created_at']),
+        ]
 
+    def save(self, *args, **kwargs):
+        if not self.request_id:
+            self.request_id = get_next_sequence("REQ", vendor=self.vendor)
+        
+        # 🆕 Auto-determine initial status for patient orders
+        if not self.pk and self.requested_by and self.requested_by.role == 'patient':
+            # Check if any tests require approval
+            if kwargs.get('_check_approval', True):
+                # This will be checked after M2M save
+                pass
+        
+        super().save(*args, **kwargs)
+        
+        if not self.barcode_image:
+            self.generate_barcode()
+            super().save(update_fields=["barcode_image"])
+    
     def generate_barcode(self):
         """Generate a barcode image for this test request."""
+        from io import BytesIO
+        from barcode import Code128
+        from barcode.writer import ImageWriter
+        from django.core.files.base import ContentFile
+        
         barcode_data = f"{self.vendor.tenant_id}-{self.patient.patient_id}-{self.request_id}"
 
         buffer = BytesIO()
@@ -457,41 +715,107 @@ class TestRequest(models.Model):
         buffer.close()
         return self.barcode_image
 
-    def save(self, *args, **kwargs):
-        """Auto-generate request ID and barcode on first save."""
-        if not self.request_id:
-            self.request_id = get_next_sequence("REQ", vendor=self.vendor)
+    # 🆕 Status transition methods
+    def check_approval_requirement(self):
+        """
+        Check if this order requires physician approval.
+        Called after tests are added via M2M.
+        """
+        if self.ordering_clinician:
+            # Clinician orders don't need approval
+            return False
         
-        super().save(*args, **kwargs)
+        # Check if any test requires approval
+        requires_approval = self.requested_tests.filter(
+            requires_physician_approval=True
+        ).exists()
         
-        if not self.barcode_image:
-            self.generate_barcode()
-            super().save(update_fields=["barcode_image"])
+        if requires_approval and self.status == 'P':
+            self.status = 'W'  # Move to "Awaiting Approval"
+            self.save(update_fields=['status'])
+        
+        return requires_approval
+    
+    def approve_order(self, user):
+        """Approve a patient order that requires review."""
+        if self.status != 'W':
+            raise ValueError("Only orders awaiting approval can be approved.")
+        
+        self.status = 'A'  # Approved
+        self.approved_by = user
+        self.approved_at = timezone.now()
+        self.save(update_fields=['status', 'approved_by', 'approved_at'])
+        
+        # TODO: Notify patient
+    
+    def reject_order(self, user, reason):
+        """Reject a patient order."""
+        if self.status not in ['P', 'W']:
+            raise ValueError("Only pending/awaiting orders can be rejected.")
+        
+        self.status = 'X'  # Rejected
+        self.rejection_reason = reason
+        self.approved_by = user  # Track who rejected it
+        self.approved_at = timezone.now()
+        self.save(update_fields=['status', 'rejection_reason', 'approved_by', 'approved_at'])
+        
+        # TODO: Notify patient
 
     def move_to_analysis(self):
-        self.status = 'A'
-        self.save(update_fields=['status'])
+        """Sample received, start analysis."""
+        if self.status in ['P', 'A', 'R']:
+            self.status = 'R'  # Received
+            self.save(update_fields=['status'])
 
     def complete_analysis(self):
+        """All tests analyzed, pending verification."""
         self.status = 'C'
         self.completed_at = timezone.now()
         self.save(update_fields=['status', 'completed_at'])
 
     def verify_results(self, user):
+        """Final verification and release."""
         self.status = 'V'
         self.verified_at = timezone.now()
         self.save(update_fields=['status', 'verified_at'])
         
+        from apps.labs.models import AuditLog
         AuditLog.objects.create(
             vendor=self.vendor, 
             user=user,
             action=f"Request {self.request_id} verified"
         )
+        
+        # Notify ordering clinician if present
+        if self.ordering_clinician:
+            self.notify_ordering_clinician()
+    
+    def notify_ordering_clinician(self):
+        """Mark that clinician has been notified of results."""
+        self.clinician_notified_at = timezone.now()
+        self.save(update_fields=['clinician_notified_at'])
+        # TODO: Send actual notification
+    
+    def clinician_acknowledge_results(self, user):
+        """Record that clinician has reviewed results."""
+        if user.role == 'clinician':
+            self.clinician_acknowledged_at = timezone.now()
+            self.save(update_fields=['clinician_acknowledged_at'])
+    
+    @property
+    def requires_approval(self):
+        """Check if order is awaiting approval."""
+        return self.status == 'W'
+    
+    @property
+    def is_patient_order(self):
+        """Check if this was a patient self-order."""
+        return self.ordering_clinician is None and self.requested_by and self.requested_by.role == 'patient'
 
     def __str__(self):
         return f"{self.request_id} ({self.patient})"
 
-
+        
 # Examination phase
 class TestAssignment(models.Model):
     """The individual unit of work: one Test assigned to one Request."""

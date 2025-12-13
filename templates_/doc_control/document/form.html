@@ -1,0 +1,524 @@
+
+
+{% extends "laboratory/assets/base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar Navigation -->
+        <div class="col-md-3 col-lg-2 d-md-block sidebar">
+            <div class="position-sticky pt-3">
+                <div class="sidebar-header mb-4">
+                    <h5 class="text-primary-emphasis">
+                        <i class="fas fa-file-contract me-2"></i>Document Control
+                    </h5>
+                    <hr class="mt-2">
+                </div>
+                
+                <ul class="nav flex-column">
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'doc_control:document_control_dashboard' %}">
+                            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'doc_control:document_list' %}">
+                            <i class="fas fa-folder me-2"></i>All Documents
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link active" href="{% url 'doc_control:document_create' %}">
+                            <i class="fas fa-plus-circle me-2"></i>Create Document
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'doc_control:category_list' %}">
+                            <i class="fas fa-tags me-2"></i>Categories
+                        </a>
+                    </li>
+                </ul>
+
+                <!-- Quick Guide -->
+                <div class="card mt-5 border-0" style="background-color: rgba(44, 90, 160, 0.05);">
+                    <div class="card-body p-3">
+                        <h6 class="card-title text-primary mb-3">
+                            <i class="fas fa-info-circle me-2"></i>Document Creation Guide
+                        </h6>
+                        <ul class="small text-muted mb-0">
+                            <li class="mb-2">1. Create document container first</li>
+                            <li class="mb-2">2. Upload version files later</li>
+                            <li class="mb-2">3. Assign to owner for approval</li>
+                            <li>4. Set review dates for compliance</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <!-- Header -->
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h2 class="h3" style="color: var(--primary-color);">
+                    <i class="fas fa-file-alt me-2"></i>
+                    {% if form.instance.pk %}Edit Document{% else %}Create New Document{% endif %}
+                </h2>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <a href="{% url 'doc_control:document_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Back to List
+                    </a>
+                </div>
+            </div>
+
+            <!-- Form -->
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-light border-0">
+                            <h5 class="mb-0">
+                                <i class="fas fa-edit me-2"></i>
+                                Document Details
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="post" id="documentForm" novalidate>
+                                {% csrf_token %}
+                                
+                                <!-- Form Errors -->
+                                {% if form.errors %}
+                                <div class="alert alert-danger">
+                                    <i class="fas fa-exclamation-circle me-2"></i>
+                                    Please correct the errors below.
+                                    <ul class="mb-0 mt-2">
+                                        {% for field in form %}
+                                            {% for error in field.errors %}
+                                            <li>{{ field.label }}: {{ error }}</li>
+                                            {% endfor %}
+                                        {% endfor %}
+                                        {% for error in form.non_field_errors %}
+                                        <li>{{ error }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                {% endif %}
+                                
+                                <!-- Document Title -->
+                                <div class="mb-4">
+                                    <label for="{{ form.title.id_for_label }}" class="form-label fw-semibold">
+                                        <i class="fas fa-heading me-1"></i> Document Title *
+                                    </label>
+                                    <div class="input-group">
+                                        {{ form.title }}
+                                        <span class="input-group-text bg-light">
+                                            <i class="fas fa-file-alt text-muted"></i>
+                                        </span>
+                                    </div>
+                                    {% if form.title.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in form.title.errors %}
+                                        <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    <div class="form-text">
+                                        Enter a clear, descriptive title for this document.
+                                    </div>
+                                </div>
+                                
+                                <!-- Category and Owner Row -->
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <label for="{{ form.category.id_for_label }}" class="form-label fw-semibold">
+                                            <i class="fas fa-tag me-1"></i> Category *
+                                        </label>
+                                        {{ form.category }}
+                                        {% if form.category.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {% for error in form.category.errors %}
+                                            <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="{{ form.owner.id_for_label }}" class="form-label fw-semibold">
+                                            <i class="fas fa-user me-1"></i> Document Owner
+                                        </label>
+                                        {{ form.owner }}
+                                        {% if form.owner.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {% for error in form.owner.errors %}
+                                            <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                        <div class="form-text">
+                                            Person responsible for approval
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Dates Row -->
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <label for="{{ form.effective_date.id_for_label }}" class="form-label fw-semibold">
+                                            <i class="fas fa-calendar-check me-1"></i> Effective Date
+                                        </label>
+                                        <div class="input-group">
+                                            {{ form.effective_date }}
+                                            <span class="input-group-text bg-light">
+                                                <i class="fas fa-calendar text-muted"></i>
+                                            </span>
+                                        </div>
+                                        {% if form.effective_date.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {% for error in form.effective_date.errors %}
+                                            <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="{{ form.review_due_date.id_for_label }}" class="form-label fw-semibold">
+                                            <i class="fas fa-calendar-exclamation me-1"></i> Review Due Date
+                                        </label>
+                                        <div class="input-group">
+                                            {{ form.review_due_date }}
+                                            <span class="input-group-text bg-light">
+                                                <i class="fas fa-calendar-alt text-muted"></i>
+                                            </span>
+                                        </div>
+                                        {% if form.review_due_date.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {% for error in form.review_due_date.errors %}
+                                            <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                        <div class="form-text">
+                                            Set for compliance review scheduling
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Form Actions -->
+                                <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+                                    <a href="{% url 'doc_control:document_list' %}" class="btn btn-outline-secondary">
+                                        <i class="fas fa-times me-1"></i> Cancel
+                                    </a>
+                                    <div>
+                                        {% if form.instance.pk %}
+                                        <a href="{% url 'doc_control:version_upload' doc_id=form.instance.pk %}" 
+                                           class="btn btn-outline-primary me-2">
+                                            <i class="fas fa-upload me-1"></i> Upload Version
+                                        </a>
+                                        {% endif %}
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-save me-1"></i>
+                                            {% if form.instance.pk %}Update Document{% else %}Create Document{% endif %}
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <!-- Audit Info -->
+                        {% if form.instance.pk %}
+                        <div class="card-footer bg-light border-0">
+                            <div class="row text-muted small">
+                                <div class="col-md-4">
+                                    <i class="fas fa-user me-1"></i>
+                                    Created by: {{ form.instance.created_by.get_full_name|default:form.instance.created_by.username }}
+                                </div>
+                                <div class="col-md-4">
+                                    <i class="fas fa-calendar me-1"></i>
+                                    Created: {{ form.instance.created_at|date:"M d, Y H:i" }}
+                                </div>
+                                <div class="col-md-4 text-md-end">
+                                    <i class="fas fa-history me-1"></i>
+                                    Last updated: {{ form.instance.updated_at|date:"M d, Y H:i" }}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Side Info Panel -->
+                <div class="col-lg-4">
+                    <!-- Status Card -->
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-light border-0">
+                            <h6 class="mb-0">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Document Status
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            {% if form.instance.pk %}
+                            <div class="text-center mb-3">
+                                {% if form.instance.status == 'ACTIVE' %}
+                                <div class="status-indicator bg-success">
+                                    <i class="fas fa-check-circle fa-2x text-white"></i>
+                                </div>
+                                <h5 class="mt-3 text-success">Active</h5>
+                                {% elif form.instance.status == 'INACTIVE' %}
+                                <div class="status-indicator bg-secondary">
+                                    <i class="fas fa-archive fa-2x text-white"></i>
+                                </div>
+                                <h5 class="mt-3 text-secondary">Inactive</h5>
+                                {% else %}
+                                <div class="status-indicator bg-warning">
+                                    <i class="fas fa-pencil-alt fa-2x text-white"></i>
+                                </div>
+                                <h5 class="mt-3 text-warning">Draft</h5>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <small class="text-muted d-block">Current Version</small>
+                                {% if form.instance.current_version %}
+                                <span class="badge bg-info fs-6">v{{ form.instance.current_version.version_number }}</span>
+                                {% else %}
+                                <span class="badge bg-light text-muted">No version</span>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <small class="text-muted d-block">Total Versions</small>
+                                <h5>{{ form.instance.versions.count }}</h5>
+                            </div>
+                            
+                            <a href="{% url 'doc_control:document_detail' pk=form.instance.pk %}" 
+                               class="btn btn-outline-primary w-100">
+                                <i class="fas fa-eye me-1"></i> View Details
+                            </a>
+                            {% else %}
+                            <div class="text-center py-3">
+                                <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+                                <p class="text-muted mb-0">Document will be created in Draft status</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Compliance Tips -->
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-light border-0">
+                            <h6 class="mb-0">
+                                <i class="fas fa-shield-alt me-2"></i>
+                                Compliance Tips
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <ul class="small text-muted mb-0">
+                                <li class="mb-2">
+                                    <i class="fas fa-check-circle text-success me-1"></i>
+                                    Assign clear ownership
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-check-circle text-success me-1"></i>
+                                    Set realistic review dates
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-check-circle text-success me-1"></i>
+                                    Use appropriate categories
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-check-circle text-success me-1"></i>
+                                    Keep titles descriptive
+                                </li>
+                                <li>
+                                    <i class="fas fa-check-circle text-success me-1"></i>
+                                    Document all changes
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .sidebar {
+        background-color: var(--light-bg);
+        border-right: 1px solid #dee2e6;
+        min-height: calc(100vh - 70px);
+        padding-top: 20px;
+    }
+    
+    .nav-link {
+        color: var(--secondary-color);
+        padding: 0.75rem 1rem;
+        border-radius: var(--border-radius);
+        transition: var(--transition);
+    }
+    
+    .nav-link:hover {
+        color: var(--primary-color);
+        background-color: rgba(44, 90, 160, 0.1);
+        transform: translateX(5px);
+    }
+    
+    .nav-link.active {
+        color: var(--primary-color);
+        background-color: rgba(44, 90, 160, 0.1);
+        font-weight: 600;
+        border-left: 3px solid var(--primary-color);
+    }
+    
+    .form-control, .form-select {
+        border-radius: var(--border-radius);
+        border: 1px solid #ced4da;
+        transition: var(--transition);
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.25rem rgba(44, 90, 160, 0.25);
+    }
+    
+    .status-indicator {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .card {
+        border-radius: var(--border-radius);
+        transition: var(--transition);
+    }
+    
+    @media (max-width: 768px) {
+        .sidebar {
+            min-height: auto;
+            border-right: none;
+            border-bottom: 1px solid #dee2e6;
+        }
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add Bootstrap classes to form fields
+    const formFields = document.querySelectorAll('#documentForm input, #documentForm select, #documentForm textarea');
+    formFields.forEach(field => {
+        if (field.type !== 'checkbox' && field.type !== 'radio') {
+            field.classList.add('form-control');
+        }
+    });
+    
+    // Date picker enhancements
+    const dateFields = document.querySelectorAll('input[type="date"]');
+    dateFields.forEach(field => {
+        // Set min date to today
+        const today = new Date().toISOString().split('T')[0];
+        field.min = today;
+        
+        // Add date validation
+        field.addEventListener('change', function() {
+            if (this.value) {
+                const selectedDate = new Date(this.value);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                
+                if (selectedDate < today) {
+                    this.classList.add('is-invalid');
+                    showFieldError(this, 'Date cannot be in the past');
+                } else {
+                    this.classList.remove('is-invalid');
+                    clearFieldError(this);
+                }
+            }
+        });
+    });
+    
+    // Form validation
+    const form = document.getElementById('documentForm');
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        
+        // Validate required fields
+        const requiredFields = form.querySelectorAll('[required]');
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                isValid = false;
+                field.classList.add('is-invalid');
+                showFieldError(field, 'This field is required');
+            }
+        });
+        
+        // Validate review date is after effective date
+        const effectiveDate = document.getElementById('id_effective_date');
+        const reviewDate = document.getElementById('id_review_due_date');
+        
+        if (effectiveDate.value && reviewDate.value) {
+            const effective = new Date(effectiveDate.value);
+            const review = new Date(reviewDate.value);
+            
+            if (review <= effective) {
+                isValid = false;
+                reviewDate.classList.add('is-invalid');
+                showFieldError(reviewDate, 'Review date must be after effective date');
+            }
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+            // Scroll to first error
+            const firstError = form.querySelector('.is-invalid');
+            if (firstError) {
+                firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                firstError.focus();
+            }
+        }
+    });
+    
+    // Clear field errors on input
+    formFields.forEach(field => {
+        field.addEventListener('input', function() {
+            this.classList.remove('is-invalid');
+            clearFieldError(this);
+        });
+    });
+    
+    // Helper functions
+    function showFieldError(field, message) {
+        let errorDiv = field.parentElement.querySelector('.field-error');
+        if (!errorDiv) {
+            errorDiv = document.createElement('div');
+            errorDiv.className = 'text-danger small mt-1 field-error';
+            field.parentElement.appendChild(errorDiv);
+        }
+        errorDiv.innerHTML = `<i class="fas fa-exclamation-circle me-1"></i>${message}`;
+    }
+    
+    function clearFieldError(field) {
+        const errorDiv = field.parentElement.querySelector('.field-error');
+        if (errorDiv) {
+            errorDiv.remove();
+        }
+    }
+    
+    // Auto-fill today's date for effective date
+    const effectiveDateField = document.getElementById('id_effective_date');
+    if (effectiveDateField && !effectiveDateField.value) {
+        effectiveDateField.value = new Date().toISOString().split('T')[0];
+    }
+    
+    // Set review date to 1 year from today
+    const reviewDateField = document.getElementById('id_review_due_date');
+    if (reviewDateField && !reviewDateField.value) {
+        const nextYear = new Date();
+        nextYear.setFullYear(nextYear.getFullYear() + 1);
+        reviewDateField.value = nextYear.toISOString().split('T')[0];
+    }
+});
+</script>
+{% endblock content %}

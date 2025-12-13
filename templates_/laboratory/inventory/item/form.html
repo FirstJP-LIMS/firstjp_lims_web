@@ -1,0 +1,214 @@
+{% extends "laboratory/assets/base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2>{{ title }}</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">Inventory</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:item_list' %}">Items</a></li>
+                    <li class="breadcrumb-item active">{{ title }}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-10 offset-md-1">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        {% if form.errors %}
+                        <div class="alert alert-danger">
+                            <strong>Please correct the errors below:</strong>
+                            <ul class="mb-0">
+                                {% for field, errors in form.errors.items %}
+                                    {% for error in errors %}
+                                    <li>{{ field }}: {{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+
+                        <!-- Basic Information -->
+                        <h5 class="mb-3">Basic Information</h5>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.item_code.id_for_label }}" class="form-label">
+                                    Item Code <span class="text-danger">*</span>
+                                </label>
+                                {{ form.item_code }}
+                                {% if form.item_code.help_text %}
+                                <div class="form-text">{{ form.item_code.help_text }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.category.id_for_label }}" class="form-label">
+                                    Category <span class="text-danger">*</span>
+                                </label>
+                                {{ form.category }}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.name.id_for_label }}" class="form-label">
+                                Item Name <span class="text-danger">*</span>
+                            </label>
+                            {{ form.name }}
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.manufacturer.id_for_label }}" class="form-label">
+                                    Manufacturer <span class="text-danger">*</span>
+                                </label>
+                                {{ form.manufacturer }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.catalog_number.id_for_label }}" class="form-label">
+                                    Catalog Number
+                                </label>
+                                {{ form.catalog_number }}
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Unit Information -->
+                        <h5 class="mb-3">Unit Information</h5>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.unit_of_measure.id_for_label }}" class="form-label">
+                                    Unit of Measure <span class="text-danger">*</span>
+                                </label>
+                                {{ form.unit_of_measure }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.pack_size.id_for_label }}" class="form-label">
+                                    Pack Size <span class="text-danger">*</span>
+                                </label>
+                                {{ form.pack_size }}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.unit_cost.id_for_label }}" class="form-label">
+                                Unit Cost (₦) <span class="text-danger">*</span>
+                            </label>
+                            {{ form.unit_cost }}
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Storage -->
+                        <h5 class="mb-3">Storage Information</h5>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.storage_condition.id_for_label }}" class="form-label">
+                                    Storage Condition <span class="text-danger">*</span>
+                                </label>
+                                {{ form.storage_condition }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.storage_location.id_for_label }}" class="form-label">
+                                    Storage Location
+                                </label>
+                                {{ form.storage_location }}
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Stock Levels -->
+                        <h5 class="mb-3">Stock Management</h5>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.minimum_stock.id_for_label }}" class="form-label">
+                                    Minimum Stock <span class="text-danger">*</span>
+                                </label>
+                                {{ form.minimum_stock }}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.reorder_level.id_for_label }}" class="form-label">
+                                    Reorder Level <span class="text-danger">*</span>
+                                </label>
+                                {{ form.reorder_level }}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.maximum_stock.id_for_label }}" class="form-label">
+                                    Maximum Stock <span class="text-danger">*</span>
+                                </label>
+                                {{ form.maximum_stock }}
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Associated Tests -->
+                        <h5 class="mb-3">Associated Tests (Optional)</h5>
+                        <div class="mb-3">
+                            <label for="{{ form.tests.id_for_label }}" class="form-label">
+                                Tests Using This Reagent
+                            </label>
+                            {{ form.tests }}
+                            <div class="form-text">Hold Ctrl/Cmd to select multiple tests</div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Options -->
+                        <h5 class="mb-3">Options</h5>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <div class="form-check">
+                                    {{ form.is_active }}
+                                    <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                        Active
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="form-check">
+                                    {{ form.requires_barcode }}
+                                    <label class="form-check-label" for="{{ form.requires_barcode.id_for_label }}">
+                                        Requires Barcode
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="form-check">
+                                    {{ form.requires_lot_tracking }}
+                                    <label class="form-check-label" for="{{ form.requires_lot_tracking.id_for_label }}">
+                                        Requires Lot Tracking
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% if item %}{% url 'inventory:item_detail' item.pk %}{% else %}{% url 'inventory:item_list' %}{% endif %}" 
+                               class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Save Item
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

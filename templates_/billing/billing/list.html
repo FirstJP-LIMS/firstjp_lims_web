@@ -1,0 +1,892 @@
+{% extends 'laboratory/assets/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Billing Records - {{ vendor.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Custom styles for billing list */
+    .billing-summary-card {
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        transition: var(--transition);
+        height: 100%;
+    }
+
+    .billing-summary-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.15);
+    }
+
+    .summary-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1rem;
+    }
+
+    .summary-icon.total {
+        background: rgba(44, 90, 160, 0.1);
+        color: var(--primary-color);
+    }
+
+    .summary-icon.amount {
+        background: rgba(25, 135, 84, 0.1);
+        color: var(--success-color);
+    }
+
+    .summary-icon.paid {
+        background: rgba(32, 201, 151, 0.1);
+        color: #20c997;
+    }
+
+    .summary-icon.unpaid {
+        background: rgba(220, 53, 69, 0.1);
+        color: var(--danger-color);
+    }
+
+    .summary-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #333;
+        line-height: 1;
+        margin: 0.5rem 0;
+    }
+
+    .summary-label {
+        font-size: 0.875rem;
+        color: var(--secondary-color);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* Filter Section */
+    .filter-section {
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .filter-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .filter-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #333;
+    }
+
+    /* Status Breakdown */
+    .status-breakdown {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-top: 1rem;
+    }
+
+    .status-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        background: #f8f9fa;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .status-count {
+        font-weight: 600;
+        color: var(--primary-color);
+    }
+
+    /* Billing Table */
+    .billing-table-container {
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        overflow: hidden;
+    }
+
+    .table-header {
+        padding: 1.5rem 1.5rem 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .table-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #333;
+    }
+
+    .billing-table {
+        margin: 0;
+    }
+
+    .billing-table th {
+        background-color: #f8f9fa;
+        border-top: none;
+        font-weight: 600;
+        color: #495057;
+        padding: 1rem 1.5rem;
+        border-bottom: 2px solid #e9ecef;
+        white-space: nowrap;
+    }
+
+    .billing-table td {
+        padding: 1rem 1.5rem;
+        vertical-align: middle;
+        border-color: #e9ecef;
+    }
+
+    .billing-table tr:hover {
+        background-color: #f8f9fa;
+        cursor: pointer;
+    }
+
+    /* Status badges */
+    .status-badge {
+        padding: 0.35rem 0.75rem;
+        border-radius: 50px;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+    }
+
+    .status-paid {
+        background: rgba(25, 135, 84, 0.1);
+        color: var(--success-color);
+    }
+
+    .status-unpaid {
+        background: rgba(220, 53, 69, 0.1);
+        color: var(--danger-color);
+    }
+
+    .status-partial {
+        background: rgba(255, 193, 7, 0.1);
+        color: var(--warning-color);
+    }
+
+    .status-invoiced {
+        background: rgba(13, 110, 253, 0.1);
+        color: #0d6efd;
+    }
+
+    .status-overdue {
+        background: rgba(220, 53, 69, 0.1);
+        color: var(--danger-color);
+        animation: pulse 2s infinite;
+    }
+
+    .status-waived {
+        background: rgba(108, 117, 125, 0.1);
+        color: var(--secondary-color);
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+
+    /* Billing type badges */
+    .billing-type {
+        padding: 0.25rem 0.75rem;
+        border-radius: 50px;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        background: rgba(44, 90, 160, 0.1);
+        color: var(--primary-color);
+    }
+
+    /* Bulk actions */
+    .bulk-actions {
+        position: sticky;
+        bottom: 0;
+        background: white;
+        border-top: 1px solid #e9ecef;
+        padding: 1rem 1.5rem;
+        display: none;
+    }
+
+    .bulk-actions.show {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    /* Empty state */
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #6c757d;
+    }
+
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.3;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .table-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        
+        .billing-table {
+            font-size: 0.875rem;
+        }
+        
+        .billing-table th,
+        .billing-table td {
+            padding: 0.75rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .summary-value {
+            font-size: 1.5rem;
+        }
+        
+        .status-breakdown {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="billing-list-page">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-2">Billing Records</h1>
+            <p class="text-muted mb-0">Manage all patient billing and payment records</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'billing:dashboard' %}" class="btn btn-outline-primary">
+                <i class="bi bi-arrow-left me-2"></i>Dashboard
+            </a>
+            <a href="{% url 'billing:billing_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-2"></i>Create Billing
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="billing-summary-card">
+                <div class="summary-icon total">
+                    <i class="bi bi-receipt"></i>
+                </div>
+                <div class="summary-label">Total Billings</div>
+                <div class="summary-value">{{ summary.total_billings|intcomma }}</div>
+                <small class="text-muted">All time records</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="billing-summary-card">
+                <div class="summary-icon amount">
+                    <i class="bi bi-currency-exchange"></i>
+                </div>
+                <div class="summary-label">Total Amount</div>
+                <div class="summary-value">₦{{ summary.total_amount_sum|default:0|floatformat:0|intcomma }}</div>
+                <small class="text-muted">Overall billing value</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="billing-summary-card">
+                <div class="summary-icon paid">
+                    <i class="bi bi-check-circle"></i>
+                </div>
+                <div class="summary-label">Paid Amount</div>
+                <div class="summary-value">₦{{ summary.paid_amount|default:0|floatformat:0|intcomma }}</div>
+                <small class="text-muted">Collected revenue</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="billing-summary-card">
+                <div class="summary-icon unpaid">
+                    <i class="bi bi-exclamation-triangle"></i>
+                </div>
+                <div class="summary-label">Unpaid Amount</div>
+                <div class="summary-value">₦{{ summary.unpaid_amount|default:0|floatformat:0|intcomma }}</div>
+                <small class="text-muted">Pending collection</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Breakdown -->
+    {% if status_breakdown %}
+    <div class="filter-section">
+        <div class="filter-header">
+            <h3 class="filter-title">Payment Status Breakdown</h3>
+        </div>
+        <div class="status-breakdown">
+            {% for item in status_breakdown %}
+            <div class="status-item">
+                <span class="status-badge status-{{ item.payment_status|lower }}">
+                    {{ item.payment_status }}
+                </span>
+                <span class="status-count">{{ item.count }}</span>
+                <span class="text-muted">(₦{{ item.total|default:0|floatformat:0|intcomma }})</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Filters -->
+    <div class="filter-section">
+        <div class="filter-header">
+            <h3 class="filter-title">Filters & Search</h3>
+            {% if q or billing_type or payment_status or date_from or date_to %}
+            <a href="{% url 'billing:billing_list' %}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-x-circle me-1"></i>Clear Filters
+            </a>
+            {% endif %}
+        </div>
+        
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="bi bi-search"></i>
+                    </span>
+                    <input type="text" 
+                           name="q" 
+                           class="form-control" 
+                           placeholder="Search request ID, patient name..."
+                           value="{{ q }}">
+                </div>
+            </div>
+            <div class="col-md-2">
+                <select name="billing_type" class="form-select">
+                    <option value="">All Types</option>
+                    <option value="CASH" {% if billing_type == 'CASH' %}selected{% endif %}>Cash/Self-Pay</option>
+                    <option value="HMO" {% if billing_type == 'HMO' %}selected{% endif %}>HMO/Insurance</option>
+                    <option value="CORPORATE" {% if billing_type == 'CORPORATE' %}selected{% endif %}>Corporate Account</option>
+                    <option value="NHIS" {% if billing_type == 'NHIS' %}selected{% endif %}>NHIS (Government)</option>
+                    <option value="STAFF" {% if billing_type == 'STAFF' %}selected{% endif %}>Staff (Internal)</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="payment_status" class="form-select">
+                    <option value="">All Status</option>
+                    <option value="UNPAID" {% if payment_status == 'UNPAID' %}selected{% endif %}>Unpaid</option>
+                    <option value="PARTIAL" {% if payment_status == 'PARTIAL' %}selected{% endif %}>Partial</option>
+                    <option value="PAID" {% if payment_status == 'PAID' %}selected{% endif %}>Paid</option>
+                    <option value="INVOICED" {% if payment_status == 'INVOICED' %}selected{% endif %}>Invoiced</option>
+                    <option value="OVERDUE" {% if payment_status == 'OVERDUE' %}selected{% endif %}>Overdue</option>
+                    <option value="WAIVED" {% if payment_status == 'WAIVED' %}selected{% endif %}>Waived</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input type="date" 
+                       name="date_from" 
+                       class="form-control" 
+                       value="{{ date_from }}"
+                       placeholder="From date">
+            </div>
+            <div class="col-md-2">
+                <input type="date" 
+                       name="date_to" 
+                       class="form-control" 
+                       value="{{ date_to }}"
+                       placeholder="To date">
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-funnel"></i>
+                </button>
+            </div>
+        </form>
+
+        <!-- Active Filters -->
+        {% if q or billing_type or payment_status or date_from or date_to %}
+        <div class="mt-3">
+            <small class="text-muted">Active filters:</small>
+            <div class="d-flex gap-2 mt-1 flex-wrap">
+                {% if q %}
+                <span class="badge bg-info">
+                    Search: "{{ q }}"
+                    <a href="?{% if billing_type %}billing_type={{ billing_type }}&{% endif %}{% if payment_status %}payment_status={{ payment_status }}&{% endif %}{% if date_from %}date_from={{ date_from }}&{% endif %}{% if date_to %}date_to={{ date_to }}{% endif %}" 
+                       class="text-white ms-2">
+                        <i class="bi bi-x"></i>
+                    </a>
+                </span>
+                {% endif %}
+                {% if billing_type %}
+                <span class="badge bg-info">
+                    Type: {{ billing_type }}
+                    <a href="?{% if q %}q={{ q }}&{% endif %}{% if payment_status %}payment_status={{ payment_status }}&{% endif %}{% if date_from %}date_from={{ date_from }}&{% endif %}{% if date_to %}date_to={{ date_to }}{% endif %}" 
+                       class="text-white ms-2">
+                        <i class="bi bi-x"></i>
+                    </a>
+                </span>
+                {% endif %}
+                {% if payment_status %}
+                <span class="badge bg-info">
+                    Status: {{ payment_status }}
+                    <a href="?{% if q %}q={{ q }}&{% endif %}{% if billing_type %}billing_type={{ billing_type }}&{% endif %}{% if date_from %}date_from={{ date_from }}&{% endif %}{% if date_to %}date_to={{ date_to }}{% endif %}" 
+                       class="text-white ms-2">
+                        <i class="bi bi-x"></i>
+                    </a>
+                </span>
+                {% endif %}
+                {% if date_from or date_to %}
+                <span class="badge bg-info">
+                    Date: {{ date_from|default:"Start" }} to {{ date_to|default:"Now" }}
+                    <a href="?{% if q %}q={{ q }}&{% endif %}{% if billing_type %}billing_type={{ billing_type }}&{% endif %}{% if payment_status %}payment_status={{ payment_status }}{% endif %}" 
+                       class="text-white ms-2">
+                        <i class="bi bi-x"></i>
+                    </a>
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Billing Table -->
+    <div class="billing-table-container">
+        <div class="table-header">
+            <h3 class="table-title">Billing Records</h3>
+            <div class="d-flex gap-2">
+                <div class="dropdown">
+                    <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" 
+                            data-bs-toggle="dropdown">
+                        <i class="bi bi-sort-down me-1"></i>Sort
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <a class="dropdown-item {% if sort == '-created_at' %}active{% endif %}" 
+                               href="?{% if q %}q={{ q }}&{% endif %}{% if billing_type %}billing_type={{ billing_type }}&{% endif %}{% if payment_status %}payment_status={{ payment_status }}&{% endif %}{% if date_from %}date_from={{ date_from }}&{% endif %}{% if date_to %}date_to={{ date_to }}&{% endif %}sort=-created_at">
+                                Newest First
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item {% if sort == 'created_at' %}active{% endif %}" 
+                               href="?{% if q %}q={{ q }}&{% endif %}{% if billing_type %}billing_type={{ billing_type }}&{% endif %}{% if payment_status %}payment_status={{ payment_status }}&{% endif %}{% if date_from %}date_from={{ date_from }}&{% endif %}{% if date_to %}date_to={{ date_to }}&{% endif %}sort=created_at">
+                                Oldest First
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item {% if sort == '-total_amount' %}active{% endif %}" 
+                               href="?{% if q %}q={{ q }}&{% endif %}{% if billing_type %}billing_type={{ billing_type }}&{% endif %}{% if payment_status %}payment_status={{ payment_status }}&{% endif %}{% if date_from %}date_from={{ date_from }}&{% endif %}{% if date_to %}date_to={{ date_to }}&{% endif %}sort=-total_amount">
+                                Highest Amount
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item {% if sort == 'total_amount' %}active{% endif %}" 
+                               href="?{% if q %}q={{ q }}&{% endif %}{% if billing_type %}billing_type={{ billing_type }}&{% endif %}{% if payment_status %}payment_status={{ payment_status }}&{% endif %}{% if date_from %}date_from={{ date_from }}&{% endif %}{% if date_to %}date_to={{ date_to }}&{% endif %}sort=total_amount">
+                                Lowest Amount
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <button class="btn btn-outline-secondary btn-sm" onclick="toggleBulkActions()">
+                    <i class="bi bi-check-square me-1"></i>Select Multiple
+                </button>
+            </div>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table billing-table">
+                <thead>
+                    <tr>
+                        <th style="width: 50px;">
+                            <input type="checkbox" id="select-all" class="form-check-input">
+                        </th>
+                        <th>Request ID</th>
+                        <th>Patient</th>
+                        <th>Type</th>
+                        <th>Provider/Client</th>
+                        <th>Date</th>
+                        <th class="text-end">Amount</th>
+                        <th class="text-end">Balance</th>
+                        <th>Status</th>
+                        <th style="width: 100px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for billing in billings %}
+                    <tr data-id="{{ billing.id }}" onclick="window.location.href='{% url 'billing:billing_detail' billing.pk %}'">
+                        <td onclick="event.stopPropagation();">
+                            <input type="checkbox" 
+                                   class="form-check-input billing-select" 
+                                   value="{{ billing.id }}">
+                        </td>
+                        <td>
+                            <strong class="text-primary">{{ billing.request.request_id|default:"N/A" }}</strong>
+                        </td>
+                        <td>
+                            {% if billing.request.patient %}
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-placeholder me-2">
+                                    <i class="bi bi-person-circle"></i>
+                                </div>
+                                <div>
+                                    {{ billing.request.patient.first_name }} {{ billing.request.patient.last_name }}
+                                    {% if billing.request.patient.phone %}
+                                    <br>
+                                    <small class="text-muted">{{ billing.request.patient.phone }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% else %}
+                            <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="billing-type">
+                                {{ billing.get_billing_type_display }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if billing.insurance_provider %}
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-shield me-2 text-primary"></i>
+                                <div>
+                                    <div class="fw-medium">{{ billing.insurance_provider.name|truncatechars:20 }}</div>
+                                    {% if billing.policy_number %}
+                                    <small class="text-muted">Policy: {{ billing.policy_number }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% elif billing.corporate_client %}
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-building me-2 text-primary"></i>
+                                <div>
+                                    <div class="fw-medium">{{ billing.corporate_client.company_name|truncatechars:20 }}</div>
+                                    {% if billing.employee_id %}
+                                    <small class="text-muted">ID: {{ billing.employee_id }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="text-nowrap">
+                                {{ billing.created_at|date:"M d, Y" }}
+                                <br>
+                                <small class="text-muted">{{ billing.created_at|date:"H:i" }}</small>
+                            </div>
+                            {% if billing.is_overdue %}
+                            <div class="mt-1">
+                                <span class="badge bg-danger">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>Overdue
+                                </span>
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <div class="fw-bold">₦{{ billing.total_amount|floatformat:0|intcomma }}</div>
+                            <small class="text-muted">
+                                {% if billing.discount > 0 %}
+                                -₦{{ billing.discount|floatformat:0|intcomma }}
+                                {% endif %}
+                            </small>
+                        </td>
+                        <td class="text-end">
+                            <span class="{% if billing.balance > 0 %}text-danger fw-bold{% else %}text-success{% endif %}">
+                                ₦{{ billing.balance|floatformat:0|intcomma }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="status-badge status-{{ billing.payment_status|lower }}">
+                                <i class="bi bi-circle-fill"></i>
+                                {{ billing.get_payment_status_display }}
+                            </span>
+                        </td>
+                        <td onclick="event.stopPropagation();">
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                        type="button" 
+                                        data-bs-toggle="dropdown">
+                                    <i class="bi bi-three-dots-vertical"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a class="dropdown-item" href="{% url 'billing:billing_detail' billing.pk %}">
+                                            <i class="bi bi-eye me-2"></i>View Details
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="{% url 'billing:billing_update' billing.pk %}">
+                                            <i class="bi bi-pencil me-2"></i>Edit
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="{% url 'billing:record_payment' billing.pk %}">
+                                            <i class="bi bi-credit-card me-2"></i>Record Payment
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="{% url 'billing:billing_print' billing.pk %}" target="_blank">
+                                            <i class="bi bi-printer me-2"></i>Print Receipt
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item text-danger" href="#">
+                                            <i class="bi bi-trash me-2"></i>Delete
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="10" class="text-center py-4">
+                            <div class="empty-state">
+                                <i class="bi bi-receipt"></i>
+                                <p class="mb-0">No billing records found</p>
+                                {% if q or billing_type or payment_status or date_from or date_to %}
+                                <small class="text-muted">Try adjusting your filters</small>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Bulk Actions Panel -->
+        <div class="bulk-actions" id="bulkActions">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-check-circle me-2 text-primary"></i>
+                <span id="selectedCount">0</span> record(s) selected
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-primary" onclick="performBulkAction('mark_paid')">
+                    <i class="bi bi-check-circle me-1"></i>Mark as Paid
+                </button>
+                <button class="btn btn-sm btn-outline-warning" onclick="performBulkAction('send_invoice')">
+                    <i class="bi bi-envelope me-1"></i>Send Invoice
+                </button>
+                <button class="btn btn-sm btn-outline-danger" onclick="performBulkAction('delete')">
+                    <i class="bi bi-trash me-1"></i>Delete
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="toggleBulkActions()">
+                    <i class="bi bi-x me-1"></i>Cancel
+                </button>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <div class="d-flex justify-content-between align-items-center px-4 py-3 border-top">
+            <div class="text-muted">
+                Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ paginator.count }} records
+            </div>
+            <nav aria-label="Billing pagination">
+                <ul class="pagination pagination-sm mb-0">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if q %}&q={{ q }}{% endif %}{% if billing_type %}&billing_type={{ billing_type }}{% endif %}{% if payment_status %}&payment_status={{ payment_status }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
+                            <i class="bi bi-chevron-double-left"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if billing_type %}&billing_type={{ billing_type }}{% endif %}{% if payment_status %}&payment_status={{ payment_status }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if q %}&q={{ q }}{% endif %}{% if billing_type %}&billing_type={{ billing_type }}{% endif %}{% if payment_status %}&payment_status={{ payment_status }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">{{ num }}</a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if billing_type %}&billing_type={{ billing_type }}{% endif %}{% if payment_status %}&payment_status={{ payment_status }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if q %}&q={{ q }}{% endif %}{% if billing_type %}&billing_type={{ billing_type }}{% endif %}{% if payment_status %}&payment_status={{ payment_status }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
+                            <i class="bi bi-chevron-double-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Bulk Action Form (hidden) -->
+<form id="bulkActionForm" method="post" action="{% url 'billing:billing_bulk_action' %}" style="display: none;">
+    {% csrf_token %}
+    <input type="hidden" name="action" id="bulkActionInput">
+    <input type="hidden" name="billing_ids" id="bulkBillingIds">
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Select all functionality
+    const selectAllCheckbox = document.getElementById('select-all');
+    const billingCheckboxes = document.querySelectorAll('.billing-select');
+    const bulkActionsPanel = document.getElementById('bulkActions');
+    const selectedCount = document.getElementById('selectedCount');
+
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            billingCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateBulkActions();
+        });
+    }
+
+    // Individual checkbox updates
+    billingCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateBulkActions);
+    });
+
+    // Update bulk actions panel
+    function updateBulkActions() {
+        const checkedCount = document.querySelectorAll('.billing-select:checked').length;
+        
+        if (checkedCount > 0) {
+            bulkActionsPanel.classList.add('show');
+            selectedCount.textContent = checkedCount;
+        } else {
+            bulkActionsPanel.classList.remove('show');
+        }
+    }
+
+    // Toggle bulk actions
+    function toggleBulkActions() {
+        if (bulkActionsPanel.classList.contains('show')) {
+            // Clear all selections
+            billingCheckboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            selectAllCheckbox.checked = false;
+            bulkActionsPanel.classList.remove('show');
+        } else {
+            // Show bulk actions (will be updated when selections are made)
+            bulkActionsPanel.classList.add('show');
+        }
+    }
+
+    // Perform bulk action
+    function performBulkAction(action) {
+        const checkedCheckboxes = document.querySelectorAll('.billing-select:checked');
+        
+        if (checkedCheckboxes.length === 0) {
+            alert('Please select at least one billing record');
+            return;
+        }
+
+        // Confirm destructive actions
+        if (action === 'delete') {
+            if (!confirm(`Are you sure you want to delete ${checkedCheckboxes.length} billing record(s)? This action cannot be undone.`)) {
+                return;
+            }
+        }
+
+        // Get selected IDs
+        const billingIds = Array.from(checkedCheckboxes).map(cb => cb.value);
+        
+        // Submit form
+        document.getElementById('bulkActionInput').value = action;
+        document.getElementById('bulkBillingIds').value = billingIds.join(',');
+        document.getElementById('bulkActionForm').submit();
+    }
+
+    // Row click navigation
+    document.querySelectorAll('.billing-table tbody tr[data-id]').forEach(row => {
+        row.addEventListener('click', function(e) {
+            // Don't navigate if clicking on checkbox or dropdown
+            if (!e.target.closest('input[type="checkbox"]') && !e.target.closest('.dropdown')) {
+                window.location.href = `{% url 'billing:billing_detail' 0 %}`.replace('0', this.dataset.id);
+            }
+        });
+    });
+
+    // Active filter badges - click to remove
+    document.querySelectorAll('.badge.bg-info a').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.stopPropagation();
+            window.location.href = this.href;
+        });
+    });
+
+    // Search input clear button
+    const searchInput = document.querySelector('input[name="q"]');
+    if (searchInput && searchInput.value) {
+        const clearBtn = document.createElement('button');
+        clearBtn.className = 'btn btn-sm btn-outline-secondary ms-2';
+        clearBtn.innerHTML = '<i class="bi bi-x"></i> Clear';
+        clearBtn.type = 'button';
+        clearBtn.addEventListener('click', function() {
+            searchInput.value = '';
+            searchInput.form.submit();
+        });
+        searchInput.parentNode.appendChild(clearBtn);
+    }
+
+    // Date range preset buttons
+    function applyDatePreset(preset) {
+        const today = new Date();
+        const dateFrom = document.querySelector('input[name="date_from"]');
+        const dateTo = document.querySelector('input[name="date_to"]');
+        
+        switch(preset) {
+            case 'today':
+                dateFrom.value = today.toISOString().split('T')[0];
+                dateTo.value = today.toISOString().split('T')[0];
+                break;
+            case 'this_week':
+                const firstDay = new Date(today.setDate(today.getDate() - today.getDay()));
+                dateFrom.value = firstDay.toISOString().split('T')[0];
+                dateTo.value = new Date().toISOString().split('T')[0];
+                break;
+            case 'this_month':
+                const firstDayMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+                dateFrom.value = firstDayMonth.toISOString().split('T')[0];
+                dateTo.value = new Date().toISOString().split('T')[0];
+                break;
+        }
+    }
+</script>
+{% endblock %}

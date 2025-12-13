@@ -11,59 +11,160 @@ from django.shortcuts import render, redirect
 from django_ratelimit.decorators import ratelimit
 
 
-def tenant_auth_page(request):
-    pass
-    # tenant = getattr(request, 'tenant', None)
-    # vendorInfo = Vendor.objects.prefetch_related('name')
-    # context = {
-    #     'tenant': tenant,
-    #     'vendorInfo': vendorInfo,
-    # }
-    # return render(request, 'authentication/landing.html', context)
+# role groups
 
-ALLOWED_PUBLIC_ROLES = ['lab_staff', 'clinician', 'patient']
+LEARN_ALLOWED = {'learner', 'facilitator'}
+TENANT_ALLOWED = ['vendor_admin', 'lab_staff', 'patient', 'clinician']
 
 def tenant_register_by_role(request, role_name):
     """
-    Handles registration for lab_staff, clinician, or patient, scoped to the current tenant.
+        Handles registration for tenant-scoped roles (lab_staff, clinician, patient, vendor_admin), scoped to the current tenant.
     """
     tenant = getattr(request, 'tenant', None)
-    
-    # Input validation
-    if role_name not in ALLOWED_PUBLIC_ROLES:
+
+    if role_name not in TENANT_ALLOWED:
         raise Http404("Invalid registration path or user role.")
-    
+
     if not tenant:
-        messages.error(request, "Cannot register. Tenant could not be resolved. Contact support.")
-        return redirect('account:login')  # ✅ Better redirect
-    
-    role_display_name = role_name.replace('_', ' ').title()
+        messages.error(request, "Tenant could not be resolved.")
+        return redirect('account:login')
 
     if request.method == 'POST':
-        form = RegistrationForm(request.POST, vendor=tenant)  # ✅ Pass vendor to form
-        
+        form = RegistrationForm(
+            request.POST,
+            vendor=tenant,
+            forced_role=role_name,
+            is_learning_portal=False
+        )
         if form.is_valid():
-            # Save with transaction for safety
-            try:
-                user = form.save(vendor=tenant, role=role_name)
+            user = form.save(vendor=tenant) # save data
+
+            # Customize success message for patients
+            if role_name == 'patient':
                 messages.success(
-                    request, 
-                    f"{role_display_name} account created successfully for {tenant.name}. You can now log in."
+                    request,
+                    f"Welcome! Your patient account has been created for {tenant.name}. "
+                    f"Please check your email to verify your account."
                 )
-                return redirect(reverse('account:login'))  # ✅ Use namespaced URL
-            except Exception as e:
-                messages.error(request, f"Registration failed: {str(e)}")
+            else:
+                messages.success(
+                    request,
+                    f"{role_name.replace('_',' ').title()} account created for {tenant.name}."
+                )
+            
+            return redirect(reverse('account:login'))
     else:
-        form = RegistrationForm(vendor=tenant)  # ✅ Pass vendor
+        form = RegistrationForm(
+            vendor=tenant,
+            forced_role=role_name,
+            is_learning_portal=False
+        )
+
+    return render(request, 'authentication/register.html', {
+        'form': form,
+        'tenant': tenant,
+        'role_name': role_name.replace('_',' ').title(),
+    })
+
+
+def learn_register(request, role_name):
+    """
+    Registration entry-point for learn.medvuno.com; only learner/facilitator allowed.
+    """
+
+    if not getattr(request, 'is_learning_portal', False):
+        raise Http404("Not found.")
+
+    if role_name not in LEARN_ALLOWED:
+        raise Http404("Invalid registration role.")
+
+    if request.method == 'POST':
+        form = RegistrationForm(
+            request.POST,
+            vendor=None,
+            forced_role=role_name,
+            is_learning_portal=True
+        )
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"{role_name.title()} account created.")
+            return redirect(reverse('account:login'))
+    else:
+        form = RegistrationForm(
+            vendor=None,
+            forced_role=role_name,
+            is_learning_portal=True
+        )
+
+    return render(request, 'authentication/register.html', {
+        'form': form,
+        'role_name': role_name.title(),
+    })
+
+
+
+@ratelimit(key='ip', rate='5/m', method='POST')
+def tenant_login(request):
+    tenant = getattr(request, 'tenant', None)
+    is_learning = getattr(request, 'is_learning_portal', False)
+
+    if request.method == 'POST':
+        form = TenantAuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+
+            # 1️⃣ Learning portal login
+            if is_learning:
+                # Only learner/facilitator allowed, vendor must be None
+                if user.vendor is not None or user.role not in LEARN_ALLOWED:
+                    messages.error(request, "This account cannot access the learning portal.")
+                    return redirect(reverse('account:login'))
+
+                login(request, user)
+                messages.success(request, f"Welcome, {user.first_name or user.email}")
+                # return redirect(reverse('lms:lms_dashboard'))  # create a learn dashboard route
+                return redirect(reverse('learn:index'))  # create a learn dashboard route
+
+            # 2️⃣ Platform Admin: global access
+            if getattr(user, 'is_platform_admin', False):
+                login(request, user)
+                messages.success(request, f"Welcome back, {user.first_name}")
+                return redirect(reverse('dashboard'))
+
+            # 3️⃣ Tenant validation (vendor sites)
+            if not tenant:
+                messages.error(request, "No tenant could be resolved. Access denied.")
+                return redirect(reverse('no_tenant'))
+
+            if not user.vendor or user.vendor.internal_id != tenant.internal_id:
+                messages.error(request, "This account does not belong to this tenant.")
+                return redirect(reverse('account:login'))
+
+            # Reject learning roles for tenant domains
+            if user.role not in TENANT_ALLOWED:
+                messages.error(request, "This account role cannot access this tenant.")
+                return redirect(reverse('account:login'))
+
+            login(request, user)
+            messages.success(request, f"Welcome, {user.email}")
+
+            # role routing
+            if user.role in ['vendor_admin', 'lab_staff']:
+                return redirect(reverse('labs:vendor_dashboard'))
+            elif user.role == 'patient':
+                return redirect(reverse('patient:patient_dashboard'))
+            elif user.role == 'clinician':
+                return redirect(reverse('clinician:clinician_dashboard'))
+            else:
+                return redirect(reverse('account:login'))
+    else:
+        form = TenantAuthenticationForm(request)
 
     context = {
         'form': form,
-        'tenant': tenant,
-        'lab_name': tenant.name,
-        'role_name': role_display_name,
-        'role_key': role_name,
+        'tenant': tenant
     }
-    return render(request, 'registration/register.html', context)
+    return render(request, 'authentication/login.html', context)
 
 
 # Admin-only vendor-admin creation
@@ -83,59 +184,11 @@ def create_vendor_admin(request, vendor_id):
     return render(request, 'registration/create_vendor_admin.html', {'form': form, 'vendor': vendor})
 
 
-@ratelimit(key='ip', rate='5/m', method='POST')  # 5 attempts per minute
-def tenant_login(request):
-    vendorInfo = Vendor.objects.prefetch_related('name')
-    tenant = getattr(request, 'tenant', None)    
-    if request.method == 'POST':
-        form = TenantAuthenticationForm(request, data=request.POST)
-        if form.is_valid():
-            user = form.get_user()
-
-            # 1️⃣ Platform Admin: global access
-            if getattr(user, 'is_platform_admin', False):
-                login(request, user)
-                messages.success(request, f"Welcome back, {user.first_name}")
-                return redirect(reverse('dashboard'))
-
-            # 2️⃣ Tenant validation
-            if not tenant:
-                messages.error(request, "No tenant could be resolved. Access denied.")
-                return redirect(reverse('no_tenant'))
-
-            if not user.vendor or user.vendor.internal_id != tenant.internal_id:
-                messages.error(request, "This account does not belong to this tenant.")
-                return redirect(reverse('login'))
-
-            # 3️⃣ Tenant-bound login successful
-            login(request, user)
-            messages.success(request, f"Welcome, {user.email}")
-
-            # 4️⃣ Role-based redirection
-            if user.role in ['vendor_admin', 'lab_staff']:
-                return redirect(reverse('labs:vendor_dashboard'))
-            elif user.role == 'patient':
-                return redirect(reverse('labs:patient_dashboard'))
-            elif user.role == 'clinician':
-                return redirect(reverse('labs:clinician_dashboard'))
-            else:
-                # fallback route for unknown roles
-                return redirect(reverse('login'))
-    else:
-        form = TenantAuthenticationForm(request)
-
-    context = {
-        'form': form,
-        'tenant': tenant,
-        'vendorInfo': vendorInfo,
-    }
-    # return render(request, 'platform/pages/login.html', context)
-    return render(request, 'authentication/login.html', context)
-
 def tenant_logout(request):
     logout(request)
     messages.info(request, "You have been logged out successfully.")
-    return redirect(reverse_lazy('login'))
+    return redirect(reverse_lazy('account:login'))
+
 
 """
     Tasks to complete:

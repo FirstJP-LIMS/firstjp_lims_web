@@ -1,4 +1,4 @@
-
+# apps/account/context_processors.py
 from .models import VendorProfile
 
 def vendor_context(request):

@@ -1,5 +1,7 @@
+# apps/tenants/models.py 
 """
-Tenants management: Models to be used for lab owners who wants to share our platform to analyze their samples.. Unique domain name attached to individual tenants.
+Tenants management: Models to be used for lab owners who wants to share our platform to analyze their samples.. 
+Unique domain name attached to individual tenants.
 """
 import uuid
 from django.db import models

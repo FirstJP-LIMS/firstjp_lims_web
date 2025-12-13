@@ -1,0 +1,691 @@
+{% extends "laboratory/assets/base.html" %}
+{% load static %}
+
+{% block title %}Inventory Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar Navigation -->
+        <div class="col-md-3 col-lg-2 d-md-block sidebar">
+            <div class="position-sticky pt-3">
+                <div class="sidebar-header mb-4">
+                    <h5 class="text-primary-emphasis">
+                        <i class="fas fa-boxes me-2"></i>Inventory Control
+                    </h5>
+                    <hr class="mt-2">
+                </div>
+                
+                <ul class="nav flex-column">
+                    <li class="nav-item mb-2">
+                        <a class="nav-link active" href="{% url 'inventory:dashboard' %}">
+                            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'inventory:item_list' %}">
+                            <i class="fas fa-box me-2"></i>All Items
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'inventory:item_create' %}">
+                            <i class="fas fa-plus-circle me-2"></i>Add New Item
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'inventory:lot_list' %}">
+                            <i class="fas fa-layer-group me-2"></i>Stock Lots
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'inventory:lot_create' %}">
+                            <i class="fas fa-truck-loading me-2"></i>Receive Stock
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'inventory:po_list' %}">
+                            <i class="fas fa-shopping-cart me-2"></i>Purchase Orders
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'inventory:storage_unit_list' %}">
+                            <i class="fas fa-warehouse me-2"></i>Storage Units
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'inventory:sample_list' %}">
+                            <i class="fas fa-vial me-2"></i>Samples
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'inventory:inventory_report' %}">
+                            <i class="fas fa-chart-bar me-2"></i>Reports
+                        </a>
+                    </li>
+                </ul>
+
+                <!-- Inventory Stats -->
+                <div class="card mt-5 border-0" style="background-color: rgba(44, 90, 160, 0.05);">
+                    <div class="card-body p-3">
+                        <h6 class="card-title text-primary mb-3">
+                            <i class="fas fa-chart-line me-2"></i>Quick Stats
+                        </h6>
+                        <div class="d-flex justify-content-between mb-2">
+                            <small>Active Items:</small>
+                            <span class="badge bg-primary">{{ total_items }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <small>Low Stock:</small>
+                            <span class="badge bg-warning">{{ low_stock_count }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <small>Expiring:</small>
+                            <span class="badge bg-info">{{ expiring_soon_count }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <small>Expired:</small>
+                            <span class="badge bg-danger">{{ expired_lots }}</span>
+                        </div>
+                        <hr class="my-2">
+                        <div class="d-flex justify-content-between">
+                            <small>Total Value:</small>
+                            <span class="badge bg-success">₦{{ inventory_value|floatformat:2 }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <!-- Header -->
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h2 class="h3" style="color: var(--primary-color);">
+                    <i class="fas fa-tachometer-alt me-2"></i>Inventory Dashboard
+                </h2>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <div class="btn-group me-2">
+                        <a href="{% url 'inventory:lot_create' %}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-truck me-1"></i> Receive Stock
+                        </a>
+                        <a href="{% url 'inventory:po_create' %}" class="btn btn-sm btn-outline-success">
+                            <i class="fas fa-cart-plus me-1"></i> New PO
+                        </a>
+                        <a href="{% url 'inventory:export_csv' %}" class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-download me-1"></i> Export
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Key Metrics Cards -->
+            <div class="row mb-4">
+                <div class="col-xl-3 col-md-6 mb-3">
+                    <div class="card border-0 text-white h-100" style="background: linear-gradient(135deg, var(--primary-color), #1a3d7a);">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title mb-1">Total Items</h6>
+                                    <h3 class="mb-0">{{ total_items }}</h3>
+                                </div>
+                                <i class="fas fa-box fa-2x opacity-50"></i>
+                            </div>
+                            <a href="{% url 'inventory:item_list' %}" class="text-white text-decoration-none d-block mt-3">
+                                <small><i class="fas fa-arrow-right me-1"></i> View All Items</small>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-xl-3 col-md-6 mb-3">
+                    <div class="card border-0 h-100" style="background: linear-gradient(135deg, #ffc107, #e0a800);">
+                        <div class="card-body text-white">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title mb-1">Low Stock</h6>
+                                    <h3 class="mb-0">{{ low_stock_count }}</h3>
+                                </div>
+                                <i class="fas fa-exclamation-triangle fa-2x opacity-75"></i>
+                            </div>
+                            <a href="{% url 'inventory:item_list' %}?status=low_stock" class="text-white text-decoration-none d-block mt-3">
+                                <small><i class="fas fa-arrow-right me-1"></i> View Low Stock</small>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-xl-3 col-md-6 mb-3">
+                    <div class="card border-0 h-100" style="background: linear-gradient(135deg, #17a2b8, #138496);">
+                        <div class="card-body text-white">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title mb-1">Expiring Soon</h6>
+                                    <h3 class="mb-0">{{ expiring_soon_count }}</h3>
+                                </div>
+                                <i class="fas fa-calendar-times fa-2x opacity-75"></i>
+                            </div>
+                            <a href="{% url 'inventory:lot_list' %}?expiry_range=30" class="text-white text-decoration-none d-block mt-3">
+                                <small><i class="fas fa-arrow-right me-1"></i> View Expiring</small>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-xl-3 col-md-6 mb-3">
+                    <div class="card border-0 h-100" style="background: linear-gradient(135deg, #28a745, #1e7e34);">
+                        <div class="card-body text-white">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title mb-1">Inventory Value</h6>
+                                    <h3 class="mb-0">₦{{ inventory_value|floatformat:2 }}</h3>
+                                </div>
+                                <i class="fas fa-coins fa-2x opacity-75"></i>
+                            </div>
+                            <a href="{% url 'inventory:inventory_report' %}" class="text-white text-decoration-none d-block mt-3">
+                                <small><i class="fas fa-arrow-right me-1"></i> View Report</small>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bolt me-2"></i>Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-xl-2 col-md-4 col-6">
+                            <a href="{% url 'inventory:lot_create' %}" class="btn btn-primary w-100">
+                                <i class="fas fa-truck-loading fa-lg mb-2"></i><br>
+                                Receive Stock
+                            </a>
+                        </div>
+                        <div class="col-xl-2 col-md-4 col-6">
+                            <a href="{% url 'inventory:usage_create' %}" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-arrow-down fa-lg mb-2"></i><br>
+                                Record Usage
+                            </a>
+                        </div>
+                        <div class="col-xl-2 col-md-4 col-6">
+                            <a href="{% url 'inventory:adjustment_create' %}" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-pencil-alt fa-lg mb-2"></i><br>
+                                Adjust Stock
+                            </a>
+                        </div>
+                        <div class="col-xl-2 col-md-4 col-6">
+                            <a href="{% url 'inventory:po_create' %}" class="btn btn-outline-success w-100">
+                                <i class="fas fa-cart-plus fa-lg mb-2"></i><br>
+                                New PO
+                            </a>
+                        </div>
+                        <div class="col-xl-2 col-md-4 col-6">
+                            <a href="{% url 'inventory:sample_create' %}" class="btn btn-outline-info w-100">
+                                <i class="fas fa-vial fa-lg mb-2"></i><br>
+                                Store Sample
+                            </a>
+                        </div>
+                        <div class="col-xl-2 col-md-4 col-6">
+                            <a href="{% url 'inventory:export_csv' %}" class="btn btn-outline-secondary w-100">
+                                <i class="fas fa-download fa-lg mb-2"></i><br>
+                                Export CSV
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alerts Section -->
+            <div class="row">
+                <!-- Low Stock Alerts -->
+                <div class="col-lg-6 mb-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-warning bg-opacity-10 border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0 text-warning-emphasis">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>Low Stock Alerts
+                                </h5>
+                                <span class="badge bg-warning">{{ low_stock_items|length }}</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            {% if low_stock_items %}
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Item</th>
+                                            <th>Current Stock</th>
+                                            <th>Reorder Level</th>
+                                            <th class="text-end">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in low_stock_items %}
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="item-icon me-3">
+                                                        <i class="fas fa-box text-primary"></i>
+                                                    </div>
+                                                    <div>
+                                                        <strong>{{ item.item_code }}</strong>
+                                                        <div class="text-muted small">{{ item.name|truncatechars:40 }}</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="badge {% if item.get_current_stock == 0 %}bg-danger{% else %}bg-warning{% endif %} fs-6">
+                                                    {{ item.get_current_stock }} {{ item.unit_of_measure }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="text-muted">{{ item.reorder_level }}</span>
+                                            </td>
+                                            <td class="text-end">
+                                                <div class="btn-group btn-group-sm" role="group">
+                                                    <a href="{% url 'inventory:lot_create_for_item' item.pk %}" 
+                                                       class="btn btn-sm btn-outline-primary" title="Order Now">
+                                                        <i class="fas fa-shopping-cart"></i>
+                                                    </a>
+                                                    <a href="{% url 'inventory:item_detail' item.pk %}" 
+                                                       class="btn btn-sm btn-outline-secondary" title="View Details">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                                <p class="text-muted mb-0">All stock levels are satisfactory</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% if low_stock_items %}
+                        <div class="card-footer bg-transparent border-0 text-end">
+                            <a href="{% url 'inventory:item_list' %}?status=low_stock" class="text-primary text-decoration-none">
+                                View all low stock items <i class="fas fa-arrow-right ms-1"></i>
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Expiring Soon -->
+                <div class="col-lg-6 mb-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-info bg-opacity-10 border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0 text-info-emphasis">
+                                    <i class="fas fa-calendar-times me-2"></i>Expiring Soon (30 Days)
+                                </h5>
+                                <span class="badge bg-info">{{ expiring_soon|length }}</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            {% if expiring_soon %}
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Item & Lot</th>
+                                            <th>Expiry Date</th>
+                                            <th>Days Left</th>
+                                            <th>Quantity</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for lot in expiring_soon %}
+                                        <tr>
+                                            <td>
+                                                <div>
+                                                    <strong>{{ lot.item.item_code }}</strong>
+                                                    <div class="text-muted small">
+                                                        {{ lot.item.name|truncatechars:30 }}
+                                                    </div>
+                                                    <div class="text-muted smaller">Lot: {{ lot.lot_number }}</div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <strong>{{ lot.expiry_date|date:"M d, Y" }}</strong>
+                                            </td>
+                                            <td>
+                                                {% with days=lot.days_until_expiry %}
+                                                <span class="badge {% if days <= 7 %}bg-danger{% elif days <= 14 %}bg-warning{% else %}bg-info{% endif %} fs-6">
+                                                    {{ days }} day{{ days|pluralize }}
+                                                </span>
+                                                {% endwith %}
+                                            </td>
+                                            <td>
+                                                <span class="fw-semibold">{{ lot.quantity_remaining }}</span>
+                                                <div class="text-muted small">{{ lot.item.unit_of_measure }}</div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                                <p class="text-muted mb-0">No items expiring in the next 30 days</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% if expiring_soon %}
+                        <div class="card-footer bg-transparent border-0 text-end">
+                            <a href="{% url 'inventory:lot_list' %}?expiry_range=30" class="text-primary text-decoration-none">
+                                View all expiring items <i class="fas fa-arrow-right ms-1"></i>
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light border-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-history me-2"></i>Recent Activity (Last 7 Days)
+                        </h5>
+                        <span class="badge bg-secondary">{{ recent_usage|length }}</span>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    {% if recent_usage %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4">Date & Time</th>
+                                    <th>Item</th>
+                                    <th>Lot Number</th>
+                                    <th>Quantity</th>
+                                    <th>Type</th>
+                                    <th>User</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for usage in recent_usage %}
+                                <tr>
+                                    <td class="ps-4">
+                                        <div>{{ usage.used_at|date:"M d, Y" }}</div>
+                                        <small class="text-muted">{{ usage.used_at|time:"H:i" }}</small>
+                                    </td>
+                                    <td>
+                                        <div class="fw-semibold">{{ usage.stock_lot.item.name|truncatechars:30 }}</div>
+                                        <small class="text-muted">{{ usage.stock_lot.item.item_code }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark">{{ usage.stock_lot.lot_number }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="fw-semibold">{{ usage.quantity_used }}</span>
+                                        <div class="text-muted small">{{ usage.stock_lot.item.unit_of_measure }}</div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ usage.get_usage_type_display }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-sm me-2">
+                                                <div class="avatar-title bg-primary bg-opacity-10 rounded-circle">
+                                                    {{ usage.used_by.first_name|first|upper }}{{ usage.used_by.last_name|first|upper }}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div class="small">{{ usage.used_by.get_full_name|default:usage.used_by.username }}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                        <p class="text-muted mb-0">No recent activity recorded</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Additional Metrics -->
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <div class="card border-0 h-100" style="background-color: rgba(220, 53, 69, 0.1);">
+                        <div class="card-body text-center">
+                            <div class="metric-icon mb-3">
+                                <i class="fas fa-skull-crossbones fa-2x text-danger"></i>
+                            </div>
+                            <h6 class="text-danger mb-2">Expired Lots</h6>
+                            <h2 class="text-danger mb-3">{{ expired_lots }}</h2>
+                            <a href="{% url 'inventory:lot_list' %}?expiry_range=expired" class="btn btn-sm btn-outline-danger">
+                                <i class="fas fa-exclamation-circle me-1"></i> View Expired
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4 mb-3">
+                    <div class="card border-0 h-100" style="background-color: rgba(13, 110, 253, 0.1);">
+                        <div class="card-body text-center">
+                            <div class="metric-icon mb-3">
+                                <i class="fas fa-clipboard-list fa-2x text-primary"></i>
+                            </div>
+                            <h6 class="text-primary mb-2">Pending POs</h6>
+                            <h2 class="text-primary mb-3">{{ pending_pos }}</h2>
+                            <a href="{% url 'inventory:po_list' %}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye me-1"></i> View Orders
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4 mb-3">
+                    <div class="card border-0 h-100" style="background-color: rgba(25, 135, 84, 0.1);">
+                        <div class="card-body text-center">
+                            <div class="metric-icon mb-3">
+                                <i class="fas fa-warehouse fa-2x text-success"></i>
+                            </div>
+                            <h6 class="text-success mb-2">Storage Locations</h6>
+                            <h2 class="text-success mb-3">{{ storage_locations }}</h2>
+                            <a href="{% url 'inventory:storage_unit_list' %}" class="btn btn-sm btn-outline-success">
+                                <i class="fas fa-map-marked-alt me-1"></i> View Storage
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .sidebar {
+        background-color: var(--light-bg);
+        border-right: 1px solid #dee2e6;
+        min-height: calc(100vh - 70px);
+        padding-top: 20px;
+    }
+    
+    .nav-link {
+        color: var(--secondary-color);
+        padding: 0.75rem 1rem;
+        border-radius: var(--border-radius);
+        transition: var(--transition);
+    }
+    
+    .nav-link:hover {
+        color: var(--primary-color);
+        background-color: rgba(44, 90, 160, 0.1);
+        transform: translateX(5px);
+    }
+    
+    .nav-link.active {
+        color: var(--primary-color);
+        background-color: rgba(44, 90, 160, 0.1);
+        font-weight: 600;
+        border-left: 3px solid var(--primary-color);
+    }
+    
+    .card {
+        border-radius: var(--border-radius);
+        transition: var(--transition);
+        border: 1px solid #e9ecef;
+    }
+    
+    .card:hover {
+        box-shadow: var(--box-shadow);
+    }
+    
+    .metric-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(255, 255, 255, 0.9);
+    }
+    
+    .item-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(44, 90, 160, 0.1);
+    }
+    
+    .avatar-sm {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .avatar-title {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--primary-color);
+    }
+    
+    .badge {
+        font-weight: 500;
+        padding: 0.35em 0.65em;
+    }
+    
+    @media (max-width: 768px) {
+        .sidebar {
+            min-height: auto;
+            border-right: none;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .btn-group {
+            flex-wrap: wrap;
+        }
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Update current time in dashboard
+    function updateCurrentTime() {
+        const now = new Date();
+        const timeElement = document.getElementById('currentTime');
+        if (timeElement) {
+            timeElement.textContent = now.toLocaleTimeString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+    }
+    
+    // Update every second
+    setInterval(updateCurrentTime, 1000);
+    updateCurrentTime();
+    
+    // Auto-refresh dashboard every 5 minutes
+    let refreshTimer = setTimeout(function() {
+        location.reload();
+    }, 300000);
+    
+    // Reset timer on user activity
+    document.addEventListener('mousemove', function() {
+        clearTimeout(refreshTimer);
+        refreshTimer = setTimeout(function() {
+            location.reload();
+        }, 300000);
+    });
+    
+    // Add hover effects to metric cards
+    const metricCards = document.querySelectorAll('.card[style*="background: linear-gradient"]');
+    metricCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-5px)';
+            this.style.boxShadow = '0 10px 20px rgba(0,0,0,0.1)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = 'none';
+        });
+    });
+    
+    // Add click animation to action buttons
+    const actionButtons = document.querySelectorAll('.btn');
+    actionButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            this.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                this.style.transform = 'scale(1)';
+            }, 150);
+        });
+    });
+    
+    // Show notification for critical items
+    if ({{ low_stock_count }} > 5 || {{ expiring_soon_count }} > 5) {
+        showNotification('warning', 'Attention: Multiple critical items need review');
+    }
+    
+    function showNotification(type, message) {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type} alert-dismissible fade show position-fixed top-0 end-0 m-3`;
+        notification.style.zIndex = '9999';
+        notification.innerHTML = `
+            <i class="fas fa-exclamation-circle me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            const bsAlert = new bootstrap.Alert(notification);
+            bsAlert.close();
+        }, 5000);
+    }
+});
+</script>
+{% endblock %}

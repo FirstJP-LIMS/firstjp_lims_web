@@ -1,0 +1,69 @@
+{% extends 'laboratory/assets/base.html' %}
+
+{% load static %}
+{% load humanize %}
+
+{% block title %}Billing Statement - {{ billing.request.request_id }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    @media print {
+        .no-print { display: none !important; }
+        body { background: white; }
+    }
+    .statement { max-width: 800px; margin: 0 auto; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="statement p-4">
+    <button onclick="window.print()" class="btn btn-primary mb-3 no-print">
+        <i class="fas fa-print"></i> Print
+    </button>
+
+    <div class="text-center mb-4">
+        <h2>BILLING STATEMENT</h2>
+        <p>{{ billing.vendor.name }}</p>
+    </div>
+
+    <table class="table">
+        <tr>
+            <td><strong>Request ID:</strong></td>
+            <td>{{ billing.request.request_id }}</td>
+            <td><strong>Date:</strong></td>
+            <td>{{ billing.created_at|date:"d M Y" }}</td>
+        </tr>
+        <tr>
+            <td><strong>Patient:</strong></td>
+            <td>{{ billing.request.patient.first_name }} {{ billing.request.patient.last_name }}</td>
+            <td><strong>Type:</strong></td>
+            <td>{{ billing.get_billing_type_display }}</td>
+        </tr>
+    </table>
+
+    <h5 class="mt-4">Test Details</h5>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Test</th>
+                <th class="text-end">Price</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in test_details %}
+            <tr>
+                <td>{{ item.test.name }}</td>
+                <td class="text-end">₦{{ item.price|floatformat:2|intcomma }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr><td>Subtotal:</td><td class="text-end">₦{{ billing.subtotal|floatformat:2|intcomma }}</td></tr>
+            <tr><td>Discount:</td><td class="text-end">-₦{{ billing.discount|floatformat:2|intcomma }}</td></tr>
+            <tr><td>Tax:</td><td class="text-end">₦{{ billing.tax|floatformat:2|intcomma }}</td></tr>
+            <tr class="fw-bold"><td>Total:</td><td class="text-end">₦{{ billing.total_amount|floatformat:2|intcomma }}</td></tr>
+            <tr class="text-danger fw-bold"><td>Balance Due:</td><td class="text-end">₦{{ balance_due|floatformat:2|intcomma }}</td></tr>
+        </tfoot>
+    </table>
+</div>
+{% endblock %}

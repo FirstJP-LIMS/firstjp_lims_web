@@ -1,0 +1,708 @@
+{% extends "laboratory/assets/base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar Navigation -->
+        <div class="col-md-3 col-lg-2 d-md-block sidebar">
+            <div class="position-sticky pt-3">
+                <div class="sidebar-header mb-4">
+                    <h5 class="text-primary-emphasis">
+                        <i class="fas fa-file-contract me-2"></i>Document Control
+                    </h5>
+                    <hr class="mt-2">
+                </div>
+                
+                <ul class="nav flex-column">
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'doc_control:document_control_dashboard' %}">
+                            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link active" href="{% url 'doc_control:document_list' %}">
+                            <i class="fas fa-folder me-2"></i>All Documents
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'doc_control:document_create' %}">
+                            <i class="fas fa-plus-circle me-2"></i>Create Document
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'doc_control:category_list' %}">
+                            <i class="fas fa-tags me-2"></i>Categories
+                        </a>
+                    </li>
+                </ul>
+
+                <!-- Filter Card -->
+                <div class="card mt-5 border-0" style="background-color: rgba(44, 90, 160, 0.05);">
+                    <div class="card-body p-3">
+                        <h6 class="card-title text-primary mb-3">
+                            <i class="fas fa-filter me-2"></i>Quick Filters
+                        </h6>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-sm btn-outline-primary filter-btn active" data-filter="all">
+                                All Documents
+                            </button>
+                            <button class="btn btn-sm btn-outline-warning filter-btn" data-filter="review">
+                                Pending Review
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger filter-btn" data-filter="due">
+                                Due for Review
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary filter-btn" data-filter="draft">
+                                My Drafts
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats Card -->
+                <div class="card mt-3 border-0" style="background-color: rgba(44, 90, 160, 0.05);">
+                    <div class="card-body p-3">
+                        <h6 class="card-title text-primary mb-3">
+                            <i class="fas fa-chart-bar me-2"></i>Document Stats
+                        </h6>
+                        <div class="d-flex justify-content-between mb-2">
+                            <small>Active:</small>
+                            <span class="badge bg-success">{{ documents.filter|length }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <small>Inactive:</small>
+                            <span class="badge bg-secondary">0</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <small>Total:</small>
+                            <span class="badge bg-primary">{{ documents.count }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <!-- Header -->
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h2 class="h3" style="color: var(--primary-color);">
+                    <i class="fas fa-folder me-2"></i>All Documents
+                </h2>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <div class="btn-group me-2">
+                        <a href="{% url 'doc_control:document_create' %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-1"></i> New Document
+                        </a>
+                        <a href="#" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#exportModal">
+                            <i class="fas fa-download me-1"></i> Export
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Messages -->
+            {% if messages %}
+            <div class="mb-4">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Search and Filter Bar -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0">
+                                    <i class="fas fa-search text-muted"></i>
+                                </span>
+                                <input type="text" class="form-control border-start-0" id="searchInput" placeholder="Search documents...">
+                                <button class="btn btn-outline-secondary" type="button" id="clearSearch">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select" id="categoryFilter">
+                                <option value="">All Categories</option>
+                                {% for category in categories %}
+                                <option value="{{ category.name }}">{{ category.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select" id="statusFilter">
+                                <option value="">All Status</option>
+                                <option value="ACTIVE">Active</option>
+                                <option value="INACTIVE">Inactive</option>
+                                <option value="DRAFT">Draft</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Documents Table -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0" id="documentsTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4">
+                                        <input class="form-check-input" type="checkbox" id="selectAll">
+                                    </th>
+                                    <th>Document Title</th>
+                                    <th>Category</th>
+                                    <th>Status</th>
+                                    <th>Current Version</th>
+                                    <th>Owner</th>
+                                    <th>Review Due</th>
+                                    <th class="text-end pe-4">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for document in documents %}
+                                <tr class="document-row" 
+                                    data-title="{{ document.title|lower }}"
+                                    data-category="{{ document.category.name|default:''|lower }}"
+                                    data-status="{{ document.status|lower }}">
+                                    <td class="ps-4">
+                                        <input class="form-check-input document-checkbox" type="checkbox" value="{{ document.pk }}">
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'doc_control:document_detail' pk=document.pk %}" class="text-decoration-none">
+                                            <strong>{{ document.title }}</strong>
+                                            <small class="d-block text-muted">
+                                                <i class="fas fa-hashtag me-1"></i>DOC-{{ document.pk|stringformat:"04d" }}
+                                            </small>
+                                        </a>
+                                    </td>
+                                    <td>
+                                        {% if document.category %}
+                                        <span class="badge bg-primary bg-opacity-10 text-primary">
+                                            <i class="fas fa-tag me-1"></i>{{ document.category.name }}
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">Uncategorized</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if document.status == 'ACTIVE' %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check-circle me-1"></i>Active
+                                        </span>
+                                        {% elif document.status == 'INACTIVE' %}
+                                        <span class="badge bg-secondary">
+                                            <i class="fas fa-archive me-1"></i>Inactive
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-warning">
+                                            <i class="fas fa-pencil-alt me-1"></i>Draft
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if document.current_version %}
+                                        <span class="badge bg-info">
+                                            v{{ document.current_version.version_number }}
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-light text-muted">No version</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if document.owner %}
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-sm me-2">
+                                                <div class="avatar-title bg-primary bg-opacity-10 rounded-circle">
+                                                    {{ document.owner.first_name|first|upper }}{{ document.owner.last_name|first|upper }}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <small class="d-block">{{ document.owner.get_full_name|default:document.owner.username }}</small>
+                                                <small class="text-muted">{{ document.owner.email }}</small>
+                                            </div>
+                                        </div>
+                                        {% else %}
+                                        <span class="text-muted">Unassigned</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if document.review_due_date %}
+                                            {% if document.review_due_date < today %}
+                                            <span class="badge bg-danger">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                                {{ document.review_due_date|date:"M d, Y" }}
+                                            </span>
+                                            {% else %}
+                                            <span class="badge bg-warning">
+                                                {{ document.review_due_date|date:"M d, Y" }}
+                                            </span>
+                                            {% endif %}
+                                        {% else %}
+                                        <span class="text-muted">Not set</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a href="{% url 'doc_control:document_detail' pk=document.pk %}" 
+                                               class="btn btn-outline-primary" 
+                                               title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{% url 'doc_control:document_edit' pk=document.pk %}" 
+                                               class="btn btn-outline-secondary" 
+                                               title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <button type="button" 
+                                                    class="btn btn-outline-danger delete-document" 
+                                                    data-document-id="{{ document.pk }}"
+                                                    data-document-title="{{ document.title }}"
+                                                    title="Retire Document">
+                                                <i class="fas fa-archive"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center py-5">
+                                        <div class="empty-state-icon mb-3">
+                                            <i class="fas fa-folder-open fa-3x text-muted"></i>
+                                        </div>
+                                        <h4 class="text-muted">No Documents Found</h4>
+                                        <p class="text-muted mb-4">Create your first document to get started.</p>
+                                        <a href="{% url 'doc_control:document_create' %}" class="btn btn-primary">
+                                            <i class="fas fa-plus me-2"></i> Create First Document
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Table Footer -->
+                <div class="card-footer bg-light border-0 d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="text-muted small" id="selectedCount">0 documents selected</span>
+                    </div>
+                    <div>
+                        <nav aria-label="Document navigation">
+                            <ul class="pagination pagination-sm mb-0">
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#" tabindex="-1">Previous</a>
+                                </li>
+                                <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                                <li class="page-item"><a class="page-link" href="#">2</a></li>
+                                <li class="page-item"><a class="page-link" href="#">3</a></li>
+                                <li class="page-item">
+                                    <a class="page-link" href="#">Next</a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteDocumentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title text-danger">
+                    <i class="fas fa-archive me-2"></i>Retire Document
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to retire the document "<span id="documentName"></span>"?</p>
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    <strong>Compliance Note:</strong> This will deactivate the document and mark all versions as obsolete. This action cannot be undone.
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDelete">
+                    <i class="fas fa-archive me-1"></i> Retire Document
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Export Modal -->
+<div class="modal fade" id="exportModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title text-primary">
+                    <i class="fas fa-download me-2"></i>Export Documents
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Export Format</label>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="radio" name="exportFormat" id="formatCSV" checked>
+                        <label class="form-check-label" for="formatCSV">
+                            CSV (Excel compatible)
+                        </label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="radio" name="exportFormat" id="formatPDF">
+                        <label class="form-check-label" for="formatPDF">
+                            PDF Report
+                        </label>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Include Columns</label>
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="colTitle" checked>
+                                <label class="form-check-label" for="colTitle">Document Title</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="colCategory" checked>
+                                <label class="form-check-label" for="colCategory">Category</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="colStatus" checked>
+                                <label class="form-check-label" for="colStatus">Status</label>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="colVersion" checked>
+                                <label class="form-check-label" for="colVersion">Version</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="colOwner" checked>
+                                <label class="form-check-label" for="colOwner">Owner</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="colDueDate" checked>
+                                <label class="form-check-label" for="colDueDate">Review Due</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary">
+                    <i class="fas fa-download me-1"></i> Export
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .sidebar {
+        background-color: var(--light-bg);
+        border-right: 1px solid #dee2e6;
+        min-height: calc(100vh - 70px);
+        padding-top: 20px;
+    }
+    
+    .nav-link {
+        color: var(--secondary-color);
+        padding: 0.75rem 1rem;
+        border-radius: var(--border-radius);
+        transition: var(--transition);
+    }
+    
+    .nav-link:hover {
+        color: var(--primary-color);
+        background-color: rgba(44, 90, 160, 0.1);
+        transform: translateX(5px);
+    }
+    
+    .nav-link.active {
+        color: var(--primary-color);
+        background-color: rgba(44, 90, 160, 0.1);
+        font-weight: 600;
+        border-left: 3px solid var(--primary-color);
+    }
+    
+    .avatar-sm {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .avatar-title {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--primary-color);
+    }
+    
+    .document-row:hover {
+        background-color: rgba(44, 90, 160, 0.03);
+    }
+    
+    .filter-btn.active {
+        background-color: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+    
+    .empty-state-icon {
+        opacity: 0.5;
+    }
+    
+    @media (max-width: 768px) {
+        .sidebar {
+            min-height: auto;
+            border-right: none;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .table-responsive {
+            font-size: 0.875rem;
+        }
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize variables
+    let currentDocumentId = null;
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteDocumentModal'));
+    const documentNameSpan = document.getElementById('documentName');
+    
+    // Delete Document Handler
+    const deleteButtons = document.querySelectorAll('.delete-document');
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            currentDocumentId = this.getAttribute('data-document-id');
+            const documentName = this.getAttribute('data-document-title');
+            
+            documentNameSpan.textContent = documentName;
+            deleteModal.show();
+        });
+    });
+    
+    // Confirm Delete
+    document.getElementById('confirmDelete').addEventListener('click', function() {
+        if (!currentDocumentId) return;
+        
+        const deleteButton = this;
+        const originalText = deleteButton.innerHTML;
+        deleteButton.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Retiring...';
+        deleteButton.disabled = true;
+        
+        // Send AJAX request
+        fetch(`/document-control/documents/${currentDocumentId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Show success message
+                showToast('success', data.message);
+                
+                // Remove the row from the table
+                const row = document.querySelector(`[data-document-id="${currentDocumentId}"]`).closest('tr');
+                row.remove();
+                
+                // Update stats
+                updateDocumentStats();
+                
+                // Close modal
+                deleteModal.hide();
+            } else {
+                showToast('error', data.message || 'Error retiring document');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('error', 'Network error occurred');
+        })
+        .finally(() => {
+            deleteButton.innerHTML = originalText;
+            deleteButton.disabled = false;
+        });
+    });
+    
+    // Search functionality
+    const searchInput = document.getElementById('searchInput');
+    const clearSearch = document.getElementById('clearSearch');
+    
+    searchInput.addEventListener('input', function() {
+        filterDocuments();
+    });
+    
+    clearSearch.addEventListener('click', function() {
+        searchInput.value = '';
+        filterDocuments();
+    });
+    
+    // Filter functionality
+    const categoryFilter = document.getElementById('categoryFilter');
+    const statusFilter = document.getElementById('statusFilter');
+    
+    categoryFilter.addEventListener('change', filterDocuments);
+    statusFilter.addEventListener('change', filterDocuments);
+    
+    // Sidebar filter buttons
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    filterButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Apply filter logic here
+            const filter = this.getAttribute('data-filter');
+            applyQuickFilter(filter);
+        });
+    });
+    
+    // Select All checkbox
+    const selectAll = document.getElementById('selectAll');
+    const documentCheckboxes = document.querySelectorAll('.document-checkbox');
+    
+    selectAll.addEventListener('change', function() {
+        documentCheckboxes.forEach(checkbox => {
+            checkbox.checked = this.checked;
+        });
+        updateSelectedCount();
+    });
+    
+    documentCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateSelectedCount);
+    });
+    
+    // Helper functions
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    function showToast(type, message) {
+        // Create toast container if it doesn't exist
+        let toastContainer = document.getElementById('toastContainer');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'toastContainer';
+            toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+            document.body.appendChild(toastContainer);
+        }
+        
+        // Create toast element
+        const toastId = 'toast-' + Date.now();
+        const toast = document.createElement('div');
+        toast.id = toastId;
+        toast.className = `toast align-items-center text-white bg-${type} border-0`;
+        toast.setAttribute('role', 'alert');
+        
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+        
+        toastContainer.appendChild(toast);
+        
+        // Show toast
+        const bsToast = new bootstrap.Toast(toast, { delay: 5000 });
+        bsToast.show();
+        
+        // Remove toast after it's hidden
+        toast.addEventListener('hidden.bs.toast', function() {
+            toast.remove();
+        });
+    }
+    
+    function filterDocuments() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const selectedCategory = categoryFilter.value.toLowerCase();
+        const selectedStatus = statusFilter.value.toLowerCase();
+        
+        document.querySelectorAll('.document-row').forEach(row => {
+            const title = row.getAttribute('data-title');
+            const category = row.getAttribute('data-category');
+            const status = row.getAttribute('data-status');
+            
+            const matchesSearch = !searchTerm || title.includes(searchTerm);
+            const matchesCategory = !selectedCategory || category === selectedCategory;
+            const matchesStatus = !selectedStatus || status === selectedStatus;
+            
+            if (matchesSearch && matchesCategory && matchesStatus) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+    
+    function applyQuickFilter(filter) {
+        // Implement quick filter logic
+        console.log('Applying filter:', filter);
+    }
+    
+    function updateSelectedCount() {
+        const selectedCount = document.querySelectorAll('.document-checkbox:checked').length;
+        const countElement = document.getElementById('selectedCount');
+        countElement.textContent = `${selectedCount} document${selectedCount !== 1 ? 's' : ''} selected`;
+    }
+    
+    function updateDocumentStats() {
+        // Update stats after document deletion
+        const activeCount = document.querySelectorAll('.document-row:not([style*="display: none"])').length;
+        const totalCount = document.querySelectorAll('.document-row').length;
+        
+        // Update badge counts here if needed
+        console.log('Updated stats:', { activeCount, totalCount });
+    }
+    
+    // Auto-dismiss alerts
+    setTimeout(function() {
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(alert => {
+            const bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        });
+    }, 5000);
+});
+</script>
+{% endblock content %}

@@ -1,0 +1,1034 @@
+{% extends 'laboratory/assets/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Billing Analytics - {{ vendor.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Analytics Dashboard Styles */
+    .analytics-header {
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .date-range-display {
+        background: rgba(44, 90, 160, 0.1);
+        border-radius: 0.5rem;
+        padding: 0.75rem 1rem;
+        margin-top: 1rem;
+        border-left: 4px solid var(--primary-color);
+    }
+
+    .date-range-text {
+        font-weight: 600;
+        color: var(--primary-color);
+    }
+
+    /* KPI Cards */
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .kpi-card {
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        padding: 1.5rem;
+        transition: var(--transition);
+    }
+
+    .kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.15);
+    }
+
+    .kpi-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1rem;
+        font-size: 1.5rem;
+    }
+
+    .kpi-icon.revenue {
+        background: rgba(25, 135, 84, 0.1);
+        color: var(--success-color);
+    }
+
+    .kpi-icon.billings {
+        background: rgba(44, 90, 160, 0.1);
+        color: var(--primary-color);
+    }
+
+    .kpi-icon.avg {
+        background: rgba(32, 201, 151, 0.1);
+        color: #20c997;
+    }
+
+    .kpi-icon.unpaid {
+        background: rgba(220, 53, 69, 0.1);
+        color: var(--danger-color);
+    }
+
+    .kpi-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #333;
+        line-height: 1;
+        margin: 0.5rem 0;
+    }
+
+    .kpi-label {
+        font-size: 0.875rem;
+        color: var(--secondary-color);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .kpi-change {
+        font-size: 0.875rem;
+        margin-top: 0.5rem;
+    }
+
+    .kpi-change.positive {
+        color: var(--success-color);
+    }
+
+    .kpi-change.negative {
+        color: var(--danger-color);
+    }
+
+    /* Chart Containers */
+    .chart-container {
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        height: 100%;
+    }
+
+    .chart-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .chart-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #333;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    /* Top Lists */
+    .top-list-container {
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        padding: 1.5rem;
+        height: 100%;
+    }
+
+    .top-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .top-list-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 0;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .top-list-item:last-child {
+        border-bottom: none;
+    }
+
+    .rank-badge {
+        width: 28px;
+        height: 28px;
+        background: #f8f9fa;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        color: var(--primary-color);
+        margin-right: 0.75rem;
+    }
+
+    .rank-1 .rank-badge {
+        background: rgba(255, 193, 7, 0.2);
+        color: var(--warning-color);
+    }
+
+    .rank-2 .rank-badge {
+        background: rgba(108, 117, 125, 0.2);
+        color: var(--secondary-color);
+    }
+
+    .rank-3 .rank-badge {
+        background: rgba(220, 53, 69, 0.2);
+        color: var(--danger-color);
+    }
+
+    .top-list-info {
+        flex: 1;
+    }
+
+    .top-list-name {
+        font-weight: 500;
+        color: #333;
+        margin-bottom: 0.25rem;
+    }
+
+    .top-list-meta {
+        font-size: 0.875rem;
+        color: var(--secondary-color);
+    }
+
+    .top-list-value {
+        font-weight: 600;
+        color: var(--primary-color);
+        text-align: right;
+    }
+
+    .top-list-value small {
+        display: block;
+        font-size: 0.75rem;
+        color: var(--secondary-color);
+        font-weight: normal;
+    }
+
+    /* Distribution Cards */
+    .distribution-card {
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .distribution-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #f8f9fa;
+    }
+
+    .distribution-item:last-child {
+        border-bottom: none;
+    }
+
+    .distribution-label {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .distribution-color {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+    }
+
+    .distribution-name {
+        font-weight: 500;
+        color: #333;
+    }
+
+    .distribution-count {
+        font-size: 0.875rem;
+        color: var(--secondary-color);
+    }
+
+    .distribution-value {
+        font-weight: 600;
+        color: var(--primary-color);
+    }
+
+    /* Date Picker */
+    .date-picker-container {
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    /* Empty States */
+    .empty-analytics {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #6c757d;
+    }
+
+    .empty-analytics i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.3;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .chart-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        
+        .kpi-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .analytics-header {
+            padding: 1.5rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .kpi-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .kpi-value {
+            font-size: 1.5rem;
+        }
+    }
+
+    /* Chart sizes */
+    .chart-wrapper {
+        height: 300px;
+        position: relative;
+    }
+
+    .trend-chart-wrapper {
+        height: 250px;
+        position: relative;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="analytics-dashboard">
+    <!-- Header -->
+    <div class="analytics-header">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+            <div>
+                <h1 class="h3 mb-2">Billing Analytics</h1>
+                <p class="text-muted mb-0">Comprehensive billing insights and revenue analytics</p>
+            </div>
+            <div>
+                <a href="{% url 'billing:billing_list' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-list me-2"></i>View All Billings
+                </a>
+            </div>
+        </div>
+
+        <!-- Date Range -->
+        <div class="date-range-display mt-3">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <i class="bi bi-calendar me-2"></i>
+                    <span class="date-range-text">
+                        {{ date_from|date:"M d, Y" }} to {{ date_to|date:"M d, Y" }}
+                    </span>
+                    <small class="text-muted ms-2">({{ date_from|timesince:date_to }} period)</small>
+                </div>
+                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#dateRangeModal">
+                    <i class="bi bi-calendar-range me-1"></i>Change Date Range
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-icon revenue">
+                <i class="bi bi-currency-exchange"></i>
+            </div>
+            <div class="kpi-label">Total Revenue</div>
+            <div class="kpi-value">₦{{ overall.total_revenue_sum|default:0|floatformat:0|intcomma }}</div>
+            <div class="kpi-change positive">
+                <i class="bi bi-arrow-up"></i> 12.5% from last period
+            </div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-icon billings">
+                <i class="bi bi-receipt"></i>
+            </div>
+            <div class="kpi-label">Total Billings</div>
+            <div class="kpi-value">{{ overall.total_billings|default:0|intcomma }}</div>
+            <div class="kpi-change positive">
+                <i class="bi bi-arrow-up"></i> 8.2% from last period
+            </div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-icon avg">
+                <i class="bi bi-graph-up"></i>
+            </div>
+            <div class="kpi-label">Average Billing</div>
+            <div class="kpi-value">₦{{ overall.avg_billing|default:0|floatformat:0|intcomma }}</div>
+            <div class="kpi-change negative">
+                <i class="bi bi-arrow-down"></i> 3.1% from last period
+            </div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-icon unpaid">
+                <i class="bi bi-exclamation-triangle"></i>
+            </div>
+            <div class="kpi-label">Unpaid Amount</div>
+            <div class="kpi-value">₦{{ overall.unpaid|default:0|floatformat:0|intcomma }}</div>
+            <div class="kpi-change negative">
+                <i class="bi bi-arrow-up"></i> 5.3% from last period
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Charts Row -->
+    <div class="row g-4">
+        <!-- Revenue Trend Chart -->
+        <div class="col-lg-8">
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="bi bi-graph-up"></i>
+                        Revenue Trend (Last 30 Days)
+                    </h3>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-secondary active" data-chart-period="daily">Daily</button>
+                        <button class="btn btn-outline-secondary" data-chart-period="weekly">Weekly</button>
+                        <button class="btn btn-outline-secondary" data-chart-period="monthly">Monthly</button>
+                    </div>
+                </div>
+                <div class="trend-chart-wrapper">
+                    <canvas id="revenueTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Revenue by Type -->
+        <div class="col-lg-4">
+            <div class="distribution-card">
+                <h3 class="chart-title mb-3">
+                    <i class="bi bi-pie-chart"></i>
+                    Revenue by Billing Type
+                </h3>
+                <div class="chart-wrapper">
+                    <canvas id="revenueByTypeChart"></canvas>
+                </div>
+                <div class="mt-3">
+                    {% for item in revenue_by_type %}
+                    <div class="distribution-item">
+                        <div class="distribution-label">
+                            <div class="distribution-color" style="background-color: var(--chart-color-{{ forloop.counter }});"></div>
+                            <span class="distribution-name">{{ item.get_billing_type_display|default:item.billing_type }}</span>
+                            <span class="distribution-count">({{ item.count }})</span>
+                        </div>
+                        <div class="distribution-value">₦{{ item.total|default:0|floatformat:0|intcomma }}</div>
+                    </div>
+                    {% empty %}
+                    <div class="empty-analytics">
+                        <i class="bi bi-pie-chart"></i>
+                        <p>No revenue data for this period</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Second Row: Payment Distribution & Top Lists -->
+    <div class="row g-4 mt-4">
+        <!-- Payment Status Distribution -->
+        <div class="col-lg-6">
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="bi bi-bar-chart"></i>
+                        Payment Status Distribution
+                    </h3>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="paymentDistributionChart"></canvas>
+                </div>
+                <div class="mt-3">
+                    {% for item in payment_distribution %}
+                    <div class="distribution-item">
+                        <div class="distribution-label">
+                            <span class="badge status-{{ item.payment_status|lower }} me-2">
+                                {{ item.payment_status }}
+                            </span>
+                            <span class="distribution-name">{{ item.get_payment_status_display|default:item.payment_status }}</span>
+                        </div>
+                        <div class="distribution-value">
+                            ₦{{ item.total|default:0|floatformat:0|intcomma }}
+                            <small>{{ item.count }} records</small>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="empty-analytics">
+                        <i class="bi bi-bar-chart"></i>
+                        <p>No payment distribution data</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Lists Column -->
+        <div class="col-lg-6">
+            <div class="row g-4">
+                <!-- Top Insurance Providers -->
+                <div class="col-md-6">
+                    <div class="top-list-container">
+                        <h3 class="chart-title mb-3">
+                            <i class="bi bi-shield-check"></i>
+                            Top Insurance Providers
+                        </h3>
+                        <ul class="top-list">
+                            {% for item in top_insurance %}
+                            <li class="top-list-item rank-{{ forloop.counter }}">
+                                <div class="rank-badge">{{ forloop.counter }}</div>
+                                <div class="top-list-info">
+                                    <div class="top-list-name">{{ item.insurance_provider__name|default:"Unknown" }}</div>
+                                    <div class="top-list-meta">{{ item.count }} billings</div>
+                                </div>
+                                <div class="top-list-value">
+                                    ₦{{ item.total|default:0|floatformat:0|intcomma }}
+                                </div>
+                            </li>
+                            {% empty %}
+                            <div class="empty-analytics">
+                                <i class="bi bi-shield"></i>
+                                <p>No insurance billing data</p>
+                            </div>
+                            {% endfor %}
+                        </ul>
+                        {% if top_insurance %}
+                        <div class="text-center mt-3">
+                            <a href="#" class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-eye me-1"></i>View All Providers
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Top Corporate Clients -->
+                <div class="col-md-6">
+                    <div class="top-list-container">
+                        <h3 class="chart-title mb-3">
+                            <i class="bi bi-building"></i>
+                            Top Corporate Clients
+                        </h3>
+                        <ul class="top-list">
+                            {% for item in top_corporate %}
+                            <li class="top-list-item rank-{{ forloop.counter }}">
+                                <div class="rank-badge">{{ forloop.counter }}</div>
+                                <div class="top-list-info">
+                                    <div class="top-list-name">{{ item.corporate_client__company_name|default:"Unknown" }}</div>
+                                    <div class="top-list-meta">{{ item.count }} billings</div>
+                                </div>
+                                <div class="top-list-value">
+                                    ₦{{ item.total|default:0|floatformat:0|intcomma }}
+                                </div>
+                            </li>
+                            {% empty %}
+                            <div class="empty-analytics">
+                                <i class="bi bi-building"></i>
+                                <p>No corporate billing data</p>
+                            </div>
+                            {% endfor %}
+                        </ul>
+                        {% if top_corporate %}
+                        <div class="text-center mt-3">
+                            <a href="#" class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-eye me-1"></i>View All Clients
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Breakdown -->
+    <div class="row g-4 mt-4">
+        <!-- Revenue by Type Detailed -->
+        <div class="col-lg-12">
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i class="bi bi-table"></i>
+                        Detailed Revenue Breakdown
+                    </h3>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary active" data-breakdown="revenue">By Revenue</button>
+                        <button class="btn btn-outline-primary" data-breakdown="count">By Count</button>
+                        <button class="btn btn-outline-primary" data-breakdown="average">By Average</button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Billing Type</th>
+                                <th class="text-end">Billings Count</th>
+                                <th class="text-end">Total Revenue</th>
+                                <th class="text-end">Average Amount</th>
+                                <th class="text-end">Percentage</th>
+                                <th>Trend</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in revenue_by_type %}
+                            <tr>
+                                <td>
+                                    <span class="badge billing-type-{{ item.billing_type|lower }}">
+                                        {{ item.get_billing_type_display|default:item.billing_type }}
+                                    </span>
+                                </td>
+                                <td class="text-end">{{ item.count|intcomma }}</td>
+                                <td class="text-end fw-bold">₦{{ item.total|default:0|floatformat:0|intcomma }}</td>
+                                <td class="text-end">₦{{ item.avg|default:0|floatformat:0|intcomma }}</td>
+                                <td class="text-end">
+                                    {% with percentage=item.total|divide:overall.total_revenue_sum|multiply:100 %}
+                                    {{ percentage|floatformat:1 }}%
+                                    {% endwith %}
+                                </td>
+                                <td>
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar" 
+                                             role="progressbar" 
+                                             style="width: {% with percentage=item.total|divide:overall.total_revenue_sum|multiply:100 %}{{ percentage|floatformat:0 }}%{% endwith %}; background-color: var(--chart-color-{{ forloop.counter }});">
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center py-4">
+                                    <div class="empty-analytics">
+                                        <i class="bi bi-table"></i>
+                                        <p>No revenue breakdown data</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        {% if revenue_by_type %}
+                        <tfoot>
+                            <tr class="table-light">
+                                <th>Total</th>
+                                <th class="text-end">{{ overall.total_billings|default:0|intcomma }}</th>
+                                <th class="text-end">₦{{ overall.total_revenue_sum|default:0|floatformat:0|intcomma }}</th>
+                                <th class="text-end">₦{{ overall.avg_billing|default:0|floatformat:0|intcomma }}</th>
+                                <th class="text-end">100%</th>
+                                <th></th>
+                            </tr>
+                        </tfoot>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Date Range Modal -->
+<div class="modal fade" id="dateRangeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Select Date Range</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="get" id="dateRangeForm">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">From Date</label>
+                            <input type="date" class="form-control" name="date_from" 
+                                   value="{{ date_from|date:'Y-m-d' }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">To Date</label>
+                            <input type="date" class="form-control" name="date_to" 
+                                   value="{{ date_to|date:'Y-m-d' }}" required>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <h6 class="mb-2">Quick Presets</h6>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" 
+                                    onclick="applyDatePreset('today')">Today</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary"
+                                    onclick="applyDatePreset('yesterday')">Yesterday</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary"
+                                    onclick="applyDatePreset('this_week')">This Week</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary"
+                                    onclick="applyDatePreset('last_week')">Last Week</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary"
+                                    onclick="applyDatePreset('this_month')">This Month</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary"
+                                    onclick="applyDatePreset('last_month')">Last Month</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="applyDateRange()">Apply Range</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Chart color palette
+        const chartColors = [
+            'rgba(44, 90, 160, 0.8)',     // Primary Blue
+            'rgba(32, 201, 151, 0.8)',    // Teal
+            'rgba(253, 126, 20, 0.8)',    // Orange
+            'rgba(111, 66, 193, 0.8)',    // Purple
+            'rgba(214, 51, 132, 0.8)',    // Pink
+            'rgba(25, 135, 84, 0.8)',     // Green
+            'rgba(220, 53, 69, 0.8)',     // Red
+            'rgba(255, 193, 7, 0.8)',     // Yellow
+        ];
+
+        // Set CSS variables for distribution colors
+        chartColors.forEach((color, index) => {
+            document.documentElement.style.setProperty(`--chart-color-${index + 1}`, color);
+        });
+
+        // Revenue Trend Chart
+        const trendCtx = document.getElementById('revenueTrendChart');
+        if (trendCtx && {{ daily_trend|length }} > 0) {
+            const trendData = {
+                labels: [
+                    {% for day in daily_trend %}
+                    '{{ day.date|date:"M d" }}'{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                datasets: [{
+                    label: 'Daily Revenue',
+                    data: [
+                        {% for day in daily_trend %}
+                        {{ day.total|default:0 }}{% if not forloop.last %},{% endif %}
+                        {% endfor %}
+                    ],
+                    borderColor: 'rgba(44, 90, 160, 1)',
+                    backgroundColor: 'rgba(44, 90, 160, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                }]
+            };
+            
+            new Chart(trendCtx, {
+                type: 'line',
+                data: trendData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `Revenue: ₦${context.raw.toLocaleString()}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '₦' + value.toLocaleString();
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Revenue (₦)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Date'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Chart period buttons
+            document.querySelectorAll('[data-chart-period]').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('[data-chart-period]').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    // In real implementation, this would reload chart data
+                    showToast(`Showing ${this.dataset.chartPeriod} trend`, 'info');
+                });
+            });
+        }
+
+        // Revenue by Type Chart
+        const revenueTypeCtx = document.getElementById('revenueByTypeChart');
+        if (revenueTypeCtx && {{ revenue_by_type|length }} > 0) {
+            const revenueTypeData = {
+                labels: [
+                    {% for item in revenue_by_type %}
+                    '{{ item.get_billing_type_display|default:item.billing_type }}'{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                datasets: [{
+                    data: [
+                        {% for item in revenue_by_type %}
+                        {{ item.total|default:0 }}{% if not forloop.last %},{% endif %}
+                        {% endfor %}
+                    ],
+                    backgroundColor: chartColors.slice(0, {{ revenue_by_type|length }}),
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            };
+            
+            new Chart(revenueTypeCtx, {
+                type: 'doughnut',
+                data: revenueTypeData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true,
+                                font: {
+                                    size: 11
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.raw || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                                    return `${label}: ₦${value.toLocaleString()} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Payment Distribution Chart
+        const paymentCtx = document.getElementById('paymentDistributionChart');
+        if (paymentCtx && {{ payment_distribution|length }} > 0) {
+            const paymentData = {
+                labels: [
+                    {% for item in payment_distribution %}
+                    '{{ item.get_payment_status_display|default:item.payment_status }}'{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                datasets: [{
+                    data: [
+                        {% for item in payment_distribution %}
+                        {{ item.total|default:0 }}{% if not forloop.last %},{% endif %}
+                        {% endfor %}
+                    ],
+                    backgroundColor: [
+                        'rgba(25, 135, 84, 0.8)',    // PAID
+                        'rgba(220, 53, 69, 0.8)',    // UNPAID
+                        'rgba(255, 193, 7, 0.8)',    // PARTIAL
+                        'rgba(13, 110, 253, 0.8)',   // INVOICED
+                        'rgba(108, 117, 125, 0.8)',  // OVERDUE
+                        'rgba(32, 201, 151, 0.8)'    // WAIVED
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            };
+            
+            new Chart(paymentCtx, {
+                type: 'bar',
+                data: paymentData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `₦${context.raw.toLocaleString()}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '₦' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Detailed breakdown buttons
+        document.querySelectorAll('[data-breakdown]').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('[data-breakdown]').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                const breakdownType = this.dataset.breakdown;
+                // In real implementation, this would reload breakdown data
+                showToast(`Showing breakdown by ${breakdownType}`, 'info');
+            });
+        });
+
+        // Initialize tooltips
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+
+    // Date range functions
+    function applyDateRange() {
+        document.getElementById('dateRangeForm').submit();
+    }
+
+    function applyDatePreset(preset) {
+        const dateFrom = document.querySelector('input[name="date_from"]');
+        const dateTo = document.querySelector('input[name="date_to"]');
+        const today = new Date();
+        
+        switch(preset) {
+            case 'today':
+                dateFrom.value = dateTo.value = today.toISOString().split('T')[0];
+                break;
+            case 'yesterday':
+                const yesterday = new Date(today);
+                yesterday.setDate(yesterday.getDate() - 1);
+                dateFrom.value = dateTo.value = yesterday.toISOString().split('T')[0];
+                break;
+            case 'this_week':
+                const firstDay = new Date(today.setDate(today.getDate() - today.getDay()));
+                dateFrom.value = firstDay.toISOString().split('T')[0];
+                dateTo.value = new Date().toISOString().split('T')[0];
+                break;
+            case 'last_week':
+                const lastWeekStart = new Date(today.setDate(today.getDate() - today.getDay() - 7));
+                const lastWeekEnd = new Date(lastWeekStart);
+                lastWeekEnd.setDate(lastWeekEnd.getDate() + 6);
+                dateFrom.value = lastWeekStart.toISOString().split('T')[0];
+                dateTo.value = lastWeekEnd.toISOString().split('T')[0];
+                break;
+            case 'this_month':
+                const firstDayMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+                dateFrom.value = firstDayMonth.toISOString().split('T')[0];
+                dateTo.value = new Date().toISOString().split('T')[0];
+                break;
+            case 'last_month':
+                const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+                dateFrom.value = lastMonthStart.toISOString().split('T')[0];
+                dateTo.value = lastMonthEnd.toISOString().split('T')[0];
+                break;
+        }
+    }
+
+    // Export functionality
+    function exportAnalytics(format) {
+        const dateFrom = '{{ date_from|date:"Y-m-d" }}';
+        const dateTo = '{{ date_to|date:"Y-m-d" }}';
+        
+        // Show loading
+        showToast(`Exporting analytics data as ${format.toUpperCase()}...`, 'info');
+        
+        // Simulate export
+        setTimeout(() => {
+            // In real implementation, make API call here
+            const fileName = `billing_analytics_${dateFrom}_to_${dateTo}.${format}`;
+            showToast(`Exported as ${fileName}`, 'success');
+        }, 1000);
+    }
+
+    // Toast notification
+    function showToast(message, type = 'success') {
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-bg-${type} border-0`;
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+        
+        const container = document.querySelector('.toast-container') || createToastContainer();
+        container.appendChild(toast);
+        
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
+        
+        toast.addEventListener('hidden.bs.toast', () => toast.remove());
+    }
+
+    function createToastContainer() {
+        const container = document.createElement('div');
+        container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        document.body.appendChild(container);
+        return container;
+    }
+</script>
+{% endblock %}

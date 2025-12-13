@@ -1,0 +1,459 @@
+{% extends "patient/assets/base.html" %}
+
+{% load static %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 flex">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-white shadow-sm border-r border-gray-200 hidden md:block">
+        <div class="h-full flex flex-col">
+            <!-- Logo -->
+            <div class="p-6 border-b border-gray-200">
+                <div class="flex items-center space-x-3">
+                    {% if request.user.vendor.logo %}
+                    <img src="{{ request.user.vendor.logo.url }}" alt="{{ request.user.vendor.name }}" class="h-8 w-auto">
+                    {% else %}
+                    <div class="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 005.555 16h8.89a5.986 5.986 0 00-4.797-2.084A5 5 0 0010 11z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    {% endif %}
+                    <div>
+                        <h1 class="text-sm font-semibold text-gray-900">{{ request.user.vendor.name|default:"MedLab" }}</h1>
+                        <p class="text-xs text-gray-500">Clinician Portal</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="flex-1 p-4 space-y-2">
+                <a href="{% url 'clinician:clinician_dashboard' %}" 
+                   class="flex items-center space-x-3 px-4 py-3 rounded-lg {% if request.resolver_match.url_name == 'dashboard' %}bg-blue-50 text-blue-600{% else %}text-gray-700 hover:bg-gray-50{% endif %}">
+                    <i class="fas fa-tachometer-alt w-5"></i>
+                    <span>Dashboard</span>
+                </a>
+                
+                <a href="{% url 'clinician:my_patients' %}" 
+                   class="flex items-center space-x-3 px-4 py-3 rounded-lg {% if 'patients' in request.resolver_match.url_name %}bg-blue-50 text-blue-600{% else %}text-gray-700 hover:bg-gray-50{% endif %}">
+                    <i class="fas fa-user-injured w-5"></i>
+                    <span>My Patients</span>
+                </a>
+                
+                <a href="" 
+                   class="flex items-center space-x-3 px-4 py-3 rounded-lg {% if 'orders' in request.resolver_match.url_name %}bg-blue-50 text-blue-600{% else %}text-gray-700 hover:bg-gray-50{% endif %}">
+                    <i class="fas fa-file-medical w-5"></i>
+                    <span>Test Orders</span>
+                </a>
+                
+                <a href="" 
+                   class="flex items-center space-x-3 px-4 py-3 rounded-lg {% if 'results' in request.resolver_match.url_name %}bg-blue-50 text-blue-600{% else %}text-gray-700 hover:bg-gray-50{% endif %}">
+                    <i class="fas fa-chart-line w-5"></i>
+                    <span>Results</span>
+                </a>
+                
+                <a href="" 
+                   class="flex items-center space-x-3 px-4 py-3 rounded-lg {% if 'messaging' in request.resolver_match.url_name %}bg-blue-50 text-blue-600{% else %}text-gray-700 hover:bg-gray-50{% endif %}">
+                    <i class="fas fa-comments w-5"></i>
+                    <span>Messaging</span>
+                    {% if unread_messages > 0 %}
+                    <span class="ml-auto bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        {{ unread_messages }}
+                    </span>
+                    {% endif %}
+                </a>
+            </nav>
+
+            <!-- User Profile -->
+            <div class="p-4 border-t border-gray-200">
+                <a href="" class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50">
+                    <div class="avatar placeholder">
+                        <div class="bg-blue-100 text-blue-800 w-10 h-10 rounded-full">
+                            <span class="text-sm">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</span>
+                        </div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-gray-900 truncate">{{ request.user.first_name }} {{ request.user.last_name }}</p>
+                        <p class="text-xs text-gray-500 truncate">Clinician</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Mobile Header -->
+    <div class="md:hidden fixed top-0 left-0 right-0 bg-white shadow-sm z-10">
+        <div class="flex items-center justify-between p-4">
+            <div class="flex items-center space-x-3">
+                {% if request.user.vendor.logo %}
+                <img src="{{ request.user.vendor.logo.url }}" alt="{{ request.user.vendor.name }}" class="h-8 w-auto">
+                {% endif %}
+                <div>
+                    <h1 class="text-sm font-semibold text-gray-900">Clinician Portal</h1>
+                </div>
+            </div>
+            <button onclick="toggleMobileMenu()" class="p-2 rounded-md text-gray-600 hover:bg-gray-100">
+                <i class="fas fa-bars text-lg"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Mobile Menu -->
+    <div id="mobileMenu" class="md:hidden fixed inset-0 z-20 hidden">
+        <div class="fixed inset-0 bg-black bg-opacity-50" onclick="toggleMobileMenu()"></div>
+        <div class="fixed inset-y-0 left-0 w-64 bg-white shadow-lg">
+            <div class="h-full flex flex-col">
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            {% if request.user.vendor.logo %}
+                            <img src="{{ request.user.vendor.logo.url }}" alt="{{ request.user.vendor.name }}" class="h-8 w-auto">
+                            {% endif %}
+                            <div>
+                                <h1 class="text-sm font-semibold text-gray-900">Clinician Portal</h1>
+                            </div>
+                        </div>
+                        <button onclick="toggleMobileMenu()" class="p-2 rounded-md text-gray-600 hover:bg-gray-100">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                <nav class="flex-1 p-4 space-y-1">
+                    <a href="{% url 'clinician:clinician_dashboard' %}" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-50" onclick="toggleMobileMenu()">
+                        <i class="fas fa-tachometer-alt w-5"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-50" onclick="toggleMobileMenu()">
+                        <i class="fas fa-user-injured w-5"></i>
+                        <span>My Patients</span>
+                    </a>
+                    <a href="" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-50" onclick="toggleMobileMenu()">
+                        <i class="fas fa-file-medical w-5"></i>
+                        <span>Test Orders</span>
+                    </a>
+                    <a href="" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-50" onclick="toggleMobileMenu()">
+                        <i class="fas fa-chart-line w-5"></i>
+                        <span>Results</span>
+                    </a>
+                    <a href="" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-gray-50" onclick="toggleMobileMenu()">
+                        <i class="fas fa-user w-5"></i>
+                        <span>Profile</span>
+                    </a>
+                </nav>
+                <div class="p-4 border-t border-gray-200">
+                    <div class="flex items-center space-x-3">
+                        <div class="avatar placeholder">
+                            <div class="bg-blue-100 text-blue-800 w-10 h-10 rounded-full">
+                                <span class="text-sm">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</span>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">{{ request.user.get_full_name }}</p>
+                            <p class="text-xs text-gray-500">Clinician</p>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <a href="{% url 'account:logout' %}" class="flex items-center space-x-3 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg">
+                            <i class="fas fa-sign-out-alt w-5"></i>
+                            <span>Sign Out</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="flex-1 md:ml-64">
+        <!-- Mobile Header Spacer -->
+        <div class="md:hidden h-16"></div>
+
+        <div class="p-6">
+            <!-- Welcome Header -->
+            <div class="mb-8">
+                <h1 class="text-2xl font-bold text-gray-900">Welcome, Dr. {{ request.user.last_name }}</h1>
+                <p class="text-gray-600 mt-1">Here's your clinical dashboard overview</p>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <!-- Total Patients -->
+                <div class="card bg-white shadow-sm border border-gray-200">
+                    <div class="card-body">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h2 class="card-title text-3xl">{{ total_patients }}</h2>
+                                <p class="text-gray-600">Total Patients</p>
+                            </div>
+                            <div class="bg-blue-100 p-3 rounded-full">
+                                <i class="fas fa-user-injured text-blue-600 text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="card-actions">
+                            <a href="{% url 'clinician:my_patients' %}" class="link link-primary text-sm">View All →</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Total Orders -->
+                <div class="card bg-white shadow-sm border border-gray-200">
+                    <div class="card-body">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h2 class="card-title text-3xl">{{ total_orders }}</h2>
+                                <p class="text-gray-600">Total Orders</p>
+                            </div>
+                            <div class="bg-green-100 p-3 rounded-full">
+                                <i class="fas fa-file-medical text-green-600 text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="card-actions">
+                            <a href="" class="link link-primary text-sm">View All →</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pending Results -->
+                <div class="card bg-white shadow-sm border border-gray-200">
+                    <div class="card-body">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h2 class="card-title text-3xl">{{ pending_results }}</h2>
+                                <p class="text-gray-600">Pending Results</p>
+                            </div>
+                            <div class="bg-amber-100 p-3 rounded-full">
+                                <i class="fas fa-clock text-amber-600 text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="card-actions">
+                            {% comment %} <a href="{% url 'clinician:results' %}?status=pending" class="link link-primary text-sm">Review →</a> {% endcomment %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Critical Results -->
+                {% if critical_results > 0 %}
+                <div class="card bg-white shadow-sm border border-red-200">
+                    <div class="card-body">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h2 class="card-title text-3xl text-red-600">{{ critical_results }}</h2>
+                                <p class="text-red-600 font-medium">Critical Results</p>
+                            </div>
+                            <div class="bg-red-100 p-3 rounded-full">
+                                <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="card-actions">
+                            {% comment %} <a href="{% url 'clinician:results' %}?priority=critical" class="link link-error text-sm">Review Urgently →</a> {% endcomment %}
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="card bg-white shadow-sm border border-gray-200">
+                    <div class="card-body">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h2 class="card-title text-3xl">0</h2>
+                                <p class="text-gray-600">Critical Results</p>
+                            </div>
+                            <div class="bg-green-100 p-3 rounded-full">
+                                <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="card-actions">
+                            <p class="text-sm text-gray-500">All clear</p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Recent Orders -->
+            <div class="card bg-white shadow-sm border border-gray-200 mb-8">
+                <div class="card-body p-0">
+                    <div class="p-6 border-b border-gray-200">
+                        <div class="flex justify-between items-center">
+                            <h2 class="text-xl font-semibold text-gray-900">Recent Test Orders</h2>
+                            {% comment %} <a href="{% url 'clinician:new_order' %}" class="btn btn-primary btn-sm"> {% endcomment %}
+                                <i class="fas fa-plus mr-2"></i>New Order
+                            </a>
+                        </div>
+                    </div>
+                    
+                    {% if recent_orders %}
+                    <div class="overflow-x-auto">
+                        <table class="table w-full">
+                            <thead>
+                                <tr>
+                                    <th class="bg-gray-50">Order ID</th>
+                                    <th class="bg-gray-50">Patient</th>
+                                    <th class="bg-gray-50">Date</th>
+                                    <th class="bg-gray-50">Status</th>
+                                    <th class="bg-gray-50">Tests</th>
+                                    <th class="bg-gray-50">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in recent_orders %}
+                                <tr class="hover:bg-gray-50">
+                                    <td class="font-mono text-sm">{{ order.order_id|default:order.id }}</td>
+                                    <td>
+                                        <div class="flex items-center">
+                                            <div class="avatar placeholder mr-2">
+                                                <div class="bg-gray-200 text-gray-700 w-8 h-8 rounded-full text-xs">
+                                                    <span>{{ order.patient.first_name|first|upper }}</span>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <p class="font-medium">{{ order.patient.first_name }} {{ order.patient.last_name }}</p>
+                                                <p class="text-xs text-gray-500">{{ order.patient.patient_id }}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>{{ order.created_at|date:"M d, Y" }}</td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if order.status == 'V' %}badge-success
+                                            {% elif order.status == 'P' %}badge-warning
+                                            {% elif order.status == 'C' %}badge-info
+                                            {% else %}badge-neutral{% endif %}">
+                                            {{ order.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                                            {{ order.test_items.count }} test(s)
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="flex space-x-2">
+                                            <a href="{% url 'clinician:order_detail' order.id %}" class="btn btn-ghost btn-xs">
+                                                View
+                                            </a>
+                                            {% if order.status == 'V' and not order.clinician_acknowledged_at %}
+                                            {% comment %} <a href="{% url 'clinician:acknowledge_result' order.id %}" class="btn btn-primary btn-xs"> {% endcomment %}
+                                                Acknowledge
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="p-8 text-center">
+                        <div class="text-gray-400 mb-4">
+                            <i class="fas fa-file-medical text-4xl"></i>
+                        </div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">No Orders Yet</h3>
+                        <p class="text-gray-600 mb-4">You haven't placed any test orders yet.</p>
+                        {% comment %} <a href="{% url 'clinician:new_order' %}" class="btn btn-primary">Place Your First Order</a> {% endcomment %}
+                    </div>
+                    {% endif %}
+                    
+                    {% if recent_orders %}
+                    <div class="p-6 border-t border-gray-200 text-center">
+                        <a href="{% url 'clinician:orders' %}" class="btn btn-ghost">View All Orders</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <a href="{% url 'clinician:new_order' %}" class="card bg-white shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                    <div class="card-body items-center text-center">
+                        <div class="bg-blue-100 p-3 rounded-full mb-3">
+                            <i class="fas fa-plus-circle text-blue-600 text-xl"></i>
+                        </div>
+                        <h3 class="card-title text-sm">New Test Order</h3>
+                        <p class="text-gray-500 text-xs mt-1">Order new lab tests</p>
+                    </div>
+                </a>
+
+                <a href="{% url 'clinician:my_patients' %}" class="card bg-white shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                    <div class="card-body items-center text-center">
+                        <div class="bg-green-100 p-3 rounded-full mb-3">
+                            <i class="fas fa-user-plus text-green-600 text-xl"></i>
+                        </div>
+                        <h3 class="card-title text-sm">Add Patient</h3>
+                        <p class="text-gray-500 text-xs mt-1">Register new patient</p>
+                    </div>
+                </a>
+
+                <a href="{% url 'clinician:results' %}" class="card bg-white shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                    <div class="card-body items-center text-center">
+                        <div class="bg-purple-100 p-3 rounded-full mb-3">
+                            <i class="fas fa-chart-bar text-purple-600 text-xl"></i>
+                        </div>
+                        <h3 class="card-title text-sm">View Results</h3>
+                        <p class="text-gray-500 text-xs mt-1">Check test results</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Add Font Awesome -->
+<script>
+if (!document.querySelector('link[href*="font-awesome"]')) {
+    const fa = document.createElement('link');
+    fa.rel = 'stylesheet';
+    fa.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css';
+    document.head.appendChild(fa);
+}
+
+// Mobile menu toggle
+function toggleMobileMenu() {
+    const menu = document.getElementById('mobileMenu');
+    menu.classList.toggle('hidden');
+}
+
+// Close mobile menu on ESC key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const menu = document.getElementById('mobileMenu');
+        if (!menu.classList.contains('hidden')) {
+            menu.classList.add('hidden');
+        }
+    }
+});
+</script>
+<style>
+.card {
+    @apply bg-white rounded-lg;
+}
+.card-body {
+    @apply p-6;
+}
+.card-title {
+    @apply font-semibold text-lg;
+}
+.card-actions {
+    @apply mt-4;
+}
+.badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+}
+.badge-success {
+    @apply bg-green-100 text-green-800;
+}
+.badge-warning {
+    @apply bg-amber-100 text-amber-800;
+}
+.badge-error {
+    @apply bg-red-100 text-red-800;
+}
+.badge-info {
+    @apply bg-blue-100 text-blue-800;
+}
+.badge-neutral {
+    @apply bg-gray-100 text-gray-800;
+}
+</style>
+{% endblock %}
+

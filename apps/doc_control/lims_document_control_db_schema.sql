@@ -1,3 +1,7 @@
+I want us to work on the Document control system which is a critical component of a Laboratory Information Management System (LIMS) that is responsible. for the management of all controlled documents within the laboratory environment. 
+my client also asked that it should be part of LIMS - the multi-tenant LIMS app.
+We will consider some regulatory compliance (e.g., FDA 21 CFR Part 11, ISO 17025) in the development process
+let's get into the development, please - the models etc...
 -- LIMS Document Control System - Database Schema (PostgreSQL)
 -- Author: ChatGPT (for developers)
 -- Date: 2025-11-14 (updated 2025-11-14)

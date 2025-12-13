@@ -1,0 +1,592 @@
+{% extends "laboratory/assets/base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar Navigation -->
+        <div class="col-md-3 col-lg-2 d-md-block sidebar">
+            <div class="position-sticky pt-3">
+                <div class="sidebar-header mb-4">
+                    <h5 class="text-primary-emphasis">
+                        <i class="fas fa-file-contract me-2"></i>Document Control
+                    </h5>
+                    <hr class="mt-2">
+                </div>
+                
+                <ul class="nav flex-column">
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'doc_control:document_control_dashboard' %}">
+                            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'doc_control:document_list' %}">
+                            <i class="fas fa-folder me-2"></i>All Documents
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'doc_control:document_create' %}">
+                            <i class="fas fa-plus-circle me-2"></i>Create Document
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'doc_control:category_list' %}">
+                            <i class="fas fa-tags me-2"></i>Categories
+                        </a>
+                    </li>
+                </ul>
+
+                <!-- Upload Progress -->
+                <div class="card mt-5 border-0" style="background-color: rgba(44, 90, 160, 0.05);">
+                    <div class="card-body p-3">
+                        <h6 class="card-title text-primary mb-3">
+                            <i class="fas fa-info-circle me-2"></i>Version Control
+                        </h6>
+                        <div class="progress mb-2" style="height: 8px;">
+                            <div class="progress-bar bg-primary" style="width: 25%"></div>
+                        </div>
+                        <small class="text-muted d-block">Step 1 of 4: Upload</small>
+                        <ul class="small text-muted mt-3 mb-0">
+                            <li>1. Upload → 2. Review → 3. Approve → 4. Release</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <!-- Header -->
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <div>
+                    <h2 class="h3" style="color: var(--primary-color);">
+                        <i class="fas fa-upload me-2"></i>Upload New Version
+                    </h2>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-0">
+                            <li class="breadcrumb-item">
+                                <a href="{% url 'doc_control:document_list' %}" class="text-decoration-none">Documents</a>
+                            </li>
+                            <li class="breadcrumb-item">
+                                <a href="{% url 'doc_control:document_detail' pk=document.pk %}" class="text-decoration-none">{{ document.title|truncatechars:20 }}</a>
+                            </li>
+                            <li class="breadcrumb-item active" aria-current="page">Upload Version</li>
+                        </ol>
+                    </nav>
+                </div>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <a href="{% url 'doc_control:document_detail' pk=document.pk %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Back to Document
+                    </a>
+                </div>
+            </div>
+
+            <!-- Messages -->
+            {% if messages %}
+            <div class="mb-4">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Document Info Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file-alt me-2"></i>
+                        Document: {{ document.title }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <small class="text-muted d-block">Current Version</small>
+                            {% if document.current_version %}
+                            <span class="badge bg-success fs-6">v{{ document.current_version.version_number }}</span>
+                            {% else %}
+                            <span class="badge bg-light text-muted">No active version</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <small class="text-muted d-block">Owner</small>
+                            {% if document.owner %}
+                            <div class="fw-semibold">{{ document.owner.get_full_name|default:document.owner.username }}</div>
+                            {% else %}
+                            <span class="text-muted">Unassigned</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <small class="text-muted d-block">Total Versions</small>
+                            <div class="fw-semibold">{{ document.versions.count }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upload Form -->
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-light border-0">
+                            <h5 class="mb-0">
+                                <i class="fas fa-cloud-upload-alt me-2"></i>
+                                Upload New Version
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="post" enctype="multipart/form-data" id="uploadForm">
+                                {% csrf_token %}
+                                
+                                <!-- Form Errors -->
+                                {% if form.errors %}
+                                <div class="alert alert-danger">
+                                    <i class="fas fa-exclamation-circle me-2"></i>
+                                    Please correct the errors below.
+                                    <ul class="mb-0 mt-2">
+                                        {% for field in form %}
+                                            {% for error in field.errors %}
+                                            <li>{{ field.label }}: {{ error }}</li>
+                                            {% endfor %}
+                                        {% endfor %}
+                                        {% for error in form.non_field_errors %}
+                                        <li>{{ error }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                {% endif %}
+                                
+                                <!-- File Upload -->
+                                <div class="mb-4">
+                                    <label for="{{ form.file.id_for_label }}" class="form-label fw-semibold">
+                                        <i class="fas fa-file me-1"></i> Document File *
+                                    </label>
+                                    <div class="file-upload-area" id="fileUploadArea">
+                                        <div class="file-upload-preview text-center p-5 border rounded" id="filePreview">
+                                            <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                                            <p class="mb-2">Drag & drop your file here or</p>
+                                            <label for="{{ form.file.id_for_label }}" class="btn btn-primary btn-sm">
+                                                <i class="fas fa-folder-open me-1"></i> Browse Files
+                                            </label>
+                                            {{ form.file }}
+                                            <p class="text-muted small mt-2">Max file size: 50MB</p>
+                                        </div>
+                                        <div class="file-info d-none mt-3" id="fileInfo">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <i class="fas fa-file text-primary me-2"></i>
+                                                    <span id="fileName"></span>
+                                                    <small class="text-muted d-block" id="fileSize"></small>
+                                                </div>
+                                                <button type="button" class="btn btn-sm btn-outline-danger" id="removeFile">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% if form.file.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in form.file.errors %}
+                                        <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Change Description -->
+                                <div class="mb-4">
+                                    <label for="{{ form.change_description.id_for_label }}" class="form-label fw-semibold">
+                                        <i class="fas fa-edit me-1"></i> Change Description *
+                                    </label>
+                                    {{ form.change_description }}
+                                    {% if form.change_description.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in form.change_description.errors %}
+                                        <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    <div class="form-text">
+                                        Describe what changes were made in this version.
+                                    </div>
+                                    <div class="text-end">
+                                        <small class="text-muted" id="charCount">0/500 characters</small>
+                                    </div>
+                                </div>
+                                
+                                <!-- Effective Date -->
+                                <div class="mb-4">
+                                    <label for="{{ form.effective_date.id_for_label }}" class="form-label fw-semibold">
+                                        <i class="fas fa-calendar-check me-1"></i> Proposed Effective Date
+                                    </label>
+                                    <div class="input-group">
+                                        {{ form.effective_date }}
+                                        <span class="input-group-text bg-light">
+                                            <i class="fas fa-calendar text-muted"></i>
+                                        </span>
+                                    </div>
+                                    {% if form.effective_date.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in form.effective_date.errors %}
+                                        <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    <div class="form-text">
+                                        When this version should become effective (optional)
+                                    </div>
+                                </div>
+                                
+                                <!-- Form Actions -->
+                                <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+                                    <a href="{% url 'doc_control:document_detail' pk=document.pk %}" class="btn btn-outline-secondary">
+                                        <i class="fas fa-times me-1"></i> Cancel
+                                    </a>
+                                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                                        <i class="fas fa-upload me-1"></i> Upload Version
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Side Panel -->
+                <div class="col-lg-4">
+                    <!-- Compliance Requirements -->
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-light border-0">
+                            <h6 class="mb-0">
+                                <i class="fas fa-shield-alt me-2"></i>
+                                Compliance Requirements
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>21 CFR Part 11 Compliance:</strong>
+                                <ul class="small mt-2 mb-0">
+                                    <li>SHA-256 checksum will be generated</li>
+                                    <li>Version number auto-incremented</li>
+                                    <li>Full audit trail created</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Workflow Enforcement:</strong>
+                                <ul class="small mt-2 mb-0">
+                                    <li>Only one active draft allowed</li>
+                                    <li>Draft → Review → Approval → Release</li>
+                                    <li>Electronic signature required</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Next Steps -->
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-light border-0">
+                            <h6 class="mb-0">
+                                <i class="fas fa-forward me-2"></i>
+                                Next Steps
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="timeline">
+                                <div class="timeline-item completed">
+                                    <div class="timeline-marker"></div>
+                                    <div class="timeline-content">
+                                        <small class="text-muted">Step 1</small>
+                                        <div class="fw-semibold">Upload Version</div>
+                                    </div>
+                                </div>
+                                <div class="timeline-item">
+                                    <div class="timeline-marker"></div>
+                                    <div class="timeline-content">
+                                        <small class="text-muted">Step 2</small>
+                                        <div class="fw-semibold">Start Review</div>
+                                        <small class="text-muted">Document owner reviews changes</small>
+                                    </div>
+                                </div>
+                                <div class="timeline-item">
+                                    <div class="timeline-marker"></div>
+                                    <div class="timeline-content">
+                                        <small class="text-muted">Step 3</small>
+                                        <div class="fw-semibold">Electronic Signature</div>
+                                        <small class="text-muted">21 CFR Part 11 compliant approval</small>
+                                    </div>
+                                </div>
+                                <div class="timeline-item">
+                                    <div class="timeline-marker"></div>
+                                    <div class="timeline-content">
+                                        <small class="text-muted">Step 4</small>
+                                        <div class="fw-semibold">Release Version</div>
+                                        <small class="text-muted">Version becomes effective</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .sidebar {
+        background-color: var(--light-bg);
+        border-right: 1px solid #dee2e6;
+        min-height: calc(100vh - 70px);
+        padding-top: 20px;
+    }
+    
+    .nav-link {
+        color: var(--secondary-color);
+        padding: 0.75rem 1rem;
+        border-radius: var(--border-radius);
+        transition: var(--transition);
+    }
+    
+    .nav-link:hover {
+        color: var(--primary-color);
+        background-color: rgba(44, 90, 160, 0.1);
+        transform: translateX(5px);
+    }
+    
+    .file-upload-area {
+        border: 2px dashed #dee2e6;
+        border-radius: var(--border-radius);
+        transition: var(--transition);
+        background-color: #f8f9fa;
+    }
+    
+    .file-upload-area:hover {
+        border-color: var(--primary-color);
+        background-color: rgba(44, 90, 160, 0.05);
+    }
+    
+    .file-upload-area.dragover {
+        border-color: var(--primary-color);
+        background-color: rgba(44, 90, 160, 0.1);
+    }
+    
+    .timeline {
+        position: relative;
+        padding-left: 20px;
+    }
+    
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 7px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background-color: #e9ecef;
+    }
+    
+    .timeline-item {
+        position: relative;
+        margin-bottom: 20px;
+    }
+    
+    .timeline-item.completed .timeline-marker {
+        background-color: var(--success-color);
+        border-color: var(--success-color);
+    }
+    
+    .timeline-marker {
+        position: absolute;
+        left: -20px;
+        top: 5px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        border: 2px solid #6c757d;
+        background-color: white;
+        z-index: 1;
+    }
+    
+    .timeline-content {
+        padding-bottom: 5px;
+    }
+    
+    #id_file {
+        display: none;
+    }
+    
+    @media (max-width: 768px) {
+        .sidebar {
+            min-height: auto;
+            border-right: none;
+            border-bottom: 1px solid #dee2e6;
+        }
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // File upload handling
+    const fileInput = document.getElementById('id_file');
+    const filePreview = document.getElementById('filePreview');
+    const fileInfo = document.getElementById('fileInfo');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const removeFileBtn = document.getElementById('removeFile');
+    const uploadArea = document.getElementById('fileUploadArea');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    // Drag and drop functionality
+    uploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        this.classList.add('dragover');
+    });
+    
+    uploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        this.classList.remove('dragover');
+    });
+    
+    uploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.classList.remove('dragover');
+        
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            updateFileInfo();
+        }
+    });
+    
+    // File input change
+    fileInput.addEventListener('change', updateFileInfo);
+    
+    // Remove file
+    removeFileBtn.addEventListener('click', function() {
+        fileInput.value = '';
+        filePreview.classList.remove('d-none');
+        fileInfo.classList.add('d-none');
+    });
+    
+    // Character counter for change description
+    const changeDesc = document.getElementById('id_change_description');
+    const charCount = document.getElementById('charCount');
+    
+    if (changeDesc) {
+        changeDesc.addEventListener('input', function() {
+            const length = this.value.length;
+            charCount.textContent = `${length}/500 characters`;
+            
+            if (length > 500) {
+                charCount.classList.remove('text-muted');
+                charCount.classList.add('text-danger');
+            } else {
+                charCount.classList.remove('text-danger');
+                charCount.classList.add('text-muted');
+            }
+        });
+        
+        // Initialize counter
+        charCount.textContent = `${changeDesc.value.length}/500 characters`;
+    }
+    
+    // Form validation
+    const form = document.getElementById('uploadForm');
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        
+        // Check file is selected
+        if (!fileInput.files.length) {
+            isValid = false;
+            showFieldError(fileInput, 'Please select a file to upload');
+        } else {
+            // Check file size (50MB limit)
+            const file = fileInput.files[0];
+            const maxSize = 50 * 1024 * 1024; // 50MB in bytes
+            
+            if (file.size > maxSize) {
+                isValid = false;
+                showFieldError(fileInput, 'File size exceeds 50MB limit');
+            }
+        }
+        
+        // Check change description
+        if (changeDesc && !changeDesc.value.trim()) {
+            isValid = false;
+            changeDesc.classList.add('is-invalid');
+            showFieldError(changeDesc, 'Change description is required');
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+            // Scroll to first error
+            const firstError = form.querySelector('.is-invalid');
+            if (firstError) {
+                firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        } else {
+            // Show loading state
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Uploading...';
+            submitBtn.disabled = true;
+        }
+    });
+    
+    // Helper functions
+    function updateFileInfo() {
+        if (fileInput.files.length) {
+            const file = fileInput.files[0];
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+            
+            filePreview.classList.add('d-none');
+            fileInfo.classList.remove('d-none');
+        }
+    }
+    
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    function showFieldError(field, message) {
+        let errorDiv = field.parentElement.querySelector('.field-error');
+        if (!errorDiv) {
+            errorDiv = document.createElement('div');
+            errorDiv.className = 'text-danger small mt-1 field-error';
+            field.parentElement.appendChild(errorDiv);
+        }
+        errorDiv.innerHTML = `<i class="fas fa-exclamation-circle me-1"></i>${message}`;
+    }
+    
+    // Auto-fill effective date to tomorrow
+    const effectiveDateField = document.getElementById('id_effective_date');
+    if (effectiveDateField && !effectiveDateField.value) {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        effectiveDateField.value = tomorrow.toISOString().split('T')[0];
+    }
+    
+    // Add Bootstrap classes to form fields
+    const formFields = document.querySelectorAll('#uploadForm input, #uploadForm textarea, #uploadForm select');
+    formFields.forEach(field => {
+        if (field.type !== 'checkbox' && field.type !== 'radio') {
+            field.classList.add('form-control');
+        }
+    });
+    
+    // Set textarea height
+    if (changeDesc) {
+        changeDesc.style.minHeight = '120px';
+        changeDesc.style.resize = 'vertical';
+    }
+});
+</script>
+{% endblock content %}

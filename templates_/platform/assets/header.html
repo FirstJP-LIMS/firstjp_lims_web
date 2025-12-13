@@ -1,21 +1,19 @@
+{% load static %}
 <nav class="bg-white shadow-md sticky top-0 z-50">
      <div class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
         <div class="flex justify-between h-16">
             <!-- Logo and Brand -->
             <div class="flex items-center">
                 <div class="flex-shrink-0 flex items-center">
-                    <!-- <svg class="h-8 w-8 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
-                    </svg> -->
-                    <span class="ml-2 text-xl font-bold text-red-500">MEDVUNO</span>
-                    
+                    {% comment %} <span class="ml-2 text-xl font-bold text-red-500">MEDVUNO</span> {% endcomment %}
+                    <img src="{% static 'assets/images/logo/med' %}" alt="MEDVUNO" class='w-100'>
                 </div>
             </div>
 
             <!-- Desktop Menu Items -->
             <div class="hidden md:flex items-center space-x-4 nav-items">
                 <a href="/" class="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition duration-300">Home</a>
-                <a href="/" class="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition duration-300">Learn</a>
+                <a href="http://learn.localhost.test:8000/" class="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition duration-300">Learn</a>
                 <!-- Services Dropdown -->
                 <div class="relative group">
                     <button class="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium flex items-center transition duration-300">

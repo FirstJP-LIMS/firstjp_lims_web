@@ -1,0 +1,53 @@
+<!-- templates/billing/email/invoice_email_body.txt -->
+Dear {{ invoice.insurance_provider.name|default:invoice.corporate_client.name }},
+
+Please find attached Invoice {{ invoice.invoice_number }} for services rendered during the period from {{ invoice.period_start|date:"d M, Y" }} to {{ invoice.period_end|date:"d M, Y" }}.
+
+Invoice Details:
+- Invoice Number: {{ invoice.invoice_number }}
+- Invoice Date: {{ invoice.invoice_date|date:"d M, Y" }}
+- Due Date: {{ invoice.due_date|date:"d M, Y" }}
+- Total Amount: ₦{{ invoice.total_amount|floatformat:2 }}
+- Amount Paid: ₦{{ invoice.amount_paid|floatformat:2 }}
+- Balance Due: ₦{{ invoice.balance_due|floatformat:2 }}
+
+Payment can be made via bank transfer to:
+Bank Name: [Your Bank Name]
+Account Number: [Your Account Number]
+Account Name: {{ vendor.name }}
+
+Please include the invoice number as reference when making payment.
+
+If you have any questions regarding this invoice, please don't hesitate to contact us.
+
+Best regards,
+{{ vendor.name }}
+{% if vendor.phone %}Phone: {{ vendor.phone }}{% endif %}
+{% if vendor.email %}Email: {{ vendor.email }}{% endif %}
+
+---
+
+<!-- templates/billing/email/receipt_email_body.txt -->
+Dear {{ payment.invoice.insurance_provider.name|default:payment.invoice.corporate_client.name }},
+
+Thank you for your payment. Please find attached the receipt for your recent payment.
+
+Payment Details:
+- Receipt Date: {{ payment.recorded_at|date:"d M, Y" }}
+- Payment Date: {{ payment.payment_date|date:"d M, Y" }}
+- Invoice Number: {{ payment.invoice.invoice_number }}
+- Amount Paid: ₦{{ payment.amount|floatformat:2 }}
+- Payment Method: {{ payment.get_payment_method_display }}
+{% if payment.reference_number %}- Reference: {{ payment.reference_number }}{% endif %}
+
+Invoice Summary:
+- Invoice Total: ₦{{ payment.invoice.total_amount|floatformat:2 }}
+- Total Paid: ₦{{ payment.invoice.amount_paid|floatformat:2 }}
+- Balance Remaining: ₦{{ payment.invoice.balance_due|floatformat:2 }}
+
+We appreciate your prompt payment.
+
+Best regards,
+{{ vendor.name }}
+{% if vendor.phone %}Phone: {{ vendor.phone }}{% endif %}
+{% if vendor.email %}Email: {{ vendor.email }}{% endif %}

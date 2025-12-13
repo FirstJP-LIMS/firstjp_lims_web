@@ -1,0 +1,270 @@
+{% extends "laboratory/assets/base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar Navigation -->
+        <div class="col-md-3 col-lg-2 d-md-block sidebar">
+            <div class="position-sticky pt-3">
+                <div class="sidebar-header mb-4">
+                    <h5 class="text-primary-emphasis">
+                        <i class="fas fa-tags me-2"></i>Document Categories
+                    </h5>
+                    <hr class="mt-2">
+                </div>
+                
+                <ul class="nav flex-column">
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'doc_control:document_control_dashboard' %}">
+                            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'doc_control:document_list' %}">
+                            <i class="fas fa-folder me-2"></i>All Documents
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'doc_control:document_create' %}">
+                            <i class="fas fa-plus-circle me-2"></i>Create Document
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link active" href="{% url 'doc_control:category_list' %}">
+                            <i class="fas fa-tags me-2"></i>Categories
+                        </a>
+                    </li>
+                </ul>
+
+                <!-- Category Stats -->
+                <div class="card mt-5 border-0" style="background-color: rgba(44, 90, 160, 0.05);">
+                    <div class="card-body p-3">
+                        <h6 class="card-title text-primary mb-3">
+                            <i class="fas fa-chart-pie me-2"></i>Category Overview
+                        </h6>
+                        <div class="mb-3">
+                            <small class="text-muted d-block">Total Categories</small>
+                            <h4 class="mb-0 text-primary">{{ categories.count }}</h4>
+                        </div>
+                        <a href="{% url 'doc_control:category_create' %}" 
+                           class="btn btn-sm btn-primary w-100">
+                            <i class="fas fa-plus me-1"></i> New Category
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <!-- Header -->
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h2 class="h3" style="color: var(--primary-color);">
+                    <i class="fas fa-tags me-2"></i>Document Categories
+                </h2>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <a href="{% url 'doc_control:category_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i> Add Category
+                    </a>
+                </div>
+            </div>
+
+            <!-- Messages -->
+            {% if messages %}
+            <div class="mb-4">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Categories Grid -->
+            {% if categories %}
+            <div class="row">
+                {% for category in categories %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card category-card h-100 border-0 shadow-sm">
+                        <div class="card-header bg-light border-0 d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <div class="category-icon me-2" style="color: var(--primary-color);">
+                                    <i class="fas fa-folder fa-lg"></i>
+                                </div>
+                                <h5 class="mb-0">{{ category.name }}</h5>
+                            </div>
+                            <span class="badge bg-secondary">{{ category.document_set.count }} docs</span>
+                        </div>
+                        <div class="card-body">
+                            {% if category.description %}
+                            <p class="card-text text-muted">{{ category.description|truncatechars:120 }}</p>
+                            {% else %}
+                            <p class="card-text text-muted"><em>No description provided</em></p>
+                            {% endif %}
+                            
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <small class="text-muted">
+                                    <i class="fas fa-user me-1"></i>
+                                </small>
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar me-1"></i>
+                                    {{ category.created_at|date:"M d, Y" }}
+                                </small>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-transparent border-0 d-flex justify-content-between">
+                            <a href="{% url 'doc_control:category_edit' pk=category.pk %}" 
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-edit me-1"></i> Edit
+                            </a>
+                            <button type="button" 
+                                    class="btn btn-sm btn-outline-danger delete-category" 
+                                    data-category-id="{{ category.pk }}" 
+                                    data-category-name="{{ category.name }}">
+                                <i class="fas fa-trash me-1"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <!-- Empty State -->
+            <div class="text-center py-5">
+                <div class="empty-state-icon mb-4">
+                    <i class="fas fa-tags fa-4x text-muted"></i>
+                </div>
+                <h3 class="h4 text-muted mb-3">No Categories Found</h3>
+                <p class="text-muted mb-4">Get started by creating your first document category.</p>
+                <a href="{% url 'doc_control:category_create' %}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-plus me-2"></i> Create First Category
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteCategoryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title text-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Delete Category
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the category "<span id="categoryName"></span>"?</p>
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    <strong>Warning:</strong> This action cannot be undone.
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteCategoryForm" method="post" action="">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i> Delete Category
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .sidebar {
+        background-color: var(--light-bg);
+        border-right: 1px solid #dee2e6;
+        min-height: calc(100vh - 70px);
+        padding-top: 20px;
+    }
+    
+    .nav-link {
+        color: var(--secondary-color);
+        padding: 0.75rem 1rem;
+        border-radius: var(--border-radius);
+        transition: var(--transition);
+    }
+    
+    .nav-link:hover {
+        color: var(--primary-color);
+        background-color: rgba(44, 90, 160, 0.1);
+        transform: translateX(5px);
+    }
+    
+    .nav-link.active {
+        color: var(--primary-color);
+        background-color: rgba(44, 90, 160, 0.1);
+        font-weight: 600;
+        border-left: 3px solid var(--primary-color);
+    }
+    
+    .category-card {
+        transition: var(--transition);
+        border: 1px solid #e9ecef;
+    }
+    
+    .category-card:hover {
+        box-shadow: var(--box-shadow);
+        transform: translateY(-5px);
+        border-color: var(--primary-color);
+    }
+    
+    .category-icon {
+        transition: var(--transition);
+    }
+    
+    .category-card:hover .category-icon {
+        transform: scale(1.2);
+    }
+    
+    .empty-state-icon {
+        opacity: 0.5;
+    }
+    
+    @media (max-width: 768px) {
+        .sidebar {
+            min-height: auto;
+            border-right: none;
+            border-bottom: 1px solid #dee2e6;
+        }
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Delete Category Modal Handler
+    const deleteButtons = document.querySelectorAll('.delete-category');
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteCategoryModal'));
+    const categoryNameSpan = document.getElementById('categoryName');
+    const deleteForm = document.getElementById('deleteCategoryForm');
+    
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const categoryId = this.getAttribute('data-category-id');
+            const categoryName = this.getAttribute('data-category-name');
+            
+            categoryNameSpan.textContent = categoryName;
+            deleteForm.action = "{% url 'doc_control:category_delete' pk=0 %}".replace('0', categoryId);
+            
+            deleteModal.show();
+        });
+    });
+    
+    // Auto-dismiss alerts after 5 seconds
+    setTimeout(function() {
+        const alerts = document.querySelectorAll('.alert:not(.alert-permanent)');
+        alerts.forEach(alert => {
+            const bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        });
+    }, 5000);
+});
+</script>
+{% endblock content %}

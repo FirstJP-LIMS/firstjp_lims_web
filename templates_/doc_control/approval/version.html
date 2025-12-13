@@ -1,0 +1,620 @@
+{% extends "laboratory/assets/base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar Navigation -->
+        <div class="col-md-3 col-lg-2 d-md-block sidebar">
+            <div class="position-sticky pt-3">
+                <div class="sidebar-header mb-4">
+                    <h5 class="text-primary-emphasis">
+                        <i class="fas fa-file-contract me-2"></i>Document Control
+                    </h5>
+                    <hr class="mt-2">
+                </div>
+                
+                <ul class="nav flex-column">
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'doc_control:document_control_dashboard' %}">
+                            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'doc_control:document_list' %}">
+                            <i class="fas fa-folder me-2"></i>All Documents
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'doc_control:document_create' %}">
+                            <i class="fas fa-plus-circle me-2"></i>Create Document
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'doc_control:category_list' %}">
+                            <i class="fas fa-tags me-2"></i>Categories
+                        </a>
+                    </li>
+                </ul>
+
+                <!-- Compliance Info -->
+                <div class="card mt-5 border-0" style="background-color: rgba(44, 90, 160, 0.05);">
+                    <div class="card-body p-3">
+                        <h6 class="card-title text-primary mb-3">
+                            <i class="fas fa-shield-alt me-2"></i>21 CFR Part 11
+                        </h6>
+                        <ul class="small text-muted mb-0">
+                            <li class="mb-2">• Electronic signature required</li>
+                            <li class="mb-2">• Non-repudiable verification</li>
+                            <li class="mb-2">• Audit trail maintained</li>
+                            <li>• Immutable record created</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <!-- Header -->
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <div>
+                    <h2 class="h3" style="color: var(--primary-color);">
+                        <i class="fas fa-signature me-2"></i>Electronic Signature Approval
+                    </h2>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-0">
+                            <li class="breadcrumb-item">
+                                <a href="{% url 'doc_control:document_list' %}" class="text-decoration-none">Documents</a>
+                            </li>
+                            <li class="breadcrumb-item">
+                                <a href="{% url 'doc_control:document_detail' pk=version.document.pk %}" class="text-decoration-none">{{ version.document.title|truncatechars:20 }}</a>
+                            </li>
+                            <li class="breadcrumb-item">
+                                <a href="{% url 'doc_control:version_detail' pk=version.pk %}" class="text-decoration-none">v{{ version.version_number }}</a>
+                            </li>
+                            <li class="breadcrumb-item active" aria-current="page">Approve</li>
+                        </ol>
+                    </nav>
+                </div>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <a href="{% url 'doc_control:version_detail' pk=version.pk %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Back
+                    </a>
+                </div>
+            </div>
+
+            <!-- Messages -->
+            {% if messages %}
+            <div class="mb-4">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Approval Summary -->
+            <div class="row mb-4">
+                <div class="col-lg-8">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-light border-0">
+                            <h5 class="mb-0">
+                                <i class="fas fa-file-check me-2"></i>
+                                Approval Summary
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <small class="text-muted d-block">Document</small>
+                                        <h5>{{ version.document.title }}</h5>
+                                    </div>
+                                    <div class="mb-3">
+                                        <small class="text-muted d-block">Version</small>
+                                        <span class="badge bg-primary fs-5">v{{ version.version_number }}</span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <small class="text-muted d-block">Current Status</small>
+                                        <span class="badge bg-warning fs-6">
+                                            <i class="fas fa-clock me-1"></i>Awaiting Approval
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <small class="text-muted d-block">Approver</small>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-lg me-3">
+                                                <div class="avatar-title bg-primary bg-opacity-10 rounded-circle">
+                                                    {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <h5 class="mb-0">{{ user.get_full_name }}</h5>
+                                                <small class="text-muted">{{ user.email }}</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <small class="text-muted d-block">Timestamp</small>
+                                        <div class="fw-semibold" id="currentTimestamp">{{ now|date:"F d, Y H:i:s" }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- File Info -->
+                            {% if version.file %}
+                            <div class="mt-4 pt-3 border-top">
+                                <small class="text-muted d-block mb-2">File Information</small>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="fas fa-file text-primary me-2"></i>
+                                        {{ version.file.name|slice:"-30:" }}
+                                        <small class="text-muted d-block">{{ version.file.size|filesizeformat }}</small>
+                                    </div>
+                                    <a href="{{ version.file.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye me-1"></i> Preview
+                                    </a>
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Change Description -->
+                            {% if version.change_description %}
+                            <div class="mt-4 pt-3 border-top">
+                                <small class="text-muted d-block mb-2">Change Description</small>
+                                <div class="card bg-light border-0">
+                                    <div class="card-body">
+                                        {{ version.change_description|linebreaks }}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Compliance Warning -->
+                <div class="col-lg-4">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-danger text-white border-0">
+                            <h6 class="mb-0">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Legal Compliance Notice
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-danger">
+                                <i class="fas fa-balance-scale me-2"></i>
+                                <strong>Legal Binding Agreement</strong>
+                                <p class="small mt-2 mb-0">
+                                    By providing your electronic signature, you are legally bound by the terms of this document.
+                                    This action is non-repudiable under 21 CFR Part 11 regulations.
+                                </p>
+                            </div>
+                            
+                            <div class="alert alert-warning">
+                                <i class="fas fa-lock me-2"></i>
+                                <strong>Security Notice</strong>
+                                <p class="small mt-2 mb-0">
+                                    Your password will be used to create a unique verification hash.
+                                    The password itself is not stored.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Electronic Signature Form -->
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-light border-0">
+                            <h5 class="mb-0">
+                                <i class="fas fa-signature me-2"></i>
+                                Electronic Signature
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="post" id="signatureForm">
+                                {% csrf_token %}
+                                
+                                <!-- Form Errors -->
+                                {% if form.errors %}
+                                <div class="alert alert-danger">
+                                    <i class="fas fa-exclamation-circle me-2"></i>
+                                    Please correct the errors below.
+                                    <ul class="mb-0 mt-2">
+                                        {% for field in form %}
+                                            {% for error in field.errors %}
+                                            <li>{{ field.label }}: {{ error }}</li>
+                                            {% endfor %}
+                                        {% endfor %}
+                                        {% for error in form.non_field_errors %}
+                                        <li>{{ error }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                {% endif %}
+                                
+                                <!-- Reason for Approval -->
+                                <div class="mb-4">
+                                    <label for="{{ form.reason.id_for_label }}" class="form-label fw-semibold">
+                                        <i class="fas fa-comment me-1"></i> Reason for Approval *
+                                    </label>
+                                    {{ form.reason }}
+                                    {% if form.reason.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in form.reason.errors %}
+                                        <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    <div class="form-text">
+                                        Provide a brief reason for approving this version.
+                                    </div>
+                                    <div class="text-end">
+                                        <small class="text-muted" id="reasonCharCount">0/255 characters</small>
+                                    </div>
+                                </div>
+                                
+                                <!-- Password Verification -->
+                                <div class="mb-4">
+                                    <label for="{{ form.password.id_for_label }}" class="form-label fw-semibold">
+                                        <i class="fas fa-key me-1"></i> Password Verification *
+                                    </label>
+                                    <div class="input-group">
+                                        {{ form.password }}
+                                        <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                    {% if form.password.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in form.password.errors %}
+                                        <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    <div class="form-text">
+                                        Enter your password to create the electronic signature.
+                                    </div>
+                                </div>
+                                
+                                <!-- Terms Agreement -->
+                                <div class="mb-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="termsAgreement" required>
+                                        <label class="form-check-label" for="termsAgreement">
+                                            <strong>I understand and agree that:</strong>
+                                        </label>
+                                    </div>
+                                    <ul class="small text-muted mt-2 mb-0">
+                                        <li>This electronic signature is legally binding</li>
+                                        <li>I have reviewed and approved this document version</li>
+                                        <li>This action will be recorded in the audit trail</li>
+                                        <li>The signature cannot be revoked or modified</li>
+                                    </ul>
+                                </div>
+                                
+                                <!-- Signature Preview -->
+                                <div class="mb-4">
+                                    <small class="text-muted d-block mb-2">Signature Preview</small>
+                                    <div class="card bg-light border-0">
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <small class="text-muted d-block">Approver</small>
+                                                    <div class="fw-semibold">{{ user.get_full_name }}</div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <small class="text-muted d-block">Timestamp</small>
+                                                    <div class="fw-semibold" id="signatureTimestamp">{{ now|date:"F d, Y H:i:s" }}</div>
+                                                </div>
+                                            </div>
+                                            <div class="mt-3">
+                                                <small class="text-muted d-block">Verification Hash (Preview)</small>
+                                                <code class="text-primary d-block text-truncate" style="max-width: 100%;">
+                                                    SHA-256({{ user.id }}:{{ user.username }}:{{ now|date:"c" }}:*****)
+                                                </code>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Form Actions -->
+                                <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+                                    <a href="{% url 'doc_control:version_detail' pk=version.pk %}" class="btn btn-outline-secondary">
+                                        <i class="fas fa-times me-1"></i> Cancel
+                                    </a>
+                                    <button type="submit" class="btn btn-success" id="signBtn">
+                                        <i class="fas fa-check-circle me-1"></i> Sign & Approve
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Technical Details -->
+                <div class="col-lg-4">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-light border-0">
+                            <h6 class="mb-0">
+                                <i class="fas fa-microchip me-2"></i>
+                                Technical Details
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <small class="text-muted d-block">Verification Method</small>
+                                <span class="badge bg-info">SHA-256 Hash</span>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <small class="text-muted d-block">Input Components</small>
+                                <ul class="small mb-0">
+                                    <li>User ID: {{ user.id }}</li>
+                                    <li>Username: {{ user.username }}</li>
+                                    <li>Timestamp: ISO 8601</li>
+                                    <li>Password hash component</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <small class="text-muted d-block">Output</small>
+                                <code class="d-block small text-truncate">
+                                    e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+                                </code>
+                                <small class="text-muted">64-character SHA-256 hash</small>
+                            </div>
+                            
+                            <div class="alert alert-info small">
+                                <i class="fas fa-database me-2"></i>
+                                <strong>Immutable Record</strong>
+                                <p class="mt-1 mb-0">The signature record cannot be altered or deleted, ensuring non-repudiation.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .sidebar {
+        background-color: var(--light-bg);
+        border-right: 1px solid #dee2e6;
+        min-height: calc(100vh - 70px);
+        padding-top: 20px;
+    }
+    
+    .nav-link {
+        color: var(--secondary-color);
+        padding: 0.75rem 1rem;
+        border-radius: var(--border-radius);
+        transition: var(--transition);
+    }
+    
+    .nav-link:hover {
+        color: var(--primary-color);
+        background-color: rgba(44, 90, 160, 0.1);
+        transform: translateX(5px);
+    }
+    
+    .avatar-lg {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .avatar-title {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--primary-color);
+    }
+    
+    code {
+        font-family: 'Courier New', monospace;
+        font-size: 0.85em;
+        padding: 2px 4px;
+        background-color: rgba(0,0,0,0.05);
+        border-radius: 3px;
+    }
+    
+    #id_password {
+        border-right: 0;
+    }
+    
+    @media (max-width: 768px) {
+        .sidebar {
+            min-height: auto;
+            border-right: none;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .breadcrumb {
+            font-size: 0.875rem;
+        }
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Update timestamp every second
+    function updateTimestamp() {
+        const now = new Date();
+        const options = { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        };
+        const timestamp = now.toLocaleDateString('en-US', options);
+        
+        document.getElementById('currentTimestamp').textContent = timestamp;
+        document.getElementById('signatureTimestamp').textContent = timestamp;
+    }
+    
+    // Update initially and every second
+    updateTimestamp();
+    setInterval(updateTimestamp, 1000);
+    
+    // Toggle password visibility
+    const togglePassword = document.getElementById('togglePassword');
+    const passwordField = document.getElementById('id_password');
+    
+    if (togglePassword && passwordField) {
+        togglePassword.addEventListener('click', function() {
+            const type = passwordField.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordField.setAttribute('type', type);
+            
+            // Toggle icon
+            const icon = this.querySelector('i');
+            if (type === 'text') {
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        });
+    }
+    
+    // Character counter for reason field
+    const reasonField = document.getElementById('id_reason');
+    const reasonCharCount = document.getElementById('reasonCharCount');
+    
+    if (reasonField) {
+        reasonField.addEventListener('input', function() {
+            const length = this.value.length;
+            reasonCharCount.textContent = `${length}/255 characters`;
+            
+            if (length > 255) {
+                reasonCharCount.classList.remove('text-muted');
+                reasonCharCount.classList.add('text-danger');
+            } else {
+                reasonCharCount.classList.remove('text-danger');
+                reasonCharCount.classList.add('text-muted');
+            }
+        });
+        
+        // Initialize counter
+        reasonCharCount.textContent = `${reasonField.value.length}/255 characters`;
+    }
+    
+    // Form validation
+    const form = document.getElementById('signatureForm');
+    const signBtn = document.getElementById('signBtn');
+    const termsAgreement = document.getElementById('termsAgreement');
+    
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        
+        // Check terms agreement
+        if (!termsAgreement.checked) {
+            isValid = false;
+            termsAgreement.classList.add('is-invalid');
+            showFieldError(termsAgreement, 'You must agree to the terms');
+        }
+        
+        // Check password
+        if (passwordField && !passwordField.value.trim()) {
+            isValid = false;
+            passwordField.classList.add('is-invalid');
+            showFieldError(passwordField, 'Password is required for electronic signature');
+        }
+        
+        // Check reason
+        if (reasonField && !reasonField.value.trim()) {
+            isValid = false;
+            reasonField.classList.add('is-invalid');
+            showFieldError(reasonField, 'Reason for approval is required');
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+            // Scroll to first error
+            const firstError = form.querySelector('.is-invalid');
+            if (firstError) {
+                firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                firstError.focus();
+            }
+        } else {
+            // Show loading state
+            signBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Processing...';
+            signBtn.disabled = true;
+            
+            // Prevent double submission
+            form.submit = function() {};
+        }
+    });
+    
+    // Clear errors on input
+    const formFields = form.querySelectorAll('input, textarea');
+    formFields.forEach(field => {
+        field.addEventListener('input', function() {
+            this.classList.remove('is-invalid');
+            clearFieldError(this);
+        });
+    });
+    
+    termsAgreement.addEventListener('change', function() {
+        this.classList.remove('is-invalid');
+        clearFieldError(this);
+    });
+    
+    // Helper functions
+    function showFieldError(field, message) {
+        let errorDiv = field.parentElement.querySelector('.field-error');
+        if (!errorDiv) {
+            errorDiv = document.createElement('div');
+            errorDiv.className = 'text-danger small mt-1 field-error';
+            field.parentElement.appendChild(errorDiv);
+        }
+        errorDiv.innerHTML = `<i class="fas fa-exclamation-circle me-1"></i>${message}`;
+    }
+    
+    function clearFieldError(field) {
+        const errorDiv = field.parentElement.querySelector('.field-error');
+        if (errorDiv) {
+            errorDiv.remove();
+        }
+    }
+    
+    // Add Bootstrap classes to form fields
+    const allFormFields = document.querySelectorAll('#signatureForm input, #signatureForm textarea');
+    allFormFields.forEach(field => {
+        if (field.type !== 'checkbox') {
+            field.classList.add('form-control');
+        }
+    });
+    
+    // Set textarea height
+    if (reasonField) {
+        reasonField.style.minHeight = '100px';
+        reasonField.style.resize = 'vertical';
+    }
+    
+    // Show warning before leaving page
+    window.addEventListener('beforeunload', function(e) {
+        if (signBtn && !signBtn.disabled && (passwordField.value || reasonField.value)) {
+            e.preventDefault();
+            e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        }
+    });
+});
+</script>
+{% endblock content %}

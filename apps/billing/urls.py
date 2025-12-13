@@ -47,20 +47,79 @@ urlpatterns = [
     path('corporate/<int:pk>/financial-report/', views.corporate_financial_report_view, name='corporate_financial_report'),
         
     # Billing Information
-    path('billings/', views.BillingListView.as_view(), name='billing_list'),
-    path('billings/<int:pk>/', views.BillingDetailView.as_view(), name='billing_detail'),
-    path('billings/<int:pk>/edit/', views.BillingUpdateView.as_view(), name='billing_update'),
-    
+    path('billings/', views.billing_list_view, name='billing_list'),
+    path('billings/create/', views.billing_create_view, name='billing_create'),
+    path('billings/<int:pk>/', views.billing_detail_view, name='billing_detail'),
+    path('billings/<int:pk>/edit/', views.billing_update_view, name='billing_update'),
+    path('billings/<int:pk>/recalculate/', views.billing_recalculate_view, name='billing_recalculate'),
+    path('billings/<int:pk>/print/', views.billing_print_view, name='billing_print'),
+    path('billings/summary/', views.billing_summary_view, name='billing_summary'),
+    path('billings/bulk-action/', views.billing_bulk_action_view, name='billing_bulk_action'),
+
+ 
     # Payments
     path('billings/<int:billing_pk>/payment/', views.PaymentCreateView.as_view(), name='payment_create'),
     path('payments/<int:payment_pk>/receipt/', views.GenerateReceiptPDFView.as_view(), name='generate_receipt'),
     
-    # Invoices
-    path('invoices/', views.InvoiceListView.as_view(), name='invoice_list'),
-    path('invoices/create/', views.InvoiceCreateView.as_view(), name='invoice_create'),
-    path('invoices/<int:pk>/', views.InvoiceDetailView.as_view(), name='invoice_detail'),
-    path('invoices/<int:invoice_pk>/payment/', views.InvoicePaymentCreateView.as_view(), name='invoice_payment_create'),
-    path('invoices/<int:invoice_pk>/pdf/', views.GenerateInvoicePDFView.as_view(), name='generate_invoice_pdf'),
+    # # Invoices
+    # path('invoices/', views.InvoiceListView.as_view(), name='invoice_list'),
+    # path('invoices/create/', views.InvoiceCreateView.as_view(), name='invoice_create'),
+    # path('invoices/<int:pk>/', views.InvoiceDetailView.as_view(), name='invoice_detail'),
+
+    # path('invoices/<int:invoice_pk>/payment/', views.InvoicePaymentCreateView.as_view(), name='invoice_payment_create'),
+
+    path('invoices/', views.invoice_list, name='invoice_list'),
+    path('invoices/create/', views.invoice_create, name='invoice_create'),
+    path('invoices/<int:pk>/', views.invoice_detail, name='invoice_detail'),
+    path('invoices/<int:invoice_pk>/payments/create/', 
+         views.invoice_payment_create, 
+         name='invoice_payment_create'),
+
+
+        # Invoice URLs
+    # path('invoices/', views.invoice_list, name='invoice_list'),
+    # path('invoices/create/', views.invoice_create, name='invoice_create'),
+    # path('invoices/<int:pk>/', views.invoice_detail, name='invoice_detail'),
+    
+    # Invoice Payment
+    path('invoices/<int:invoice_pk>/payments/create/', 
+         views.invoice_payment_create, 
+         name='invoice_payment_create'),
+    
+    # PDF Generation - Download
+    path('invoices/<int:invoice_pk>/pdf/', 
+         views.generate_invoice_pdf_view, 
+         name='invoice_pdf_download'),
+    
+    path('invoices/<int:invoice_pk>/pdf/preview/', 
+         views.preview_invoice_pdf_view, 
+         name='invoice_pdf_preview'),
+    
+    path('payments/<int:payment_pk>/receipt/pdf/', 
+         views.generate_receipt_pdf_view, 
+         name='receipt_pdf_download'),
+    
+    path('payments/<int:payment_pk>/receipt/pdf/preview/', 
+         views.preview_receipt_pdf_view, 
+         name='receipt_pdf_preview'),
+    
+    # Email Invoice & Receipt
+    path('invoices/<int:invoice_pk>/email/', 
+         views.email_invoice_view, 
+         name='email_invoice'),
+    
+    path('payments/<int:payment_pk>/receipt/email/', 
+         views.email_receipt_view, 
+         name='email_receipt'),
+    
+    # Print View
+    path('invoices/<int:invoice_pk>/print/', 
+         views.print_invoice_view, 
+         name='invoice_print'),
+
+
+
+    # path('invoices/<int:invoice_pk>/pdf/', views.GenerateInvoicePDFView.as_view(), name='generate_invoice_pdf'),
     # Reports
     path('reports/', views.BillingReportView.as_view(), name='reports'),
 ]

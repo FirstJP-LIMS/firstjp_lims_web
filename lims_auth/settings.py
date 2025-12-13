@@ -32,11 +32,15 @@ INSTALLED_APPS = [
     # created apps 
     "apps.accounts",
     "apps.tenants",
+    "apps.patient",
+    "apps.clinician",
     "apps.core",
     "apps.labs",
     "apps.inventory",
     "apps.billing",
-    "apps.lms",
+    "apps.doc_control",
+    # "apps.lms",
+    "apps.learn",
 
     # installed apps 
     'phonenumber_field',
@@ -86,8 +90,9 @@ AUTHENTICATION_BACKENDS = [
     # 'django.contrib.auth.backends.ModelBackend',  # fallback
 ]
 
-LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = '/'
+
+LOGIN_URL = 'account:login'
+LOGOUT_REDIRECT_URL = 'account:login'
 
 
 ROOT_URLCONF = "lims_auth.urls"
@@ -143,9 +148,19 @@ EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 PLATFORM_ADMIN_EMAIL = os.getenv("PLATFORM_ADMIN_EMAIL")
 SITE_NAME = "mednovu.com"
+
 # ========================================
 # ENVIRONMENT-SPECIFIC SETTINGS
 # ========================================
+
+# Domains that should not 404 (main platform root, apex, www, learn)
+# GLOBAL_HOSTS = [
+#     f"{PLATFORM_BASE_DOMAIN}",
+#     f"www.{PLATFORM_BASE_DOMAIN}",
+#     f"learn.{PLATFORM_BASE_DOMAIN}"
+# ]
+
+
 
 if ENVIRONMENT == "production":
     # Production settings
@@ -159,7 +174,7 @@ if ENVIRONMENT == "production":
     "firstjp-lims-web-ytsi.onrender.com",
     ]
 
-    PLATFORM_BASE_DOMAIN = "medvuno"
+    # PLATFORM_BASE_DOMAIN = "medvuno"
     
     # CSRF trusted origins for production
     CSRF_TRUSTED_ORIGINS = [
@@ -170,12 +185,13 @@ if ENVIRONMENT == "production":
     ]
     PLATFORM_BASE_DOMAIN = os.getenv("PLATFORM_BASE_DOMAIN", "medvuno.com",)
 
+    GLOBAL_HOSTS = [f"learn.{PLATFORM_BASE_DOMAIN}"]
+    
     DATABASES = {
         'default': dj_database_url.parse(os.getenv('DATABASE_URL'))
         }
     
-    GLOBAL_HOSTS = [os.getenv("PLATFORM_BASE_DOMAIN", "medvuno.com",)]
-    
+
     # Security settings for production
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
@@ -212,6 +228,7 @@ else:
         "127.0.0.1",
         "localhost",
         ".localhost.test",
+        "learn.localhost.test"
     ]
     
     # Add development-only apps

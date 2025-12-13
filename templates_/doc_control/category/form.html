@@ -1,0 +1,317 @@
+{% extends "laboratory/assets/base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar Navigation -->
+        <div class="col-md-3 col-lg-2 d-md-block sidebar">
+            <div class="position-sticky pt-3">
+                <div class="sidebar-header mb-4">
+                    <h5 class="text-primary-emphasis">
+                        <i class="fas fa-tags me-2"></i>Document Categories
+                    </h5>
+                    <hr class="mt-2">
+                </div>
+                
+                <ul class="nav flex-column">
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'doc_control:document_control_dashboard' %}">
+                            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'doc_control:document_list' %}">
+                            <i class="fas fa-folder me-2"></i>All Documents
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'doc_control:document_create' %}">
+                            <i class="fas fa-plus-circle me-2"></i>Create Document
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link active" href="{% url 'doc_control:category_list' %}">
+                            <i class="fas fa-tags me-2"></i>Categories
+                        </a>
+                    </li>
+                </ul>
+
+                <!-- Quick Actions -->
+                <div class="card mt-5 border-0" style="background-color: rgba(44, 90, 160, 0.05);">
+                    <div class="card-body p-3">
+                        <h6 class="card-title text-primary mb-3">
+                            <i class="fas fa-lightbulb me-2"></i>Tips
+                        </h6>
+                        <ul class="small text-muted mb-0">
+                            <li>Use clear, descriptive names</li>
+                            <li>Add helpful descriptions</li>
+                            <li>Organize by department or type</li>
+                            <li>Avoid duplicates</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <!-- Header -->
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h2 class="h3" style="color: var(--primary-color);">
+                    <i class="fas fa-tags me-2"></i>
+                    {% if form.instance.pk %}Edit Category{% else %}Create New Category{% endif %}
+                </h2>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <a href="{% url 'doc_control:category_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Back to List
+                    </a>
+                </div>
+            </div>
+
+            <!-- Form Card -->
+            <div class="row justify-content-center">
+                <div class="col-md-8 col-lg-6">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-light border-0">
+                            <h5 class="mb-0">
+                                <i class="fas fa-edit me-2"></i>
+                                Category Details
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="post" id="categoryForm">
+                                {% csrf_token %}
+                                
+                                <!-- Form Errors -->
+                                {% if form.errors %}
+                                <div class="alert alert-danger">
+                                    <i class="fas fa-exclamation-circle me-2"></i>
+                                    Please correct the errors below.
+                                </div>
+                                {% endif %}
+                                
+                                <!-- Name Field -->
+                                <div class="mb-4">
+                                    <label for="{{ form.name.id_for_label }}" class="form-label fw-semibold">
+                                        <i class="fas fa-heading me-1"></i> Category Name *
+                                    </label>
+                                    {{ form.name }}
+                                    {% if form.name.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in form.name.errors %}
+                                        <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    <div class="form-text">
+                                        Choose a clear, descriptive name for this category.
+                                    </div>
+                                </div>
+                                
+                                <!-- Description Field -->
+                                <div class="mb-4">
+                                    <label for="{{ form.description.id_for_label }}" class="form-label fw-semibold">
+                                        <i class="fas fa-align-left me-1"></i> Description
+                                    </label>
+                                    {{ form.description }}
+                                    {% if form.description.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {% for error in form.description.errors %}
+                                        <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    <div class="form-text">
+                                        Optional. Provide additional context about this category.
+                                    </div>
+                                </div>
+                                
+                                <!-- Form Actions -->
+                                <div class="d-flex justify-content-between mt-4">
+                                    <a href="{% url 'doc_control:category_list' %}" class="btn btn-outline-secondary">
+                                        <i class="fas fa-times me-1"></i> Cancel
+                                    </a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-1"></i>
+                                        {% if form.instance.pk %}Update Category{% else %}Create Category{% endif %}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <!-- Info Panel -->
+                        {% if form.instance.pk %}
+                        <div class="card-footer bg-light border-0">
+                            <div class="row text-muted small">
+                                <div class="col-md-6">
+                                    <i class="fas fa-user me-1"></i>
+                                    Created by: {{ form.instance.created_by.get_full_name|default:form.instance.created_by.username }}
+                                </div>
+                                <div class="col-md-6 text-md-end">
+                                    <i class="fas fa-calendar me-1"></i>
+                                    Created: {{ form.instance.created_at|date:"M d, Y" }}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Usage Info -->
+                    {% if form.instance.pk and form.instance.document_set.exists %}
+                    <div class="card border-0 shadow-sm mt-4">
+                        <div class="card-header bg-warning bg-opacity-10 border-0">
+                            <h6 class="mb-0">
+                                <i class="fas fa-file-alt me-2"></i>
+                                Used by {{ form.instance.document_set.count }} document(s)
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-group list-group-flush">
+                                {% for doc in form.instance.document_set.all|slice:":5" %}
+                                <li class="list-group-item border-0 px-0">
+                                    <i class="fas fa-file me-2 text-primary"></i>
+                                    {{ doc.title }}
+                                    <span class="badge bg-secondary float-end">{{ doc.status }}</span>
+                                </li>
+                                {% endfor %}
+                                {% if form.instance.document_set.count > 5 %}
+                                <li class="list-group-item border-0 px-0 text-muted">
+                                    ... and {{ form.instance.document_set.count|add:"-5" }} more
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .sidebar {
+        background-color: var(--light-bg);
+        border-right: 1px solid #dee2e6;
+        min-height: calc(100vh - 70px);
+        padding-top: 20px;
+    }
+    
+    .nav-link {
+        color: var(--secondary-color);
+        padding: 0.75rem 1rem;
+        border-radius: var(--border-radius);
+        transition: var(--transition);
+    }
+    
+    .nav-link:hover {
+        color: var(--primary-color);
+        background-color: rgba(44, 90, 160, 0.1);
+        transform: translateX(5px);
+    }
+    
+    .nav-link.active {
+        color: var(--primary-color);
+        background-color: rgba(44, 90, 160, 0.1);
+        font-weight: 600;
+        border-left: 3px solid var(--primary-color);
+    }
+    
+    .form-control, .form-select {
+        border-radius: var(--border-radius);
+        border: 1px solid #ced4da;
+        transition: var(--transition);
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.25rem rgba(44, 90, 160, 0.25);
+    }
+    
+    textarea.form-control {
+        min-height: 120px;
+        resize: vertical;
+    }
+    
+    .card {
+        border-radius: var(--border-radius);
+        transition: var(--transition);
+    }
+    
+    @media (max-width: 768px) {
+        .sidebar {
+            min-height: auto;
+            border-right: none;
+            border-bottom: 1px solid #dee2e6;
+        }
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add Bootstrap classes to form fields
+    const formFields = document.querySelectorAll('#categoryForm input, #categoryForm textarea, #categoryForm select');
+    formFields.forEach(field => {
+        field.classList.add('form-control');
+        
+        // Add focus effect
+        field.addEventListener('focus', function() {
+            this.parentElement.classList.add('focused');
+        });
+        
+        field.addEventListener('blur', function() {
+            this.parentElement.classList.remove('focused');
+        });
+    });
+    
+    // Character counter for description
+    const descriptionField = document.querySelector('#id_description');
+    if (descriptionField) {
+        const counter = document.createElement('div');
+        counter.className = 'form-text text-end';
+        counter.id = 'descriptionCounter';
+        descriptionField.parentElement.appendChild(counter);
+        
+        function updateCounter() {
+            const length = descriptionField.value.length;
+            counter.textContent = `${length} characters`;
+            
+            if (length > 500) {
+                counter.classList.remove('text-muted');
+                counter.classList.add('text-warning');
+            } else {
+                counter.classList.remove('text-warning');
+                counter.classList.add('text-muted');
+            }
+        }
+        
+        descriptionField.addEventListener('input', updateCounter);
+        updateCounter();
+    }
+    
+    // Form validation on submit
+    const form = document.getElementById('categoryForm');
+    form.addEventListener('submit', function(e) {
+        const nameField = document.querySelector('#id_name');
+        if (nameField && !nameField.value.trim()) {
+            e.preventDefault();
+            nameField.classList.add('is-invalid');
+            
+            // Show error message
+            let errorDiv = nameField.parentElement.querySelector('.text-danger');
+            if (!errorDiv) {
+                errorDiv = document.createElement('div');
+                errorDiv.className = 'text-danger small mt-1';
+                nameField.parentElement.appendChild(errorDiv);
+            }
+            errorDiv.innerHTML = '<i class="fas fa-exclamation-circle me-1"></i>Category name is required.';
+            
+            // Scroll to error
+            nameField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            nameField.focus();
+        }
+    });
+});
+</script>
+{% endblock content %}

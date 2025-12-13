@@ -1,0 +1,197 @@
+{% load static tailwind_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>
+            {% block title %}
+            MEDVUNO LEARNING — Practical Medical Laboratory Courses
+            {% endblock %}
+    </title>
+
+    {% tailwind_css %}
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- DaisyUI plugin (via Tailwind config through CDN) -->
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              DEFAULT: '#0B6FA4',
+              accent: '#1CA6A6'
+            }
+          }
+        }
+      },
+      plugins: [function({ addComponents }) {
+        // no-op placeholder if plugin load required
+      }]
+    }
+  </script>
+
+  <!-- DaisyUI via CDN (provides components classes) -->
+  {% comment %} <link href="https://cdn.jsdelivr.net/npm/daisyui@2.51.5/dist/full.css" rel="stylesheet" /> {% endcomment %}
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{--brand:#0B6FA4;--muted:#6B7280}
+    html,body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;}
+    /* reveal animation */
+    .reveal {opacity:0; transform: translateY(12px); transition:opacity .5s ease, transform .5s ease;}
+    .reveal.in-view {opacity:1; transform: translateY(0);}
+    /* small accessible focus */
+    :focus{outline: 3px solid rgba(11,111,164,0.15); outline-offset: 2px;}
+  </style>
+</head>
+<body class="bg-[#F8FAFC] text-[#0F172A] antialiased">
+
+  <!-- Header -->
+    {% include "lms/assets/header.html" %}
+  {% block content %}
+  
+  {% endblock content %}
+
+  
+  <!-- Footer -->
+  <footer class="mt-12 border-t bg-white">
+    <div class="max-w-6xl mx-auto px-4 py-8 sm:px-6">
+      <div class="md:flex md:justify-between">
+        <div class="mb-6 md:mb-0">
+          <a href="#" class="flex items-center gap-3">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" class="text-[#0B6FA4]">
+              <rect width="24" height="24" rx="4" fill="currentColor"></rect>
+            </svg>
+            <span class="font-semibold">MedLab Academy</span>
+          </a>
+          <p class="mt-3 text-sm text-[#6B7280]">Practical training for clinical laboratory professionals.</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-6">
+          <div>
+            <h4 class="font-medium">Courses</h4>
+            <ul class="mt-3 text-sm text-[#6B7280] space-y-2">
+              <li><a href="#courses">All courses</a></li>
+              <li><a href="#how">How it works</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4 class="font-medium">Company</h4>
+            <ul class="mt-3 text-sm text-[#6B7280] space-y-2">
+              <li><a href="#about">About</a></li>
+              <li><a href="#contact">Contact</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-8 border-t pt-4 flex items-center justify-between text-sm text-[#6B7280]">
+        <div>© <span id="year"></span> MedLab Academy. All rights reserved.</div>
+        <div class="flex items-center gap-3">
+          <form class="flex items-center gap-2" onsubmit="event.preventDefault()">
+            <input type="email" placeholder="Email" class="input input-sm" aria-label="newsletter email">
+            <button class="btn btn-sm" type="submit">Subscribe</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Modal (Enroll quick) -->
+  <div id="modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40">
+    <div class="bg-white rounded-lg max-w-lg w-full p-6">
+      <button id="modalClose" class="float-right text-sm">Close</button>
+      <h3 class="text-lg font-semibold">Enroll — Course preview</h3>
+      <p class="mt-2 text-sm text-[#6B7280]">This is a quick enrollment modal (placeholder).</p>
+      <div class="mt-4">
+        <button class="px-4 py-2 rounded bg-[#0B6FA4] text-white">Start enrollment</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts: interactions -->
+  <script>
+    // Mobile menu toggle
+    const mobileBtn = document.getElementById('mobileMenuBtn');
+    const mobileMenu = document.getElementById('mobileMenu');
+    const iconOpen = document.getElementById('iconOpen');
+    const iconClose = document.getElementById('iconClose');
+
+    mobileBtn.addEventListener('click', () => {
+      const expanded = mobileBtn.getAttribute('aria-expanded') === 'true';
+      mobileBtn.setAttribute('aria-expanded', String(!expanded));
+      mobileMenu.classList.toggle('hidden');
+      iconOpen.classList.toggle('hidden');
+      iconClose.classList.toggle('hidden');
+    });
+
+    // Reveal on scroll
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('in-view');
+          // if we want to animate numeric counters
+          const counter = entry.target.querySelector('[data-count]');
+          if (counter) { animateCount(counter); }
+        }
+      });
+    }, {threshold: 0.15});
+
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+    // Course card hover behavior (desktop)
+    document.querySelectorAll('.course-card').forEach(card => {
+      card.addEventListener('mouseenter', () => card.classList.add('shadow-lg', 'scale-[1.01]'));
+      card.addEventListener('mouseleave', () => card.classList.remove('shadow-lg', 'scale-[1.01]'));
+      card.addEventListener('focus', () => card.classList.add('shadow-lg'));
+      card.addEventListener('blur', () => card.classList.remove('shadow-lg'));
+    });
+
+    // Modal behavior for Enroll buttons
+    const modal = document.getElementById('modal');
+    const modalClose = document.getElementById('modalClose');
+    document.querySelectorAll('[data-enroll]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+      });
+    });
+    modalClose.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+    function closeModal() {
+      modal.classList.add('hidden');
+      modal.style.display = '';
+      document.body.style.overflow = '';
+    }
+
+    // Year auto-fill
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // Simple count animation
+    function animateCount(el) {
+      const target = +el.getAttribute('data-count');
+      if (!target) return;
+      if (el.dataset.running) return;
+      el.dataset.running = '1';
+      const duration = 900;
+      const start = performance.now();
+      function step(now) {
+        const t = Math.min(1, (now - start) / duration);
+        el.textContent = Math.floor(t * target);
+        if (t < 1) requestAnimationFrame(step); else el.textContent = target;
+      }
+      requestAnimationFrame(step);
+    }
+  </script>
+      {% block extra_js %}{% endblock %}
+</body>
+</html>
