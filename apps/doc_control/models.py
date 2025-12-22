@@ -18,9 +18,9 @@ User = get_user_model()
 
 class DocumentCategory(models.Model):
     """Categories for organizing documents (SOPs, Forms, Policies, etc.)"""
-    vendor = models.ForeignKey('tenants.Vendor', on_delete=models.CASCADE, related_name='document_categories')
+    vendor = models.ForeignKey('tenants.Vendor', on_delete=models.CASCADE, related_name='document_categories', default="Ven")
     name = models.CharField(max_length=100)
-    code = models.CharField(max_length=20)  # e.g., SOP, FORM, POLICY
+    code = models.CharField(max_length=20, default="SOP")  # e.g., SOP, FORM, POLICY
     description = models.TextField(blank=True)
     requires_training = models.BooleanField(default=False)
     retention_period_days = models.IntegerField(default=2555)  # 7 years default

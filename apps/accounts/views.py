@@ -13,7 +13,7 @@ from django_ratelimit.decorators import ratelimit
 
 # role groups
 
-LEARN_ALLOWED = {'learner', 'facilitator'}
+LEARN_ALLOWED = ['learner', 'facilitator']
 TENANT_ALLOWED = ['vendor_admin', 'lab_staff', 'patient', 'clinician']
 
 def tenant_register_by_role(request, role_name):
@@ -102,7 +102,6 @@ def learn_register(request, role_name):
     })
 
 
-
 @ratelimit(key='ip', rate='5/m', method='POST')
 def tenant_login(request):
     tenant = getattr(request, 'tenant', None)
@@ -122,8 +121,11 @@ def tenant_login(request):
 
                 login(request, user)
                 messages.success(request, f"Welcome, {user.first_name or user.email}")
-                # return redirect(reverse('lms:lms_dashboard'))  # create a learn dashboard route
-                return redirect(reverse('learn:index'))  # create a learn dashboard route
+                # return redirect(reverse('learn:index'))  # create a learn dashboard route
+                if user.role == "learner":
+                    return redirect(reverse('learn:index'))  # create a learn dashboard route
+                elif user.role == "facilitator":
+                    return redirect(reverse('learn:facilitator_dashboard'))  # create a learn dashboard route
 
             # 2️⃣ Platform Admin: global access
             if getattr(user, 'is_platform_admin', False):

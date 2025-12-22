@@ -51,6 +51,10 @@ INSTALLED_APPS = [
     'crispy_forms',
     'crispy_bootstrap5',
     'widget_tweaks',
+
+    # aws
+    "storages",
+    # 'django_ses',
 ]
 
 TAILWIND_APP_NAME = "theme"
@@ -133,21 +137,56 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# Media files
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# Email settings
-EMAIL_BACKEND = os.getenv("EMAIL_BACKEND")
+# Email setting - Gmail
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = os.getenv("EMAIL_HOST")
 EMAIL_PORT = os.getenv("EMAIL_PORT")
 EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS")
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
-PLATFORM_ADMIN_EMAIL = os.getenv("PLATFORM_ADMIN_EMAIL")
+DEFAULT_FROM_EMAIL = os.getenv("PLATFORM_ADMIN_EMAIL")
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
+
+
+# Amazon setup 
+# EMAIL_BACKEND = "django_ses.SESBackend"
+
+# AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+# AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+
+# AWS_SES_REGION_NAME = "eu-north-1"
+# AWS_SES_REGION_ENDPOINT = "email.eu-north-1.amazonaws.com"
+
+# DEFAULT_FROM_EMAIL = "Medvuno <no-reply@medvuno.com>"
+# SERVER_EMAIL = DEFAULT_FROM_EMAIL
+
+
+
+
+# EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+
+# EMAIL_HOST = "email-smtp.eu-north-1.amazonaws.com"
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+
+# EMAIL_HOST_USER = os.getenv("SES_SMTP_USERNAME")
+# EMAIL_HOST_PASSWORD = os.getenv("SES_SMTP_PASSWORD")
+
+# DEFAULT_FROM_EMAIL = "Medvuno <no-reply@medvuno.com>"
+
 SITE_NAME = "mednovu.com"
+# SITE_URL = "mednovu.com"
+
+PLATFORM_ADMIN_EMAIL = "firstjpinternationalconsult@gmail.com"
+
+
+
+# SMS
+PHONENUMBER_DEFAULT_REGION = "NG"
 
 # ========================================
 # ENVIRONMENT-SPECIFIC SETTINGS
@@ -166,6 +205,10 @@ if ENVIRONMENT == "production":
     # Production settings
     DEBUG = False
     # DEBUG = True
+
+    INSTALLED_APPS += [
+        "storages",
+    ]
 
     ALLOWED_HOSTS = [
     "medvuno.com",
@@ -188,10 +231,38 @@ if ENVIRONMENT == "production":
     GLOBAL_HOSTS = [f"learn.{PLATFORM_BASE_DOMAIN}"]
     
     DATABASES = {
-        'default': dj_database_url.parse(os.getenv('DATABASE_URL'))
+        # Aiven console
+        'default': dj_database_url.parse(os.getenv('DATABASE_URL')), 
+        # AWS 
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.getenv("DB_NAME"),
+            "USER": os.getenv("DB_USER"),
+            "PASSWORD": os.getenv("DB_PASSWORD"),
+            "HOST": os.getenv("DB_HOST"),
+            "PORT": os.getenv("DB_PORT", "5432"),
+            "CONN_MAX_AGE": 60,
+            "OPTIONS": {
+                "sslmode": "require",
+            },
         }
+    }
     
+    # FILES MGT - Images, pdf, videos    
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3.S3Storage",
+            "OPTIONS": {
+                "bucket_name": "medvuno-s3",
+                "region_name": "eu-north-1",
+                "default_acl": "public-read",
+                "querystring_auth": True,
+            },
+        },
+    }
 
+    STATICFILES_STORAGE = "storages.backends.s3.S3Storage"
+ 
     # Security settings for production
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
@@ -202,6 +273,7 @@ if ENVIRONMENT == "production":
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
+
 
 
 else:
@@ -244,3 +316,8 @@ else:
     ]
     
     INTERNAL_IPS = ["127.0.0.1"]
+
+    # Media files
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+

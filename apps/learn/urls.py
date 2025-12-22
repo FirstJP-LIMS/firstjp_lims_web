@@ -9,7 +9,9 @@ from .views.discussions import thread_list_view, thread_create_view, reply_creat
 from .views.learning_paths import learning_path_list_view, learning_path_detail_view, learning_path_enroll_view
 from .views.cohorts import cohort_detail_view, cohort_join_view
 from .views.certificates import certificate_view, generate_certificate_view
+from .views.facilitators import facilitator_dashboard, facilitator_draft_create_view, facilitator_draft_list_view, facilitator_draft_detail_view, facilitator_lesson_create_view, facilitator_module_create_view, facilitator_media_upload_view
 from .views import landing
+
 
 app_name = "learn"
 
@@ -17,11 +19,20 @@ urlpatterns = [
     # generic pages 
     path("", landing.index_page, name="index"),
 
+    # facilitators 
+    path("facilitator/dashboard/", facilitator_dashboard, name="facilitator_dashboard"),
+    path("facilitator/create-draft/", facilitator_draft_create_view, name="facilitator_draft_create"),
+    path("facilitator/create-draft/", facilitator_draft_list_view, name="facilitator_draft_list"),
+    path("facilitator/draft_detail/", facilitator_draft_detail_view, name="facilitator_draft_detail"),
+    path("facilitator/lesson-create/", facilitator_lesson_create_view, name="facilitator_lesson_create"),
+    path("facilitator/module_create/", facilitator_module_create_view, name="facilitator_module_create"),
+
+
     # courses
     path("courses", course_list_view, name="course_list"),
     path("course/<slug:slug>/", course_detail_view, name="course_detail"),
-    path("course/<slug:course_slug>/enroll/", enroll_in_course_view, name="enroll"),
-    path("course/<slug:course_slug>/continue/", continue_course_view, name="continue_course"),
+    path("course/<slug:slug>/enroll/", enroll_in_course_view, name="enroll"),
+    path("course/<slug:slug>/continue/", continue_course_view, name="continue_course"),
 
     # modules & lessons
     path("module/<uuid:module_id>/", module_detail_view, name="module_detail"),

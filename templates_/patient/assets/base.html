@@ -22,8 +22,13 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" referrerpolicy="no-referrer"/>
 </head>
 
-<body class="bg-gray-50 font-mulish">
-    {% include 'patient/assets/header_pt.html' %}
+<body class="bg-gray-50 font-mulish">    
+    {% if request.role == 'clinician' %}
+        {% include "patient/assets/header_cli.html" %}
+    {% else %}
+        {% include 'patient/assets/header_pt.html' %}
+    {% endif %}
+
 
     <main class="main-body">
         {% block content %}

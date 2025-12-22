@@ -1,0 +1,744 @@
+{% extends "clinician/assets/base.html" %}
+{% load static humanize order_filters %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 flex">
+    <!-- Sidebar -->
+    {% include 'clinician/assets/sidebar.html' %}
+
+    <!-- Main Content -->
+    <main class="flex-1 md:ml-64">
+        <!-- Mobile Header Spacer -->
+        <div class="md:hidden h-16"></div>
+
+        <div class="p-6">
+            <!-- Page Header -->
+            <div class="mb-8">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">My Test Orders</h1>
+                        <p class="text-gray-600 mt-1">View and manage all test requests you've placed</p>
+                    </div>
+                    <div class="flex gap-3">
+                        <a href="{% url 'clinician:test_catalog' %}" class="btn btn-primary">
+                            <i class="fas fa-plus-circle mr-2"></i> New Order
+                        </a>
+                        <button onclick="exportOrders()" class="btn btn-outline">
+                            <i class="fas fa-download mr-2"></i> Export
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Overview -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div class="card bg-white shadow-sm border border-gray-200">
+                    <div class="card-body p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600">Total Orders</p>
+                                <p class="text-2xl font-bold">{{ test_requests.paginator.count|intcomma }}</p>
+                            </div>
+                            <div class="bg-blue-100 p-2 rounded-full">
+                                <i class="fas fa-clipboard-list text-blue-600"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card bg-white shadow-sm border border-gray-200">
+                    <div class="card-body p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600">Pending</p>
+                                <p class="text-2xl font-bold">
+                                    {{ test_requests|get_pending_count }}
+                                </p>
+                            </div>
+                            <div class="bg-yellow-100 p-2 rounded-full">
+                                <i class="fas fa-clock text-yellow-600"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card bg-white shadow-sm border border-gray-200">
+                    <div class="card-body p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600">Completed</p>
+                                <p class="text-2xl font-bold">
+                                    {{ test_requests|get_completed_count }}
+                                </p>
+                            </div>
+                            <div class="bg-green-100 p-2 rounded-full">
+                                <i class="fas fa-check-circle text-green-600"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card bg-white shadow-sm border border-gray-200">
+                    <div class="card-body p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600">Today's Orders</p>
+                                <p class="text-2xl font-bold">
+                                    {{ test_requests|get_today_count }}
+                                </p>
+                            </div>
+                            <div class="bg-purple-100 p-2 rounded-full">
+                                <i class="fas fa-calendar-day text-purple-600"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters Card -->
+            <div class="card bg-white shadow-sm border border-gray-200 mb-6">
+                <div class="card-body p-6">
+                    <form method="GET" action="{% url 'clinician:my_orders' %}" class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <!-- Status Filter -->
+                            <div>
+                                <label for="status" class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                                <select name="status" id="status" class="select select-bordered w-full">
+                                    <option value="">All Statuses</option>
+                                    <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                                    <option value="collected" {% if status_filter == 'collected' %}selected{% endif %}>Collected</option>
+                                    <option value="processing" {% if status_filter == 'processing' %}selected{% endif %}>Processing</option>
+                                    <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
+                                    <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Patient Filter -->
+                            <div>
+                                <label for="patient" class="block text-sm font-medium text-gray-700 mb-2">Patient ID</label>
+                                <input 
+                                    type="text" 
+                                    name="patient" 
+                                    id="patient"
+                                    value="{{ patient_filter|default:'' }}"
+                                    placeholder="Search by patient ID..."
+                                    class="input input-bordered w-full"
+                                >
+                            </div>
+                            
+                            <!-- Date Range Filter -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
+                                <div class="flex gap-2">
+                                    <input 
+                                        type="date" 
+                                        name="start_date" 
+                                        value="{{ request.GET.start_date }}"
+                                        class="input input-bordered flex-1"
+                                        placeholder="From"
+                                    >
+                                    <input 
+                                        type="date" 
+                                        name="end_date" 
+                                        value="{{ request.GET.end_date }}"
+                                        class="input input-bordered flex-1"
+                                        placeholder="To"
+                                    >
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Advanced Filters (Collapsible) -->
+                        <div>
+                            <button type="button" onclick="toggleAdvancedFilters()" class="btn btn-sm btn-ghost mb-4">
+                                <i class="fas fa-filter mr-2"></i> Advanced Filters
+                                <i class="fas fa-chevron-down ml-1"></i>
+                            </button>
+                            
+                            <div id="advanced-filters" class="hidden space-y-4">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Priority</label>
+                                        <select name="priority" class="select select-bordered w-full">
+                                            <option value="">All Priorities</option>
+                                            <option value="urgent" {% if request.GET.priority == 'urgent' %}selected{% endif %}>Urgent</option>
+                                            <option value="routine" {% if request.GET.priority == 'routine' %}selected{% endif %}>Routine</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="flex justify-between items-center pt-4 border-t border-gray-100">
+                            <div>
+                                {% if status_filter or patient_filter or request.GET.start_date or request.GET.end_date %}
+                                <a href="{% url 'clinician:my_orders' %}" class="btn btn-ghost">
+                                    Clear Filters
+                                </a>
+                                {% endif %}
+                            </div>
+                            <div class="flex gap-3">
+                                <button type="reset" class="btn btn-ghost">Reset</button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-filter mr-2"></i> Apply Filters
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Orders Table -->
+            <div class="card bg-white shadow-sm border border-gray-200">
+                <div class="card-header border-b border-gray-200 p-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <h3 class="font-semibold text-gray-900">Test Orders</h3>
+                            <p class="text-sm text-gray-600">
+                                Showing <span class="font-semibold">{{ test_requests.start_index }}-{{ test_requests.end_index }}</span> 
+                                of <span class="font-semibold">{{ test_requests.paginator.count }}</span> orders
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-body p-0">
+                    {% if test_requests %}
+                    <div class="overflow-x-auto">
+                        <table class="table table-zebra">
+                            <thead>
+                                <tr class="bg-gray-50">
+                                    <th class="font-medium text-gray-700">Order ID</th>
+                                    <th class="font-medium text-gray-700">Patient</th>
+                                    <th class="font-medium text-gray-700">Tests</th>
+                                    <th class="font-medium text-gray-700">Status</th>
+                                    <th class="font-medium text-gray-700">Created</th>
+                                    <th class="font-medium text-gray-700">Cost</th>
+                                    <th class="font-medium text-gray-700">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for request in test_requests %}
+                                <tr class="hover:bg-gray-50 order-row" data-order-id="{{ request.request_id }}">
+                                    <td>
+                                        <div class="font-mono font-semibold">{{ request.request_id }}</div>
+                                        {% if request.priority == 'urgent' %}
+                                        <span class="badge badge-xs {{ request.priority|priority_class }} mt-1">Urgent</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="font-medium text-gray-900">
+                                            {{ request.patient.first_name }} {{ request.patient.last_name }}
+                                        </div>
+                                        <div class="text-sm text-gray-500">{{ request.patient.patient_id }}</div>
+                                    </td>
+                                    <td>
+                                        <div class="text-sm">
+                                            <span class="font-semibold">{{ request.requested_tests.count }}</span> tests
+                                        </div>
+                                        <div class="text-xs text-gray-500 truncate max-w-xs">
+                                            {% for test in request.requested_tests.all|slice:":2" %}
+                                                {{ test.code }}{% if not forloop.last %}, {% endif %}
+                                            {% endfor %}
+                                            {% if request.requested_tests.count > 2 %}
+                                                +{{ request.requested_tests.count|add:"-2" }} more
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="flex items-center gap-2">
+                                            <span class="badge {{ request.status|status_class }}">
+                                                {{ request.get_status_display }}
+                                            </span>
+                                            {% if request.collected_at and request.status != 'completed' %}
+                                            <span class="text-xs text-gray-500">
+                                                {{ request.collected_at|timesince }} ago
+                                            </span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="text-sm">{{ request.created_at|date:"M d, Y" }}</div>
+                                        <div class="text-xs text-gray-500">{{ request.created_at|timesince }} ago</div>
+                                    </td>
+                                    <td>
+                                        <div class="font-semibold">
+                                            ₦{{ request.calculate_total|default:"0.00"|intcomma }}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="flex gap-1">
+                                            <a href="{% url 'clinician:test_request_detail' request.request_id %}" 
+                                               class="btn btn-xs btn-ghost" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{% url 'clinician:patient_detail' request.patient.patient_id %}" 
+                                               class="btn btn-xs btn-ghost" title="View Patient">
+                                                <i class="fas fa-user"></i>
+                                            </a>
+                                            {% if request.status == 'pending' %}
+                                            <button onclick="cancelOrder('{{ request.request_id }}')" 
+                                                    class="btn btn-xs btn-ghost text-red-600" title="Cancel Order">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                            {% endif %}
+                                            {% if request.status == 'completed' %}
+                                            <button onclick="downloadResults('{{ request.request_id }}')" 
+                                                    class="btn btn-xs btn-ghost text-green-600" title="Download Results">
+                                                <i class="fas fa-download"></i>
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <!-- Empty State -->
+                    <div class="text-center py-12">
+                        <i class="fas fa-clipboard-list text-gray-300 text-4xl mb-4"></i>
+                        <h3 class="text-lg font-semibold text-gray-700 mb-2">No orders found</h3>
+                        <p class="text-gray-500 mb-6">
+                            {% if status_filter or patient_filter or request.GET.start_date or request.GET.end_date %}
+                                No orders match your current filters.
+                            {% else %}
+                                You haven't placed any test orders yet.
+                            {% endif %}
+                        </p>
+                        {% if status_filter or patient_filter or request.GET.start_date or request.GET.end_date %}
+                        <a href="{% url 'clinician:my_orders' %}" class="btn btn-primary">
+                            Clear Filters
+                        </a>
+                        {% else %}
+                        <a href="{% url 'clinician:test_catalog' %}" class="btn btn-primary">
+                            <i class="fas fa-plus-circle mr-2"></i> Place Your First Order
+                        </a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Pagination -->
+                {% if test_requests.has_other_pages %}
+                <div class="card-footer border-t border-gray-200 p-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div class="text-sm text-gray-600">
+                            Page {{ test_requests.number }} of {{ test_requests.paginator.num_pages }}
+                        </div>
+                        <div class="join">
+                            {% if test_requests.has_previous %}
+                            <a href="?{% if status_filter %}status={{ status_filter }}&{% endif %}{% if patient_filter %}patient={{ patient_filter }}&{% endif %}{% if request.GET.start_date %}start_date={{ request.GET.start_date }}&{% endif %}{% if request.GET.end_date %}end_date={{ request.GET.end_date }}&{% endif %}{% if request.GET.priority %}priority={{ request.GET.priority }}&{% endif %}page={{ test_requests.previous_page_number }}" 
+                               class="join-item btn">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                            {% endif %}
+                            
+                            {% for num in test_requests.paginator.page_range %}
+                                {% if test_requests.number == num %}
+                                <span class="join-item btn btn-active">{{ num }}</span>
+                                {% elif num > test_requests.number|add:'-3' and num < test_requests.number|add:'3' %}
+                                <a href="?{% if status_filter %}status={{ status_filter }}&{% endif %}{% if patient_filter %}patient={{ patient_filter }}&{% endif %}{% if request.GET.start_date %}start_date={{ request.GET.start_date }}&{% endif %}{% if request.GET.end_date %}end_date={{ request.GET.end_date }}&{% endif %}{% if request.GET.priority %}priority={{ request.GET.priority }}&{% endif %}page={{ num }}" 
+                                   class="join-item btn">{{ num }}</a>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if test_requests.has_next %}
+                            <a href="?{% if status_filter %}status={{ status_filter }}&{% endif %}{% if patient_filter %}patient={{ patient_filter }}&{% endif %}{% if request.GET.start_date %}start_date={{ request.GET.start_date }}&{% endif %}{% if request.GET.end_date %}end_date={{ request.GET.end_date }}&{% endif %}{% if request.GET.priority %}priority={{ request.GET.priority }}&{% endif %}page={{ test_requests.next_page_number }}" 
+                               class="join-item btn">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Status Distribution & Recent Activity -->
+            <div class="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Status Distribution -->
+                <div class="card bg-white shadow-sm border border-gray-200">
+                    <div class="card-header border-b border-gray-200 p-4">
+                        <h3 class="font-semibold text-gray-900">Order Status Distribution</h3>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="space-y-4">
+                            {% for status_code, status_data in status_distribution.items %}
+                            <div>
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="text-sm font-medium text-gray-700">
+                                        {{ status_data.name }}
+                                    </span>
+                                    <span class="text-sm font-semibold">{{ status_data.count }}</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="{{ status_code|status_class|split:' '|first }} h-2 rounded-full" 
+                                         style="width: {{ status_data.percentage }}%"></div>
+                                </div>
+                            </div>
+                            {% empty %}
+                            <div class="text-center py-4 text-gray-500">
+                                <i class="fas fa-chart-pie text-2xl mb-2"></i>
+                                <p>No status data available</p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="card bg-white shadow-sm border border-gray-200">
+                    <div class="card-header border-b border-gray-200 p-4">
+                        <h3 class="font-semibold text-gray-900">Recent Activity</h3>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="space-y-4">
+                            {% for activity in recent_activity %}
+                            <div class="flex items-start">
+                                <div class="flex-shrink-0">
+                                    <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                                        <i class="fas fa-{{ activity.icon }} text-gray-500"></i>
+                                    </div>
+                                </div>
+                                <div class="ml-3 flex-1">
+                                    <p class="text-sm">{{ activity.description }}</p>
+                                    <div class="flex items-center text-xs text-gray-500 mt-1">
+                                        <span>{{ activity.time_ago }}</span>
+                                        <span class="mx-2">•</span>
+                                        <a href="{% url 'clinician:test_request_detail' activity.request_id %}" 
+                                           class="font-mono hover:text-primary">
+                                            {{ activity.request_id|truncatechars:8 }}
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% empty %}
+                            <div class="text-center py-4 text-gray-500">
+                                <i class="fas fa-history text-2xl mb-2"></i>
+                                <p>No recent activity</p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Bulk Actions Modal -->
+<div id="bulkActionsModal" class="modal hidden">
+    <div class="modal-box">
+        <h3 class="text-lg font-bold mb-4">Bulk Actions</h3>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Select Action</label>
+                <select id="bulk-action-select" class="select select-bordered w-full">
+                    <option value="">Choose an action...</option>
+                    <option value="download_results">Download Results (PDF)</option>
+                    <option value="send_reminders">Send Status Reminders</option>
+                    <option value="generate_invoices">Generate Invoices</option>
+                    <option value="cancel_orders">Cancel Selected Orders</option>
+                </select>
+            </div>
+            
+            <div class="modal-action">
+                <button type="button" onclick="closeBulkModal()" class="btn btn-ghost">Cancel</button>
+                <button type="button" onclick="executeBulkAction()" class="btn btn-primary">Execute</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+.modal-box {
+    background: white;
+    border-radius: 0.5rem;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+.hidden {
+    display: none;
+}
+.selected-row {
+    background-color: #dbeafe !important;
+}
+</style>
+
+<script>
+// Selected orders array
+let selectedOrders = [];
+
+// Toggle advanced filters
+function toggleAdvancedFilters() {
+    const filters = document.getElementById('advanced-filters');
+    const icon = event.currentTarget.querySelector('.fa-chevron-down');
+    
+    if (filters.classList.contains('hidden')) {
+        filters.classList.remove('hidden');
+        icon.classList.remove('fa-chevron-down');
+        icon.classList.add('fa-chevron-up');
+    } else {
+        filters.classList.add('hidden');
+        icon.classList.remove('fa-chevron-up');
+        icon.classList.add('fa-chevron-down');
+    }
+}
+
+// Cancel single order
+function cancelOrder(requestId) {
+    if (confirm('Are you sure you want to cancel this order? This action cannot be undone.')) {
+        fetch(`/clinician/test-request/${requestId}/cancel/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Order cancelled successfully', 'success');
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showNotification(data.error || 'Failed to cancel order', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Network error. Please try again.', 'error');
+        });
+    }
+}
+
+// Download results for single order
+function downloadResults(requestId) {
+    fetch(`/clinician/test-request/${requestId}/download-results/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.blob())
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `results-${requestId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        showNotification('Results downloaded successfully', 'success');
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Failed to download results', 'error');
+    });
+}
+
+// Export all orders
+function exportOrders() {
+    const params = new URLSearchParams(window.location.search);
+    params.set('export', 'csv');
+    window.location.href = `?${params.toString()}`;
+}
+
+// Row selection
+document.addEventListener('DOMContentLoaded', function() {
+    // Add click handler to table rows
+    document.querySelectorAll('.order-row').forEach(row => {
+        row.addEventListener('click', function(e) {
+            // Don't trigger if clicking on a link, button, or checkbox
+            if (e.target.tagName === 'A' || e.target.tagName === 'BUTTON' || 
+                e.target.tagName === 'INPUT' || e.target.closest('a') || 
+                e.target.closest('button') || e.target.closest('input')) {
+                return;
+            }
+            
+            const orderId = this.dataset.orderId;
+            const index = selectedOrders.indexOf(orderId);
+            
+            if (index === -1) {
+                // Select row
+                this.classList.add('selected-row');
+                selectedOrders.push(orderId);
+            } else {
+                // Deselect row
+                this.classList.remove('selected-row');
+                selectedOrders.splice(index, 1);
+            }
+            
+            updateBulkActionButton();
+        });
+    });
+});
+
+// Bulk actions
+function openBulkActions() {
+    if (selectedOrders.length === 0) {
+        showNotification('Please select at least one order by clicking on the row', 'error');
+        return;
+    }
+    
+    document.getElementById('bulkActionsModal').classList.remove('hidden');
+}
+
+function closeBulkModal() {
+    document.getElementById('bulkActionsModal').classList.add('hidden');
+}
+
+function executeBulkAction() {
+    const action = document.getElementById('bulk-action-select').value;
+    
+    if (!action) {
+        showNotification('Please select an action', 'error');
+        return;
+    }
+    
+    if (selectedOrders.length === 0) {
+        showNotification('Please select at least one order', 'error');
+        return;
+    }
+    
+    // Execute bulk action
+    fetch('{% url "clinician:bulk_order_actions" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            action: action,
+            order_ids: selectedOrders
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(data.message || 'Action completed successfully', 'success');
+            closeBulkModal();
+            
+            // Refresh page after successful action
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
+        } else {
+            showNotification(data.error || 'Failed to execute action', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Network error. Please try again.', 'error');
+    });
+}
+
+function updateBulkActionButton() {
+    const selectedCount = selectedOrders.length;
+    
+    // Create or update bulk actions button
+    let bulkBtn = document.getElementById('bulk-actions-btn');
+    if (!bulkBtn) {
+        const actionDiv = document.querySelector('.flex.gap-3');
+        bulkBtn = document.createElement('button');
+        bulkBtn.id = 'bulk-actions-btn';
+        bulkBtn.className = 'btn btn-outline';
+        bulkBtn.onclick = openBulkActions;
+        actionDiv.appendChild(bulkBtn);
+    }
+    
+    bulkBtn.disabled = selectedCount === 0;
+    bulkBtn.innerHTML = selectedCount > 0 
+        ? `<i class="fas fa-tasks mr-2"></i> Actions (${selectedCount})`
+        : `<i class="fas fa-tasks mr-2"></i> Bulk Actions`;
+}
+
+// Helper function to get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function showNotification(message, type = 'info') {
+    // Remove existing notifications
+    document.querySelectorAll('.notification').forEach(n => n.remove());
+    
+    // Create notification
+    const notification = document.createElement('div');
+    notification.className = `notification fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 transform translate-x-full ${type === 'success' ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'}`;
+    notification.innerHTML = `
+        <div class="flex items-center gap-3">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+            <span>${message}</span>
+            <button onclick="this.parentElement.parentElement.remove()" class="ml-auto text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.transform = 'translateX(0)';
+    }, 10);
+    
+    setTimeout(() => {
+        notification.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 3000);
+}
+
+// Close modal when clicking outside
+document.querySelectorAll('.modal').forEach(modal => {
+    modal.addEventListener('click', function(e) {
+        if (e.target === this) {
+            this.classList.add('hidden');
+        }
+    });
+});
+
+// Add a split filter to the template tags
+function splitFilter(value, delimiter) {
+    return value.split(delimiter);
+}
+
+// Auto-refresh for pending orders (every 60 seconds)
+{% if status_filter == 'pending' or not status_filter %}
+setTimeout(() => {
+    window.location.reload();
+}, 60000);
+{% endif %}
+</script>
+{% endblock %}

@@ -25,7 +25,7 @@
 
             <!-- Navigation Menu - Using Dashboard Color Scheme -->
             <div class="collapse navbar-collapse" id="labNavbar">
-                <ul class="navbar-nav me-auto">
+                <ul class="navbar-nav me-auto" style="font-size: 14px;">
                     <li class="nav-item">
                         <a class="nav-link {% if request.resolver_match.url_name == 'labs:vendor_dashboard' %}active{% endif %}" 
                             href="{% url 'labs:vendor_dashboard' %}">
@@ -60,7 +60,7 @@
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                             <i class="bi bi-gear me-1"></i>Management
                         </a>
-                        <ul class="dropdown-menu">
+                        <ul class="dropdown-menu" style="font-size: 14px;">
                             <li><a class="dropdown-item" href="{% url 'labs:test_list' %}">
                                 <i class="bi bi-clipboard2-pulse me-2"></i>Test Catalog
                             </a></li>
@@ -88,7 +88,7 @@
                 </ul>
 
                 <!-- Right Side: User Menu & Actions -->
-                <div class="navbar-nav align-items-center">
+                <div class="navbar-nav align-items-center" style="font-size: 14px;">
                     <!-- Quick Actions -->
                     <div class="nav-item me-3">
                         <a href="{% url 'labs:create_test_request' %}" class="btn btn-brand-red btn-sm">
@@ -104,8 +104,8 @@
                                 3
                             </span>
                         </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><h6 class="dropdown-header">Notifications</h6></li>
+                        <li><h6 class="dropdown-header">Notifications</h6></li>
+                        <!-- <ul class="dropdown-menu dropdown-menu-end">
                             <li><a class="dropdown-item" href="#">
                                 <div class="d-flex w-100 justify-content-between">
                                     <small>New test request</small>
@@ -122,11 +122,11 @@
                             </a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item text-brand-blue text-center" href="#">View all</a></li>
-                        </ul>
+                        </ul> -->
                     </div>
 
                     <!-- User Menu -->
-                    <div class="nav-item dropdown">
+                    <div class="nav-item dropdown" style="font-size: 14px;">
                         <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown">
                             <div class="user-avatar me-2">
                                 {{ request.user.first_name|first }}{{ request.user.last_name|first }}
@@ -135,10 +135,13 @@
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li><h6 class="dropdown-header">Signed in as</h6></li>
-                            <li><span class="dropdown-item-text">
-                                <strong>{{ request.user.get_full_name|default:"User" }}</strong>
-                                <br>
-                                <small class="text-muted">{{ request.user.title|default:"Lab Staff" }}</small>
+                            <li>
+                                <span class="dropdown-item-text">
+                                <!-- <strong>{{ request.user.get_full_name|default:"User" }}</strong> -->
+                                <!-- <br> -->
+                                <small class="text-muted">{{ request.user.title|default:"Lab Staff" }}
+
+                                </small>
                             </span></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{% url 'account:laboratory_profile' %}">

@@ -20,7 +20,7 @@ class ClinicianProfile(models.Model):
         ('pathology', 'Pathology'),
         ('other', 'Other'),
     ]
-    
+
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='clinician_profile')
     
     # Professional Information
@@ -28,17 +28,9 @@ class ClinicianProfile(models.Model):
     
     specialization = models.CharField(max_length=50, choices=SPECIALIZATION_CHOICES, default='general_practice')
     
-    organization = models.CharField(
-        max_length=255,
-        blank=True,
-        help_text="Hospital/Clinic name"
-    )
+    organization = models.CharField(max_length=255, blank=True, help_text="Hospital/Clinic name")
     
-    department = models.CharField(
-        max_length=100,
-        blank=True,
-        help_text="Department within organization"
-    )
+    department = models.CharField(max_length=100, blank=True, help_text="Department within organization")
     
     # Credentials
     qualifications = models.CharField(max_length=250, blank=True, help_text="Degrees and certifications (e.g., MD, MBBS, DO)")
@@ -48,9 +40,7 @@ class ClinicianProfile(models.Model):
     
     enable_critical_alerts = models.BooleanField(default=True, help_text="Receive notifications for critical/panic values")
     
-    preferred_contact_method = models.CharField(
-        max_length=20,
-        choices=[
+    preferred_contact_method = models.CharField(max_length=20, choices=[
             ('email', 'Email'),
             ('sms', 'SMS'),
             ('both', 'Both'),
@@ -63,10 +53,7 @@ class ClinicianProfile(models.Model):
     last_order_date = models.DateTimeField(null=True, blank=True)
     
     # Status
-    is_verified = models.BooleanField(
-        default=False,
-        help_text="Has admin verified clinician credentials?"
-    )
+    is_verified = models.BooleanField(default=False, help_text="Has admin verified clinician credentials?")
     
     verification_notes = models.TextField(
         blank=True,
@@ -165,3 +152,4 @@ class ClinicianPatientRelationship(models.Model):
         # return f"{self.clinician.get_full_name()} → {self.patient.patient_id}"
         return f"{self.clinician.first_name} → {self.patient.patient_id}"
     
+

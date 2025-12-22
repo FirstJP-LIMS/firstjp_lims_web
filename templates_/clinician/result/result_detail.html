@@ -1,0 +1,198 @@
+<!-- clinician/result/result_detail.html -->
+{% extends "clinician/assets/base.html" %}
+{% load static %}
+
+{% block title %}Result Details - {{ test_request.request_id }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 flex">
+    {% include 'clinician/assets/sidebar.html' %}
+    
+    <div class="flex-1 p-8">
+        <!-- Back Button -->
+        <div class="mb-6">
+            <a href="{% url 'clinician:my_results' %}" class="text-blue-600 hover:text-blue-800 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Back to Results
+            </a>
+        </div>
+        
+        <!-- Patient Info Card -->
+        <div class="bg-white rounded-lg shadow mb-6">
+            <div class="p-6 border-b border-gray-200">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">
+                            {{ test_request.patient.first_name }} {{ test_request.patient.last_name }}
+                        </h1>
+                        <div class="mt-2 text-sm text-gray-600 space-y-1">
+                            <p><strong>Patient ID:</strong> {{ test_request.patient.patient_id }}</p>
+                            <p><strong>DOB:</strong> {{ test_request.patient.date_of_birth|date:"M d, Y" }} 
+                               ({{ test_request.patient.date_of_birth|timesince|truncatewords:1 }} old)</p>
+                            <p><strong>Gender:</strong> {{ test_request.patient.get_gender_display }}</p>
+                            <p><strong>Contact:</strong> {{ test_request.patient.contact_phone }} | {{ test_request.patient.contact_email }}</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Critical Alert -->
+                    {% if has_critical %}
+                    <div class="bg-red-50 border-2 border-red-200 rounded-lg p-4">
+                        <div class="flex items-center gap-2 text-red-800">
+                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                            </svg>
+                            <div>
+                                <p class="font-bold">CRITICAL VALUES DETECTED</p>
+                                <p class="text-sm">Immediate action required</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Order Info -->
+            <div class="p-6 bg-gray-50 grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                    <p class="text-xs text-gray-600">Order ID</p>
+                    <p class="font-semibold text-gray-900">{{ test_request.request_id }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-600">Order Date</p>
+                    <p class="font-semibold text-gray-900">{{ test_request.created_at|date:"M d, Y" }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-600">Result Date</p>
+                    <p class="font-semibold text-gray-900">{{ test_request.verified_at|date:"M d, Y h:i A" }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-600">Status</p>
+                    <p class="font-semibold {% if test_request.clinician_acknowledged_at %}text-green-600{% else %}text-yellow-600{% endif %}">
+                        {% if test_request.clinician_acknowledged_at %}
+                            Acknowledged
+                        {% else %}
+                            Pending Review
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Clinical Context -->
+        {% if test_request.clinical_indication or test_request.clinical_history %}
+        <div class="bg-white rounded-lg shadow mb-6 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Clinical Context</h2>
+            
+            {% if test_request.clinical_indication %}
+            <div class="mb-4">
+                <p class="text-sm font-medium text-gray-700">Clinical Indication</p>
+                <p class="text-gray-900 mt-1">{{ test_request.clinical_indication }}</p>
+            </div>
+            {% endif %}
+            
+            {% if test_request.clinical_history %}
+            <div>
+                <p class="text-sm font-medium text-gray-700">Clinical History</p>
+                <p class="text-gray-900 mt-1">{{ test_request.clinical_history }}</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        <!-- Test Results -->
+        <div class="bg-white rounded-lg shadow mb-6">
+            <div class="p-6 border-b border-gray-200">
+                <h2 class="text-xl font-semibold text-gray-900">Test Results</h2>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Test Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Result</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Units</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reference Range</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Flag</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for result in results %}
+                        <tr class="{% if result.flag == 'C' %}bg-red-50{% elif result.flag in 'HL' %}bg-yellow-50{% endif %}">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900">{{ result.assignment.lab_test.name }}</div>
+                                <div class="text-xs text-gray-500">{{ result.assignment.lab_test.code }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-bold text-gray-900">{{ result.result_value }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ result.units|default:"-" }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ result.reference_range|default:"N/A" }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
+                                    {% if result.flag == 'C' %}bg-red-100 text-red-800
+                                    {% elif result.flag == 'H' %}bg-orange-100 text-orange-800
+                                    {% elif result.flag == 'L' %}bg-yellow-100 text-yellow-800
+                                    {% elif result.flag == 'A' %}bg-purple-100 text-purple-800
+                                    {% else %}bg-green-100 text-green-800{% endif %}">
+                                    {{ result.get_flag_display }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <div class="flex items-center gap-1">
+                                    <svg class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                    </svg>
+                                    Released
+                                </div>
+                            </td>
+                        </tr>
+                        
+                        {% if result.remarks or result.interpretation %}
+                        <tr class="bg-gray-50">
+                            <td colspan="6" class="px-6 py-3">
+                                {% if result.remarks %}
+                                <p class="text-sm"><strong>Remarks:</strong> {{ result.remarks }}</p>
+                                {% endif %}
+                                {% if result.interpretation %}
+                                <p class="text-sm mt-1"><strong>Interpretation:</strong> {{ result.interpretation }}</p>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Actions -->
+        <div class="flex gap-4">
+            {% if not test_request.clinician_acknowledged_at %}
+            <form method="post" action="{% url 'clinician:acknowledge_results' pk=test_request.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium">
+                    ✓ Acknowledge Results
+                </button>
+            </form>
+            {% else %}
+            <div class="px-6 py-3 bg-green-100 text-green-800 rounded-lg">
+                ✓ Acknowledged on {{ test_request.clinician_acknowledged_at|date:"M d, Y h:i A" }}
+            </div>
+            {% endif %}
+            
+            <a href="{% url 'clinician:download_results' request_id=test_request.request_id %}" 
+               class="px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition font-medium">
+                📥 Download Report
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

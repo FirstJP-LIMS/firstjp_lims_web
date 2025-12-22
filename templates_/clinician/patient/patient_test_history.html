@@ -1,0 +1,110 @@
+{% extends "clinician/assets/base.html" %}
+
+{% block content %}
+<div class="min-h-screen flex bg-gray-50">
+
+    {% include "clinician/assets/sidebar.html" %}
+
+    <main class="flex-1 md:ml-64 p-6">
+        <div class="max-w-7xl mx-auto space-y-6">
+
+            <div>
+                <h1 class="text-2xl font-semibold">
+                    Test History — {{ patient.first_name }} {{ patient.last_name }}
+                </h1>
+                <p class="text-sm text-gray-500">
+                    Patient ID: {{ patient.patient_id }}
+                </p>
+            </div>
+
+            <div class="bg-white rounded shadow overflow-x-auto">
+                <table class="table table-zebra w-full">
+                    <thead>
+                        <tr>
+                            <th>Request ID</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Severity</th>
+                            <th>Results</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for req in test_requests %}
+                        {% with results=req.assignments.all %}
+                        <tr>
+
+                            <!-- Request -->
+                            <td class="font-mono text-sm">
+                                {{ req.request_id }}
+                            </td>
+
+                            <!-- Date -->
+                            <td>
+                                {{ req.created_at|date:"Y-m-d" }}
+                            </td>
+
+                            <!-- Status -->
+                            <td>
+                                <span class="badge
+                                    {% if req.status == 'V' %}badge-success
+                                    {% elif req.status == 'C' %}badge-info
+                                    {% elif req.status == 'P' %}badge-warning
+                                    {% else %}badge-neutral{% endif %}
+                                ">
+                                    {{ req.get_status_display }}
+                                </span>
+                            </td>
+
+                            <!-- Severity -->
+                            <td>
+                                {% if results %}
+                                    {% if results|length == 1 %}
+                                        {% for a in results %}
+                                            {% if a.result.flag == 'C' %}
+                                                <span class="badge badge-error">Critical</span>
+                                            {% elif a.result.flag == 'A' %}
+                                                <span class="badge badge-warning">Abnormal</span>
+                                            {% elif a.result.flag == 'N' %}
+                                                <span class="badge badge-success">Normal</span>
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="badge badge-outline">Multiple</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge badge-ghost">Pending</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Results Access -->
+                            <td>
+                                {% if results %}
+                                    <a href="{% url 'clinician:request_results' req.id %}"
+                                       class="btn btn-xs btn-outline btn-primary">
+                                        View Results
+                                    </a>
+                                {% else %}
+                                    <span class="text-xs text-gray-400">
+                                        Not released
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                        </tr>
+                        {% endwith %}
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-gray-500 py-6">
+                                No test history found.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </main>
+</div>
+{% endblock %}

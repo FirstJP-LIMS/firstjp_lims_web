@@ -3,6 +3,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db import transaction
 from ..models import Assignment, Submission, Enrollment
+from django.utils import timezone
+
 
 @login_required
 def assignment_detail_view(request, assignment_id):

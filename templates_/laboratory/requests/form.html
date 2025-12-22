@@ -33,44 +33,68 @@
 
     <form method="post" novalidate id="testRequestForm">
         {% csrf_token %}
-        
         <div class="row">
             <div class="col-lg-8">
                 <!-- Patient Information Card -->
-                <div class="main-card mb-4">
-                    <div class="card-header">
-                        <h5 class="card-title">
-                            <i class="bi bi-person-plus me-2"></i>
+                <div class="main-card card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white border-0 py-3">
+                        <h5 class="card-title mb-0 fw-semibold">
+                            <i class="bi bi-person-plus me-2 text-primary"></i>
                             Patient Information
                         </h5>
                     </div>
                     <div class="card-body">
                         <!-- Patient Selection Section -->
                         <div class="mb-4">
-                            <h6 class="text-brand-blue border-bottom pb-2 mb-3">
+                            <h6 class="text-primary border-bottom pb-2 mb-3">
                                 <i class="bi bi-person-check me-2"></i>
-                                Patient Selection
+                                Select Existing Patient
                             </h6>
                             
                             <div class="row">
                                 <div class="col-md-12 mb-3">
-                                    {{ form.existing_patient|as_crispy_field }}
+                                    <label for="patientSearch" class="form-label fw-semibold">Search Patient</label>
+                                    <div class="input-group mb-2">
+                                        <span class="input-group-text bg-light">
+                                            <i class="bi bi-search"></i>
+                                        </span>
+                                        <input type="text" class="form-control" id="patientSearch" 
+                                               placeholder="Search by name, patient ID, or phone number...">
+                                        <button class="btn btn-outline-secondary" type="button" id="clearPatientSearch">
+                                            <i class="bi bi-x-circle"></i>
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Searchable Patient Select -->
+                                    <select class="form-select" id="id_existing_patient" name="existing_patient" size="5" 
+                                            style="min-height: 150px;">
+                                        <option value="">-- Select a patient --</option>
+                                        {% for patient in form.existing_patient.field.queryset %}
+                                        <option value="{{ patient.id }}" 
+                                                data-search="{{ patient.first_name|lower }} {{ patient.last_name|lower }} {{ patient.patient_id|lower }} {{ patient.contact_phone|default:'' }}">
+                                            {{ patient.patient_id }} - {{ patient.first_name }} {{ patient.last_name }}
+                                            {% if patient.date_of_birth %} (DOB: {{ patient.date_of_birth|date:"Y-m-d" }}){% endif %}
+                                            {% if patient.contact_phone %} - {{ patient.contact_phone }}{% endif %}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    <small class="text-muted">Click on a patient to select</small>
                                 </div>
                             </div>
 
                             <div class="text-center mb-3">
-                                <span class="text-muted">- OR -</span>
+                                <span class="badge bg-secondary">OR</span>
                             </div>
 
-                            <div class="alert alert-info">
+                            <div class="alert alert-info border-0">
                                 <i class="bi bi-info-circle me-2"></i>
-                                <strong>New Patient:</strong> Enter patient details below
+                                <strong>New Patient?</strong> Enter patient details below
                             </div>
                         </div>
 
                         <!-- New Patient Details -->
                         <div id="newPatientSection">
-                            <h6 class="text-brand-blue border-bottom pb-2 mb-3">
+                            <h6 class="text-primary border-bottom pb-2 mb-3">
                                 <i class="bi bi-person-plus me-2"></i>
                                 New Patient Details
                             </h6>
@@ -106,76 +130,111 @@
                 </div>
 
                 <!-- Test Selection Card -->
-                <div class="main-card mb-4">
-                    <div class="card-header">
-                        <h5 class="card-title">
-                            <i class="bi bi-clipboard-check me-2"></i>
+                <div class="main-card card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white border-0 py-3">
+                        <h5 class="card-title mb-0 fw-semibold">
+                            <i class="bi bi-clipboard-check me-2 text-primary"></i>
                             Test Selection
                         </h5>
                     </div>
                     <div class="card-body">
-                        <div class="alert alert-warning" id="testSelectionAlert" style="display: none;">
+                        <div class="alert alert-warning border-0" id="testSelectionAlert" style="display: none;">
                             <i class="bi bi-exclamation-triangle me-2"></i>
                             Please select at least one test to proceed.
                         </div>
 
-                        <!-- Test Search and Selection -->
+                        <!-- Test Search -->
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">Search and Select Tests</label>
+                            <label class="form-label fw-semibold">Search Tests</label>
                             <div class="input-group mb-3">
-                                <input type="text" class="form-control" id="testSearch" placeholder="Search tests by name or code...">
-                                <button class="btn btn-outline-secondary" type="button" id="clearSearch">
-                                    <i class="bi bi-x-circle"></i>
+                                <span class="input-group-text bg-light">
+                                    <i class="bi bi-search"></i>
+                                </span>
+                                <input type="text" class="form-control" id="testSearch" 
+                                       placeholder="Search by test name, code, or department...">
+                                <button class="btn btn-outline-secondary" type="button" id="clearTestSearch">
+                                    <i class="bi bi-x-circle"></i> Clear
+                                </button>
+                            </div>
+                            <div class="d-flex gap-2 mb-3">
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="selectAllVisible">
+                                    <i class="bi bi-check-all me-1"></i>Select All Visible
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="deselectAll">
+                                    <i class="bi bi-x-square me-1"></i>Deselect All
                                 </button>
                             </div>
                         </div>
 
-                        <!-- Test Selection Dropdown -->
-                        <div class="mb-3">
-                            <button class="btn btn-outline-red w-100 text-start" type="button" data-bs-toggle="collapse" data-bs-target="#testSelectionCollapse">
-                                <i class="bi bi-plus-circle me-2"></i>
-                                <span id="selectedTestsCount">Select Tests (0 selected)</span>
-                                <i class="bi bi-chevron-down float-end"></i>
-                            </button>
-                            
-                            <div class="collapse mt-2" id="testSelectionCollapse">
-                                <div class="card card-body">
-                                    <div class="tests-selection" style="max-height: 300px; overflow-y: auto;">
-                                        {% for test in form.tests_to_order.field.queryset %}
-                                        <div class="form-check test-item" style="padding-left: 2rem;" data-price="{{ test.price }}" data-department="{{ test.assigned_department.name }}">
-                                            <input class="form-check-input test-checkbox" type="checkbox" 
-                                                   name="tests_to_order" value="{{ test.id }}" 
-                                                   id="test_{{ test.id }}">
-                                            <label class="form-check-label w-100" for="test_{{ test.id }}">
-                                                <div class="d-flex justify-content-between align-items-center">
-                                                    <div>
-                                                        <strong>{{ test.code }}</strong> - {{ test.name }}
-                                                        <br>
-                                                        <small class="text-muted">
-                                                            {{ test.assigned_department.name }} • 
-                                                            {{ test.get_result_type_display }}
-                                                        </small>
+                        <!-- Tests Grid -->
+                        <div class="tests-container" style="max-height: 500px; overflow-y: auto;">
+                            <div id="testsGrid" class="row g-2">
+                                {% for test in form.tests_to_order.field.queryset %}
+                                <div class="col-md-6 test-item" 
+                                     data-test-id="{{ test.id }}"
+                                     data-test-name="{{ test.name|lower }}"
+                                     data-test-code="{{ test.code|lower }}"
+                                     data-test-department="{{ test.assigned_department.name|lower }}"
+                                     data-price="{{ test.price }}">
+                                    <div class="card h-100 test-card">
+                                        <div class="card-body p-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input test-checkbox" 
+                                                       type="checkbox" 
+                                                       name="tests_to_order" 
+                                                       value="{{ test.id }}" 
+                                                       id="test_{{ test.id }}">
+                                                <label class="form-check-label w-100" for="test_{{ test.id }}">
+                                                    <div class="d-flex justify-content-between align-items-start">
+                                                        <div class="flex-grow-1">
+                                                            <div class="fw-bold text-primary">{{ test.code }}</div>
+                                                            <div class="small text-dark">{{ test.name }}</div>
+                                                            <div class="small text-muted mt-1">
+                                                                <i class="bi bi-building me-1"></i>{{ test.assigned_department.name }}
+                                                            </div>
+                                                            <div class="small">
+                                                                <span class="badge bg-{% if test.result_type == 'QNT' %}info{% else %}warning{% endif %} bg-opacity-15 text-{% if test.result_type == 'QNT' %}info{% else %}warning{% endif %}">
+                                                                    {{ test.get_result_type_display }}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="text-end ms-2">
+                                                            <strong class="text-success">₦{{ test.price }}</strong>
+                                                        </div>
                                                     </div>
-                                                    <div class="text-end">
-                                                        <strong class="text-brand-blue">N{{ test.price }}</strong>
-                                                    </div>
-                                                </div>
-                                            </label>
+                                                </label>
+                                            </div>
                                         </div>
-                                        {% if not forloop.last %}<hr class="my-2">{% endif %}
-                                        {% endfor %}
                                     </div>
                                 </div>
+                                {% empty %}
+                                <div class="col-12">
+                                    <div class="alert alert-info">
+                                        <i class="bi bi-info-circle me-2"></i>
+                                        No tests available. Please add tests to your catalog first.
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div id="noTestsFound" class="alert alert-warning mt-3" style="display: none;">
+                                <i class="bi bi-search me-2"></i>
+                                No tests found matching your search. Try different keywords.
                             </div>
                         </div>
 
                         <!-- Selected Tests Summary -->
-                        <div class="card bg-light mt-3" id="selectedTestsSummary" style="display: none;">
+                        <div class="card bg-light border-0 mt-3" id="selectedTestsSummary" style="display: none;">
                             <div class="card-body">
-                                <h6 class="card-title">Selected Tests Summary</h6>
-                                <div id="selectedTestsList"></div>
-                                <div class="mt-2 pt-2 border-top">
-                                    <strong>Total Price: N<span id="totalPrice">0.00</span></strong>
+                                <h6 class="card-title fw-semibold">
+                                    <i class="bi bi-check-circle text-success me-2"></i>
+                                    Selected Tests (<span id="selectedCount">0</span>)
+                                </h6>
+                                <div id="selectedTestsList" class="small"></div>
+                                <div class="mt-3 pt-3 border-top">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <strong class="text-dark">Total Price:</strong>
+                                        <strong class="text-success fs-5">₦<span id="totalPrice">0.00</span></strong>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -183,10 +242,10 @@
                 </div>
 
                 <!-- Sample Information Card -->
-                <div class="main-card mb-4">
-                    <div class="card-header">
-                        <h5 class="card-title">
-                            <i class="bi bi-droplet me-2"></i>
+                <div class="main-card card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white border-0 py-3">
+                        <h5 class="card-title mb-0 fw-semibold">
+                            <i class="bi bi-droplet me-2 text-primary"></i>
                             Specimen Collection
                         </h5>
                     </div>
@@ -230,16 +289,24 @@
 
             <div class="col-lg-4">
                 <!-- Additional Information Card -->
-                <div class="main-card mb-4">
-                    <div class="card-header">
-                        <h5 class="card-title">
-                            <i class="bi bi-file-text me-2"></i>
+                <div class="main-card card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white border-0 py-3">
+                        <h5 class="card-title mb-0 fw-semibold">
+                            <i class="bi bi-file-text me-2 text-primary"></i>
                             Request Details
                         </h5>
                     </div>
                     <div class="card-body">
                         <div class="mb-3">
                             {{ form.priority|as_crispy_field }}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.clinical_indication|as_crispy_field }}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.urgency_reason|as_crispy_field }}
                         </div>
 
                         <div class="mb-3">
@@ -250,7 +317,7 @@
                             {{ form.clinical_history|as_crispy_field }}
                         </div>
 
-                        <div class="form-check mb-3">
+                        <div class="form-check">
                             {{ form.has_informed_consent }}
                             <label class="form-check-label" for="{{ form.has_informed_consent.id_for_label }}">
                                 Patient has provided informed consent
@@ -260,70 +327,44 @@
                 </div>
 
                 <!-- Help Card -->
-                <div class="main-card mb-4">
-                    <div class="card-header">
-                        <h5 class="card-title">
-                            <i class="bi bi-info-circle me-2"></i>
+                <div class="main-card card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white border-0 py-3">
+                        <h5 class="card-title mb-0 fw-semibold">
+                            <i class="bi bi-info-circle me-2 text-primary"></i>
                             Guidelines
                         </h5>
                     </div>
                     <div class="card-body">
-                        <h6 class="text-brand-blue">Patient Selection</h6>
+                        <h6 class="text-primary">Patient Selection</h6>
                         <ul class="list-unstyled small mb-3">
-                            <li><i class="bi bi-check text-success me-2"></i>Choose existing patient for quick entry</li>
-                            <li><i class="bi bi-check text-success me-2"></i>Add new patient if first visit</li>
+                            <li><i class="bi bi-check text-success me-2"></i>Search and select existing patient</li>
+                            <li><i class="bi bi-check text-success me-2"></i>Or enter new patient details</li>
                         </ul>
 
-                        <h6 class="text-brand-blue">Specimen Types</h6>
+                        <h6 class="text-primary">Test Selection</h6>
                         <ul class="list-unstyled small mb-3">
-                            <li><i class="bi bi-droplet text-primary me-2"></i>Blood</li>
-                            <li><i class="bi bi-droplet text-primary me-2"></i>Urine</li>
-                            <li><i class="bi bi-droplet text-primary me-2"></i>Tissue</li>
-                            <li><i class="bi bi-droplet text-primary me-2"></i>Saliva</li>
+                            <li><i class="bi bi-check text-success me-2"></i>Use search to quickly find tests</li>
+                            <li><i class="bi bi-check text-success me-2"></i>Select multiple tests as needed</li>
+                            <li><i class="bi bi-check text-success me-2"></i>Review total price before submitting</li>
                         </ul>
 
-                        <h6 class="text-brand-blue">Collection Methods</h6>
+                        <h6 class="text-primary">Specimen Types</h6>
                         <ul class="list-unstyled small">
-                            <li><i class="bi bi-eyedropper text-warning me-2"></i>Venipuncture</li>
-                            <li><i class="bi bi-eyedropper text-warning me-2"></i>Fingerstick</li>
-                            <li><i class="bi bi-eyedropper text-warning me-2"></i>Swab</li>
-                            <li><i class="bi bi-eyedropper text-warning me-2"></i>Catheter</li>
+                            <li><i class="bi bi-droplet text-primary me-2"></i>Blood, Urine, Tissue, Saliva</li>
                         </ul>
-                    </div>
-                </div>
-
-                <!-- Quick Actions -->
-                <div class="main-card">
-                    <div class="card-header">
-                        <h5 class="card-title">
-                            <i class="bi bi-lightning me-2"></i>
-                            Quick Actions
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="d-grid gap-2">
-                            <a href="{% url 'labs:test_list' %}" class="btn btn-outline-red text-start">
-                                <i class="bi bi-clipboard-data me-2"></i>
-                                Manage Test Catalog
-                            </a>
-                            <a href="{% url 'labs:test_request_list' %}" class="btn btn-outline-red text-start">
-                                <i class="bi bi-list-check me-2"></i>
-                                View All Requests
-                            </a>
-                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Submit Button -->
-        <div class="main-card mt-4">
-            <div class="card-body text-center">
-                <div class="d-flex gap-2 justify-content-center">
-                    <a href="{% url 'labs:test_request_list' %}" class="btn btn-outline-red btn-lg">
+        <div class="main-card card border-0 shadow-sm mt-4">
+            <div class="card-body text-center py-4">
+                <div class="d-flex gap-3 justify-content-center">
+                    <a href="{% url 'labs:test_request_list' %}" class="btn btn-outline-secondary btn-lg px-5">
                         <i class="bi bi-x-circle me-2"></i>Cancel
                     </a>
-                    <button type="submit" class="btn btn-red btn-lg">
+                    <button type="submit" class="btn btn-primary btn-lg px-5">
                         <i class="bi bi-send-check me-2"></i>Submit Test Request
                     </button>
                 </div>
@@ -334,136 +375,214 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Patient search functionality
+    const patientSearch = document.getElementById('patientSearch');
+    const clearPatientSearch = document.getElementById('clearPatientSearch');
     const existingPatientSelect = document.getElementById('id_existing_patient');
     const newPatientSection = document.getElementById('newPatientSection');
+    
+    // Test search functionality
     const testSearch = document.getElementById('testSearch');
-    const clearSearch = document.getElementById('clearSearch');
+    const clearTestSearch = document.getElementById('clearTestSearch');
     const testCheckboxes = document.querySelectorAll('.test-checkbox');
+    const testItems = document.querySelectorAll('.test-item');
+    const selectAllVisible = document.getElementById('selectAllVisible');
+    const deselectAll = document.getElementById('deselectAll');
+    const noTestsFound = document.getElementById('noTestsFound');
+    
+    // Summary elements
     const selectedTestsSummary = document.getElementById('selectedTestsSummary');
     const selectedTestsList = document.getElementById('selectedTestsList');
+    const selectedCount = document.getElementById('selectedCount');
     const totalPriceElement = document.getElementById('totalPrice');
     const testSelectionAlert = document.getElementById('testSelectionAlert');
-    const selectedTestsCount = document.getElementById('selectedTestsCount');
-    const testSelectionCollapse = document.getElementById('testSelectionCollapse');
 
-    // Toggle new patient section based on existing patient selection
+    // ======================
+    // PATIENT SEARCH
+    // ======================
+    function filterPatients() {
+        const searchTerm = patientSearch.value.toLowerCase().trim();
+        const options = existingPatientSelect.querySelectorAll('option');
+        let hasVisibleOptions = false;
+        
+        options.forEach(option => {
+            if (option.value === '') {
+                option.style.display = 'block';
+                return;
+            }
+            
+            const searchData = option.dataset.search || '';
+            if (searchData.includes(searchTerm)) {
+                option.style.display = 'block';
+                hasVisibleOptions = true;
+            } else {
+                option.style.display = 'none';
+            }
+        });
+    }
+
     function toggleNewPatientSection() {
         if (existingPatientSelect && existingPatientSelect.value) {
             newPatientSection.style.display = 'none';
+            // Clear new patient fields
+            document.getElementById('id_first_name').value = '';
+            document.getElementById('id_last_name').value = '';
         } else {
             newPatientSection.style.display = 'block';
         }
     }
 
-    // Search functionality for tests
+    patientSearch.addEventListener('input', filterPatients);
+    clearPatientSearch.addEventListener('click', function() {
+        patientSearch.value = '';
+        filterPatients();
+    });
+    existingPatientSelect.addEventListener('change', toggleNewPatientSection);
+
+    // ======================
+    // TEST SEARCH
+    // ======================
     function filterTests() {
-        const searchTerm = testSearch.value.toLowerCase();
-        const testItems = document.querySelectorAll('.test-item');
+        const searchTerm = testSearch.value.toLowerCase().trim();
+        let visibleCount = 0;
         
         testItems.forEach(item => {
-            const testText = item.textContent.toLowerCase();
-            if (testText.includes(searchTerm)) {
+            const testName = item.dataset.testName || '';
+            const testCode = item.dataset.testCode || '';
+            const testDept = item.dataset.testDepartment || '';
+            const searchText = `${testName} ${testCode} ${testDept}`;
+            
+            if (!searchTerm || searchText.includes(searchTerm)) {
                 item.style.display = 'block';
+                visibleCount++;
             } else {
                 item.style.display = 'none';
             }
         });
+        
+        // Show/hide "no tests found" message
+        if (visibleCount === 0 && searchTerm) {
+            noTestsFound.style.display = 'block';
+        } else {
+            noTestsFound.style.display = 'none';
+        }
     }
 
-    // Update selected tests summary
-    function updateSelectedTestsSummary() {
-        const selectedTests = Array.from(testCheckboxes)
-            .filter(checkbox => checkbox.checked)
-            .map(checkbox => {
-                const testItem = checkbox.closest('.test-item');
-                const label = testItem.querySelector('label');
-                const price = parseFloat(testItem.dataset.price || 0);
-                const department = testItem.dataset.department;
-                const testName = label.querySelector('strong').textContent + ' - ' + 
-                               label.textContent.split(' - ')[1].split('\n')[0];
-                
-                return {
-                    id: checkbox.value,
-                    name: testName,
-                    price: price,
-                    department: department
-                };
-            });
+    testSearch.addEventListener('input', filterTests);
+    
+    clearTestSearch.addEventListener('click', function() {
+        testSearch.value = '';
+        filterTests();
+    });
 
-        // Update selected count in dropdown button
-        selectedTestsCount.textContent = `Select Tests (${selectedTests.length} selected)`;
+    // Select/Deselect buttons
+    selectAllVisible.addEventListener('click', function() {
+        testItems.forEach(item => {
+            if (item.style.display !== 'none') {
+                const checkbox = item.querySelector('.test-checkbox');
+                if (checkbox) checkbox.checked = true;
+            }
+        });
+        updateSelectedTestsSummary();
+    });
+
+    deselectAll.addEventListener('click', function() {
+        testCheckboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        updateSelectedTestsSummary();
+    });
+
+    // ======================
+    // SELECTED TESTS SUMMARY
+    // ======================
+    function updateSelectedTestsSummary() {
+        const selectedTests = [];
+        let totalPrice = 0;
+        
+        testItems.forEach(item => {
+            const checkbox = item.querySelector('.test-checkbox');
+            if (checkbox && checkbox.checked) {
+                const testName = item.querySelector('label .text-dark').textContent;
+                const testCode = item.querySelector('label .text-primary').textContent;
+                const price = parseFloat(item.dataset.price || 0);
+                const testId = item.dataset.testId;
+                
+                selectedTests.push({
+                    id: testId,
+                    code: testCode,
+                    name: testName,
+                    price: price
+                });
+                
+                totalPrice += price;
+            }
+        });
+
+        // Update count and display
+        selectedCount.textContent = selectedTests.length;
+        totalPriceElement.textContent = totalPrice.toFixed(2);
 
         if (selectedTests.length > 0) {
             selectedTestsSummary.style.display = 'block';
+            testSelectionAlert.style.display = 'none';
+            
             selectedTestsList.innerHTML = selectedTests.map(test => 
-                `<div class="d-flex justify-content-between align-items-center small mb-2">
+                `<div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
                     <div>
-                        <div class="fw-semibold">${test.name.split(' - ')[0]}</div>
-                        <div class="text-muted">${test.department}</div>
+                        <strong class="text-primary">${test.code}</strong>
+                        <div class="text-muted">${test.name}</div>
                     </div>
                     <div class="text-end">
-                        <div class="fw-semibold">$${test.price.toFixed(2)}</div>
-                        <button type="button" class="btn btn-sm btn-outline-danger remove-test" data-test-id="${test.id}">
+                        <strong class="text-success">₦${test.price.toFixed(2)}</strong>
+                        <button type="button" class="btn btn-sm btn-outline-danger ms-2 remove-test" 
+                                data-test-id="${test.id}" title="Remove test">
                             <i class="bi bi-x"></i>
                         </button>
                     </div>
                 </div>`
             ).join('');
             
-            const total = selectedTests.reduce((sum, test) => sum + test.price, 0);
-            totalPriceElement.textContent = total.toFixed(2);
-            testSelectionAlert.style.display = 'none';
-            
-            // Auto-collapse the dropdown when tests are selected
-            if (selectedTests.length >= 3) {
-                const bsCollapse = new bootstrap.Collapse(testSelectionCollapse);
-                bsCollapse.hide();
-            }
+            // Add event listeners to remove buttons
+            document.querySelectorAll('.remove-test').forEach(button => {
+                button.addEventListener('click', function() {
+                    const testId = this.dataset.testId;
+                    const item = document.querySelector(`.test-item[data-test-id="${testId}"]`);
+                    if (item) {
+                        const checkbox = item.querySelector('.test-checkbox');
+                        if (checkbox) {
+                            checkbox.checked = false;
+                            updateSelectedTestsSummary();
+                        }
+                    }
+                });
+            });
         } else {
             selectedTestsSummary.style.display = 'none';
-            testSelectionAlert.style.display = 'block';
         }
-
-        // Add event listeners to remove buttons
-        document.querySelectorAll('.remove-test').forEach(button => {
-            button.addEventListener('click', function() {
-                const testId = this.dataset.testId;
-                const checkbox = document.querySelector(`.test-checkbox[value="${testId}"]`);
-                if (checkbox) {
-                    checkbox.checked = false;
-                    updateSelectedTestsSummary();
-                }
-            });
-        });
     }
 
-    // Form validation
+    // Listen to checkbox changes
+    testCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateSelectedTestsSummary);
+    });
+
+    // ======================
+    // FORM VALIDATION
+    // ======================
     document.getElementById('testRequestForm').addEventListener('submit', function(e) {
-        const selectedTests = Array.from(testCheckboxes).filter(checkbox => checkbox.checked);
+        const selectedTests = Array.from(testCheckboxes).filter(cb => cb.checked);
+        
         if (selectedTests.length === 0) {
             e.preventDefault();
             testSelectionAlert.style.display = 'block';
-            testSelectionAlert.scrollIntoView({ behavior: 'smooth' });
+            testSelectionAlert.scrollIntoView({ behavior: 'smooth', block: 'center' });
             
-            // Show the test selection dropdown if it's collapsed
-            const bsCollapse = new bootstrap.Collapse(testSelectionCollapse);
-            bsCollapse.show();
+            // Flash the test selection card
+            const testCard = testSelectionAlert.closest('.card');
+            testCard.classList.add('border-danger');
+            setTimeout(() => testCard.classList.remove('border-danger'), 2000);
         }
-    });
-
-    // Event listeners
-    if (existingPatientSelect) {
-        existingPatientSelect.addEventListener('change', toggleNewPatientSection);
-    }
-    
-    testSearch.addEventListener('input', filterTests);
-    clearSearch.addEventListener('click', function() {
-        testSearch.value = '';
-        filterTests();
-    });
-    
-    testCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', updateSelectedTestsSummary);
     });
 
     // Initialize
@@ -473,64 +592,100 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <style>
-    /* Custom styling for form elements */
-    .form-check-input:checked {
-        background-color: var(--brand-red);
-        border-color: var(--brand-red);
-    }
+/* Test Card Styling */
+.test-card {
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+    cursor: pointer;
+}
 
-    .tests-selection .form-check {
-        padding: 0.75rem;
-        border-radius: 8px;
-        transition: all 0.3s ease;
-        border: 1px solid transparent;
-    }
+.test-card:hover {
+    border-color: #0d6efd;
+    box-shadow: 0 0.25rem 0.5rem rgba(13, 110, 253, 0.15);
+    transform: translateY(-2px);
+}
 
-    .tests-selection .form-check:hover {
-        background-color: rgba(0, 31, 64, 0.02);
-        border-color: var(--brand-red);
-    }
+.test-checkbox:checked + label {
+    font-weight: 600;
+}
 
-    .tests-selection .form-check-label {
-        font-weight: 500;
-        cursor: pointer;
-        width: 100%;
-    }
+.test-checkbox:checked ~ * .test-card,
+.test-item:has(.test-checkbox:checked) .test-card {
+    border-color: #198754;
+    background-color: rgba(25, 135, 84, 0.05);
+}
 
-    #newPatientSection {
-        transition: all 0.3s ease;
-    }
+/* Patient Select Styling */
+#id_existing_patient {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+}
 
-    .test-item hr {
-        margin: 0.5rem 0;
-    }
+#id_existing_patient option {
+    padding: 0.5rem;
+    border-bottom: 1px solid #f8f9fa;
+}
 
-    .remove-test {
-        padding: 0.1rem 0.3rem;
-        font-size: 0.7rem;
-    }
+#id_existing_patient option:hover {
+    background-color: #e7f1ff;
+}
 
-    #testSelectionCollapse .card {
-        border: 1px solid var(--brand-red);
-    }
+/* Scrollbar Styling */
+.tests-container::-webkit-scrollbar,
+#id_existing_patient::-webkit-scrollbar {
+    width: 8px;
+}
 
-    /* Scrollbar styling for test selection */
-    .tests-selection::-webkit-scrollbar {
-        width: 6px;
-    }
+.tests-container::-webkit-scrollbar-track,
+#id_existing_patient::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
 
-    .tests-selection::-webkit-scrollbar-track {
-        background: #f1f1f1;
-        border-radius: 3px;
-    }
+.tests-container::-webkit-scrollbar-thumb,
+#id_existing_patient::-webkit-scrollbar-thumb {
+    background: #0d6efd;
+    border-radius: 4px;
+}
 
-    .tests-selection::-webkit-scrollbar-thumb {
-        background: var(--brand-red);
-        border-radius: 3px;
-    }
+.tests-container::-webkit-scrollbar-thumb:hover,
+#id_existing_patient::-webkit-scrollbar-thumb:hover {
+    background: #0b5ed7;
+}
 
-    .tests-selection::-webkit-scrollbar-thumb:hover {
-        background: #b3002d;
-    }
+/* Remove test button */
+.remove-test {
+    padding: 0.15rem 0.4rem;
+    font-size: 0.75rem;
+    line-height: 1;
+}
+
+/* Form check input */
+.form-check-input:checked {
+    background-color: #198754;
+    border-color: #198754;
+}
+
+/* Transition for new patient section */
+#newPatientSection {
+    transition: all 0.3s ease;
+}
+
+/* Search input focus */
+.input-group:focus-within .input-group-text {
+    border-color: #0d6efd;
+    background-color: #e7f1ff;
+}
+
+/* Alert animations */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+.border-danger {
+    animation: shake 0.5s;
+}
 </style>
 {% endblock %}

@@ -1,0 +1,32 @@
+{% extends "learn/facilitator/base.html" %}
+{% block title %}{{ course.title }}{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-semibold mb-6">{{ course.title }}</h1>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+
+    <div class="bg-white p-6 rounded-xl shadow">
+        <p class="text-sm text-gray-500">Enrollments</p>
+        <p class="text-2xl font-bold">{{ total_enrollments }}</p>
+    </div>
+
+    <div class="bg-white p-6 rounded-xl shadow">
+        <p class="text-sm text-gray-500">Completion Rate</p>
+        <p class="text-2xl font-bold">{{ completion_rate }}</p>
+    </div>
+
+    <div class="bg-white p-6 rounded-xl shadow">
+        <p class="text-sm text-gray-500">Avg Progress</p>
+        <p class="text-2xl font-bold">{{ avg_progress }}%</p>
+    </div>
+
+</div>
+
+{% if dropoff_lesson %}
+<div class="bg-white p-6 rounded-xl shadow">
+    <h3 class="font-semibold mb-2">Highest Drop-off Lesson</h3>
+    <p class="text-gray-700">{{ dropoff_lesson.lesson__title }}</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,21 @@
+<div class="relative">
+    <!-- Timeline line -->
+    <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200"></div>
+    
+    {% for event in timeline_events %}
+    <div class="relative flex items-start mb-4 last:mb-0">
+        <div class="flex-shrink-0">
+            <div class="w-8 h-8 rounded-full {{ event.bg_class }} flex items-center justify-center">
+                <i class="fas fa-{{ event.icon }} {{ event.icon_class }}"></i>
+            </div>
+        </div>
+        <div class="ml-4">
+            <p class="font-medium text-gray-900">{{ event.title }}</p>
+            <p class="text-sm text-gray-500">{{ event.date|date:"M d, Y • g:i a" }}</p>
+            {% if event.description %}
+            <p class="text-sm text-gray-600 mt-1">{{ event.description }}</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>

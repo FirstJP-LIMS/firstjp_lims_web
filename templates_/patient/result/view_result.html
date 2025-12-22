@@ -1,0 +1,221 @@
+{% extends "patient/assets/base.html" %}
+{% load static humanize %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex justify-between items-start">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Test Results</h1>
+                <p class="text-gray-600 mt-2">
+                    Order: <span class="font-mono">{{ test_request.request_id }}</span>
+                    • Verified: {{ test_request.verified_at|date:"M d, Y" }}
+                </p>
+            </div>
+            <div class="flex gap-2">
+                <a href="{% url 'patients:download_results' test_request.request_id %}" 
+                   class="btn btn-outline">
+                    <i class="fas fa-download mr-2"></i> Download
+                </a>
+                <a href="{% url 'patients:order_detail' test_request.request_id %}" 
+                   class="btn btn-ghost">
+                    <i class="fas fa-arrow-left mr-2"></i> Back to Order
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Critical Alert -->
+    {% if has_critical %}
+    <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+        <div class="flex items-center">
+            <i class="fas fa-exclamation-triangle text-red-500 text-xl mr-3"></i>
+            <div>
+                <h3 class="font-semibold text-red-800">Important Medical Alert</h3>
+                <p class="text-red-700 text-sm mt-1">
+                    Some results require immediate medical attention. Please contact your healthcare provider.
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Patient Info Card -->
+    <div class="bg-white rounded-lg border p-6 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+                <h3 class="text-sm font-medium text-gray-700 mb-2">Patient Information</h3>
+                <p class="font-medium">{{ patient.first_name }} {{ patient.last_name }}</p>
+                <p class="text-sm text-gray-500 mt-1">ID: {{ patient.patient_id }}</p>
+            </div>
+            <div>
+                <h3 class="text-sm font-medium text-gray-700 mb-2">Demographics</h3>
+                <p>{{ patient.get_gender_display }}</p>
+                {% if patient.date_of_birth %}
+                <p class="text-sm text-gray-500">{{ patient.date_of_birth|date:"M d, Y" }}</p>
+                {% endif %}
+            </div>
+            <div>
+                <h3 class="text-sm font-medium text-gray-700 mb-2">Order Details</h3>
+                <p class="font-mono">{{ test_request.request_id }}</p>
+                <p class="text-sm text-gray-500">Collected: {{ test_request.collected_at|date:"M d, Y" }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Table -->
+    <div class="bg-white rounded-lg border overflow-hidden mb-6">
+        <div class="px-6 py-4 border-b bg-gray-50">
+            <h2 class="text-lg font-semibold text-gray-900">Test Results</h2>
+            <p class="text-sm text-gray-600 mt-1">{{ results.count }} tests completed</p>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Test</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Result</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reference Range</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Flag</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for result in results %}
+                    <tr class="{% if result.flag == 'C' %}bg-red-50{% elif result.flag in 'HL' %}bg-yellow-50{% endif %}">
+                        <td class="px-6 py-4">
+                            <div class="font-medium text-gray-900">{{ result.assignment.lab_test.name }}</div>
+                            <div class="text-sm text-gray-500">{{ result.assignment.lab_test.code }}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="font-semibold">{{ result.formatted_result }}</div>
+                            {% if result.unit %}
+                            <div class="text-sm text-gray-500">{{ result.unit }}</div>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-sm">
+                            {{ result.reference_range|default:"N/A" }}
+                        </td>
+                        <td class="px-6 py-4">
+                            {% if result.flag == 'N' %}
+                            <span class="badge badge-success">Normal</span>
+                            {% elif result.flag == 'L' %}
+                            <span class="badge badge-warning">Low</span>
+                            {% elif result.flag == 'H' %}
+                            <span class="badge badge-warning">High</span>
+                            {% elif result.flag == 'C' %}
+                            <span class="badge badge-error">Critical</span>
+                            {% elif result.flag == 'A' %}
+                            <span class="badge badge-warning">Abnormal</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    
+                    {% if result.remarks %}
+                    <tr class="bg-gray-50">
+                        <td colspan="4" class="px-6 py-3 text-sm text-gray-600">
+                            <div class="flex">
+                                <i class="fas fa-comment mr-2 mt-0.5 text-gray-400"></i>
+                                <span>{{ result.remarks }}</span>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="px-6 py-12 text-center text-gray-500">
+                            <i class="fas fa-flask text-3xl mb-3 text-gray-300"></i>
+                            <p>No results available yet</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Interpretive Comments -->
+    {% for result in results %}
+        {% if result.interpretive_comment %}
+        <div class="bg-white rounded-lg border p-6 mb-4">
+            <h3 class="font-semibold text-gray-900 mb-2">{{ result.assignment.lab_test.name }}</h3>
+            <div class="prose prose-sm max-w-none">
+                {{ result.interpretive_comment|linebreaks }}
+            </div>
+        </div>
+        {% endif %}
+    {% endfor %}
+
+    <!-- Medical Disclaimer -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+        <div class="flex items-start">
+            <i class="fas fa-stethoscope text-blue-500 text-xl mr-3 mt-0.5"></i>
+            <div>
+                <h3 class="font-semibold text-blue-800 mb-2">Important Medical Disclaimer</h3>
+                <div class="text-blue-700 text-sm space-y-2">
+                    <p>• These results should be interpreted by a qualified healthcare provider.</p>
+                    <p>• Do not use these results for self-diagnosis or treatment.</p>
+                    <p>• Contact your doctor if you have questions or concerns about your results.</p>
+                    {% if has_critical %}
+                    <p class="font-semibold">• Results marked as CRITICAL require immediate medical attention.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer Info -->
+    <div class="mt-6 text-center text-sm text-gray-500">
+        <p>
+            Verified by: {{ test_request.verified_by.get_full_name|default:"Laboratory Director" }}
+            • Released to patient: {{ test_request.patient_viewed_results_at|date:"M d, Y" }}
+        </p>
+        <p class="mt-2">{{ test_request.vendor.name }}</p>
+    </div>
+</div>
+
+
+
+<script>
+// Print functionality
+function printResults() {
+    window.print();
+}
+</script>
+
+
+<!-- Add to view_results.html before closing content block -->
+{% if not test_request.patient_viewed_results_at %}
+<div id="resultsModal" class="modal modal-open">
+    <div class="modal-box">
+        <h3 class="text-lg font-bold mb-4">Your Results Are Ready</h3>
+        <div class="space-y-4">
+            <p class="text-gray-600">
+                Your test results have been reviewed and released. Please review them carefully.
+            </p>
+            {% if has_critical %}
+            <div class="p-3 bg-red-50 border border-red-200 rounded">
+                <div class="flex items-center">
+                    <i class="fas fa-exclamation-triangle text-red-500 mr-3"></i>
+                    <p class="text-red-700">
+                        <strong>Important:</strong> Some results require immediate medical attention.
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+            <div class="modal-action">
+                <button onclick="closeModal()" class="btn btn-primary">View Results</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function closeModal() {
+    document.getElementById('resultsModal').classList.remove('modal-open');
+}
+</script>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "clinician/assets/base.html" %}
+
+{% block content %}
+<div class="min-h-screen flex bg-gray-50">
+
+    {% include "clinician/assets/sidebar.html" %}
+
+    <main class="flex-1 md:ml-64 p-6">
+        <div class="max-w-6xl mx-auto">
+
+            <h1 class="text-2xl font-semibold mb-6">My Patients</h1>
+
+            <div class="bg-white shadow rounded overflow-x-auto">
+                <table class="table table-zebra w-full">
+                    <thead>
+                        <tr>
+                            <th>Patient ID</th>
+                            <th>Name</th>
+                            <th>Total Tests</th>
+                            <th>Last Test</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for patient in patients %}
+                        <tr>
+                            <td>{{ patient.patient_id }}</td>
+                            <td>{{ patient.first_name }} {{ patient.last_name }}</td>
+                            <td>{{ patient.total_tests }}</td>
+                            <td>{{ patient.last_test_date|date:"Y-m-d" }}</td>
+                            <td>
+                                <a href="{% url 'clinician:patient_detail' patient.patient_id %}"
+                                   class="btn btn-sm btn-outline btn-primary">
+                                    Open
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-gray-500">
+                                No active patients.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </main>
+</div>
+{% endblock %}

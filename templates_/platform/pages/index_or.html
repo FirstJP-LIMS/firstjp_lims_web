@@ -1,0 +1,258 @@
+{% extends "platform/assets/base.html" %}
+{% block content %}
+
+<!-- Hero section -->
+<section class="bg-gray-50 py-8 lg:py-14 overflow-hidden">
+  <div class="max-w-7xl mx-auto px-4 lg:px-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 items-center gap-0">
+
+      <!-- LEFT: TEXT -->
+      <div class="space-y-5">
+
+        <!-- Badge & Tagline -->
+        <div class="space-y-2">
+          <span class="inline-flex items-center bg-[#183153] text-white font-semibold text-[11px] tracking-wider px-3 py-1 rounded-full w-fit">
+            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03z" clip-rule="evenodd"/>
+            </svg>
+            A Product of FIRSTJP CONSULT
+          </span>
+
+          <div class="flex items-center gap-2">
+            <div class="h-[2px] w-5 bg-[#D4AF37]"></div>
+            <span class="text-[#D4AF37] font-semibold tracking-wider text-xs uppercase">
+              AI-Powered & Performance Optimized
+            </span>
+            <div class="h-[2px] w-5 bg-[#D4AF37]"></div>
+          </div>
+        </div>
+
+        <!-- Headline -->
+        <h1 class="text-4xl lg:text-6xl text-[#183153] font-extrabold leading-tight tracking-tight">
+         Smarter Workflows <br class="hidden sm:block" />for Laboratories
+        </h1>
+
+        <!-- Description -->
+        <p class="text-gray-900 text-base lg:text-lg leading-relaxed max-w-md">
+          Medvuno is an AI-driven LIMS engineered by
+          <span class="font-semibold text-black"> FIRSTJP </span>
+          for modern laboratories—automating workflows, enforcing compliance,
+          and enabling scalable diagnostic operations.
+        </p>
+
+        <!-- CTA -->
+        <div class="flex flex-wrap gap-3 pt-2">
+          <a href="#pricing"
+             class="btn bg-[#E63946] hover:bg-red-700 border-none text-white px-8 btn-md shadow-md">
+            View Pricing
+          </a>
+          <a href="#"
+             class="btn btn-outline border-[#183153] text-[#183153] hover:bg-[#183153] hover:text-white px-8 btn-md">
+            Request Demo
+          </a>
+        </div>
+      </div>
+
+      <!-- RIGHT: IMAGE -->
+      <div class="relative flex justify-center md:justify-end">
+        <div class="absolute inset-0 bg-blue-200 blur-3xl opacity-20 rounded-full"></div>
+        <img 
+          src="https://creliohealth.com/assets/img/us-home/Banner-image.svg" 
+          alt="Medvuno LIMS Platform" 
+          class="relative w-full max-w-lg object-contain drop-shadow-xl"
+        />
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- PARENT COMPANY -->
+<section class="bg-white py-20 border-b">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="flex flex-col lg:flex-row items-center gap-12">
+      <div class="lg:w-1/2 space-y-6">
+        <div class="inline-block bg-[#183153]/5 text-[#183153] px-4 py-1 rounded-full text-sm font-bold tracking-wide uppercase">
+          The Engineering Behind Medvuno
+        </div>
+        <h2 class="text-3xl md:text-4xl font-extrabold text-[#183153] leading-tight">
+          Developed & Managed by <br/>
+          <span class="text-[#D4AF37]">First JP International Consult</span>
+        </h2>
+        <p class="text-gray-600 text-lg leading-relaxed">
+          A global leader in healthcare technology and quality management. We bridge the gap between laboratory science and digital innovation, ensuring every module in Medvuno meets the rigorous standards of modern healthcare.
+        </p>
+      </div>
+
+      <div class="lg:w-1/2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="flex items-start gap-3 p-4 rounded-xl bg-gray-50 border border-gray-100 transition-hover hover:shadow-md">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-[#D4AF37]" fill="none" viewBox="0 0 24 24" stroke="currentColor font-bold"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          <span class="text-sm font-bold text-[#183153]">ISO 15189:2022 Experts</span>
+        </div>
+        <div class="flex items-start gap-3 p-4 rounded-xl bg-gray-50 border border-gray-100">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-[#D4AF37]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.644.322a6 6 0 01-3.86.517l-2.387-.477a2 2 0 00-1.022.547l-1.168 1.168a2 2 0 001.414 3.414h15a2 2 0 001.414-3.414l-1.168-1.168z" /></svg>
+          <span class="text-sm font-bold text-[#183153]">Regulatory Advisory</span>
+        </div>
+        <div class="flex items-start gap-3 p-4 rounded-xl bg-gray-50 border border-gray-100">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-[#D4AF37]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+          <span class="text-sm font-bold text-[#183153]">Digital Transformation</span>
+        </div>
+        <div class="flex items-start gap-3 p-4 rounded-xl bg-gray-50 border border-gray-100">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-[#D4AF37]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+          <span class="text-sm font-bold text-[#183153]">Quality Management</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="bg-gray-50 py-24">
+  <div class="max-w-7xl mx-auto px-6 lg:px-12">
+    <div class="text-center mb-16 space-y-4">
+      <h2 class="text-4xl md:text-5xl font-extrabold text-[#183153]">
+        Built for Regulated Laboratories
+      </h2>
+      <p class="mt-4 text-gray-500 text-lg max-w-2xl mx-auto">
+        Sophisticated tools designed to automate complex workflows while maintaining strict compliance.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div class="card bg-white border border-gray-100 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl group">
+        <div class="card-body p-10">
+          <div class="w-12 h-12 bg-[#E63946]/10 flex items-center justify-center rounded-lg mb-4 group-hover:bg-[#E63946] transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-[#E63946] group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+          </div>
+          <h3 class="text-xl font-bold text-[#183153] group-hover:text-[#E63946] transition-colors">Workflow Automation</h3>
+          <p class="text-gray-600 mt-2">
+            Automate sample lifecycle tracking, result validation, and clinical reporting to cut turnaround times by up to 40%.
+          </p>
+        </div>
+      </div>
+
+      <div class="card bg-white border border-gray-100 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl group">
+        <div class="card-body p-10">
+          <div class="w-12 h-12 bg-[#D4AF37]/10 flex items-center justify-center rounded-lg mb-4 group-hover:bg-[#D4AF37] transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-[#D4AF37] group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.040L3 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622l-.382-3.016z" /></svg>
+          </div>
+          <h3 class="text-xl font-bold text-[#183153] group-hover:text-[#D4AF37] transition-colors">ISO-Ready Architecture</h3>
+          <p class="text-gray-600 mt-2">
+            Built-in support for ISO 15189:2022. Manage digital audit trails, quality indicators, and non-conformance reports effortlessly.
+          </p>
+        </div>
+      </div>
+
+      <div class="card bg-white border border-gray-100 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl group">
+        <div class="card-body p-10">
+          <div class="w-12 h-12 bg-[#183153]/10 flex items-center justify-center rounded-lg mb-4 group-hover:bg-[#183153] transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-[#183153] group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
+          </div>
+          <h3 class="text-xl font-bold text-[#183153] group-hover:text-[#183153] transition-colors">Analyzer Integration</h3>
+          <p class="text-gray-600 mt-2">
+            Seamlessly connect your lab equipment. We support bidirectional data flow via HL7 and enterprise-grade APIs.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="bg-white py-10">
+  <div class="max-w-7xl mx-auto px-6 lg:px-12">
+    <div class="text-center mb-16">
+      <h2 class="text-3xl md:text-4xl font-bold text-[#0A1A44]">
+        Powerful Features Built for Modern Laboratories
+      </h2>
+      <p class="mt-4 text-gray-600 max-w-2xl mx-auto">
+        Empower your medical lab with innovative technology and seamless automation.
+      </p>
+    </div>
+
+    <div class="relative space-y-12">
+      <div class="flex flex-col md:flex-row items-center gap-6 md:gap-12">
+        <div class="flex-shrink-0">
+          <div class="w-16 h-16 flex items-center justify-center bg-[#E63946]/10 rounded-2xl">
+            <!-- Lucide Globe -->
+            <svg class="w-8 h-8 text-[#E63946]" fill="none" stroke="currentColor" stroke-width="2"
+                 viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10"></path>
+            </svg>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="text-xl font-semibold text-[#0A1A44] mb-2">Own Your Unique Domain</h3>
+          <p class="text-gray-600">
+            Give your lab a strong online identity with a custom domain name.
+          </p>
+        </div>
+      </div>
+
+      <!-- CARD 2 (Offset) -->
+      <div class="flex flex-col md:flex-row-reverse items-center gap-6 md:gap-12 md:ml-20">
+        <div class="flex-shrink-0">
+          <div class="w-16 h-16 flex items-center justify-center bg-[#0A1A44]/10 rounded-2xl">
+            <!-- Lucide Users -->
+            <svg class="w-8 h-8 text-[#0A1A44]" fill="none" stroke="currentColor" stroke-width="2"
+                 viewBox="0 0 24 24">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+              <circle cx="19" cy="7" r="3"></circle>
+            </svg>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="text-xl font-semibold text-[#0A1A44] mb-2">Manage Your Patients</h3>
+          <p class="text-gray-600">
+            Track patient data and results with an intuitive centralized dashboard.
+          </p>
+        </div>
+      </div>
+
+      <!-- CARD 3 -->
+      <div class="flex flex-col md:flex-row items-center gap-6 md:gap-12 md:ml-40">
+        <div class="flex-shrink-0">
+          <div class="w-16 h-16 flex items-center justify-center bg-[#D4AF37]/10 rounded-2xl">
+            <!-- Lucide Cpu -->
+            <svg class="w-8 h-8 text-[#D4AF37]" fill="none" stroke="currentColor" stroke-width="2"
+                 viewBox="0 0 24 24">
+              <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+              <rect x="9" y="9" width="6" height="6"></rect>
+              <line x1="9" y1="1" x2="9" y2="4"></line>
+              <line x1="15" y1="1" x2="15" y2="4"></line>
+              <line x1="9" y1="20" x2="9" y2="23"></line>
+              <line x1="15" y1="20" x2="15" y2="23"></line>
+            </svg>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="text-xl font-semibold text-[#0A1A44] mb-2">Advanced AI-Powered LIMS</h3>
+          <p class="text-gray-600">
+            Automate workflows, reduce errors, and optimize route-to-result time.
+          </p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- CTA Button -->
+    <div class="text-center mt-16">
+      <a href="#"
+         class="inline-block bg-[#E63946] hover:bg-red-700 text-white px-8 py-4 rounded-xl shadow-lg font-semibold text-lg transition">
+        Start Free Trial
+      </a>
+    </div>
+
+  </div>
+</section>
+
+{% endblock content %}
+
+

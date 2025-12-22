@@ -67,7 +67,12 @@
                         </div>
                         {% endif %}
 
-                        <!-- Basic Information -->
+                        <!-- Section 1: Basic Information -->
+                        <div class="section-header mb-4">
+                            <h6 class="text-brand-blue mb-3">
+                                <i class="bi bi-info-circle me-2"></i>Basic Information
+                            </h6>
+                        </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 {{ form.code|as_crispy_field }}
@@ -76,57 +81,117 @@
                                 {{ form.name|as_crispy_field }}
                             </div>
                         </div>
-
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 {{ form.assigned_department|as_crispy_field }}
                             </div>
+                        </div>
+
+                        <!-- Section 2: Pricing & Availability -->
+                        <div class="section-header mb-4 mt-4">
+                            <h6 class="text-brand-blue mb-3">
+                                <i class="bi bi-currency-dollar me-2"></i>Pricing & Availability
+                            </h6>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.price|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <div class="form-check form-switch">
+                                    {{ form.enabled|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="form-check form-switch">
+                                    {{ form.available_for_online_booking|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="form-check form-switch">
+                                    {{ form.requires_physician_approval|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section 3: Technical Details -->
+                        <div class="section-header mb-4 mt-4">
+                            <h6 class="text-brand-blue mb-3">
+                                <i class="bi bi-gear me-2"></i>Technical Details
+                            </h6>
+                        </div>
+                        <div class="row">
                             <div class="col-md-6 mb-3">
                                 {{ form.specimen_type|as_crispy_field }}
                             </div>
-                        </div>
-
-                        <!-- Pricing & Configuration -->
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                {{ form.price|as_crispy_field }}
+                            <div class="col-md-6 mb-3">
+                                {{ form.method|as_crispy_field }}
                             </div>
-                            <div class="col-md-4 mb-3">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.platform|as_crispy_field }}
+                            </div>
+                            <div class="col-md-3 mb-3">
                                 {{ form.result_type|as_crispy_field }}
                             </div>
-                            <div class="col-md-4 mb-3">
-                                {{ form.enabled|as_crispy_field }}
+                            <div class="col-md-3 mb-3">
+                                {{ form.default_units|as_crispy_field }}
                             </div>
                         </div>
-
-                        <!-- Turnaround Time -->
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 {{ form.turnaround_override|as_crispy_field }}
                             </div>
-                            <div class="col-md-6 mb-3">
-                                {{ form.default_units|as_crispy_field }}
+                        </div>
+
+                        <!-- Section 4: Patient Information -->
+                        <div class="section-header mb-4 mt-4">
+                            <h6 class="text-brand-blue mb-3">
+                                <i class="bi bi-person me-2"></i>Patient Information
+                            </h6>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <div class="form-check form-switch">
+                                    {{ form.preparation_required|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                {{ form.preparation_instructions|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                {{ form.collection_instructions|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                {{ form.patient_friendly_description|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                {{ form.typical_reasons|as_crispy_field }}
                             </div>
                         </div>
 
-                        <!-- Reference Ranges -->
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                {{ form.amr_low|as_crispy_field }}
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                {{ form.amr_high|as_crispy_field }}
-                            </div>
+                        <!-- Section 5: Reference Ranges -->
+                        <div class="section-header mb-4 mt-4">
+                            <h6 class="text-brand-blue mb-3">
+                                <i class="bi bi-graph-up me-2"></i>Reference Ranges
+                            </h6>
                         </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                {{ form.reportable_low|as_crispy_field }}
+                        
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Normal Reference Range</label>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                {{ form.reportable_high|as_crispy_field }}
-                            </div>
-                        </div>
-                        <div class="row">
                             <div class="col-md-6 mb-3">
                                 {{ form.min_reference_value|as_crispy_field }}
                             </div>
@@ -134,7 +199,35 @@
                                 {{ form.max_reference_value|as_crispy_field }}
                             </div>
                         </div>
-                        <div class="row">
+
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Analytical Measurement Range (AMR)</label>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.amr_low|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.amr_high|as_crispy_field }}
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Reportable Range</label>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.reportable_low|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.reportable_high|as_crispy_field }}
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Panic/Critical Values</label>
+                            </div>
                             <div class="col-md-6 mb-3">
                                 {{ form.panic_low_value|as_crispy_field }}
                             </div>
@@ -142,12 +235,28 @@
                                 {{ form.panic_high_value|as_crispy_field }}
                             </div>
                         </div>
-                        <!-- Comments -->
-                        <div class="mb-4">
-                            {{ form.general_comment_template|as_crispy_field }}
+
+                        <!-- Section 6: Advanced Settings -->
+                        <div class="section-header mb-4 mt-4">
+                            <h6 class="text-brand-blue mb-3">
+                                <i class="bi bi-sliders me-2"></i>Advanced Settings
+                            </h6>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                {{ form.general_comment_template|as_crispy_field }}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12 mb-4">
+                                <div class="form-check form-switch">
+                                    {{ form.enabled_for_autoverify|as_crispy_field }}
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="d-flex gap-2 justify-content-between">
+                        <!-- Form Actions -->
+                        <div class="d-flex gap-2 justify-content-between mt-4 pt-3 border-top">
                             <a href="{% url 'labs:test_list' %}" class="btn btn-outline-red">
                                 <i class="bi bi-x-circle me-2"></i>Cancel
                             </a>
@@ -179,6 +288,7 @@
                         <li><i class="bi bi-check text-success me-2"></i>Use short, unique codes</li>
                         <li><i class="bi bi-check text-success me-2"></i>Examples: HGB, WBC, GLU</li>
                         <li><i class="bi bi-check text-success me-2"></i>Maximum 64 characters</li>
+                        <li><i class="bi bi-check text-success me-2"></i>Codes are unique per vendor</li>
                     </ul>
 
                     <h6 class="text-brand-blue">Result Types</h6>
@@ -191,7 +301,19 @@
                     <p class="small text-muted">Format: HH:MM:SS<br>Example: 4:00:00 for 4 hours</p>
 
                     <h6 class="text-brand-blue">Reference Ranges</h6>
-                    <p class="small text-muted">Examples:<br>• 12.0 - 16.0 g/dL<br>• Negative<br>• 0 - 5 cells/HPF</p>
+                    <p class="small text-muted">
+                        <strong>Normal Range:</strong> Expected values for healthy patients<br>
+                        <strong>AMR:</strong> Analytical measurement range of instrument<br>
+                        <strong>Reportable:</strong> Range lab can verify results<br>
+                        <strong>Panic:</strong> Critical values requiring immediate attention
+                    </p>
+
+                    <h6 class="text-brand-blue">Field Tips</h6>
+                    <ul class="list-unstyled small">
+                        <li><i class="bi bi-lightbulb text-warning me-2"></i>Preparation instructions are required when "Preparation Required" is checked</li>
+                        <li><i class="bi bi-lightbulb text-warning me-2"></i>Patient-friendly description should use simple, non-technical language</li>
+                        <li><i class="bi bi-lightbulb text-warning me-2"></i>Reference ranges must have min &lt; max</li>
+                    </ul>
                 </div>
             </div>
 
@@ -226,5 +348,33 @@
         background-color: var(--brand-red);
         border-color: var(--brand-red);
     }
+    
+    .section-header {
+        border-bottom: 2px solid var(--brand-blue-light);
+        padding-bottom: 0.5rem;
+    }
+    
+    .form-switch .form-check-input {
+        width: 3em;
+        height: 1.5em;
+    }
+    
+    /* Improve form spacing */
+    .form-group {
+        margin-bottom: 1rem;
+    }
+    
+    /* Better styling for switch labels */
+    .form-check-label {
+        font-weight: 500;
+        color: #495057;
+    }
+    
+    /* Help text styling */
+    .form-text {
+        font-size: 0.85rem;
+        color: #6c757d !important;
+    }
 </style>
+
 {% endblock %}

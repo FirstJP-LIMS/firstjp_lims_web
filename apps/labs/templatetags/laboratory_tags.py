@@ -153,3 +153,10 @@ def can_perform_action(assignment, action):
             not assignment.result.released
         )
     return False
+
+
+@register.filter
+def status_badge(enabled):
+    if enabled:
+        return '<span class="badge bg-success bg-opacity-15 text-success border-0"><i class="bi bi-check-circle me-1"></i> Active</span>'
+    return '<span class="badge bg-secondary bg-opacity-15 text-secondary border-0"><i class="bi bi-pause-circle me-1"></i> Inactive</span>'

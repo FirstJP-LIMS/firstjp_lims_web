@@ -1,0 +1,33 @@
+{% extends "learn/facilitator/base.html" %}
+{% block title %}Pending Assignments{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-semibold mb-6">Pending Assignments</h1>
+
+<div class="bg-white rounded-xl shadow overflow-x-auto">
+<table class="min-w-full text-sm">
+    <thead class="bg-gray-100">
+        <tr>
+            <th class="px-6 py-3 text-left">Student</th>
+            <th class="px-6 py-3">Assignment</th>
+            <th class="px-6 py-3">Submitted</th>
+            <th class="px-6 py-3">Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for submission in submissions %}
+        <tr class="border-t">
+            <td class="px-6 py-3">{{ submission.student.get_full_name }}</td>
+            <td class="px-6 py-3">{{ submission.assignment.title }}</td>
+            <td class="px-6 py-3">{{ submission.created_at }}</td>
+            <td class="px-6 py-3">
+                <a href="#" class="text-blue-600 hover:underline">
+                    Grade
+                </a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}

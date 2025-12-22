@@ -1,0 +1,156 @@
+{% extends "patient/assets/base.html" %}
+{% load static humanize %}
+{% load patient_extras %}
+
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex justify-between items-start">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <h1 class="text-2xl font-bold text-gray-900">Order: {{ test_request.request_id }}</h1>
+                    <span class="badge badge-{{ test_request.status }}">
+                        {{ test_request.get_status_display }}
+                    </span>
+                    {% if test_request.requires_approval %}
+                    <span class="badge badge-warning">Pending Approval</span>
+                    {% endif %}
+                </div>
+                <p class="text-gray-600">
+                    Created {{ test_request.created_at|timesince }} ago • 
+                    {% if test_request.collected_at %}
+                        Collected {{ test_request.collected_at|timesince }} ago
+                    {% else %}
+                        Not yet collected
+                    {% endif %}
+                </p>
+            </div>
+            <a href="{% url 'patients:orders_list' %}" class="btn btn-ghost">
+                <i class="fas fa-arrow-left mr-2"></i> Back
+            </a>
+        </div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="bg-white rounded-lg border p-6 mb-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Order Status</h2>
+        <div class="space-y-4">
+            {% include 'patient/test_order/partials/timeline.html' %}
+        </div>
+    </div>
+
+    <!-- Tests -->
+    <div class="bg-white rounded-lg border p-6 mb-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Tests Requested</h2>
+        <div class="space-y-4">
+            {% for test in test_request.requested_tests.all %}
+            <div class="p-4 border rounded-lg">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h3 class="font-medium text-gray-900">{{ test.name }}</h3>
+                        <p class="text-sm text-gray-500">{{ test.code }} • {{ test.assigned_department.name }}</p>
+                        {% if test.preparation_instructions %}
+                        <div class="mt-2 text-sm text-gray-600">
+                            <strong>Preparation:</strong> {{ test.preparation_instructions }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <span class="font-semibold">₦{{ test.price|floatformat:2 }}</span>
+                </div>
+            </div>
+            {% endfor %}
+            
+            <!-- Total -->
+            <div class="pt-4 border-t">
+                <div class="flex justify-between items-center">
+                    <span class="text-lg font-semibold">Total</span>
+                    <span class="text-xl font-bold text-primary">
+                        ₦{{ test_request.calculate_total|default:"0.00"|intcomma }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Information -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <!-- Patient Info -->
+        <div class="bg-white rounded-lg border p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Patient Information</h2>
+            <div class="space-y-3">
+                <div>
+                    <p class="text-sm text-gray-600">Name</p>
+                    <p class="font-medium">{{ patient.first_name }} {{ patient.last_name }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">Patient ID</p>
+                    <p class="font-mono">{{ patient.patient_id }}</p>
+                </div>
+                {% if test_request.reason_for_testing %}
+                <div>
+                    <p class="text-sm text-gray-600">Reason for Testing</p>
+                    <p class="font-medium">{{ test_request.reason_for_testing }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Order Details -->
+        <div class="bg-white rounded-lg border p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Order Details</h2>
+            <div class="space-y-3">
+                <div>
+                    <p class="text-sm text-gray-600">Order ID</p>
+                    <p class="font-mono">{{ test_request.request_id }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">Created</p>
+                    <p>{{ test_request.created_at|date:"F j, Y, g:i a" }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">Status</p>
+                    <span class="badge badge-{{ test_request.status }}">
+                        {{ test_request.get_status_display }}
+                    </span>
+                </div>
+                {% if test_request.requires_approval %}
+                <div class="p-3 bg-yellow-50 border border-yellow-200 rounded">
+                    <p class="text-sm text-yellow-700">
+                        <i class="fas fa-clock mr-2"></i>
+                        This order requires physician approval before processing.
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    {% if test_request.status == 'pending' %}
+    <div class="bg-white rounded-lg border p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Next Steps</h2>
+        <div class="space-y-4">
+            {% if test_request.requires_approval %}
+            <p class="text-gray-600">
+                Your request is pending physician review. We'll notify you once it's approved.
+            </p>
+            {% else %}
+            <p class="text-gray-600">
+                Your order is ready for sample collection. Please visit the lab or schedule a home collection.
+            </p>
+            <div class="flex gap-4">
+                <button class="btn btn-primary">
+                    <i class="fas fa-calendar mr-2"></i> Schedule Collection
+                </button>
+                <a href="#" class="btn btn-outline">
+                    <i class="fas fa-download mr-2"></i> Download Requisition
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,149 @@
+{% extends "patient/assets/base.html" %}
+{% load static humanize %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-gray-900">My Test Orders</h1>
+        <p class="text-gray-600 mt-2">View all your test requests</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white p-4 rounded-lg border">
+            <p class="text-sm text-gray-600">Total Orders</p>
+            <p class="text-2xl font-bold">{{ orders.paginator.count }}</p>
+        </div>
+        <div class="bg-white p-4 rounded-lg border">
+            <p class="text-sm text-gray-600">Pending</p>
+            <p class="text-2xl font-bold">{{ orders|get_pending_count }}</p>
+        </div>
+        <div class="bg-white p-4 rounded-lg border">
+            <p class="text-sm text-gray-600">Completed</p>
+            <p class="text-2xl font-bold">{{ orders|get_completed_count }}</p>
+        </div>
+        <div class="bg-white p-4 rounded-lg border">
+            <p class="text-sm text-gray-600">Requires Action</p>
+            <p class="text-2xl font-bold">{{ orders|get_approval_count }}</p>
+        </div>
+    </div>
+
+    <!-- Filter -->
+    <div class="bg-white rounded-lg border p-4 mb-6">
+        <form method="GET" class="flex gap-4">
+            <select name="status" class="select select-bordered flex-1" onchange="this.form.submit()">
+                <option value="">All Statuses</option>
+                <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="collected" {% if status_filter == 'collected' %}selected{% endif %}>Collected</option>
+                <option value="processing" {% if status_filter == 'processing' %}selected{% endif %}>Processing</option>
+                <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
+                <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
+            </select>
+            <a href="{% url 'patients:create_order' %}" class="btn btn-primary">
+                <i class="fas fa-plus mr-2"></i> New Request
+            </a>
+        </form>
+    </div>
+
+    <!-- Orders Table -->
+    <div class="bg-white rounded-lg border overflow-hidden">
+        {% if orders %}
+        <div class="overflow-x-auto">
+            <table class="table table-zebra">
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Tests</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                        <th>Cost</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr>
+                        <td class="font-mono">{{ order.request_id }}</td>
+                        <td>
+                            <div>{{ order.requested_tests.count }} tests</div>
+                            <div class="text-xs text-gray-500">
+                                {% for test in order.requested_tests.all|slice:":2" %}
+                                    {{ test.code }}{% if not forloop.last %}, {% endif %}
+                                {% endfor %}
+                                {% if order.requested_tests.count > 2 %}...{% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge badge-{{ order.status }}">
+                                {{ order.get_status_display }}
+                            </span>
+                            {% if order.requires_approval %}
+                            <span class="badge badge-warning ml-1">Needs Approval</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div>{{ order.created_at|date:"M d, Y" }}</div>
+                            <div class="text-xs text-gray-500">{{ order.created_at|timesince }} ago</div>
+                        </td>
+                        <td class="font-semibold">
+                            ₦{{ order.calculate_total|default:"0.00"|intcomma }}
+                        </td>
+                        <td>
+                            <a href="{% url 'patients:order_detail' order.request_id %}" 
+                               class="btn btn-ghost btn-sm">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if orders.has_other_pages %}
+        <div class="p-4 border-t">
+            <div class="join flex justify-center">
+                {% if orders.has_previous %}
+                <a href="?page={{ orders.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}" 
+                   class="join-item btn">«</a>
+                {% endif %}
+                
+                {% for num in orders.paginator.page_range %}
+                    {% if orders.number == num %}
+                    <span class="join-item btn btn-active">{{ num }}</span>
+                    {% elif num > orders.number|add:'-3' and num < orders.number|add:'3' %}
+                    <a href="?page={{ num }}{% if status_filter %}&status={{ status_filter }}{% endif %}" 
+                       class="join-item btn">{{ num }}</a>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if orders.has_next %}
+                <a href="?page={{ orders.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}" 
+                   class="join-item btn">»</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+        {% else %}
+        <!-- Empty State -->
+        <div class="text-center py-12">
+            <i class="fas fa-clipboard-list text-gray-300 text-4xl mb-4"></i>
+            <h3 class="text-lg font-semibold text-gray-700 mb-2">No orders found</h3>
+            <p class="text-gray-500 mb-6">
+                {% if status_filter %}
+                    No orders with this status.
+                {% else %}
+                    You haven't placed any test orders yet.
+                {% endif %}
+            </p>
+            <a href="{% url 'patients:create_order' %}" class="btn btn-primary">
+                <i class="fas fa-plus mr-2"></i> Place Your First Order
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

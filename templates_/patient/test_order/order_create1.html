@@ -1,0 +1,134 @@
+{% extends "patient/assets/base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-gray-900">New Test Request</h1>
+        <p class="text-gray-600 mt-2">Select tests and provide required information</p>
+    </div>
+
+    <!-- Form -->
+    <form method="POST" class="space-y-6">
+        {% csrf_token %}
+        
+        <!-- Tests Selection -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">1. Select Tests</h2>
+            
+            {% if form.requested_tests.errors %}
+            <div class="alert alert-error mb-4">
+                {{ form.requested_tests.errors }}
+            </div>
+            {% endif %}
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {% for checkbox in form.requested_tests %}
+                <label class="flex items-start p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <input type="checkbox" name="requested_tests" value="{{ checkbox.data.value }}" 
+                           class="mt-1 mr-3 checkbox" {% if checkbox.data.selected %}checked{% endif %}>
+                    <div class="flex-1">
+                        <div class="font-medium text-gray-900">{{ checkbox.data.label }}</div>
+                        {% with test=checkbox.data.instance %}
+                        {% if test.specimen_type %}
+                        <div class="text-sm text-gray-500 mt-1">
+                            <i class="fas fa-flask mr-1"></i> {{ test.specimen_type }}
+                        </div>
+                        {% endif %}
+                        {% if test.requires_physician_approval %}
+                        <div class="mt-2">
+                            <span class="badge badge-warning badge-sm">Requires Physician Approval</span>
+                        </div>
+                        {% endif %}
+                        <div class="mt-2 text-primary font-semibold">
+                            ₦{{ test.price|floatformat:2 }}
+                        </div>
+                        {% endwith %}
+                    </div>
+                </label>
+                {% endfor %}
+            </div>
+            
+            <div class="mt-4 text-right">
+                <a href="{% url 'patient:test_catalog' %}" class="link link-primary text-sm">
+                    <i class="fas fa-search mr-1"></i> Browse more tests
+                </a>
+            </div>
+        </div>
+
+        <!-- Reason for Testing -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">2. Reason for Testing</h2>
+            {{ form.reason_for_testing }}
+            <p class="mt-2 text-sm text-gray-500">Optional: Tell us why you're requesting these tests</p>
+        </div>
+
+        <!-- Medical History -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">3. Medical Information</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Medical History (Optional)
+                    </label>
+                    {{ form.clinical_history }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Consent -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">4. Consent & Confirmation</h2>
+            <div class="space-y-4">
+                <label class="flex items-start">
+                    {{ form.has_informed_consent }}
+                    <span class="ml-3 text-gray-700">
+                        I confirm that I have read and understand the test preparation requirements.
+                        I consent to these tests being performed.
+                    </span>
+                </label>
+                {% if form.has_informed_consent.errors %}
+                <div class="text-red-600 text-sm">{{ form.has_informed_consent.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Form Errors -->
+        {% if form.non_field_errors %}
+        <div class="alert alert-error">
+            <i class="fas fa-exclamation-circle mr-2"></i>
+            {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- Actions -->
+        <div class="flex gap-4 pt-6 border-t">
+            <a href="{% url 'patient:test_catalog' %}" class="btn btn-ghost">Cancel</a>
+            <button type="submit" class="btn btn-primary flex-1">
+                <i class="fas fa-paper-plane mr-2"></i> Submit Request
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+// Auto-submit if coming from catalog with test parameter
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const testId = urlParams.get('test');
+    
+    if (testId) {
+        const checkbox = document.querySelector(`input[value="${testId}"]`);
+        if (checkbox) {
+            checkbox.checked = true;
+            checkbox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+});
+</script>
+{% endblock %}
+
+
+
+

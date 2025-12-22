@@ -1,0 +1,32 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html>
+<body style="font-family: Arial, sans-serif; font-size: 15px; color: #333; line-height: 1.6;">
+    <div style="margin-bottom: 20px;">
+        <img src="{{ protocol }}://{{ domain }}{% static 'assets/images/logo/med.jpg' %}" alt="MEDVUNO" style="width: 160px;">
+    </div>
+
+    <p>Hello {{ vendor_name }} Team,</p>
+
+    <p>Your laboratory workspace has been successfully activated.</p>
+
+    <div style="background-color: #f4f4f4; padding: 15px; border-left: 4px solid #d9534f; margin: 20px 0;">
+        <p>
+            Here's your customized domain for your laboratory
+            <strong>Domain URL:</strong> <br>
+            <a href="{{ login_url }}">{{ domain_name }}</a>
+        </p>
+    </div>
+    <p>You can now access your dashboard using the credentials created during onboarding, your email {{ vendor_email }}. For security reasons, we do not resend passwords.</p>
+
+    <p style="margin-top: 25px;">
+        <a href="{{ login_url }}" style="background-color: #d9534f; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Login to Dashboard</a>
+    </p>
+
+    <p style="margin-top: 30px; font-size: 13px; color: #777;">
+        Best regards,<br>
+        {{ platform_name }} Team
+    </p>
+</body>
+</html>

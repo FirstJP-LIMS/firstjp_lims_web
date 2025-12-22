@@ -1,0 +1,365 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+
+{% block title %}Upload Media - LearnHub{% endblock %}
+
+{% block extra_css %}
+<style>
+    .upload-area {
+        border: 3px dashed var(--navy-blue);
+        background: rgba(10, 25, 47, 0.05);
+        transition: all 0.3s ease;
+    }
+    .upload-area.dragover {
+        border-color: var(--brand-red);
+        background: rgba(220, 38, 38, 0.05);
+    }
+    .file-preview {
+        transition: transform 0.2s ease;
+    }
+    .file-preview:hover {
+        transform: translateY(-2px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-navy mb-2">
+            <i class="fas fa-cloud-upload-alt mr-2"></i>Upload Media
+        </h1>
+        <p class="text-gray-600">Upload images, videos, documents, and other media files for your courses</p>
+    </div>
+
+    <!-- Form -->
+    <div class="card bg-white shadow-lg border border-gray-200">
+        <div class="card-body">
+            <form method="POST" enctype="multipart/form-data" id="mediaUploadForm">
+                {% csrf_token %}
+                
+                <!-- File Upload Area -->
+                <div class="upload-area rounded-xl p-8 text-center mb-8 cursor-pointer" id="uploadArea">
+                    <input type="file" name="file" id="fileInput" class="hidden" multiple>
+                    
+                    <div class="flex flex-col items-center justify-center space-y-4">
+                        <div class="p-4 rounded-full bg-navy bg-opacity-10">
+                            <i class="fas fa-cloud-upload-alt text-4xl text-navy"></i>
+                        </div>
+                        
+                        <div>
+                            <h3 class="text-xl font-semibold text-navy mb-2">Drag & Drop Files Here</h3>
+                            <p class="text-gray-600 mb-4">or click to browse files on your computer</p>
+                            
+                            <button type="button" id="browseButton" class="btn bg-brand-red text-white hover:bg-red-700">
+                                <i class="fas fa-folder-open mr-2"></i> Browse Files
+                            </button>
+                        </div>
+                        
+                        <div class="text-sm text-gray-500">
+                            <p>Supports: JPG, PNG, GIF, MP4, PDF, DOC, PPT</p>
+                            <p>Maximum file size: 100MB per file</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- File Preview -->
+                <div id="filePreview" class="hidden mb-6">
+                    <h3 class="font-semibold text-navy mb-4">Selected Files</h3>
+                    <div id="previewList" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                </div>
+
+                <!-- Form Fields -->
+                <div id="formFields" class="hidden">
+                    <h3 class="font-semibold text-navy mb-6 text-xl">Media Details</h3>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Left Column -->
+                        <div class="space-y-6">
+                            <!-- Title -->
+                            <div class="form-control">
+                                <label class="label" for="{{ form.title.id_for_label }}">
+                                    <span class="label-text font-semibold text-navy">Title *</span>
+                                </label>
+                                {% render_field form.title class="input input-bordered w-full focus:ring-2 focus:ring-navy focus:border-navy" placeholder="Enter media title" %}
+                            </div>
+
+                            <!-- Media Type -->
+                            <div class="form-control">
+                                <label class="label" for="{{ form.media_type.id_for_label }}">
+                                    <span class="label-text font-semibold text-navy">Media Type *</span>
+                                </label>
+                                {% render_field form.media_type class="select select-bordered w-full focus:ring-2 focus:ring-navy focus:border-navy" %}
+                            </div>
+
+                            <!-- External URL -->
+                            <div class="form-control">
+                                <label class="label" for="{{ form.external_url.id_for_label }}">
+                                    <span class="label-text font-semibold text-navy">External URL</span>
+                                </label>
+                                {% render_field form.external_url class="input input-bordered w-full focus:ring-2 focus:ring-navy focus:border-navy" placeholder="https://example.com/video" %}
+                                <label class="label">
+                                    <span class="label-text-alt text-gray-500">Optional: For videos hosted on YouTube, Vimeo, etc.</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Right Column -->
+                        <div class="space-y-6">
+                            <!-- Duration -->
+                            <div class="form-control">
+                                <label class="label" for="{{ form.duration_seconds.id_for_label }}">
+                                    <span class="label-text font-semibold text-navy">Duration (seconds)</span>
+                                </label>
+                                {% render_field form.duration_seconds class="input input-bordered w-full focus:ring-2 focus:ring-navy focus:border-navy" placeholder="For video/audio files" %}
+                            </div>
+
+                            <!-- Thumbnail -->
+                            <div class="form-control">
+                                <label class="label" for="{{ form.thumbnail.id_for_label }}">
+                                    <span class="label-text font-semibold text-navy">Custom Thumbnail</span>
+                                </label>
+                                <div class="flex items-center space-x-4">
+                                    <div id="thumbnailPreview" class="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
+                                        <span class="text-gray-400">Preview</span>
+                                    </div>
+                                    <div>
+                                        {% render_field form.thumbnail class="file-input file-input-bordered" %}
+                                        <label class="label mt-2">
+                                            <span class="label-text-alt text-gray-500">Optional custom thumbnail</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- File Preview (hidden) -->
+                            {% render_field form.file class="hidden" %}
+                        </div>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="mt-8 pt-6 border-t border-gray-200 flex justify-between">
+                        <button type="button" id="cancelButton" class="btn btn-outline border-gray-300 text-gray-700 hover:bg-gray-50">
+                            Cancel
+                        </button>
+                        <div class="space-x-3">
+                            <button type="submit" class="btn bg-navy text-white hover:bg-navy hover:opacity-90">
+                                <i class="fas fa-upload mr-2"></i> Upload Media
+                            </button>
+                            <button type="submit" name="upload_another" class="btn bg-brand-red text-white hover:bg-red-700">
+                                <i class="fas fa-plus-circle mr-2"></i> Upload & Add Another
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Recent Uploads -->
+    <div class="mt-8">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold text-navy">Recently Uploaded Media</h2>
+            <a href="#" class="text-brand-red hover:text-red-700 font-medium">
+                View All <i class="fas fa-arrow-right ml-1"></i>
+            </a>
+        </div>
+        
+        {% if recent_media %}
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {% for media in recent_media %}
+            <div class="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+                <div class="h-40 bg-gray-100 flex items-center justify-center">
+                    {% if media.media_type == 'image' %}
+                    <i class="fas fa-image text-3xl text-gray-400"></i>
+                    {% elif media.media_type == 'video' %}
+                    <i class="fas fa-video text-3xl text-gray-400"></i>
+                    {% elif media.media_type == 'document' %}
+                    <i class="fas fa-file-alt text-3xl text-gray-400"></i>
+                    {% else %}
+                    <i class="fas fa-file text-3xl text-gray-400"></i>
+                    {% endif %}
+                </div>
+                <div class="p-4">
+                    <h4 class="font-medium text-gray-900 truncate">{{ media.title }}</h4>
+                    <div class="flex justify-between items-center mt-2">
+                        <span class="text-xs text-gray-500">{{ media.get_media_type_display }}</span>
+                        <span class="text-xs text-gray-500">{{ media.created_at|date:"M d" }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-12 border border-gray-200 rounded-lg bg-gray-50">
+            <i class="fas fa-file-upload text-4xl text-gray-300 mb-4"></i>
+            <p class="text-gray-600">No media uploaded yet</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    // Upload Area Functionality
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const browseButton = document.getElementById('browseButton');
+    const formFields = document.getElementById('formFields');
+    const filePreview = document.getElementById('filePreview');
+    const previewList = document.getElementById('previewList');
+    const cancelButton = document.getElementById('cancelButton');
+    const mediaFileField = document.getElementById('{{ form.file.id_for_label }}');
+
+    let selectedFiles = [];
+
+    // Browse button click
+    browseButton.addEventListener('click', () => fileInput.click());
+
+    // File input change
+    fileInput.addEventListener('change', (e) => {
+        selectedFiles = Array.from(e.target.files);
+        showFilePreview(selectedFiles);
+        showFormFields();
+    });
+
+    // Drag and drop functionality
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, () => {
+            uploadArea.classList.add('dragover');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, () => {
+            uploadArea.classList.remove('dragover');
+        }, false);
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        selectedFiles = Array.from(dt.files);
+        showFilePreview(selectedFiles);
+        showFormFields();
+    });
+
+    // Show file preview
+    function showFilePreview(files) {
+        previewList.innerHTML = '';
+        
+        files.forEach((file, index) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const preview = document.createElement('div');
+                preview.className = 'file-preview bg-gray-50 border border-gray-200 rounded-lg p-4';
+                
+                let previewHTML = '';
+                if (file.type.startsWith('image/')) {
+                    previewHTML = `
+                        <div class="flex items-center space-x-4">
+                            <img src="${e.target.result}" alt="${file.name}" class="w-16 h-16 object-cover rounded">
+                            <div class="flex-1">
+                                <h4 class="font-medium text-gray-900 truncate">${file.name}</h4>
+                                <p class="text-sm text-gray-500">${(file.size / (1024*1024)).toFixed(2)} MB</p>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    const icon = getFileIcon(file.type);
+                    previewHTML = `
+                        <div class="flex items-center space-x-4">
+                            <div class="w-16 h-16 bg-gray-100 rounded flex items-center justify-center">
+                                <i class="${icon} text-2xl text-gray-400"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-medium text-gray-900 truncate">${file.name}</h4>
+                                <p class="text-sm text-gray-500">${(file.size / (1024*1024)).toFixed(2)} MB • ${file.type}</p>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                preview.innerHTML = previewHTML;
+                previewList.appendChild(preview);
+            };
+            
+            if (file.type.startsWith('image/')) {
+                reader.readAsDataURL(file);
+            } else {
+                reader.readAsText(file);
+            }
+        });
+        
+        filePreview.classList.remove('hidden');
+    }
+
+    // Show form fields
+    function showFormFields() {
+        formFields.classList.remove('hidden');
+        uploadArea.classList.add('hidden');
+    }
+
+    // Cancel button
+    cancelButton.addEventListener('click', () => {
+        formFields.classList.add('hidden');
+        filePreview.classList.add('hidden');
+        uploadArea.classList.remove('hidden');
+        selectedFiles = [];
+        fileInput.value = '';
+    });
+
+    // Get file icon based on type
+    function getFileIcon(fileType) {
+        if (fileType.startsWith('video/')) return 'fas fa-video';
+        if (fileType.startsWith('audio/')) return 'fas fa-music';
+        if (fileType.includes('pdf')) return 'fas fa-file-pdf';
+        if (fileType.includes('word') || fileType.includes('document')) return 'fas fa-file-word';
+        if (fileType.includes('excel') || fileType.includes('spreadsheet')) return 'fas fa-file-excel';
+        if (fileType.includes('powerpoint') || fileType.includes('presentation')) return 'fas fa-file-powerpoint';
+        return 'fas fa-file';
+    }
+
+    // Form submission
+    document.getElementById('mediaUploadForm').addEventListener('submit', function(e) {
+        if (selectedFiles.length === 0) {
+            e.preventDefault();
+            alert('Please select at least one file to upload');
+            return;
+        }
+        
+        // Create a DataTransfer object and add files
+        const dataTransfer = new DataTransfer();
+        selectedFiles.forEach(file => dataTransfer.items.add(file));
+        mediaFileField.files = dataTransfer.files;
+    });
+
+    // Thumbnail preview
+    const thumbnailInput = document.querySelector('input[name="thumbnail"]');
+    const thumbnailPreview = document.getElementById('thumbnailPreview');
+    
+    if (thumbnailInput) {
+        thumbnailInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    thumbnailPreview.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover rounded">`;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+</script>
+{% endblock %}
+
+{% endblock %}

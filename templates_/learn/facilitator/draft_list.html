@@ -1,0 +1,240 @@
+{% extends "learn/assets/base.html" %}
+
+{% block title %}My Drafts - LearnHub{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-navy mb-2">
+                <i class="fas fa-file-alt mr-2"></i>My Course Drafts
+            </h1>
+            <p class="text-gray-600">Manage and track all your course drafts in one place</p>
+        </div>
+        <a href="{% url 'facilitator_draft_create' %}" class="btn bg-brand-red text-white hover:bg-red-700">
+            <i class="fas fa-plus mr-2"></i> Create New Draft
+        </a>
+    </div>
+</div>
+
+<!-- Status Filter Tabs -->
+<div class="tabs tabs-boxed bg-gray-100 p-1 mb-6">
+    <a href="?status=all" class="tab {% if not request.GET.status or request.GET.status == 'all' %}tab-active bg-navy text-white{% endif %}">All Drafts</a>
+    <a href="?status=draft" class="tab {% if request.GET.status == 'draft' %}tab-active bg-navy text-white{% endif %}">Active</a>
+    <a href="?status=submitted" class="tab {% if request.GET.status == 'submitted' %}tab-active bg-navy text-white{% endif %}">Submitted</a>
+    <a href="?status=approved" class="tab {% if request.GET.status == 'approved' %}tab-active bg-navy text-white{% endif %}">Approved</a>
+    <a href="?status=rejected" class="tab {% if request.GET.status == 'rejected' %}tab-active bg-navy text-white{% endif %}">Rejected</a>
+</div>
+
+<!-- Drafts Table -->
+<div class="card bg-white shadow-lg border border-gray-200">
+    <div class="card-body p-0">
+        {% if drafts %}
+        <div class="overflow-x-auto">
+            <table class="table">
+                <thead>
+                    <tr class="bg-gray-50">
+                        <th class="text-navy font-semibold">Title</th>
+                        <th class="text-navy font-semibold">Status</th>
+                        <th class="text-navy font-semibold">Category</th>
+                        <th class="text-navy font-semibold">Difficulty</th>
+                        <th class="text-navy font-semibold">Created</th>
+                        <th class="text-navy font-semibold">Last Updated</th>
+                        <th class="text-navy font-semibold">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for draft in drafts %}
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td>
+                            <div class="font-medium text-gray-900">{{ draft.title }}</div>
+                            {% if draft.short_description %}
+                            <div class="text-sm text-gray-500 mt-1">{{ draft.short_description|truncatechars:60 }}</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if draft.status == 'draft' %}
+                            <span class="badge bg-blue-100 text-blue-800 border-0">
+                                <i class="fas fa-edit mr-1"></i> Draft
+                            </span>
+                            {% elif draft.status == 'submitted' %}
+                            <span class="badge bg-yellow-100 text-yellow-800 border-0">
+                                <i class="fas fa-paper-plane mr-1"></i> Submitted
+                            </span>
+                            {% elif draft.status == 'approved' %}
+                            <span class="badge bg-green-100 text-green-800 border-0">
+                                <i class="fas fa-check mr-1"></i> Approved
+                            </span>
+                            {% elif draft.status == 'rejected' %}
+                            <span class="badge bg-red-100 text-red-800 border-0">
+                                <i class="fas fa-times mr-1"></i> Rejected
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if draft.category %}
+                            <span class="badge badge-outline border-navy text-navy">{{ draft.category.name }}</span>
+                            {% else %}
+                            <span class="text-gray-400">Not set</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if draft.difficulty %}
+                            <span class="badge badge-sm 
+                                {% if draft.difficulty == 'basic' %}bg-green-100 text-green-800
+                                {% elif draft.difficulty == 'intermediate' %}bg-yellow-100 text-yellow-800
+                                {% elif draft.difficulty == 'advanced' %}bg-red-100 text-red-800
+                                {% endif %}">
+                                {{ draft.get_difficulty_display }}
+                            </span>
+                            {% else %}
+                            <span class="text-gray-400">Not set</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-gray-600">{{ draft.created_at|date:"M d, Y" }}</td>
+                        <td class="text-gray-600">{{ draft.updated_at|date:"M d, Y" }}</td>
+                        <td>
+                            <div class="flex space-x-2">
+                                <a href="{% url 'facilitator_draft_detail' draft.id %}" class="btn btn-xs btn-outline border-navy text-navy hover:bg-navy hover:text-white" title="View">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if draft.status == 'draft' %}
+                                <a href="#" class="btn btn-xs bg-navy text-white hover:bg-navy hover:opacity-90" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button class="btn btn-xs bg-brand-red text-white hover:bg-red-700" title="Submit for review" onclick="submitDraft('{{ draft.id }}')">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                                {% endif %}
+                                {% if draft.review_notes %}
+                                <div class="tooltip" data-tip="Review Notes">
+                                    <button class="btn btn-xs btn-ghost text-brand-red" onclick="showReviewNotes('{{ draft.review_notes }}')">
+                                        <i class="fas fa-comment"></i>
+                                    </button>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if drafts.has_other_pages %}
+        <div class="join flex justify-center mt-6">
+            {% if drafts.has_previous %}
+            <a href="?page={{ drafts.previous_page_number }}" class="join-item btn btn-sm border-gray-300">«</a>
+            {% endif %}
+            
+            {% for num in drafts.paginator.page_range %}
+                {% if drafts.number == num %}
+                <a href="?page={{ num }}" class="join-item btn btn-sm bg-navy text-white border-navy">{{ num }}</a>
+                {% elif num > drafts.number|add:'-3' and num < drafts.number|add:'3' %}
+                <a href="?page={{ num }}" class="join-item btn btn-sm border-gray-300">{{ num }}</a>
+                {% endif %}
+            {% endfor %}
+            
+            {% if drafts.has_next %}
+            <a href="?page={{ drafts.next_page_number }}" class="join-item btn btn-sm border-gray-300">»</a>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        {% else %}
+        <div class="text-center py-12">
+            <i class="fas fa-file-alt text-5xl text-gray-300 mb-4"></i>
+            <h3 class="text-xl font-medium text-gray-700 mb-2">No drafts found</h3>
+            <p class="text-gray-500 mb-6">Start creating your first course draft</p>
+            <a href="{% url 'facilitator_draft_create' %}" class="btn bg-brand-red text-white hover:bg-red-700">
+                <i class="fas fa-plus mr-2"></i> Create Your First Draft
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Quick Stats -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-8">
+    <div class="stat bg-white rounded-lg border border-gray-200 p-4">
+        <div class="stat-figure text-navy">
+            <i class="fas fa-edit text-2xl"></i>
+        </div>
+        <div class="stat-title text-gray-600">Active Drafts</div>
+        <div class="stat-value text-navy">{{ drafts|status_count:'draft' }}</div>
+    </div>
+    
+    <div class="stat bg-white rounded-lg border border-gray-200 p-4">
+        <div class="stat-figure text-yellow-600">
+            <i class="fas fa-hourglass-half text-2xl"></i>
+        </div>
+        <div class="stat-title text-gray-600">Submitted</div>
+        <div class="stat-value text-yellow-600">{{ drafts|status_count:'submitted' }}</div>
+    </div>
+    
+    <div class="stat bg-white rounded-lg border border-gray-200 p-4">
+        <div class="stat-figure text-green-600">
+            <i class="fas fa-check-circle text-2xl"></i>
+        </div>
+        <div class="stat-title text-gray-600">Approved</div>
+        <div class="stat-value text-green-600">{{ drafts|status_count:'approved' }}</div>
+    </div>
+    
+    <div class="stat bg-white rounded-lg border border-gray-200 p-4">
+        <div class="stat-figure text-brand-red">
+            <i class="fas fa-times-circle text-2xl"></i>
+        </div>
+        <div class="stat-title text-gray-600">Rejected</div>
+        <div class="stat-value text-brand-red">{{ drafts|status_count:'rejected' }}</div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    function submitDraft(draftId) {
+        if (confirm('Are you sure you want to submit this draft for review? You won\'t be able to edit it until the admin reviews it.')) {
+            fetch(`/drafts/${draftId}/submit/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error submitting draft: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while submitting the draft.');
+            });
+        }
+    }
+    
+    function showReviewNotes(notes) {
+        const modal = document.createElement('div');
+        modal.className = 'modal modal-open';
+        modal.innerHTML = `
+            <div class="modal-box">
+                <h3 class="font-bold text-lg text-navy mb-4">
+                    <i class="fas fa-comment mr-2"></i>Review Notes
+                </h3>
+                <div class="bg-gray-50 p-4 rounded-lg mb-4">
+                    <p class="text-gray-700 whitespace-pre-line">${notes}</p>
+                </div>
+                <div class="modal-action">
+                    <button class="btn bg-navy text-white" onclick="this.closest('.modal').remove()">Close</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+</script>
+{% endblock %}
+
+{% endblock %}

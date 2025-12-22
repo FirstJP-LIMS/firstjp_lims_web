@@ -1,0 +1,141 @@
+{% extends "patient/assets/base.html" %}
+{% load static humanize %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-gray-900">Available Tests</h1>
+        <p class="text-gray-600 mt-2">Browse and select tests you can order online</p>
+    </div>
+
+    <!-- Search & Filters -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+        <form method="GET" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- Search -->
+                <div>
+                    <input type="text" name="q" value="{{ query|default:'' }}" 
+                           placeholder="Search tests..." class="input input-bordered w-full">
+                </div>
+                
+                <!-- Department Filter -->
+                <div>
+                    <select name="department" class="select select-bordered w-full">
+                        <option value="">All Departments</option>
+                        {% for dept in departments %}
+                        <option value="{{ dept.id }}" {% if request.GET.department == dept.id|stringformat:"s" %}selected{% endif %}>
+                            {{ dept.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Submit -->
+                <div>
+                    <button type="submit" class="btn btn-primary w-full">Filter</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Test Grid -->
+    {% if tests %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for test in tests %}
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+            <div class="p-5">
+                <!-- Test Header -->
+                <div class="flex justify-between items-start mb-3">
+                    <div>
+                        <h3 class="font-bold text-gray-900">{{ test.name }}</h3>
+                        <p class="text-sm text-gray-500 font-mono">{{ test.code }}</p>
+                    </div>
+                    {% if test.requires_physician_approval %}
+                    <span class="badge badge-warning">Requires Approval</span>
+                    {% endif %}
+                </div>
+                
+                <!-- Department -->
+                <div class="mb-3">
+                    <span class="badge badge-outline">{{ test.assigned_department.name }}</span>
+                </div>
+                
+                <!-- Description -->
+                {% if test.patient_friendly_description %}
+                <p class="text-gray-600 text-sm mb-4 line-clamp-2">
+                    {{ test.patient_friendly_description }}
+                </p>
+                {% endif %}
+                
+                <!-- Specimen & Turnaround -->
+                <div class="text-sm text-gray-500 space-y-1 mb-4">
+                    {% if test.specimen_type %}
+                    <div class="flex items-center">
+                        <i class="fas fa-flask w-4 mr-2"></i>
+                        <span>{{ test.specimen_type }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="flex items-center">
+                        <i class="fas fa-clock w-4 mr-2"></i>
+                        <span>Results in {{ test.get_estimated_turnaround }} hours</span>
+                    </div>
+                </div>
+                
+                <!-- Price & Action -->
+                <div class="flex items-center justify-between pt-4 border-t">
+                    <div>
+                        <span class="text-xl font-bold text-primary">₦{{ test.price|floatformat:2|intcomma }}</span>
+                    </div>
+                    <a href="{% url 'patients:create_order' %}?test={{ test.id }}" 
+                       class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus mr-1"></i> Add
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Pagination -->
+    {% if tests.has_other_pages %}
+    <div class="mt-8 flex justify-center">
+        <div class="join">
+            {% if tests.has_previous %}
+            <a href="?page={{ tests.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if request.GET.department %}&department={{ request.GET.department }}{% endif %}" 
+               class="join-item btn btn-sm">«</a>
+            {% endif %}
+            
+            {% for num in tests.paginator.page_range %}
+                {% if tests.number == num %}
+                <span class="join-item btn btn-sm btn-active">{{ num }}</span>
+                {% elif num > tests.number|add:'-3' and num < tests.number|add:'3' %}
+                <a href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}{% if request.GET.department %}&department={{ request.GET.department }}{% endif %}" 
+                   class="join-item btn btn-sm">{{ num }}</a>
+                {% endif %}
+            {% endfor %}
+            
+            {% if tests.has_next %}
+            <a href="?page={{ tests.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if request.GET.department %}&department={{ request.GET.department }}{% endif %}" 
+               class="join-item btn btn-sm">»</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    
+    {% else %}
+    <!-- Empty State -->
+    <div class="text-center py-12 bg-white rounded-lg border border-gray-200">
+        <i class="fas fa-flask text-gray-300 text-4xl mb-4"></i>
+        <h3 class="text-lg font-semibold text-gray-700 mb-2">No tests found</h3>
+        <p class="text-gray-500">
+            {% if query %}
+                No tests match your search.
+            {% else %}
+                No tests are currently available for online booking.
+            {% endif %}
+        </p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

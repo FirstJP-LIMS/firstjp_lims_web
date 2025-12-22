@@ -1,3 +1,196 @@
+from django.contrib import admin
+from .models import (
+    CourseCategory,
+    Course,
+    Module,
+    Lesson,
+    MediaAsset,
+    CourseDraft,
+    DraftModule,
+    DraftLesson,
+)
+from .services.course_promotion import promote_course_draft
+
+
+# # --------------------
+# # Core Admin Classes
+# # --------------------
+
+admin.site.register(CourseCategory)
+admin.site.register(Course)
+admin.site.register(Module)
+admin.site.register(Lesson)
+admin.site.register(MediaAsset)
+
+
+# @admin.register(CourseCategory)
+# class CategoryAdmin(admin.ModelAdmin):
+#     list_display = ("name", "slug")
+#     search_fields = ("name",)
+
+
+# @admin.register(Course)
+# class CourseAdmin(admin.ModelAdmin):
+#     list_display = (
+#         "title", "slug", "author", "difficulty_level",
+#         "is_published", "created_at"
+#     )
+#     list_filter = ("is_published", "difficulty_level", "created_at")
+#     search_fields = ("title", "description", "tags")
+#     prepopulated_fields = {"slug": ("title",)}
+#     # inlines = [ModuleInline]
+#     ordering = ("title",)
+
+
+# @admin.register(Module)
+# class ModuleAdmin(admin.ModelAdmin):
+#     list_display = ("title", "course", "position")
+#     list_filter = ("course",)
+#     search_fields = ("title",)
+#     # inlines = [LessonInline]
+#     ordering = ("course", "position")
+
+
+# @admin.register(Lesson)
+# class LessonAdmin(admin.ModelAdmin):
+#     list_display = ("title", "module", "position", "is_previewable")
+#     list_filter = ("module__course", "is_previewable")
+#     search_fields = ("title", "content")
+#     # inlines = [MediaAssetInline]
+#     ordering = ("module", "position")
+
+
+# @admin.register(MediaAsset)
+# class MediaAssetAdmin(admin.ModelAdmin):
+#     list_display = ("lesson", "media_type", "mime_type", "file_size")
+#     list_filter = ("media_type",)
+#     search_fields = ("lesson__title",)
+#     ordering = ("lesson",)
+
+# Facilitators 
+@admin.register(CourseDraft)
+class CourseDraftAdmin(admin.ModelAdmin):
+    list_display = ('title', 'created_by', 'status', 'created_at',)
+    list_filter = ('status', 'category')
+    search_fields = ('title', 'short_description')
+    readonly_fields = ('created_by', 'status', 'created_at', 'updated_at',)
+    actions = ['approve_drafts', 'reject_drafts']
+
+    fieldsets = (
+        ("Draft Metadata", {
+            "fields": ('title', 'slug', 'created_by', 'status',)}),
+        ("Course Content", {
+            "fields": (
+                'short_description',
+                'long_description',
+                'category',
+                'tags',
+                'difficulty',
+                'thumbnail',
+            )
+        }),
+        ("Review", {
+            "fields": ('review_notes',),
+        }),
+        ("Timestamps", {
+            "fields": ('created_at', 'updated_at'),
+        }),
+    )
+
+    def has_add_permission(self, request):
+        return False  # Admins cannot create drafts
+
+    def has_delete_permission(self, request, obj=None):
+        return False  # Preserve audit trail
+
+    @admin.action(description="Approve selected drafts (Publish)")
+    def approve_drafts(self, request, queryset):
+        approved = 0
+
+        for draft in queryset.filter(status='submitted'):
+            promote_course_draft(draft)
+            approved += 1
+
+        self.message_user(
+            request,
+            f"{approved} course draft(s) approved and published."
+        )
+
+    @admin.action(description="Reject selected drafts")
+    def reject_drafts(self, request, queryset):
+        updated = queryset.update(status='rejected')
+        self.message_user(
+            request,
+            f"{updated} course draft(s) rejected."
+        )
+
+
+class DraftLessonInline(admin.TabularInline):
+    model = DraftLesson
+    extra = 0
+    readonly_fields = [f.name for f in DraftLesson._meta.fields]
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+class DraftModuleInline(admin.TabularInline):
+    model = DraftModule
+    extra = 0
+    readonly_fields = [f.name for f in DraftModule._meta.fields]
+    show_change_link = True
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+
+"""
+@login_required
+@user_passes_test(lambda u: u.is_staff)
+def admin_draft_review_detail_view(request, pk):
+    draft = get_object_or_404(CourseDraft, pk=pk)
+    return render(request, 'lms/admin/draft_review_detail.html', {
+        'draft': draft
+    })
+
+@login_required
+@user_passes_test(lambda u: u.is_staff)
+def admin_draft_review_list_view(request):
+    drafts = CourseDraft.objects.filter(status='submitted')
+    return render(request, 'lms/admin/draft_review_list.html', {
+        'drafts': drafts
+    })
+
+    
+@login_required
+@user_passes_test(lambda u: u.is_staff)
+def admin_draft_approve_view(request, pk):
+    draft = get_object_or_404(CourseDraft, pk=pk, status='submitted')
+
+    promote_course_draft(draft)
+
+    return redirect('lms:admin_draft_review_list')
+
+@login_required
+@user_passes_test(lambda u: u.is_staff)
+def admin_draft_reject_view(request, pk):
+    draft = get_object_or_404(CourseDraft, pk=pk)
+
+    if request.method == 'POST':
+        notes = request.POST.get('review_notes', '')
+        draft.status = 'rejected'
+        draft.review_notes = notes
+        draft.save(update_fields=['status', 'review_notes'])
+        return redirect('lms:admin_draft_review_list')
+
+    return render(request, 'lms/admin/draft_reject_confirm.html', {
+        'draft': draft
+    })
+
+    
+"""
+
 # from django.contrib import admin
 # from django.utils.html import format_html
 # from django import forms
@@ -63,54 +256,6 @@
 #     extra = 1
 #     fields = ("text", "question_type", "explanation")
 
-
-# # --------------------
-# # Core Admin Classes
-# # --------------------
-
-# @admin.register(CourseCategory)
-# class CategoryAdmin(admin.ModelAdmin):
-#     list_display = ("name", "slug")
-#     search_fields = ("name",)
-
-
-# @admin.register(Course)
-# class CourseAdmin(admin.ModelAdmin):
-#     list_display = (
-#         "title", "slug", "author", "difficulty_level",
-#         "is_published", "created_at"
-#     )
-#     list_filter = ("is_published", "difficulty_level", "created_at")
-#     search_fields = ("title", "description", "tags")
-#     prepopulated_fields = {"slug": ("title",)}
-#     inlines = [ModuleInline]
-#     ordering = ("title",)
-
-
-# @admin.register(Module)
-# class ModuleAdmin(admin.ModelAdmin):
-#     list_display = ("title", "course", "position")
-#     list_filter = ("course",)
-#     search_fields = ("title",)
-#     inlines = [LessonInline]
-#     ordering = ("course", "position")
-
-
-# @admin.register(Lesson)
-# class LessonAdmin(admin.ModelAdmin):
-#     list_display = ("title", "module", "position", "is_previewable")
-#     list_filter = ("module__course", "is_previewable")
-#     search_fields = ("title", "content")
-#     inlines = [MediaAssetInline]
-#     ordering = ("module", "position")
-
-
-# @admin.register(MediaAsset)
-# class MediaAssetAdmin(admin.ModelAdmin):
-#     list_display = ("lesson", "media_type", "mime_type", "file_size")
-#     list_filter = ("media_type",)
-#     search_fields = ("lesson__title",)
-#     ordering = ("lesson",)
 
 
 # # --------------------

@@ -1,0 +1,387 @@
+{% extends "patient/base.html" %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}Request Lab Tests - {{ vendor.name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <!-- Header -->
+            <div class="mb-4">
+                <h2 class="fw-bold text-dark mb-2">
+                    <i class="bi bi-clipboard-plus me-2 text-primary"></i>
+                    Request Lab Tests
+                </h2>
+                <p class="text-muted">
+                    Select the tests you need and we'll guide you through the process
+                </p>
+            </div>
+
+            <!-- Messages -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm border-0" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <!-- No Tests Available Warning -->
+            {% if available_tests_count == 0 %}
+                <div class="alert alert-warning border-0 shadow-sm">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-exclamation-triangle-fill fs-3 me-3"></i>
+                        <div>
+                            <h5 class="mb-1">No Tests Available</h5>
+                            <p class="mb-2">
+                                Currently, there are no tests available for online booking.
+                            </p>
+                            <p class="mb-0 small">
+                                Please contact the laboratory at 
+                                <strong>{{ vendor.contact_phone|default:"N/A" }}</strong>
+                                or email <strong>{{ vendor.contact_email|default:"N/A" }}</strong>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+
+            <!-- Patient Info Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <h6 class="card-title fw-semibold mb-3">
+                        <i class="bi bi-person-check text-primary me-2"></i>
+                        Patient Information
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="mb-2">
+                                <strong>Name:</strong> {{ patient.first_name }} {{ patient.last_name }}
+                            </p>
+                            <p class="mb-2">
+                                <strong>Patient ID:</strong> {{ patient.patient_id }}
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            {% if patient.date_of_birth %}
+                            <p class="mb-2">
+                                <strong>Date of Birth:</strong> {{ patient.date_of_birth|date:"M d, Y" }}
+                            </p>
+                            {% endif %}
+                            {% if patient.contact_phone %}
+                            <p class="mb-2">
+                                <strong>Phone:</strong> {{ patient.contact_phone }}
+                            </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Form -->
+            <form method="post" id="patientOrderForm">
+                {% csrf_token %}
+                
+                <!-- Available Tests -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white border-0 py-3">
+                        <h5 class="card-title mb-0 fw-semibold">
+                            <i class="bi bi-clipboard-check text-primary me-2"></i>
+                            Available Tests
+                            <span class="badge bg-primary rounded-pill ms-2">{{ available_tests_count }}</span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Search Box -->
+                        <div class="mb-3">
+                            <div class="input-group">
+                                <span class="input-group-text bg-light">
+                                    <i class="bi bi-search"></i>
+                                </span>
+                                <input type="text" class="form-control" id="testSearchInput" 
+                                       placeholder="Search tests by name or code...">
+                                <button class="btn btn-outline-secondary" type="button" id="clearSearch">
+                                    <i class="bi bi-x-circle"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Test Selection -->
+                        <div id="testsContainer" style="max-height: 500px; overflow-y: auto;">
+                            {% for test in form.requested_tests.field.queryset %}
+                            <div class="test-card-item mb-3 p-3 border rounded" 
+                                 data-test-name="{{ test.name|lower }}"
+                                 data-test-code="{{ test.code|lower }}"
+                                 data-price="{{ test.price }}">
+                                <div class="form-check">
+                                    <input class="form-check-input test-checkbox" 
+                                           type="checkbox" 
+                                           name="requested_tests" 
+                                           value="{{ test.id }}" 
+                                           id="test_{{ test.id }}">
+                                    <label class="form-check-label w-100" for="test_{{ test.id }}">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-1 text-primary fw-bold">
+                                                    {{ test.code }} - {{ test.name }}
+                                                </h6>
+                                                
+                                                {% if test.patient_friendly_description %}
+                                                <p class="small text-muted mb-2">
+                                                    {{ test.patient_friendly_description }}
+                                                </p>
+                                                {% endif %}
+                                                
+                                                <div class="d-flex flex-wrap gap-2 mb-2">
+                                                    <span class="badge bg-secondary bg-opacity-10 text-secondary">
+                                                        <i class="bi bi-building me-1"></i>
+                                                        {{ test.assigned_department.name }}
+                                                    </span>
+                                                    
+                                                    {% if test.preparation_required %}
+                                                    <span class="badge bg-warning bg-opacity-10 text-warning">
+                                                        <i class="bi bi-exclamation-triangle me-1"></i>
+                                                        Preparation Required
+                                                    </span>
+                                                    {% endif %}
+                                                    
+                                                    {% if test.requires_physician_approval %}
+                                                    <span class="badge bg-info bg-opacity-10 text-info">
+                                                        <i class="bi bi-shield-check me-1"></i>
+                                                        Requires Approval
+                                                    </span>
+                                                    {% endif %}
+                                                </div>
+                                                
+                                                {% if test.preparation_instructions %}
+                                                <div class="small text-muted">
+                                                    <i class="bi bi-info-circle me-1"></i>
+                                                    <strong>Preparation:</strong> {{ test.preparation_instructions|truncatewords:20 }}
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                            
+                                            <div class="text-end ms-3">
+                                                <h5 class="mb-0 text-success fw-bold">
+                                                    ₦{{ test.price }}
+                                                </h5>
+                                            </div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                            {% empty %}
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle me-2"></i>
+                                No tests are currently available for online booking.
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <div id="noTestsFound" class="alert alert-warning mt-3" style="display: none;">
+                            <i class="bi bi-search me-2"></i>
+                            No tests found matching your search.
+                        </div>
+
+                        {% if form.requested_tests.errors %}
+                        <div class="alert alert-danger mt-3">
+                            {{ form.requested_tests.errors }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Selected Tests Summary -->
+                <div id="selectedSummary" class="card border-0 shadow-sm mb-4" style="display: none;">
+                    <div class="card-body">
+                        <h6 class="fw-semibold mb-3">
+                            <i class="bi bi-check-circle text-success me-2"></i>
+                            Selected Tests (<span id="selectedCount">0</span>)
+                        </h6>
+                        <div id="selectedList"></div>
+                        <hr>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <strong>Total Price:</strong>
+                            <h4 class="mb-0 text-success">₦<span id="totalPrice">0.00</span></h4>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Additional Information -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-body">
+                        <h6 class="fw-semibold mb-3">
+                            <i class="bi bi-pencil text-primary me-2"></i>
+                            Additional Information
+                        </h6>
+                        
+                        <div class="mb-3">
+                            {{ form.reason_for_testing|as_crispy_field }}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.clinical_history|as_crispy_field }}
+                        </div>
+                        
+                        <div class="form-check">
+                            {{ form.has_informed_consent }}
+                            <label class="form-check-label" for="{{ form.has_informed_consent.id_for_label }}">
+                                {{ form.has_informed_consent.label }}
+                            </label>
+                            {% if form.has_informed_consent.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.has_informed_consent.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Buttons -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-body text-center py-4">
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                            <a href="{% url 'patients:dashboard' %}" class="btn btn-outline-secondary btn-lg px-4">
+                                <i class="bi bi-x-circle me-2"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary btn-lg px-4" id="submitBtn">
+                                <i class="bi bi-send-check me-2"></i>Submit Request
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const testSearchInput = document.getElementById('testSearchInput');
+    const clearSearch = document.getElementById('clearSearch');
+    const testItems = document.querySelectorAll('.test-card-item');
+    const testCheckboxes = document.querySelectorAll('.test-checkbox');
+    const selectedSummary = document.getElementById('selectedSummary');
+    const selectedList = document.getElementById('selectedList');
+    const selectedCount = document.getElementById('selectedCount');
+    const totalPrice = document.getElementById('totalPrice');
+    const noTestsFound = document.getElementById('noTestsFound');
+    const submitBtn = document.getElementById('submitBtn');
+
+    // Search functionality
+    function filterTests() {
+        const searchTerm = testSearchInput.value.toLowerCase().trim();
+        let visibleCount = 0;
+
+        testItems.forEach(item => {
+            const testName = item.dataset.testName || '';
+            const testCode = item.dataset.testCode || '';
+            const searchText = `${testName} ${testCode}`;
+
+            if (!searchTerm || searchText.includes(searchTerm)) {
+                item.style.display = 'block';
+                visibleCount++;
+            } else {
+                item.style.display = 'none';
+            }
+        });
+
+        noTestsFound.style.display = (visibleCount === 0 && searchTerm) ? 'block' : 'none';
+    }
+
+    testSearchInput.addEventListener('input', filterTests);
+    clearSearch.addEventListener('click', function() {
+        testSearchInput.value = '';
+        filterTests();
+    });
+
+    // Update summary
+    function updateSummary() {
+        const selected = [];
+        let total = 0;
+
+        testItems.forEach(item => {
+            const checkbox = item.querySelector('.test-checkbox');
+            if (checkbox && checkbox.checked) {
+                const label = item.querySelector('label h6').textContent.trim();
+                const price = parseFloat(item.dataset.price || 0);
+                selected.push({ label, price });
+                total += price;
+            }
+        });
+
+        selectedCount.textContent = selected.length;
+        totalPrice.textContent = total.toFixed(2);
+
+        if (selected.length > 0) {
+            selectedSummary.style.display = 'block';
+            selectedList.innerHTML = selected.map(test => 
+                `<div class="d-flex justify-content-between mb-2">
+                    <span>${test.label}</span>
+                    <strong class="text-success">₦${test.price.toFixed(2)}</strong>
+                </div>`
+            ).join('');
+            submitBtn.disabled = false;
+        } else {
+            selectedSummary.style.display = 'none';
+            submitBtn.disabled = true;
+        }
+    }
+
+    testCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateSummary);
+    });
+
+    // Form validation
+    document.getElementById('patientOrderForm').addEventListener('submit', function(e) {
+        const selected = Array.from(testCheckboxes).filter(cb => cb.checked);
+        if (selected.length === 0) {
+            e.preventDefault();
+            alert('Please select at least one test.');
+        }
+    });
+
+    // Initialize
+    updateSummary();
+});
+</script>
+
+<style>
+.test-card-item {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.test-card-item:hover {
+    background-color: #f8f9fa;
+    border-color: #0d6efd !important;
+}
+
+.test-checkbox:checked + label {
+    font-weight: 600;
+}
+
+.test-card-item:has(.test-checkbox:checked) {
+    border-color: #198754 !important;
+    background-color: rgba(25, 135, 84, 0.05);
+}
+
+#testsContainer::-webkit-scrollbar {
+    width: 8px;
+}
+
+#testsContainer::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+#testsContainer::-webkit-scrollbar-thumb {
+    background: #0d6efd;
+    border-radius: 4px;
+}
+</style>
+{% endblock %}

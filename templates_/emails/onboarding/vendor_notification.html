@@ -1,0 +1,29 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+</head>
+<body style="font-family: Arial, sans-serif; font-size: 15px; color: #333; line-height: 1.6;">
+    
+    <div style="margin-bottom: 20px;">
+        <img src="{{ protocol }}://{{ domain }}{% static 'assets/images/logo/med.jpg' %}" 
+             alt="MEDVUNO" 
+             style="width: 160px; display: block; outline: none; border: none; text-decoration: none;">
+    </div>
+
+    <p>Hello {{ first_name }},</p>
+
+    <p>
+        Thank you for submitting your vendor onboarding request for 
+        <strong>{{ vendor_name }}</strong>.
+    </p>
+
+    <p>Our platform team is reviewing your application and will contact you shortly.</p>
+
+    <p style="margin-top: 25px;">
+        Best regards,<br>
+        <strong>Medvuno team</strong>
+    </p>
+</body>
+</html>

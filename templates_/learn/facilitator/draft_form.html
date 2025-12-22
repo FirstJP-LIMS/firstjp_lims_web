@@ -1,0 +1,239 @@
+{% extends "learn/assets/base.html" %}
+
+{% load widget_tweaks %}
+
+{% block title %}{{ title|default:"Create New Draft" }} - LearnHub{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+        <a href="{% url 'learn:facilitator_draft_list' %}" class="text-brand-red hover:text-red-700 mb-4 inline-block">
+            <i class="fas fa-arrow-left mr-2"></i> Back to Drafts
+        </a>
+        <h1 class="text-3xl font-bold text-navy mb-2">
+            <i class="fas fa-plus-circle mr-2"></i>{{ title|default:"Create New Course Draft" }}
+        </h1>
+        <p class="text-gray-600">Fill in the details below to create a new course draft</p>
+    </div>
+
+    <!-- Form -->
+    <div class="card bg-white shadow-lg border border-gray-200">
+        <div class="card-body">
+            <form method="POST" enctype="multipart/form-data" novalidate>
+                {% csrf_token %}
+                
+                <!-- Form Errors -->
+                {% if form.errors %}
+                <div class="alert alert-error bg-red-50 border-l-4 border-brand-red mb-6">
+                    <div class="flex items-center">
+                        <i class="fas fa-exclamation-circle text-brand-red text-xl mr-3"></i>
+                        <div>
+                            <h3 class="font-bold text-red-800">Please correct the errors below</h3>
+                            <ul class="text-red-700 mt-2 list-disc list-inside">
+                                {% for field, errors in form.errors.items %}
+                                    {% for error in errors %}
+                                    <li>{{ field|title }}: {{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Form Fields in Two Columns -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Left Column -->
+                    <div class="space-y-6">
+                        <!-- Title -->
+                        <div class="form-control">
+                            <label class="label" for="{{ form.title.id_for_label }}">
+                                <span class="label-text font-semibold text-navy">Course Title *</span>
+                            </label>
+                            {% render_field form.title class="input input-bordered w-full focus:ring-2 focus:ring-navy focus:border-navy" placeholder="Enter course title" %}
+                            {% if form.title.help_text %}
+                            <label class="label">
+                                <span class="label-text-alt text-gray-500">{{ form.title.help_text }}</span>
+                            </label>
+                            {% endif %}
+                        </div>
+
+                        <!-- Short Description -->
+                        <div class="form-control">
+                            <label class="label" for="{{ form.short_description.id_for_label }}">
+                                <span class="label-text font-semibold text-navy">Short Description *</span>
+                            </label>
+                            {% render_field form.short_description class="textarea textarea-bordered w-full focus:ring-2 focus:ring-navy focus:border-navy" rows="3" placeholder="Brief description (max 512 characters)" %}
+                        </div>
+
+                        <!-- Category -->
+                        <div class="form-control">
+                            <label class="label" for="{{ form.category.id_for_label }}">
+                                <span class="label-text font-semibold text-navy">Category</span>
+                            </label>
+                            {% render_field form.category class="select select-bordered w-full focus:ring-2 focus:ring-navy focus:border-navy" %}
+                        </div>
+
+                        <!-- Difficulty -->
+                        <div class="form-control">
+                            <label class="label" for="{{ form.difficulty.id_for_label }}">
+                                <span class="label-text font-semibold text-navy">Difficulty Level</span>
+                            </label>
+                            {% render_field form.difficulty class="select select-bordered w-full focus:ring-2 focus:ring-navy focus:border-navy" %}
+                        </div>
+
+                        <!-- Thumbnail -->
+                        <div class="form-control">
+                            <label class="label" for="{{ form.thumbnail.id_for_label }}">
+                                <span class="label-text font-semibold text-navy">Course Thumbnail</span>
+                            </label>
+                            {% if form.instance.thumbnail %}
+                            <div class="mb-4">
+                                <img src="{{ form.instance.thumbnail.url }}" alt="Current thumbnail" class="w-32 h-32 object-cover rounded-lg mb-2">
+                                <label class="cursor-pointer">
+                                    {% render_field form.thumbnail class="file-input file-input-bordered w-full" %}
+                                </label>
+                            </div>
+                            {% else %}
+                            {% render_field form.thumbnail class="file-input file-input-bordered w-full" %}
+                            {% endif %}
+                            <label class="label">
+                                <span class="label-text-alt text-gray-500">Recommended: 1280x720 px, max 2MB</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Right Column -->
+                    <div class="space-y-6">
+                        <!-- Long Description -->
+                        <div class="form-control">
+                            <label class="label" for="{{ form.long_description.id_for_label }}">
+                                <span class="label-text font-semibold text-navy">Detailed Description</span>
+                            </label>
+                            {% render_field form.long_description class="textarea textarea-bordered w-full focus:ring-2 focus:ring-navy focus:border-navy" rows="6" placeholder="Detailed course description with learning objectives, etc." %}
+                        </div>
+
+                        <!-- Tags -->
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text font-semibold text-navy">Tags</span>
+                            </label>
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                {% for checkbox in form.tags %}
+                                <label class="flex items-center space-x-2 cursor-pointer">
+                                    {{ checkbox.tag }}
+                                    <span class="text-gray-700">{{ checkbox.choice_label }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Review Notes (for editing existing drafts) -->
+                        {% if form.review_notes %}
+                        <div class="form-control">
+                            <label class="label" for="{{ form.review_notes.id_for_label }}">
+                                <span class="label-text font-semibold text-navy">Admin Review Notes</span>
+                            </label>
+                            {% render_field form.review_notes class="textarea textarea-bordered w-full bg-gray-50" rows="4" readonly="readonly" %}
+                            <label class="label">
+                                <span class="label-text-alt text-gray-500">These notes are from admin review</span>
+                            </label>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="mt-8 pt-6 border-t border-gray-200 flex justify-between">
+                    <a href="{% url 'learn:facilitator_draft_list' %}" class="btn btn-outline border-gray-300 text-gray-700 hover:bg-gray-50">
+                        Cancel
+                    </a>
+                    <div class="space-x-3">
+                        {% if form.instance.pk %}
+                        <button type="submit" name="save_draft" class="btn bg-navy text-white hover:bg-navy hover:opacity-90">
+                            <i class="fas fa-save mr-2"></i> Update Draft
+                        </button>
+                        {% if form.instance.status == 'draft' %}
+                        <button type="button" onclick="submitForReview()" class="btn bg-brand-red text-white hover:bg-red-700">
+                            <i class="fas fa-paper-plane mr-2"></i> Submit for Review
+                        </button>
+                        {% endif %}
+                        {% else %}
+                        <button type="submit" name="save_draft" class="btn bg-navy text-white hover:bg-navy hover:opacity-90">
+                            <i class="fas fa-save mr-2"></i> Save as Draft
+                        </button>
+                        <button type="submit" name="save_and_add" class="btn bg-brand-red text-white hover:bg-red-700">
+                            <i class="fas fa-plus-circle mr-2"></i> Save & Add Modules
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Form Guidelines -->
+    <div class="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+        <h3 class="font-bold text-navy mb-3 flex items-center">
+            <i class="fas fa-lightbulb mr-2"></i> Tips for Creating Great Courses
+        </h3>
+        <ul class="space-y-2 text-gray-700">
+            <li class="flex items-start">
+                <i class="fas fa-check text-green-500 mt-1 mr-2"></i>
+                <span>Use clear, descriptive titles that reflect course content</span>
+            </li>
+            <li class="flex items-start">
+                <i class="fas fa-check text-green-500 mt-1 mr-2"></i>
+                <span>Include specific learning objectives in the detailed description</span>
+            </li>
+            <li class="flex items-start">
+                <i class="fas fa-check text-green-500 mt-1 mr-2"></i>
+                <span>Choose relevant tags to help students find your course</span>
+            </li>
+            <li class="flex items-start">
+                <i class="fas fa-check text-green-500 mt-1 mr-2"></i>
+                <span>Set appropriate difficulty level for your target audience</span>
+            </li>
+        </ul>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    function submitForReview() {
+        if (confirm('Are you ready to submit this draft for admin review?\n\nOnce submitted, you cannot edit until it\'s reviewed.')) {
+            const form = document.querySelector('form');
+            const submitBtn = document.createElement('input');
+            submitBtn.type = 'hidden';
+            submitBtn.name = 'submit_for_review';
+            submitBtn.value = '1';
+            form.appendChild(submitBtn);
+            form.submit();
+        }
+    }
+    
+    // Character counter for short description
+    const shortDescField = document.getElementById('{{ form.short_description.id_for_label }}');
+    if (shortDescField) {
+        const counter = document.createElement('div');
+        counter.className = 'text-right text-sm text-gray-500 mt-1';
+        shortDescField.parentNode.appendChild(counter);
+        
+        function updateCounter() {
+            const length = shortDescField.value.length;
+            counter.textContent = `${length}/512 characters`;
+            if (length > 512) {
+                counter.classList.add('text-red-600');
+            } else {
+                counter.classList.remove('text-red-600');
+            }
+        }
+        
+        shortDescField.addEventListener('input', updateCounter);
+        updateCounter();
+    }
+</script>
+{% endblock %}
+
+{% endblock %}

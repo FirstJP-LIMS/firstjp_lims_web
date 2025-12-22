@@ -1,0 +1,34 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+</head>
+<body style="font-family: Arial, sans-serif; font-size: 15px; color: #333; line-height: 1.6;">
+    
+    <div style="margin-bottom: 25px; border-bottom: 1px solid #eee; padding-bottom: 15px;">
+        <img src="{{ protocol }}://{{ domain }}{% static 'assets/images/logo/med.jpg' %}" 
+             alt="MEDVUNO" 
+             style="width: 160px; display: block;">
+    </div>
+
+    <h2 style="font-size: 18px; color: #d9534f;">New Vendor Onboarding Request</h2>
+
+    <p>A new vendor has submitted an application for review:</p>
+
+    <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; border: 1px solid #ddd;">
+        <p style="margin: 5px 0;"><strong>Vendor:</strong> {{ vendor_name }}</p>
+        <p style="margin: 5px 0;"><strong>Contact Email:</strong> {{ vendor_email }}</p>
+        <p style="margin: 5px 0;"><strong>Plan type:</strong> {{ plan_type }}</p>
+        <p style="margin: 5px 0;"><strong>Admin User:</strong> {{ first_name }}</p>
+    </div>
+
+    <p style="margin-top: 20px;">
+        Please log in to the admin dashboard to review and approve this request.
+    </p>
+
+    <p style="margin-top: 25px; font-size: 12px; color: #777;">
+        This is an automated system notification.
+    </p>
+</body>
+</html>

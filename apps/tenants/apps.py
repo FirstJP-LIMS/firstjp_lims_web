@@ -6,5 +6,5 @@ class TenantsConfig(AppConfig):
     name = 'apps.tenants'
 
     def ready(self):
-        import apps.tenants.signals  # ✅ ensures the signal file is loaded
-
+        import apps.tenants.signals 
+        

@@ -1,0 +1,70 @@
+/* Brand Color Utilities */
+.btn-primary {
+    background-color: #0a192f !important;
+    border-color: #0a192f !important;
+    color: white !important;
+}
+
+.btn-primary:hover {
+    background-color: #0d2240 !important;
+    border-color: #0d2240 !important;
+}
+
+.btn-secondary {
+    background-color: #dc2626 !important;
+    border-color: #dc2626 !important;
+    color: white !important;
+}
+
+.btn-secondary:hover {
+    background-color: #b91c1c !important;
+    border-color: #b91c1c !important;
+}
+
+.btn-outline-primary {
+    border-color: #0a192f !important;
+    color: #0a192f !important;
+}
+
+.btn-outline-primary:hover {
+    background-color: #0a192f !important;
+    border-color: #0a192f !important;
+    color: white !important;
+}
+
+/* Custom badge styles */
+.badge-primary {
+    background-color: #0a192f !important;
+    color: white !important;
+}
+
+.badge-secondary {
+    background-color: #dc2626 !important;
+    color: white !important;
+}
+
+/* Card header styling */
+.card-header {
+    border-bottom: 2px solid #0a192f;
+    background-color: #f8fafc;
+}
+
+/* Progress bars */
+.progress-bar-primary {
+    background-color: #0a192f !important;
+}
+
+.progress-bar-secondary {
+    background-color: #dc2626 !important;
+}
+
+/* Table row hover */
+.table tbody tr:hover {
+    background-color: rgba(10, 25, 47, 0.05) !important;
+}
+
+/* Active nav link */
+.nav-active {
+    color: #dc2626 !important;
+    border-bottom: 2px solid #dc2626;
+}

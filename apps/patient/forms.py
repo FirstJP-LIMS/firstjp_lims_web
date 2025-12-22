@@ -1,8 +1,11 @@
 # In patients/forms.py
 
 from django import forms
-from apps.labs.models import Patient
+from django.db import transaction
+from django.utils import timezone
 from .models import PatientUser
+from apps.labs.models import Patient, TestRequest, VendorTest
+
 
 class PatientProfileForm(forms.Form):
     """
@@ -183,123 +186,149 @@ class PatientProfileForm(forms.Form):
         return self.patient, self.patient_user
 
 
-# class ChangeEmailRequestForm(forms.Form):
-#     """
-#     Separate form for requesting email change (requires verification).
-#     """
-#     new_email = forms.EmailField(
-#         required=True,
-#         widget=forms.EmailInput(attrs={'class': 'form-control'}),
-#         label="New Email Address"
-#     )
+from django.core.exceptions import ValidationError
+from apps.labs.models import TestRequest, VendorTest
+
+class PatientTestOrderForm(forms.ModelForm):
+    """
+    Simplified form for patients to order tests for themselves.
+    Patients can only order tests marked as available_for_online_booking.
+    """
     
-#     confirm_email = forms.EmailField(
-#         required=True,
-#         widget=forms.EmailInput(attrs={'class': 'form-control'}),
-#         label="Confirm New Email"
-#     )
+    requested_tests = forms.ModelMultipleChoiceField(
+        queryset=VendorTest.objects.none(),
+        required=True,
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'}),
+        label="Select Tests",
+        help_text="Choose the tests you would like to request"
+    )
     
-#     password = forms.CharField(
-#         required=True,
-#         widget=forms.PasswordInput(attrs={'class': 'form-control'}),
-#         label="Current Password",
-#         help_text="For security verification"
-#     )
+    reason_for_testing = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': 'Optional: Why are you requesting these tests? (e.g., routine checkup, symptoms you\'re experiencing)'
+        }),
+        label="Reason for Testing (Optional)"
+    )
     
-#     def __init__(self, *args, user=None, **kwargs):
-#         self.user = user
-#         super().__init__(*args, **kwargs)
-    
-#     def clean_confirm_email(self):
-#         """Ensure emails match."""
-#         email1 = self.cleaned_data.get('new_email')
-#         email2 = self.cleaned_data.get('confirm_email')
+    class Meta:
+        model = TestRequest
+        fields = ['requested_tests', 'reason_for_testing', 'clinical_history', 'has_informed_consent']
         
-#         if email1 and email2 and email1 != email2:
-#             raise forms.ValidationError("Email addresses do not match.")
+        widgets = {
+            'clinical_history': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 2,
+                'placeholder': 'Any relevant medical history, medications, or allergies we should know about'
+            }),
+            'has_informed_consent': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
         
-#         return email2
+        labels = {
+            'clinical_history': 'Medical History (Optional)',
+            'has_informed_consent': 'I consent to these tests and understand the preparation requirements',
+        }
     
-#     def clean_new_email(self):
-#         """Check if email is already in use."""
-#         email = self.cleaned_data.get('new_email')
+    def __init__(self, *args, user=None, vendor=None, **kwargs):
+        super().__init__(*args, **kwargs)
         
-#         if self.user and email == self.user.email:
-#             raise forms.ValidationError("This is already your current email address.")
+        self.user = user
+        self.vendor = vendor
         
-#         # Check if email exists for this vendor
-#         if self.user and self.user.vendor:
-#             from django.contrib.auth import get_user_model
-#             User = get_user_model()
+        # DEBUG: Print to see what's happening
+        print(f"DEBUG - PatientTestOrderForm init:")
+        print(f"  User: {user}")
+        print(f"  Vendor: {vendor}")
+        
+        # Only show tests available for patient self-ordering
+        if vendor:
+            available_tests = VendorTest.objects.filter(
+                vendor=vendor,
+                enabled=True,
+                available_for_online_booking=True
+            ).select_related('assigned_department').order_by('name')
             
-#             if User.objects.filter(email=email, vendor=self.user.vendor).exists():
-#                 raise forms.ValidationError("This email is already registered.")
+            print(f"  Available tests count: {available_tests.count()}")
+            
+            self.fields['requested_tests'].queryset = available_tests
+        else:
+            print("  WARNING: No vendor provided!")
         
-#         return email
+        # Make consent required
+        self.fields['has_informed_consent'].required = True
     
-#     def clean_password(self):
-#         """Verify current password."""
-#         password = self.cleaned_data.get('password')
+    def clean_requested_tests(self):
+        """Validate test selection and check patient eligibility."""
+        tests = self.cleaned_data.get('requested_tests')
         
-#         if self.user and not self.user.check_password(password):
-#             raise forms.ValidationError("Incorrect password.")
+        if not tests or tests.count() == 0:
+            raise ValidationError("Please select at least one test.")
         
-#         return password
+        # Verify all tests are patient-accessible
+        for test in tests:
+            if not test.can_be_ordered_by_patient():
+                raise ValidationError(
+                    f"The test '{test.name}' requires clinician authorization and cannot be self-ordered."
+                )
+        
+        return tests
+    
+    def clean(self):
+        cleaned = super().clean()
+        
+        # Ensure consent is checked
+        if not cleaned.get('has_informed_consent'):
+            raise ValidationError({
+                'has_informed_consent': 'You must consent to proceed with the test request.'
+            })
+        
+        return cleaned
+    
+    @property
+    def total_order_price(self):
+        """Calculate total price of selected tests."""
+        if hasattr(self, 'cleaned_data'):
+            tests = self.cleaned_data.get('requested_tests', [])
+            total = sum(test.price for test in tests)
+            return total
+        return 0
+    
+    def save(self, commit=True):
+        """Create test request for patient self-order."""
+        instance = super().save(commit=False)
+        
+        # Set vendor
+        instance.vendor = self.vendor
+        
+        # Get patient from user's patient_profile
+        try:
+            patient_user = self.user.patient_profile
+            instance.patient = patient_user.patient
+        except AttributeError:
+            raise ValueError("User does not have a patient profile.")
+        
+        # Set attribution (patient self-order)
+        instance.requested_by = self.user
+        instance.ordering_clinician = None  # No clinician for self-orders
+        
+        # Copy reason to clinical_indication
+        instance.clinical_indication = self.cleaned_data.get('reason_for_testing', '')
+        
+        # Always routine priority for patient self-orders
+        instance.priority = 'routine'
+        
+        if commit:
+            with transaction.atomic():
+                instance.save()
+                
+                # Add selected tests
+                instance.requested_tests.set(self.cleaned_data['requested_tests'])
+                
+                # Check if any tests require approval
+                instance.check_approval_requirement()
+        
+        return instance
 
-
-# class PasswordChangeForm(forms.Form):
-#     """
-#     Custom password change form for patients.
-#     """
-#     current_password = forms.CharField(
-#         required=True,
-#         widget=forms.PasswordInput(attrs={'class': 'form-control'}),
-#         label="Current Password"
-#     )
-    
-#     new_password1 = forms.CharField(
-#         required=True,
-#         widget=forms.PasswordInput(attrs={'class': 'form-control'}),
-#         label="New Password",
-#         min_length=8,
-#         help_text="Password must be at least 8 characters"
-#     )
-    
-#     new_password2 = forms.CharField(
-#         required=True,
-#         widget=forms.PasswordInput(attrs={'class': 'form-control'}),
-#         label="Confirm New Password"
-#     )
-    
-#     def __init__(self, *args, user=None, **kwargs):
-#         self.user = user
-#         super().__init__(*args, **kwargs)
-    
-#     def clean_current_password(self):
-#         """Verify current password."""
-#         password = self.cleaned_data.get('current_password')
-        
-#         if self.user and not self.user.check_password(password):
-#             raise forms.ValidationError("Current password is incorrect.")
-        
-#         return password
-    
-#     def clean_new_password2(self):
-#         """Ensure new passwords match."""
-#         pwd1 = self.cleaned_data.get('new_password1')
-#         pwd2 = self.cleaned_data.get('new_password2')
-        
-#         if pwd1 and pwd2 and pwd1 != pwd2:
-#             raise forms.ValidationError("New passwords do not match.")
-        
-#         return pwd2
-    
-#     def save(self):
-#         """Update user password."""
-#         if not self.user:
-#             raise ValueError("User instance required.")
-        
-#         self.user.set_password(self.cleaned_data['new_password1'])
-#         self.user.save()
-#         return self.user
 

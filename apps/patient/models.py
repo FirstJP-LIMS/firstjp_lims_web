@@ -13,8 +13,7 @@ class PatientUser(models.Model):
     patient = models.OneToOneField('labs.Patient', on_delete=models.CASCADE, related_name='user_account', help_text="Link to lab operations patient record")
     
     # Portal preferences
-    preferred_notification = models.CharField(
-        max_length=20,
+    preferred_notification = models.CharField(max_length=20,
         choices=[
             ('email', 'Email Only'),
             ('sms', 'SMS Only'),
@@ -23,19 +22,13 @@ class PatientUser(models.Model):
         default='email'
     )
     
-    consent_to_digital_results = models.BooleanField(
-        default=False,
-        help_text="Patient consents to viewing results online"
-    )
+    consent_to_digital_results = models.BooleanField(default=False, help_text="Patient consents to viewing results online")
     
     # Verification status
     email_verified = models.BooleanField(default=False)
     phone_verified = models.BooleanField(default=False)
     
-    profile_completed = models.BooleanField(
-        default=False,
-        help_text="Has patient filled all required profile fields?"
-    )
+    profile_completed = models.BooleanField(default=False, help_text="Has patient filled all required profile fields?")
     
     # Additional preferences
     language_preference = models.CharField(max_length=10, default='en')

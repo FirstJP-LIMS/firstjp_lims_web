@@ -21,7 +21,7 @@
     <!-- Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Mulish:ital,wght@0,200..1000;1,200..1000&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
     
     {% block extra_css %}{% endblock %}
 </head>
@@ -30,9 +30,10 @@
     {% include 'laboratory/assets/header.html' %}
 
     <!-- Main Content -->
-    <main class="main-content">
+    <!-- <main class="main-content"> -->
+    <main class="container py-6" style="margin-top:4rem; margin-bottom:4rem;">
         <!-- <div class="container px-4 py-4"> -->
-        <div class="px-4">
+        <div class="px-4 py-6">
             {% block content %}
             <!-- Page content -->
             {% endblock %}

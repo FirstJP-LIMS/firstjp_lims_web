@@ -1,0 +1,183 @@
+{% extends 'learn/assets/base.html' %}
+{% load static %}
+{% load math_tags %}
+{% load humanize %} 
+
+{% block title %}{{ course.title }} - Course Details{% endblock %}
+
+{% block content %}
+<div class="bg-navy-50 py-10 md:py-16">
+    <div class="container mx-auto px-4">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <div class="lg:col-span-2 space-y-6">
+                
+                <div class="text-sm breadcrumbs text-gray-500">
+                    <ul>
+                        <li><a href="{% url 'learn:course_list' %}" class="hover:text-navy-600">Courses</a></li>
+                        <li><span class="text-navy-800 font-medium">{{ course.title }}</span></li>
+                    </ul>
+                </div>
+                
+                <h1 class="text-4xl md:text-6xl font-extrabold text-navy-800 tracking-tight">
+                    {{ course.title }}
+                </h1>
+                
+                <p class="text-xl text-gray-600 border-l-4 border-red-500 pl-4 italic">
+                    {{ course.short_description }}
+                </p>
+
+                <div class="flex flex-wrap items-center space-x-4 md:space-x-8 text-sm text-gray-600">
+                    <div class="flex items-center text-yellow-500">
+                        {% comment %} {% include 'learn/components/rating_stars.html' with rating=avg_rating %} {% endcomment %}
+                        <span class="ml-2 font-semibold text-navy-800">
+                            {{ avg_rating|floatformat:1|default:"0.0" }}
+                        </span>
+                        <span class="text-gray-500 ml-1">
+                            ({{ feedback_count|intcomma }} reviews)
+                        </span>
+                    </div>
+
+                    {% for facilitator in course.facilitators.all %}
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                        {% comment %} By {{ facilitator.get_full_name|default:facilitator.username }} {% endcomment %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="lg:col-span-1">
+                <div class="card bg-white shadow-2xl sticky top-24 border-t-8 border-navy-600">
+                    
+                    <figure>
+                        {% if course.thumbnail %}
+                        <img src="{{ course.thumbnail.url }}" alt="{{ course.title }}" class="w-full h-48 object-cover">
+                        {% else %}
+                        <div class="w-full h-48 bg-navy-100 flex items-center justify-center">
+                            <span class="text-navy-400 text-2xl font-semibold">Course Media</span>
+                        </div>
+                        {% endif %}
+                    </figure>
+
+                    <div class="card-body p-6 space-y-4">
+                        
+                        <div class="text-4xl font-extrabold text-navy-800 text-center">
+                            {% if course.is_free %}
+                                <span class="text-green-600">FREE</span>
+                            {% else %}
+                                <span>{{ course.currency_symbol }}</span>
+                                {{ course.display_price }}
+                                <span class="text-sm text-gray-500 font-normal ml-2">One-time purchase</span>
+                            {% endif %}
+                        </div>
+
+                        {% if enrollment %}
+                            <div class="alert alert-info shadow-lg">
+                                <div>
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current flex-shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    <span>You are currently enrolled.</span>
+                                </div>
+                            </div>
+                            <a href="{% url 'learn:lesson_detail' course.slug course.modules.first.slug course.modules.first.lessons.first.slug %}" 
+                               class="btn btn-block btn-lg bg-red-600 hover:bg-red-700 text-white">
+                                {% if progress.completed_at %}
+                                    Review Course
+                                {% else %}
+                                    Continue Learning
+                                {% endif %}
+                            </a>
+                            
+                            <progress class="progress progress-error w-full" value="{{ progress.percent }}" max="100"></progress>
+                            <span class="text-xs text-gray-500 text-center block">{{ progress.percent|default:0 }}% Complete</span>
+
+                        {% else %}
+                            <button class="btn btn-block btn-lg bg-navy-600 hover:bg-navy-700 text-white" 
+                                    {% comment %} hx-post="{% url 'enrollment:enroll_or_purchase' course.id %}"  {% endcomment %}
+                                    hx-target="#global-messages">
+                                {% if course.is_free %}Enroll for Free{% else %}Secure Your Spot{% endif %}
+                            </button>
+                            <p class="text-center text-xs text-gray-400">30-day money-back guarantee.</p>
+                        {% endif %}
+
+                        <div class="divider">Includes</div>
+                        <ul class="space-y-2 text-sm text-gray-600">
+                            <li class="flex items-center"><i class="fas fa-play-circle text-navy-500 w-4 h-4 mr-2"></i> {{ course.lessons_count }} Total Lessons</li>
+                            <li class="flex items-center"><i class="fas fa-chart-line text-navy-500 w-4 h-4 mr-2"></i> {{ course.difficulty|capfirst }} Level</li>
+                            <li class="flex items-center"><i class="fas fa-certificate text-navy-500 w-4 h-4 mr-2"></i> Certificate of Completion</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="bg-white py-10">
+    <div class="container mx-auto px-4">
+        <div class="lg:grid lg:grid-cols-3 lg:gap-8">
+            <div class="lg:col-span-2">
+                <div class="tabs tabs-boxed mb-6 bg-gray-100">
+                    <a class="tab tab-lg tab-active text-navy-800" href="#overview">Overview</a>
+                    <a class="tab tab-lg text-navy-800" href="#curriculum">Curriculum</a>
+                    <a class="tab tab-lg text-navy-800" href="#reviews">Reviews</a>
+                </div>
+
+                <section id="overview" class="space-y-6 mb-10">
+                    <h2 class="text-3xl font-bold text-navy-800">Course Goals and Details</h2>
+                    <div class="prose max-w-none text-gray-700">
+                        {{ course.long_description|safe }}
+                    </div>
+                </section>
+
+                <section id="curriculum" class="space-y-6 mb-10">
+                    <h2 class="text-3xl font-bold text-navy-800">Full Course Curriculum</h2>
+                    
+                    <div class="join join-vertical w-full shadow-lg border border-gray-100 rounded-lg">
+                        {% for module in modules %}
+                        <div class="collapse collapse-arrow join-item border border-gray-200">
+                            <input type="checkbox" {% if forloop.first %}checked="checked"{% endif %} /> 
+                            <div class="collapse-title text-xl font-medium text-navy-700 bg-gray-50 hover:bg-gray-100 transition duration-150">
+                                {{ module.position }}. {{ module.title }} 
+                                <span class="text-sm text-gray-500 ml-3 font-normal">({{ module.lessons.count }} Lessons)</span>
+                            </div>
+                            <div class="collapse-content bg-white p-0"> 
+                                <ul class="text-gray-700 divide-y divide-gray-100">
+                                    {% for lesson in module.lessons.all %}
+                                    <li class="flex justify-between items-center p-4 hover:bg-navy-50 transition duration-100">
+                                        <div class="flex items-center">
+                                            <i class="fas fa-file-alt text-red-500 w-4 h-4 mr-3"></i> 
+                                            <span class="font-medium text-sm">{{ lesson.position }}. {{ lesson.title }}</span>
+                                        </div>
+                                        <span class="badge badge-ghost text-xs">
+                                            {% if lesson.duration_seconds %}
+                                                {{ lesson.duration_seconds|div:60|floatformat:0 }} mins
+                                            {% else %}
+                                                Article
+                                            {% endif %}
+                                        </span>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <p class="p-4 text-gray-500">The curriculum is being finalized for this course.</p>
+                        {% endfor %}
+                    </div>
+                </section>
+
+                <section id="reviews" class="space-y-6 mb-10">
+                    <h2 class="text-3xl font-bold text-navy-800">Student Reviews</h2>
+                    <div class="text-center py-10 border border-gray-200 rounded-lg bg-gray-50">
+                        <p class="text-lg text-gray-500">Reviews and feedback loading soon...</p>
+                    </div>
+                </section>
+            </div>
+            
+            <div class="hidden lg:block lg:col-span-1">
+                </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

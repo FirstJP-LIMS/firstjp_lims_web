@@ -1,0 +1,170 @@
+{% extends 'learn/assets/base.html' %}
+{% load static %}
+
+{% block title %}Medical Laboratory Courses | Medvuno{% endblock %}
+
+{% block content %}
+<section class="bg-slate-50 min-h-screen py-10">
+    <div class="container mx-auto px-4">
+
+        <!-- Page Header -->
+        <div class="mb-10">
+            <h1 class="text-3xl md:text-4xl font-bold text-slate-900">
+                Medical Laboratory Courses
+            </h1>
+            <p class="mt-2 text-slate-600 max-w-2xl">
+                Advance your professional laboratory practice with structured, expert-led courses.
+            </p>
+        </div>
+
+        <!-- Filters -->
+        <div class="bg-white rounded-xl shadow-sm p-5 mb-8">
+            <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+
+                <!-- Search -->
+                <div class="md:col-span-2">
+                    <input
+                        type="text"
+                        name="q"
+                        value="{{ q|default:'' }}"
+                        placeholder="Search courses (Hematology, Microbiology...)"
+                        class="input input-bordered w-full"
+                    />
+                </div>
+
+                <!-- Category -->
+                <div>
+                    <select name="category" class="select select-bordered w-full">
+                        <option value="">All Categories</option>
+                        {% for cat in categories %}
+                            <option value="{{ cat.slug }}"
+                                {% if selected_category == cat.slug %}selected{% endif %}
+                            >
+                                {{ cat.title }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Submit -->
+                <div>
+                    <button type="submit" class="btn w-full bg-slate-900 text-white hover:bg-slate-800">
+                        Filter
+                    </button>
+                </div>
+
+            </form>
+        </div>
+
+        <!-- Courses Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+
+            {% for course in courses %}
+            <div class="card bg-white shadow-md hover:shadow-xl transition">
+
+                <!-- Thumbnail -->
+                {% if course.thumbnail %}
+                    <figure class="h-48 overflow-hidden">
+                        <img
+                            src="{{ course.thumbnail.url }}"
+                            alt="{{ course.title }}"
+                            class="w-full h-full object-cover"
+                        />
+                    </figure>
+                {% else %}
+                    <div class="h-48 bg-slate-200 flex items-center justify-center text-slate-500">
+                        No Image
+                    </div>
+                {% endif %}
+
+                <div class="card-body">
+
+                    <!-- Category -->
+                    {% if course.category %}
+                        <span class="badge badge-outline text-slate-700 mb-2">
+                            {{ course.category.title }}
+                        </span>
+                    {% endif %}
+
+                    <!-- Title -->
+                    <h2 class="card-title text-lg font-semibold text-slate-900">
+                        {{ course.title }}
+                    </h2>
+
+                    <!-- Short Description -->
+                    <p class="text-sm text-slate-600 line-clamp-3">
+                        {{ course.short_description }}
+                    </p>
+
+                    <!-- Difficulty & Lessons -->
+                    <div class="flex items-center justify-between text-xs text-slate-500 mt-3">
+                        {% if course.difficulty %}
+                            <span class="badge badge-sm badge-ghost capitalize">
+                                {{ course.difficulty }}
+                            </span>
+                        {% endif %}
+                        <span>
+                            {{ course.lessons_count }} lessons
+                        </span>
+                    </div>
+
+                    <!-- Price -->
+                    <div class="mt-4 flex items-center justify-between">
+                        {% if course.is_free %}
+                            <span class="badge badge-success badge-lg">
+                                FREE
+                            </span>
+                        {% else %}
+                            <span class="text-lg font-bold text-red-600">
+                                {{ course.currency_symbol }}{{ course.display_price }}
+                            </span>
+                        {% endif %}
+
+                        <a
+                            href="{% url 'learn:course_detail' course.slug %}"
+                            class="btn btn-sm bg-slate-900 text-white hover:bg-slate-800"
+                        >
+                            View Course
+                        </a>
+                    </div>
+
+                </div>
+            </div>
+            {% empty %}
+                <div class="col-span-full text-center py-12 text-slate-500">
+                    No courses found.
+                </div>
+            {% endfor %}
+
+        </div>
+
+        <!-- Pagination -->
+        {% if courses.paginator.num_pages > 1 %}
+        <div class="mt-12 flex justify-center">
+            <div class="join">
+
+                {% if courses.has_previous %}
+                    <a href="?page={{ courses.previous_page_number }}"
+                       class="join-item btn btn-outline">
+                        Prev
+                    </a>
+                {% endif %}
+
+                <span class="join-item btn btn-disabled">
+                    Page {{ courses.number }} of {{ courses.paginator.num_pages }}
+                </span>
+
+                {% if courses.has_next %}
+                    <a href="?page={{ courses.next_page_number }}"
+                       class="join-item btn btn-outline">
+                        Next
+                    </a>
+                {% endif %}
+
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+</section>
+{% endblock %}

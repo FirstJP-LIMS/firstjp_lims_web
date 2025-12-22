@@ -1,0 +1,411 @@
+{% extends "learn/assets/base.html" %}
+
+{% block title %}
+Facilitator Dashboard
+{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-navy mb-2">
+        <i class="fas fa-tachometer-alt mr-2"></i>Facilitator Dashboard
+    </h1>
+</div>
+
+<!-- Stats Overview Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <!-- Drafts Card -->
+    <div class="card bg-white shadow-lg border border-gray-200">
+        <div class="card-body">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="card-title text-gray-500 text-sm uppercase tracking-wide">Total Drafts</h3>
+                    <p class="text-3xl font-bold text-navy mt-2">
+                        {{ status_summary.draft|default:0|add:status_summary.submitted|default:0 }}
+                    </p>
+                </div>
+                <div class="p-3 rounded-full bg-navy bg-opacity-10">
+                    <i class="fas fa-edit text-navy text-2xl"></i>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="flex justify-between text-sm">
+                    <span class="text-gray-600">Active: {{ status_summary.draft|default:0 }}</span>
+                    <span class="text-gray-600">Submitted: {{ status_summary.submitted|default:0 }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Published Courses Card -->
+    <div class="card bg-white shadow-lg border border-gray-200">
+        <div class="card-body">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="card-title text-gray-500 text-sm uppercase tracking-wide">Published Courses</h3>
+                    <p class="text-3xl font-bold text-navy mt-2">{{ authored_courses.count }}</p>
+                </div>
+                <div class="p-3 rounded-full bg-green-100">
+                    <i class="fas fa-check-circle text-green-600 text-2xl"></i>
+                </div>
+            </div>
+            <div class="mt-4">
+                <a href="{% url 'learn:facilitator_draft_create' %}" class="text-brand-red hover:text-red-700 font-medium text-sm flex items-center">
+                    <i class="fas fa-plus mr-1"></i> Create New Course
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Awaiting Review Card -->
+    <div class="card bg-white shadow-lg border border-gray-200">
+        <div class="card-body">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="card-title text-gray-500 text-sm uppercase tracking-wide">Awaiting Review</h3>
+                    <p class="text-3xl font-bold text-navy mt-2">{{ submitted_drafts.count }}</p>
+                </div>
+                <div class="p-3 rounded-full bg-yellow-100">
+                    <i class="fas fa-clock text-yellow-600 text-2xl"></i>
+                </div>
+            </div>
+            <div class="mt-4">
+                {% if submitted_drafts.count > 0 %}
+                <p class="text-sm text-gray-600">{{ submitted_drafts.count }} draft(s) waiting for admin approval</p>
+                {% else %}
+                <p class="text-sm text-gray-600">No drafts pending review</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions Card -->
+    <div class="card bg-white shadow-lg border border-gray-200">
+        <div class="card-body">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="card-title text-gray-500 text-sm uppercase tracking-wide">Quick Actions</h3>
+                    <p class="text-navy font-medium mt-2">Create & Manage</p>
+                </div>
+                <div class="p-3 rounded-full bg-brand-red bg-opacity-10">
+                    <i class="fas fa-bolt text-brand-red text-2xl"></i>
+                </div>
+            </div>
+            <div class="mt-4 flex flex-col space-y-2">
+                <a href="{% url 'learn:facilitator_draft_create' %}" class="btn btn-sm bg-navy text-white hover:bg-navy hover:opacity-90">
+                    <i class="fas fa-plus mr-2"></i> New Draft
+                </a>
+                <a href="{% url 'learn:facilitator_draft_list' %}" class="btn btn-sm btn-outline border-navy text-navy hover:bg-navy hover:text-white">
+                    <i class="fas fa-list mr-2"></i> View All Drafts
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <!-- Active Drafts Section -->
+    <div class="card bg-white shadow-lg border border-gray-200">
+        <div class="card-body">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="card-title text-xl text-navy">
+                    <i class="fas fa-pencil-alt mr-2"></i>Active Drafts
+                </h2>
+                <a href="{% url 'learn:facilitator_draft_list' %}" class="text-sm text-brand-red hover:text-red-700 font-medium">
+                    View All <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+            
+            {% if active_drafts %}
+            <div class="overflow-x-auto">
+                <table class="table table-zebra">
+                    <thead>
+                        <tr class="bg-gray-50">
+                            <th class="text-navy font-semibold">Title</th>
+                            <th class="text-navy font-semibold">Category</th>
+                            <th class="text-navy font-semibold">Last Updated</th>
+                            <th class="text-navy font-semibold">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for draft in active_drafts %}
+                        <tr>
+                            <td>
+                                <div class="font-medium text-gray-900">{{ draft.title }}</div>
+                                {% if draft.difficulty %}
+                                <span class="badge badge-sm 
+                                    {% if draft.difficulty == 'basic' %}bg-green-100 text-green-800
+                                    {% elif draft.difficulty == 'intermediate' %}bg-yellow-100 text-yellow-800
+                                    {% elif draft.difficulty == 'advanced' %}bg-red-100 text-red-800
+                                    {% endif %}">
+                                    {{ draft.get_difficulty_display }}
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if draft.category %}
+                                <span class="badge badge-outline border-navy text-navy">{{ draft.category.name }}</span>
+                                {% else %}
+                                <span class="text-gray-400">Not set</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-gray-600">{{ draft.updated_at|date:"M d, Y" }}</td>
+                            <td>
+                                <div class="flex space-x-2">
+                                    <a href="{% url 'edit_draft' draft.id %}" class="btn btn-xs btn-outline border-navy text-navy hover:bg-navy hover:text-white">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <button class="btn btn-xs bg-brand-red text-white hover:bg-red-700" onclick="submitDraft('{{ draft.id }}')">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-8">
+                <i class="fas fa-file-alt text-4xl text-gray-300 mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-700 mb-2">No active drafts</h3>
+                <p class="text-gray-500 mb-4">Start creating your first course draft</p>
+                <a href="{% url 'learn:facilitator_draft_create' %}" class="btn bg-navy text-white hover:bg-navy hover:opacity-90">
+                    <i class="fas fa-plus mr-2"></i> Create Draft
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Recently Published Courses -->
+    <div class="card bg-white shadow-lg border border-gray-200">
+        <div class="card-body">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="card-title text-xl text-navy">
+                    <i class="fas fa-book mr-2"></i>Published Courses
+                </h2>
+                <a href="{% url 'learn:facilitator_draft_create' %}" class="text-sm text-brand-red hover:text-red-700 font-medium">
+                    View All Approved <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+            
+            {% if authored_courses %}
+            <div class="space-y-4">
+                {% for course in authored_courses %}
+                <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-bold text-lg text-navy mb-1">{{ course.title }}</h3>
+                            <div class="flex items-center space-x-3 mb-2">
+                                {% if course.category %}
+                                <span class="badge bg-navy text-white">{{ course.category.name }}</span>
+                                {% endif %}
+                                <span class="badge 
+                                    {% if course.difficulty == 'basic' %}bg-green-100 text-green-800
+                                    {% elif course.difficulty == 'intermediate' %}bg-yellow-100 text-yellow-800
+                                    {% elif course.difficulty == 'advanced' %}bg-red-100 text-red-800
+                                    {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                    {{ course.get_difficulty_display|default:"Not set" }}
+                                </span>
+                            </div>
+                            <p class="text-gray-600 text-sm mb-3">{{ course.short_description|truncatechars:100 }}</p>
+                        </div>
+                        {% if course.thumbnail %}
+                        <img src="{{ course.thumbnail.url }}" alt="{{ course.title }}" class="w-16 h-16 object-cover rounded-lg">
+                        {% endif %}
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <div class="text-sm text-gray-500">
+                            <i class="fas fa-calendar-alt mr-1"></i>
+                            Published: {{ course.published_at|date:"M d, Y" }}
+                        </div>
+                        <div class="flex space-x-2">
+                            <a href="{% url 'course_detail' course.slug %}" class="btn btn-xs btn-outline border-navy text-navy hover:bg-navy hover:text-white">
+                                View
+                            </a>
+                            <a href="{% url 'edit_course' course.id %}" class="btn btn-xs bg-navy text-white hover:bg-navy hover:opacity-90">
+                                Manage
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-8">
+                <i class="fas fa-book-open text-4xl text-gray-300 mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-700 mb-2">No published courses yet</h3>
+                <p class="text-gray-500 mb-4">Your published courses will appear here</p>
+                <a href="{% url 'learn:facilitator_draft_create' %}" class="btn bg-brand-red text-white hover:bg-red-700">
+                    <i class="fas fa-rocket mr-2"></i> Publish Your First Course
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Submitted Drafts Section -->
+<div class="mt-8 card bg-white shadow-lg border border-gray-200">
+    <div class="card-body">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="card-title text-xl text-navy">
+                <i class="fas fa-hourglass-half mr-2"></i>Drafts Awaiting Review
+            </h2>
+            <span class="badge bg-brand-red text-white">{{ submitted_drafts.count }} Pending</span>
+        </div>
+        
+        {% if submitted_drafts %}
+        <div class="overflow-x-auto">
+            <table class="table">
+                <thead>
+                    <tr class="bg-gray-50">
+                        <th class="text-navy font-semibold">Title</th>
+                        <th class="text-navy font-semibold">Category</th>
+                        <th class="text-navy font-semibold">Submitted Date</th>
+                        <th class="text-navy font-semibold">Status</th>
+                        <th class="text-navy font-semibold">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for draft in submitted_drafts %}
+                    <tr>
+                        <td class="font-medium">{{ draft.title }}</td>
+                        <td>
+                            {% if draft.category %}
+                            <span class="badge badge-outline border-navy text-navy">{{ draft.category.name }}</span>
+                            {% else %}
+                            <span class="text-gray-400">Not set</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-gray-600">{{ draft.created_at|date:"M d, Y" }}</td>
+                        <td>
+                            <span class="badge bg-yellow-100 text-yellow-800">
+                                {{ draft.get_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="flex space-x-2">
+                                <a href="{% url 'view_draft' draft.id %}" class="btn btn-xs btn-outline border-navy text-navy hover:bg-navy hover:text-white">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                                {% if draft.review_notes %}
+                                <div class="tooltip" data-tip="Review notes available">
+                                    <button class="btn btn-xs btn-ghost text-brand-red">
+                                        <i class="fas fa-sticky-note"></i>
+                                    </button>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-8">
+            <i class="fas fa-check-circle text-4xl text-green-300 mb-4"></i>
+            <h3 class="text-lg font-medium text-gray-700 mb-2">No drafts awaiting review</h3>
+            <p class="text-gray-500">All your drafts are either approved or still in progress</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Quick Stats Footer -->
+<div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div class="bg-navy text-white rounded-lg p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-lg font-semibold mb-2">Course Progress</h3>
+                <p class="text-3xl font-bold">{{ authored_courses.count }} Live</p>
+            </div>
+            <i class="fas fa-chart-line text-3xl opacity-80"></i>
+        </div>
+        <div class="mt-4">
+            <div class="h-2 bg-white bg-opacity-20 rounded-full">
+                <div class="h-full bg-brand-red rounded-full" style="width: 75%"></div>
+            </div>
+            <p class="text-sm mt-2 text-gray-300">Completion rate: 75%</p>
+        </div>
+    </div>
+    
+    <div class="bg-white border border-gray-200 rounded-lg p-6 shadow">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-lg font-semibold text-navy mb-2">Next Steps</h3>
+                <ul class="space-y-2 text-gray-600">
+                    <li class="flex items-center">
+                        <i class="fas fa-check-circle text-green-500 mr-2"></i>
+                        Complete course drafts
+                    </li>
+                    <li class="flex items-center">
+                        <i class="fas fa-clock text-yellow-500 mr-2"></i>
+                        Review pending submissions
+                    </li>
+                </ul>
+            </div>
+            <i class="fas fa-tasks text-3xl text-navy opacity-60"></i>
+        </div>
+    </div>
+    
+    <div class="bg-brand-red text-white rounded-lg p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-lg font-semibold mb-2">Need Help?</h3>
+                <p class="mb-4">Check our facilitator guide</p>
+                <a href="#" class="btn btn-outline btn-sm border-white text-white hover:bg-white hover:text-brand-red">
+                    <i class="fas fa-question-circle mr-2"></i> Get Help
+                </a>
+            </div>
+            <i class="fas fa-hands-helping text-3xl opacity-80"></i>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    function submitDraft(draftId) {
+        if (confirm('Are you sure you want to submit this draft for review?')) {
+            // Implement AJAX call to submit draft
+            fetch(`/drafts/${draftId}/submit/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error submitting draft: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while submitting the draft.');
+            });
+        }
+    }
+    
+    // Update last login time display
+    document.addEventListener('DOMContentLoaded', function() {
+        const now = new Date();
+        const options = { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        };
+        console.log('Dashboard loaded at:', now.toLocaleDateString('en-US', options));
+    });
+</script>
+
+{% endblock %}
+
+{% endblock %}

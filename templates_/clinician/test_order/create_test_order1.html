@@ -1,0 +1,790 @@
+{% extends "clinician/assets/base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 flex">
+    <!-- Sidebar -->
+    {% include 'clinician/assets/sidebar.html' %}
+
+    <!-- Main Content -->
+    <main class="flex-1 md:ml-64">
+        <!-- Mobile Header Spacer -->
+        <div class="md:hidden h-16"></div>
+
+        <div class="p-6">
+            <!-- Page Header -->
+            <div class="mb-8">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">
+                            {% if patient %}
+                                New Test Order for {{ patient.first_name }} {{ patient.last_name }}
+                            {% else %}
+                                Create New Test Order
+                            {% endif %}
+                        </h1>
+                        <p class="text-gray-600 mt-1">
+                            {% if patient %}
+                                Patient ID: <span class="font-mono">{{ patient.patient_id }}</span> 
+                                • {{ patient.get_gender_display }} 
+                                {% if patient.date_of_birth %}
+                                    • {{ patient.date_of_birth|timesince }} old
+                                {% endif %}
+                            {% else %}
+                                Select patient and tests to create a new order
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="flex gap-3">
+                        <a href="{% url 'clinician:test_catalog' %}" class="btn btn-ghost">
+                            <i class="fas fa-search mr-2"></i> Browse Tests
+                        </a>
+                        {% if patient %}
+                        <a href="{% url 'clinician:patient_detail' patient.patient_id %}" class="btn btn-ghost">
+                            <i class="fas fa-user mr-2"></i> View Patient
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Patient Selection Card (if no patient provided) -->
+            {% if not patient %}
+            <div class="card bg-white shadow-sm border border-gray-200 mb-6">
+                <div class="card-body p-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Step 1: Select Patient</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Quick Patient Search -->
+                        <div class="relative">
+                            <input 
+                                type="text" 
+                                id="patient-search" 
+                                placeholder="Search patients by name or ID..."
+                                class="input input-bordered w-full pl-10"
+                            >
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-search text-gray-400"></i>
+                            </div>
+                        </div>
+                        
+                        <!-- New Patient Button -->
+                        <a href="" class="btn btn-primary">
+                            <i class="fas fa-user-plus mr-2"></i> New Patient
+                        </a>
+                    </div>
+                    
+                    <!-- Recent Patients List -->
+                    <div class="mt-6">
+                        <h3 class="text-sm font-medium text-gray-700 mb-3">Recent Patients</h3>
+                        <div class="space-y-2" id="recent-patients">
+                            <!-- This would be populated via AJAX or from context -->
+                            <div class="text-center py-4 text-gray-500">
+                                <i class="fas fa-user-clock text-2xl mb-2"></i>
+                                <p>Search for a patient to begin</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Order Form -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Test Selection Panel -->
+                <div class="lg:col-span-2">
+                    <div class="card bg-white shadow-sm border border-gray-200">
+                        <div class="card-body p-6">
+                            <h2 class="text-lg font-semibold text-gray-900 mb-4">
+                                {% if patient %}
+                                    Step 1: Select Tests for {{ patient.first_name }}
+                                {% else %}
+                                    Step 2: Select Tests
+                                {% endif %}
+                            </h2>
+                            
+                            <!-- Test Search & Filter -->
+                            <div class="mb-6">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                    <div class="relative">
+                                        <input 
+                                            type="text" 
+                                            id="test-search" 
+                                            placeholder="Search tests..."
+                                            class="input input-bordered w-full pl-10"
+                                        >
+                                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <i class="fas fa-search text-gray-400"></i>
+                                        </div>
+                                    </div>
+                                    
+                                    <select id="department-filter" class="select select-bordered">
+                                        <option value="">All Departments</option>
+                                        {% for dept in form.fields.tests.queryset.values_list.assigned_department %}
+                                            <!-- Would need to populate with actual departments -->
+                                        {% endfor %}
+                                    </select>
+                                    
+                                    <button onclick="browseCatalog()" class="btn btn-outline">
+                                        <i class="fas fa-external-link-alt mr-2"></i> Browse Catalog
+                                    </button>
+                                </div>
+                                
+                                <!-- Quick Test Categories -->
+                                <div class="flex flex-wrap gap-2">
+                                    <button class="btn btn-xs btn-outline" onclick="addCommonTest('cbc')">
+                                        <i class="fas fa-tint mr-1"></i> CBC
+                                    </button>
+                                    <button class="btn btn-xs btn-outline" onclick="addCommonTest('cbc')">
+                                        <i class="fas fa-heart mr-1"></i> Lipid Profile
+                                    </button>
+                                    <button class="btn btn-xs btn-outline" onclick="addCommonTest('cbc')">
+                                        <i class="fas fa-syringe mr-1"></i> Basic Metabolic
+                                    </button>
+                                    <button class="btn btn-xs btn-outline" onclick="addCommonTest('cbc')">
+                                        <i class="fas fa-dna mr-1"></i> HIV Screen
+                                    </button>
+                                    <button class="btn btn-xs btn-outline" onclick="addCommonTest('cbc')">
+                                        <i class="fas fa-liver mr-1"></i> Liver Function
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Selected Tests List -->
+                            <div id="selected-tests-container" class="mb-6">
+                                <div class="flex justify-between items-center mb-3">
+                                    <h3 class="text-sm font-medium text-gray-700">Selected Tests (0)</h3>
+                                    <button onclick="clearSelectedTests()" class="btn btn-xs btn-ghost text-red-600">
+                                        <i class="fas fa-trash mr-1"></i> Clear All
+                                    </button>
+                                </div>
+                                
+                                <div id="selected-tests-list" class="space-y-2">
+                                    <!-- Tests will be added here via JavaScript -->
+                                    <div id="empty-tests-message" class="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg">
+                                        <i class="fas fa-flask text-gray-300 text-3xl mb-3"></i>
+                                        <p class="text-gray-500">No tests selected</p>
+                                        <p class="text-sm text-gray-400 mt-1">Search and add tests from the catalog</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Total Cost -->
+                            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <p class="text-sm text-gray-600">Estimated Total Cost</p>
+                                        <p id="total-cost" class="text-2xl font-bold text-gray-900">₦0.00</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm text-gray-600 text-right">Turnaround Time</p>
+                                        <p id="turnaround-time" class="text-lg font-semibold text-gray-700">24-48 hours</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Order Details Card -->
+                    <div class="card bg-white shadow-sm border border-gray-200 mt-6">
+                        <div class="card-body p-6">
+                            <h2 class="text-lg font-semibold text-gray-900 mb-4">Step 2: Order Details</h2>
+                            
+                            <form method="POST" id="order-form">
+                                {% csrf_token %}
+                                
+                                <!-- Hidden field for selected tests -->
+                                <input type="hidden" name="tests" id="id_tests" value="">
+                                
+                                <!-- Patient Selection (if not pre-selected) -->
+                                {% if not patient %}
+                                <div class="mb-6">
+                                    <label for="{{ form.patient.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                        Select Patient *
+                                    </label>
+                                    <div class="relative">
+                                        {{ form.patient }}
+                                        {% if form.patient.errors %}
+                                            <div class="mt-1 text-sm text-red-600">
+                                                {{ form.patient.errors }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <p class="mt-1 text-sm text-gray-500">
+                                        Or <a href="" class="link link-primary">create a new patient</a>
+                                    </p>
+                                </div>
+                                {% else %}
+                                <input type="hidden" name="patient" value="{{ patient.id }}">
+                                {% endif %}
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <!-- Clinical Information -->
+                                    <div>
+                                        <h3 class="text-sm font-medium text-gray-700 mb-3">Clinical Information</h3>
+                                        
+                                        <div class="space-y-4">
+                                            <div>
+                                                <label for="{{ form.clinical_indication.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                                                    Clinical Indication *
+                                                </label>
+                                                {{ form.clinical_indication }}
+                                                {% if form.clinical_indication.errors %}
+                                                    <div class="mt-1 text-sm text-red-600">
+                                                        {{ form.clinical_indication.errors }}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            
+                                            <div>
+                                                <label for="{{ form.urgency.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                                                    Urgency
+                                                </label>
+                                                {{ form.urgency }}
+                                                {% if form.urgency.errors %}
+                                                    <div class="mt-1 text-sm text-red-600">
+                                                        {{ form.urgency.errors }}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            
+                                            <div>
+                                                <label for="{{ form.special_instructions.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                                                    Special Instructions
+                                                </label>
+                                                {{ form.special_instructions }}
+                                                {% if form.special_instructions.errors %}
+                                                    <div class="mt-1 text-sm text-red-600">
+                                                        {{ form.special_instructions.errors }}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Billing & Collection -->
+                                    <div>
+                                        <h3 class="text-sm font-medium text-gray-700 mb-3">Billing & Collection</h3>
+                                        
+                                        <div class="space-y-4">
+                                            <div>
+                                                <label for="{{ form.insurance_provider.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                                                    Insurance Provider
+                                                </label>
+                                                {{ form.insurance_provider }}
+                                                {% if form.insurance_provider.errors %}
+                                                    <div class="mt-1 text-sm text-red-600">
+                                                        {{ form.insurance_provider.errors }}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            
+                                            <div>
+                                                <label for="{{ form.priority.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                                                    Priority
+                                                </label>
+                                                {{ form.priority }}
+                                                {% if form.priority.errors %}
+                                                    <div class="mt-1 text-sm text-red-600">
+                                                        {{ form.priority.errors }}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            
+                                            <div>
+                                                <label for="{{ form.collection_method.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                                                    Collection Method
+                                                </label>
+                                                {{ form.collection_method }}
+                                                {% if form.collection_method.errors %}
+                                                    <div class="mt-1 text-sm text-red-600">
+                                                        {{ form.collection_method.errors }}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Form-level errors -->
+                                {% if form.non_field_errors %}
+                                <div class="mt-4 p-4 bg-red-50 border border-red-200 rounded-md">
+                                    <div class="flex items-center">
+                                        <i class="fas fa-exclamation-circle text-red-500 mr-3"></i>
+                                        <div class="text-sm text-red-700">
+                                            {{ form.non_field_errors }}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Order Summary Panel -->
+                <div>
+                    <div class="card bg-white shadow-sm border border-gray-200 sticky top-6">
+                        <div class="card-body p-6">
+                            <h2 class="text-lg font-semibold text-gray-900 mb-4">Order Summary</h2>
+                            
+                            <!-- Patient Info -->
+                            {% if patient %}
+                            <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                                <div class="flex items-start gap-3">
+                                    <div class="bg-primary/10 p-2 rounded-full">
+                                        <i class="fas fa-user text-primary"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-medium text-gray-900">{{ patient.first_name }} {{ patient.last_name }}</h3>
+                                        <p class="text-sm text-gray-600">ID: {{ patient.patient_id }}</p>
+                                        <p class="text-xs text-gray-500">
+                                            {% if patient.date_of_birth %}
+                                                {{ patient.get_gender_display }} • {{ patient.date_of_birth|date:"Y-m-d" }}
+                                            {% else %}
+                                                {{ patient.get_gender_display }}
+                                            {% endif %}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Test Count -->
+                            <div class="mb-6">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-sm text-gray-600">Number of Tests</span>
+                                    <span id="test-count" class="font-semibold">0</span>
+                                </div>
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-sm text-gray-600">Estimated Cost</span>
+                                    <span id="summary-total-cost" class="font-semibold">₦0.00</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-600">Estimated Turnaround</span>
+                                    <span id="summary-turnaround" class="font-semibold">24-48 hours</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Test List Preview -->
+                            <div class="mb-6">
+                                <h3 class="text-sm font-medium text-gray-700 mb-2">Tests Included</h3>
+                                <div id="summary-tests-list" class="space-y-2 max-h-60 overflow-y-auto">
+                                    <p class="text-sm text-gray-500 text-center py-4">No tests selected yet</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Action Buttons -->
+                            <div class="space-y-3">
+                                <button 
+                                    type="button"
+                                    onclick="validateAndSubmit()"
+                                    id="submit-order-btn"
+                                    class="btn btn-primary w-full justify-center"
+                                    disabled
+                                >
+                                    <i class="fas fa-paper-plane mr-2"></i> Submit Order
+                                </button>
+                                
+                                <button 
+                                    type="button"
+                                    onclick="saveAsDraft()"
+                                    class="btn btn-outline w-full justify-center"
+                                >
+                                    <i class="fas fa-save mr-2"></i> Save as Draft
+                                </button>
+                                
+                                <a 
+                                    href="{% if patient %}{% url 'clinician:patient_detail' patient.patient_id %}{% else %}{% url 'clinician:clinician_dashboard' %}{% endif %}" 
+                                    class="btn btn-ghost w-full justify-center"
+                                >
+                                    <i class="fas fa-times mr-2"></i> Cancel
+                                </a>
+                            </div>
+                            
+                            <!-- Help Text -->
+                            <div class="mt-6 pt-6 border-t border-gray-100">
+                                <div class="flex items-center text-sm text-gray-500">
+                                    <i class="fas fa-info-circle mr-2"></i>
+                                    <p>Orders are sent directly to the lab for processing</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Modal for Test Selection -->
+<div id="test-catalog-modal" class="modal hidden">
+    <div class="modal-box max-w-4xl">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold">Select Tests</h3>
+            <button onclick="closeModal()" class="btn btn-sm btn-circle btn-ghost">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="modal-content">
+            <!-- Test catalog will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<style>
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+.modal-box {
+    background: white;
+    border-radius: 0.5rem;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+.sticky {
+    position: sticky;
+}
+</style>
+
+<script>
+// Global state
+let selectedTests = [];
+let testCatalog = []; // This would be populated from backend
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    // Load test catalog via AJAX
+    fetchTestCatalog();
+    
+    // Setup patient search if needed
+    {% if not patient %}
+    setupPatientSearch();
+    {% endif %}
+    
+    // Setup test search
+    setupTestSearch();
+});
+
+function fetchTestCatalog() {
+    // AJAX call to get tests
+    fetch('/clinician/api/tests/')
+        .then(response => response.json())
+        .then(data => {
+            testCatalog = data.tests;
+        })
+        .catch(error => console.error('Error loading tests:', error));
+}
+
+function setupTestSearch() {
+    const searchInput = document.getElementById('test-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', function(e) {
+            const query = e.target.value.toLowerCase();
+            if (query.length > 2) {
+                searchTests(query);
+            }
+        });
+    }
+}
+
+function searchTests(query) {
+    const filteredTests = testCatalog.filter(test => 
+        test.name.toLowerCase().includes(query) ||
+        test.code.toLowerCase().includes(query) ||
+        test.department.toLowerCase().includes(query)
+    );
+    
+    // Display search results (you might want a dropdown or modal)
+    console.log('Found tests:', filteredTests.length);
+}
+
+function browseCatalog() {
+    // Open modal with test catalog
+    const modal = document.getElementById('test-catalog-modal');
+    const modalContent = document.getElementById('modal-content');
+    
+    // Load catalog content
+    modalContent.innerHTML = `
+        <div class="text-center py-8">
+            <i class="fas fa-spinner fa-spin text-2xl text-gray-400"></i>
+            <p class="mt-2 text-gray-500">Loading test catalog...</p>
+        </div>
+    `;
+    
+    modal.classList.remove('hidden');
+    
+    // Simulate loading catalog
+    setTimeout(() => {
+        modalContent.innerHTML = `
+            <div class="grid grid-cols-1 gap-3">
+                ${testCatalog.slice(0, 20).map(test => `
+                    <div class="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+                        <div>
+                            <h4 class="font-medium text-gray-900">${test.name}</h4>
+                            <p class="text-sm text-gray-500">${test.code} • ${test.department}</p>
+                            <p class="text-sm font-semibold text-primary mt-1">₦${test.price.toFixed(2)}</p>
+                        </div>
+                        <button onclick="addTestToOrder('${test.id}')" class="btn btn-sm btn-primary">
+                            <i class="fas fa-plus"></i> Add
+                        </button>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }, 500);
+}
+
+function closeModal() {
+    document.getElementById('test-catalog-modal').classList.add('hidden');
+}
+
+function addTestToOrder(testId) {
+    const test = testCatalog.find(t => t.id === testId);
+    if (test && !selectedTests.some(t => t.id === testId)) {
+        selectedTests.push({
+            id: test.id,
+            name: test.name,
+            code: test.code,
+            price: test.price,
+            department: test.department,
+            turnaround: test.turnaround
+        });
+        
+        updateSelectedTestsUI();
+        updateSummary();
+        updateFormField();
+        closeModal();
+    }
+}
+
+function removeTestFromOrder(testId) {
+    selectedTests = selectedTests.filter(test => test.id !== testId);
+    updateSelectedTestsUI();
+    updateSummary();
+    updateFormField();
+}
+
+function updateSelectedTestsUI() {
+    const container = document.getElementById('selected-tests-list');
+    const emptyMessage = document.getElementById('empty-tests-message');
+    
+    if (selectedTests.length === 0) {
+        if (emptyMessage) {
+            emptyMessage.classList.remove('hidden');
+        }
+        container.innerHTML = '';
+        container.appendChild(emptyMessage);
+    } else {
+        if (emptyMessage) {
+            emptyMessage.classList.add('hidden');
+        }
+        
+        container.innerHTML = selectedTests.map(test => `
+            <div class="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                <div class="flex-1">
+                    <div class="flex items-center justify-between mb-1">
+                        <h4 class="font-medium text-gray-900">${test.name}</h4>
+                        <span class="text-sm font-semibold text-primary">₦${test.price.toFixed(2)}</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-sm text-gray-500">
+                        <span class="font-mono">${test.code}</span>
+                        <span>•</span>
+                        <span>${test.department}</span>
+                    </div>
+                </div>
+                <button onclick="removeTestFromOrder('${test.id}')" class="ml-3 btn btn-sm btn-ghost text-red-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `).join('');
+    }
+    
+    // Update test count in header
+    document.querySelector('#selected-tests-container h3').textContent = 
+        `Selected Tests (${selectedTests.length})`;
+}
+
+function updateSummary() {
+    const totalCost = selectedTests.reduce((sum, test) => sum + parseFloat(test.price), 0);
+    const testCount = selectedTests.length;
+    
+    // Calculate max turnaround
+    const maxTurnaround = selectedTests.reduce((max, test) => 
+        Math.max(max, test.turnaround || 48), 24
+    );
+    
+    // Update elements
+    document.getElementById('total-cost').textContent = `₦${totalCost.toFixed(2)}`;
+    document.getElementById('test-count').textContent = testCount;
+    document.getElementById('summary-total-cost').textContent = `₦${totalCost.toFixed(2)}`;
+    document.getElementById('summary-turnaround').textContent = `${maxTurnaround} hours`;
+    document.getElementById('turnaround-time').textContent = `${maxTurnaround} hours`;
+    
+    // Update test list in summary
+    const summaryList = document.getElementById('summary-tests-list');
+    if (testCount === 0) {
+        summaryList.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">No tests selected yet</p>';
+    } else {
+        summaryList.innerHTML = selectedTests.slice(0, 5).map(test => `
+            <div class="flex items-center justify-between text-sm">
+                <span class="truncate">${test.name}</span>
+                <span class="font-semibold">₦${test.price.toFixed(2)}</span>
+            </div>
+        `).join('');
+        
+        if (testCount > 5) {
+            summaryList.innerHTML += `
+                <div class="text-center text-sm text-gray-500 pt-2 border-t">
+                    +${testCount - 5} more tests
+                </div>
+            `;
+        }
+    }
+    
+    // Enable/disable submit button
+    const submitBtn = document.getElementById('submit-order-btn');
+    submitBtn.disabled = testCount === 0;
+}
+
+function updateFormField() {
+    // Update hidden input with selected test IDs
+    const testIds = selectedTests.map(test => test.id).join(',');
+    document.getElementById('id_tests').value = testIds;
+}
+
+function clearSelectedTests() {
+    if (selectedTests.length > 0) {
+        if (confirm('Are you sure you want to remove all selected tests?')) {
+            selectedTests = [];
+            updateSelectedTestsUI();
+            updateSummary();
+            updateFormField();
+        }
+    }
+}
+
+function addCommonTest(testType) {
+    // Map common test types to actual test IDs
+    const testMap = {
+        'cbc': 'CBC001', // Example IDs
+        'lipid': 'LIP001',
+        'metabolic': 'MET001',
+        'hiv': 'HIV001',
+        'liver': 'LFT001'
+    };
+    
+    const testId = testMap[testType];
+    if (testId) {
+        // Find test in catalog and add it
+        const test = testCatalog.find(t => t.code === testId);
+        if (test) {
+            addTestToOrder(test.id);
+        }
+    }
+}
+
+function validateAndSubmit() {
+    // Basic validation
+    if (selectedTests.length === 0) {
+        showNotification('Please select at least one test', 'error');
+        return;
+    }
+    
+    // Check if patient is selected (for non-pre-selected forms)
+    {% if not patient %}
+    const patientSelect = document.getElementById('id_patient');
+    if (!patientSelect || patientSelect.value === '') {
+        showNotification('Please select a patient', 'error');
+        patientSelect.focus();
+        return;
+    }
+    {% endif %}
+    
+    // Check clinical indication
+    const indication = document.getElementById('id_clinical_indication');
+    if (indication && indication.value.trim() === '') {
+        showNotification('Clinical indication is required', 'error');
+        indication.focus();
+        return;
+    }
+    
+    // Disable button and show loading
+    const submitBtn = document.getElementById('submit-order-btn');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Submitting...';
+    submitBtn.disabled = true;
+    
+    // Submit the form
+    document.getElementById('order-form').submit();
+}
+
+function saveAsDraft() {
+    // Implement save as draft functionality
+    showNotification('Draft saved successfully', 'success');
+}
+
+function showNotification(message, type = 'info') {
+    // Reuse notification function from previous template
+    console.log(`${type.toUpperCase()}: ${message}`);
+    // You can use the same notification function from test_catalog.html
+}
+
+// Patient search functionality (if no patient pre-selected)
+function setupPatientSearch() {
+    const searchInput = document.getElementById('patient-search');
+    const recentPatients = document.getElementById('recent-patients');
+    
+    if (searchInput) {
+        searchInput.addEventListener('input', function(e) {
+            const query = e.target.value.trim();
+            if (query.length > 1) {
+                // AJAX search for patients
+                fetch(`/clinician/api/patients/search/?q=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        displayPatientResults(data.patients);
+                    })
+                    .catch(error => console.error('Search error:', error));
+            }
+        });
+    }
+}
+
+function displayPatientResults(patients) {
+    const container = document.getElementById('recent-patients');
+    if (patients.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-4 text-gray-500">
+                <i class="fas fa-user-slash text-2xl mb-2"></i>
+                <p>No patients found</p>
+            </div>
+        `;
+    } else {
+        container.innerHTML = patients.slice(0, 5).map(patient => `
+            <a href="/clinician/create-order/${patient.id}/" class="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+                <div class="flex items-center gap-3">
+                    <div class="bg-gray-100 p-2 rounded-full">
+                        <i class="fas fa-user text-gray-600"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-medium text-gray-900">${patient.first_name} ${patient.last_name}</h4>
+                        <p class="text-sm text-gray-500">ID: ${patient.patient_id}</p>
+                    </div>
+                </div>
+                <i class="fas fa-chevron-right text-gray-400"></i>
+            </a>
+        `).join('');
+    }
+}
+</script>
+{% endblock %}

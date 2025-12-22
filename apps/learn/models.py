@@ -1,3 +1,19 @@
+"""
+Facilitator
+    → CourseDraft (CRUD)
+    → DraftModule (CRUD)
+    → DraftLesson (CRUD)
+    → MediaAsset (Upload)
+    → Submit Draft
+            ↓
+    Admin
+    → Review
+    → Approve
+    → promote_course_draft()
+            ↓
+    Public Course
+"""
+
 # apps/learn/models.py
 import uuid
 from decimal import Decimal
@@ -58,10 +74,9 @@ class FacilitatorProfile(TimeStampedModel):
 
 
 # ---------- Taxonomy ----------
-
 class CourseCategory(TimeStampedModel):
-    """High-level category for grouping courses (Hematology, Microbiology, etc.)."""
-    slug = models.SlugField(max_length=120, unique=True)
+    """Set by Admin: High-level category for grouping courses (Hematology, Microbiology, etc.)."""
+    slug = models.SlugField(max_length=120, unique=True, blank=True)
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
 
@@ -70,6 +85,19 @@ class CourseCategory(TimeStampedModel):
 
     def __str__(self):
         return self.title
+
+    def save(self, *args, **kwargs):
+        # Only generate slug if not set
+        if not self.slug:
+            base_slug = slugify(self.title)
+            slug = base_slug
+            counter = 1
+            # Ensure uniqueness
+            while CourseCategory.objects.filter(slug=slug).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            self.slug = slug
+        super().save(*args, **kwargs)
 
 
 class CourseTag(TimeStampedModel):
@@ -114,21 +142,33 @@ class MediaAsset(TimeStampedModel):
         return f"{self.title} ({self.media_type})"
 
 
+from django.utils.text import slugify
+from django.db.models import Q 
+
 # ---------- Course Model Hierarchy ----------
 
 class Course(TimeStampedModel):
+     
+    DIFFICULTY_STATUS = [
+        ('basic', 'Basic'),
+        ('intermediate', 'Intermediate'),
+        ('advanced', 'Advanced'),
+    ]
     """
     Course is the main container. UUID PK for global uniqueness.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=300)
-    slug = models.SlugField(max_length=300, unique=True)
+    # Note: slug is not null/blank since it will be auto-generated
+    slug = models.SlugField(max_length=300, unique=True, blank=True) # Added blank=True
     short_description = models.CharField(max_length=512, blank=True)
     long_description = models.TextField(blank=True)
     category = models.ForeignKey(CourseCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name='courses')
     tags = models.ManyToManyField(CourseTag, blank=True, related_name='courses')
     thumbnail = models.ImageField(upload_to='learn/course_thumbs/', blank=True, null=True)
-    difficulty = models.CharField(max_length=50, blank=True, null=True, help_text="Beginner/Intermediate/Advanced")
+    
+    difficulty = models.CharField(max_length=50, choices=DIFFICULTY_STATUS, blank=True, null=True)
+
     published = models.BooleanField(default=False, db_index=True)
     published_at = models.DateTimeField(blank=True, null=True)
     featured = models.BooleanField(default=False, db_index=True)
@@ -141,6 +181,19 @@ class Course(TimeStampedModel):
     # denormalized counts (helpful for performance; keep updated in app logic or celery tasks)
     lessons_count = models.PositiveIntegerField(default=0)
     modules_count = models.PositiveIntegerField(default=0)
+
+
+    base_price = models.DecimalField(max_digits=8, decimal_places=2,
+        default=0.00,
+        help_text="Base price of the course in USD. Set to 0.00 for free courses."
+    )
+
+    is_free = models.BooleanField(
+        default=False,
+        editable=False,
+        help_text="Automatically set to True if base_price is 0.00"
+    )
+
 
     class Meta:
         ordering = ["-featured", "-published_at", "title"]
@@ -157,6 +210,35 @@ class Course(TimeStampedModel):
             self.published = True
             self.published_at = timezone.now()
             self.save(update_fields=["published", "published_at"])
+    
+    def save(self, *args, **kwargs):
+        # Set course to free 
+        self.is_free = self.base_price == 0.00
+        
+        # use the catogory and title
+        # 1. Generate the base slug only if it's a new object or the title changed
+        if not self.pk or self.title != self.__original_title:
+            category_slug_part = ""
+            if self.category and self.category.slug:
+                category_slug_part = f"{self.category.slug}-"
+            
+            # Combine category and title
+            base_slug = slugify(f"{category_slug_part}{self.title}")
+            
+            # Ensure slug is unique, appending a counter if necessary
+            unique_slug = base_slug
+            num = 1
+            while Course.objects.filter(slug=unique_slug).exclude(pk=self.pk).exists():
+                unique_slug = f'{base_slug}-{num}'
+                num += 1
+            
+            self.slug = unique_slug
+        super().save(*args, **kwargs)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Store original title to detect changes in save method
+        self.__original_title = self.title
 
 
 class Module(TimeStampedModel):
@@ -166,11 +248,16 @@ class Module(TimeStampedModel):
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     position = models.PositiveIntegerField(default=0, help_text="Ordering index")
+    
+    # 🌟 NEW FIELD: Slug for use in URLs 🌟
+    slug = models.SlugField(max_length=255, blank=True)
 
     class Meta:
         ordering = ["position"]
         constraints = [
-            UniqueConstraint(fields=['course', 'position'], name='unique_module_position_per_course')
+            UniqueConstraint(fields=['course', 'position'], name='unique_module_position_per_course'),
+            # 🌟 NEW CONSTRAINT: Slug must be unique per course 🌟
+            UniqueConstraint(fields=['course', 'slug'], name='unique_module_slug_per_course')
         ]
         indexes = [
             models.Index(fields=["course", "position"]),
@@ -178,6 +265,35 @@ class Module(TimeStampedModel):
 
     def __str__(self):
         return f"{self.course.title} — {self.title}"
+
+    # 🌟 NEW SLUG GENERATION METHOD 🌟
+    def save(self, *args, **kwargs):
+        # Store original title to detect changes for slug regeneration
+        original_title = getattr(self, '__original_title', None)
+        
+        # Only generate/update slug if it's a new record OR the title has changed
+        if not self.pk or self.title != original_title:
+            
+            # 1. Generate the base slug from the title
+            base_slug = slugify(self.title)
+            
+            # 2. Ensure the slug is unique within its parent course
+            unique_slug = base_slug
+            num = 1
+            
+            # Query the database for existing slugs under the same course, excluding self
+            while Module.objects.filter(course=self.course, slug=unique_slug).exclude(pk=self.pk).exists():
+                unique_slug = f'{base_slug}-{num}'
+                num += 1
+            
+            self.slug = unique_slug
+        
+        self.__original_title = self.title
+        super().save(*args, **kwargs)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.__original_title = self.title
 
 
 class Lesson(TimeStampedModel):
@@ -193,7 +309,11 @@ class Lesson(TimeStampedModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name='lessons')
     title = models.CharField(max_length=255)
-    slug = models.SlugField(max_length=320, blank=True, null=True, help_text="Unique per module when provided")
+    
+    # 🌟 MODIFIED FIELD: Set blank=True to allow save() to fill it 🌟
+    # Removed null=True and help_text referencing the old conditional unique constraint
+    slug = models.SlugField(max_length=320, blank=True) 
+    
     lesson_type = models.CharField(max_length=32, choices=LESSON_TYPE_CHOICES, default='video')
     summary = models.TextField(blank=True)
     body = models.TextField(blank=True, help_text="Optional HTML/markdown stored as text")
@@ -207,10 +327,8 @@ class Lesson(TimeStampedModel):
         ordering = ["position"]
         constraints = [
             UniqueConstraint(fields=('module', 'position'), name='unique_lesson_position_per_module'),
-            # Make slug unique per module, but only when slug is not null
-            UniqueConstraint(fields=('module', 'slug'),
-                             condition=Q(slug__isnull=False),
-                             name='unique_lesson_slug_per_module')
+            # 🌟 SIMPLIFIED CONSTRAINT: Slug is now always required and unique per module 🌟
+            UniqueConstraint(fields=('module', 'slug'), name='unique_lesson_slug_per_module'),
         ]
         indexes = [
             models.Index(fields=["module", "position"]),
@@ -218,6 +336,122 @@ class Lesson(TimeStampedModel):
 
     def __str__(self):
         return f"{self.module.course.title} — {self.title}"
+
+    def save(self, *args, **kwargs):
+        # Store original title to detect changes for slug regeneration
+        original_title = getattr(self, '__original_title', None)
+        if not self.pk or self.title != original_title:            
+            base_slug = slugify(self.title)
+            unique_slug = base_slug
+            num = 1
+            while Lesson.objects.filter(module=self.module, slug=unique_slug).exclude(pk=self.pk).exists():
+                unique_slug = f'{base_slug}-{num}'
+                num += 1
+            self.slug = unique_slug
+        # Update original title storage and call parent save
+        self.__original_title = self.title
+        super().save(*args, **kwargs)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Store original title on initialization
+        self.__original_title = self.title
+
+
+# ---------- Facilitator-owned ----------
+class CourseDraft(TimeStampedModel):
+    DRAFT_STATUS = [
+        ('draft', 'Draft'),
+        ('submitted', 'Submitted for Review'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+
+    DIFFICULTY_STATUS = [
+        ('basic', 'Basic'),
+        ('intermediate', 'Intermediate'),
+        ('advanced', 'Advanced'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    created_by = models.ForeignKey(User,on_delete=models.CASCADE,related_name='course_drafts')
+
+    title = models.CharField(max_length=300)
+    slug = models.SlugField(max_length=300, unique=True)
+    short_description = models.CharField(max_length=512, blank=True)
+    long_description = models.TextField(blank=True)
+
+    category = models.ForeignKey(CourseCategory,on_delete=models.SET_NULL, null=True,blank=True)
+    tags = models.ManyToManyField(CourseTag, blank=True)
+
+    thumbnail = models.ImageField(upload_to='learn/course_drafts/',blank=True, null=True)
+
+    difficulty = models.CharField(max_length=50, choices=DIFFICULTY_STATUS, blank=True, null=True)
+
+    status = models.CharField(max_length=20, choices=DRAFT_STATUS, default='draft', db_index=True)
+
+    review_notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['created_by', 'status']),
+        ]
+
+    def __str__(self):
+        return f"Draft: {self.title} ({self.status})"
+
+
+class DraftModule(TimeStampedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    course_draft = models.ForeignKey(
+        CourseDraft,
+        on_delete=models.CASCADE,
+        related_name='modules'
+    )
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    position = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['position']
+        constraints = [
+            UniqueConstraint(
+                fields=['course_draft', 'position'],
+                name='unique_draft_module_position'
+            )
+        ]
+
+
+class DraftLesson(TimeStampedModel):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    
+    module = models.ForeignKey(
+        DraftModule,
+        on_delete=models.CASCADE,
+        related_name='lessons'
+    )
+
+    title = models.CharField(max_length=255)
+    lesson_type = models.CharField(
+        max_length=32,
+        choices=Lesson.LESSON_TYPE_CHOICES
+    )
+    summary = models.TextField(blank=True)
+    body = models.TextField(blank=True)
+    position = models.PositiveIntegerField(default=0)
+    duration_seconds = models.PositiveIntegerField(blank=True, null=True)
+
+    media = models.ManyToManyField(MediaAsset, blank=True)
+
+    class Meta:
+        ordering = ['position']
+        constraints = [
+            UniqueConstraint(
+                fields=['module', 'position'],
+                name='unique_draft_lesson_position'
+            )
+        ]
 
 
 # ---------- Assessments ----------
@@ -475,7 +709,7 @@ class CourseFeedback(TimeStampedModel):
     RATING_CHOICES = [(i, i) for i in range(1, 6)]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='feedback')
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='feedbacks') # relate to Courses
     learner = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='feedback_given')
     rating = models.IntegerField(choices=RATING_CHOICES, default=5)
     comment = models.TextField(blank=True)
@@ -710,3 +944,6 @@ generate serializers + DRF views for CRUD + enrollment APIs, or
 
 write migrations and a small data migration script to backfill slugs/search vectors.
 """
+
+
+

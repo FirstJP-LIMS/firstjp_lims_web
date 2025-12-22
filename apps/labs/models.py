@@ -58,7 +58,8 @@ class Department(models.Model):
         unique_together = ('vendor', 'name') 
 
     def __str__(self):
-        return f"{self.vendor.name} - {self.name}"
+        # return f"{self.vendor.name} - {self.name}"
+        return f"{self.name}"
 
 
 class VendorTest(models.Model):
@@ -110,8 +111,7 @@ class VendorTest(models.Model):
     amr_high = models.DecimalField(max_digits=12, decimal_places=6, null=True, blank=True, help_text="Analytical Measuring Range (upper)")
 
     reportable_low = models.DecimalField(max_digits=12, decimal_places=6, null=True, blank=True, help_text="Reportable (clinical) low")
-    reportable_high = models.DecimalField(max_digits=12, decimal_places=6, null=True, blank=True,
-                                          help_text="Reportable (clinical) high")
+    reportable_high = models.DecimalField(max_digits=12, decimal_places=6, null=True, blank=True, help_text="Reportable (clinical) high")
 
     # Reference / clinical ranges (these can be vendor-default; patient-specific ranges may be applied at runtime)
     min_reference_value = models.DecimalField(max_digits=12, decimal_places=6, null=True, blank=True)
@@ -464,129 +464,6 @@ PRIORITY_STATUS = [
         ("urgent","URGENT"),
         ("routine","ROUTINE"),
     ]
-# class TestRequest(models.Model):
-#     """Represents a full lab order for a patient, possibly containing multiple tests."""
-
-#     ORDER_STATUS = [
-#         ('P', 'Pending'),     # Created, awaiting sample collection
-#         ('R', 'Received'),    # Sample received/accessioned
-#         ('A', 'Analysis'),    # Tests being analyzed
-#         ('C', 'Complete'),    # Results generated, awaiting verification
-#         ('V', 'Verified'),    # Final report verified and ready for release
-#     ]
-
-#     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="requests")  # ✅ Direct reference
-#     patient = models.ForeignKey('Patient', on_delete=models.PROTECT, related_name="requests")
-#     # requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="ordered_requests")
-
-#     requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="ordered_requests", help_text="User who created this order (clinician or patient)")
-
-#     ordering_clinician = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="clinical_orders", limit_choices_to={'role': 'clinician'}, help_text="Clinician responsible for this order")
-    
-#     request_id = models.CharField(max_length=64, unique=True, help_text="Unique Request/Order ID (auto-generated).")
-
-#     requested_tests = models.ManyToManyField('VendorTest', related_name="test_requests")
-
-#     clinical_history = models.TextField(blank=True, help_text="Relevant clinical notes or history.")
-    
-#     # 🆕 Clinical context
-#     clinical_indication = models.TextField(blank=True, help_text="Reason for ordering tests (ICD codes, symptoms, diagnosis)")
-    
-#     urgency_reason = models.TextField(blank=True, help_text="Justification for urgent/STAT orders")
-
-#     priority = models.CharField(choices=PRIORITY_STATUS, max_length=45, default="routine", help_text="e.g., routine, urgent, stat.")
-#     status = models.CharField(choices=ORDER_STATUS, max_length=1, default="P")
-
-#     # --- New fields ---
-#     has_informed_consent = models.BooleanField(default=False, help_text="Indicates that informed consent was obtained.")
-#     collection_notes = models.TextField(blank=True, help_text="Additional notes on phlebotomy or collection (time deviations, complications, etc.).")
-
-#     external_referral = models.CharField(max_length=255, blank=True, null=True, help_text="Referring doctor or institution, if any.")
-
-#     barcode_image = models.ImageField(upload_to='barcodes/', null=True, blank=True)
-
-#     created_at = models.DateTimeField(auto_now_add=True)
-#     completed_at = models.DateTimeField(null=True, blank=True)
-#     verified_at = models.DateTimeField(null=True, blank=True)
-
-#     # 🆕 Result notification tracking
-#     clinician_notified_at = models.DateTimeField(null=True, blank=True, help_text="When was the ordering clinician notified of results?")
-    
-#     clinician_acknowledged_at = models.DateTimeField(null=True, blank=True, help_text="When did clinician acknowledge reviewing results?")
-
-#     from django.db import models
-#     class Meta:
-#         ordering = ["-created_at"]
-#         verbose_name = "Test Request"
-#         verbose_name_plural = "Test Requests"
-#         indexes = [
-#             models.Index(fields=['ordering_clinician', 'status']),
-#             models.Index(fields=['patient', 'created_at']),
-#         ]
-
-#     def generate_barcode(self):
-#         """Generate a barcode image for this test request."""
-#         barcode_data = f"{self.vendor.tenant_id}-{self.patient.patient_id}-{self.request_id}"
-
-#         buffer = BytesIO()
-#         barcode = Code128(barcode_data, writer=ImageWriter())
-#         barcode.write(buffer)
-
-#         filename = f"barcode_{self.request_id}.png"
-#         self.barcode_image.save(filename, ContentFile(buffer.getvalue()), save=False)
-#         buffer.close()
-#         return self.barcode_image
-
-#     def save(self, *args, **kwargs):
-#         """Auto-generate request ID and barcode on first save."""
-#         if not self.request_id:
-#             self.request_id = get_next_sequence("REQ", vendor=self.vendor)
-        
-#         super().save(*args, **kwargs)
-        
-#         if not self.barcode_image:
-#             self.generate_barcode()
-#             super().save(update_fields=["barcode_image"])
-
-#     def move_to_analysis(self):
-#         self.status = 'A'
-#         self.save(update_fields=['status'])
-
-#     def complete_analysis(self):
-#         self.status = 'C'
-#         self.completed_at = timezone.now()
-#         self.save(update_fields=['status', 'completed_at'])
-
-#     def verify_results(self, user):
-#         self.status = 'V'
-#         self.verified_at = timezone.now()
-#         self.save(update_fields=['status', 'verified_at'])
-        
-#         AuditLog.objects.create(
-#             vendor=self.vendor, 
-#             user=user,
-#             action=f"Request {self.request_id} verified"
-#         )
-
-#     # clinical-clinician properties 
-#     def notify_ordering_clinician(self):
-#         """Mark that clinician has been notified of results."""
-#         self.clinician_notified_at = timezone.now()
-#         self.save(update_fields=['clinician_notified_at'])
-        
-#         # TODO: Send actual notification (email/SMS)
-    
-#     def clinician_acknowledge_results(self, user):
-#         """Record that clinician has reviewed results."""
-#         if user.role == 'clinician':
-#             self.clinician_acknowledged_at = timezone.now()
-#             self.save(update_fields=['clinician_acknowledged_at'])
-
-#     def __str__(self):
-#         return f"{self.request_id} ({self.patient})"
-
-
-# In labs/models.py - UPDATE TestRequest
 
 class TestRequest(models.Model):
     """Represents a full lab order for a patient, possibly containing multiple tests."""
@@ -605,14 +482,7 @@ class TestRequest(models.Model):
     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="requests")
     patient = models.ForeignKey('Patient', on_delete=models.PROTECT, related_name="requests")
     
-    requested_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="ordered_requests",
-        help_text="User who created this order (clinician or patient)"
-    )
+    requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="ordered_requests", help_text="User who created this order (clinician or patient)")
     
     ordering_clinician = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -669,6 +539,8 @@ class TestRequest(models.Model):
     verified_at = models.DateTimeField(null=True, blank=True)
     clinician_notified_at = models.DateTimeField(null=True, blank=True)
     clinician_acknowledged_at = models.DateTimeField(null=True, blank=True)
+
+    # Request Result 
 
     class Meta:
         ordering = ["-created_at"]
@@ -773,34 +645,53 @@ class TestRequest(models.Model):
         self.completed_at = timezone.now()
         self.save(update_fields=['status', 'completed_at'])
 
-    def verify_results(self, user):
-        """Final verification and release."""
-        self.status = 'V'
-        self.verified_at = timezone.now()
-        self.save(update_fields=['status', 'verified_at'])
+    # def verify_results(self, user):
+    #     """Final verification and release."""
+    #     self.status = 'V'
+    #     self.verified_at = timezone.now()
+    #     self.save(update_fields=['status', 'verified_at'])
         
-        from apps.labs.models import AuditLog
-        AuditLog.objects.create(
-            vendor=self.vendor, 
-            user=user,
-            action=f"Request {self.request_id} verified"
-        )
+    #     from apps.labs.models import AuditLog
+    #     AuditLog.objects.create(
+    #         vendor=self.vendor, 
+    #         user=user,
+    #         action=f"Request {self.request_id} verified"
+    #     )
         
-        # Notify ordering clinician if present
-        if self.ordering_clinician:
-            self.notify_ordering_clinician()
+    #     # Notify ordering clinician if present
+    #     if self.ordering_clinician:
+    #         self.notify_ordering_clinician()
     
-    def notify_ordering_clinician(self):
-        """Mark that clinician has been notified of results."""
-        self.clinician_notified_at = timezone.now()
-        self.save(update_fields=['clinician_notified_at'])
-        # TODO: Send actual notification
+    # def notify_ordering_clinician(self):
+    #     """Mark that clinician has been notified of results."""
+    #     self.clinician_notified_at = timezone.now()
+    #     self.save(update_fields=['clinician_notified_at'])
+    #     # TODO: Send actual notification
     
-    def clinician_acknowledge_results(self, user):
-        """Record that clinician has reviewed results."""
-        if user.role == 'clinician':
-            self.clinician_acknowledged_at = timezone.now()
-            self.save(update_fields=['clinician_acknowledged_at'])
+    # def clinician_acknowledge_results(self, user):
+    #     """Record that clinician has reviewed results."""
+    #     if user.role == 'clinician':
+    #         self.clinician_acknowledged_at = timezone.now()
+    #         self.save(update_fields=['clinician_acknowledged_at'])
+    
+    
+    @property
+    def has_critical_results(self):
+        return self.assignments.filter(
+            result__flag='C',
+            result__released=True
+        ).exists()
+
+    @property
+    def all_results_released(self):
+        return not self.assignments.filter(
+            result__released=False
+        ).exists()
+
+    @property
+    def requires_clinician_attention(self):
+        return self.has_critical_results and not self.clinician_acknowledged_at
+    
     
     @property
     def requires_approval(self):
@@ -898,6 +789,7 @@ class TestAssignment(models.Model):
     def __str__(self):
         return f"{self.request.request_id} - {self.lab_test.code}"
 
+
 class TestResult(models.Model):
     """
     Stores the final result for a TestAssignment.
@@ -955,18 +847,9 @@ class TestResult(models.Model):
     # ===================
     # USER + AUDIT FIELDS
     # ===================
-    entered_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        null=True, on_delete=models.SET_NULL,
-        related_name="entered_results"
-    )
+    entered_by = models.ForeignKey(settings.AUTH_USER_MODEL,null=True, on_delete=models.SET_NULL, related_name="entered_results")
 
-    verified_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        null=True, blank=True,
-        on_delete=models.SET_NULL,
-        related_name="verified_results"
-    )
+    verified_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="verified_results")
 
     released_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

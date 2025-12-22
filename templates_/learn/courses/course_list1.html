@@ -1,0 +1,528 @@
+    {% extends 'learn/assets/base.html' %}
+
+{% block title %}Medical Laboratory Courses - MedLearnHub{% endblock %}
+
+{% block hero_section %}
+<section class="bg-gradient-medical text-white py-16">
+    <div class="container mx-auto px-4">
+        <div class="max-w-3xl mx-auto text-center">
+            <h1 class="font-heading font-bold text-4xl md:text-5xl mb-6">
+                Advance Your <span class="text-medical-gold">Medical Laboratory</span> Career
+            </h1>
+            <p class="text-xl text-blue-100 mb-8">
+                Expert-led courses in hematology, microbiology, clinical chemistry, and more. 
+                Learn from industry professionals and earn recognized certifications.
+            </p>
+            
+            <!-- Search Bar -->
+            <form method="GET" action="{% url 'learn:course_list' %}" class="max-w-2xl mx-auto">
+                <div class="relative">
+                    <input 
+                        type="text" 
+                        name="q" 
+                        value="{{ q }}" 
+                        placeholder="Search for courses, topics, or instructors..." 
+                        class="w-full pl-12 pr-6 py-4 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-medical-gold shadow-lg"
+                    >
+                    <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-medical-blue text-xl"></i>
+                    <button type="submit" class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-medical-red text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors">
+                        Search
+                    </button>
+                </div>
+            </form>
+            
+            <!-- Quick Stats -->
+            <div class="flex flex-wrap justify-center gap-8 mt-12">
+                <div class="text-center">
+                    <div class="text-3xl font-bold mb-1">{{ courses.paginator.count|default:"100+" }}</div>
+                    <div class="text-blue-200">Courses Available</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold mb-1">50+</div>
+                    <div class="text-blue-200">Expert Instructors</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold mb-1">10k+</div>
+                    <div class="text-blue-200">Students Enrolled</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold mb-1">24/7</div>
+                    <div class="text-blue-200">Access Anywhere</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-12">
+    <!-- Filters and Controls -->
+    <div class="mb-12">
+        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+            <!-- Category Filter -->
+            <div class="flex-1">
+                <h3 class="font-heading font-bold text-lg text-medical-blue mb-3">Filter by Category:</h3>
+                <div class="flex flex-wrap gap-2">
+                    <a 
+                        href="{% url 'learn:course_list' %}{% if q %}?q={{ q }}{% endif %}" 
+                        class="px-4 py-2 rounded-full border {% if not selected_category %}bg-medical-blue text-white border-medical-blue{% else %}border-gray-300 text-gray-700 hover:border-medical-blue hover:text-medical-blue{% endif %} transition-colors"
+                    >
+                        All Categories
+                    </a>
+                    {% for category in categories %}
+                    <a 
+                        href="{% url 'learn:course_list' %}?category={{ category.slug }}{% if q %}&q={{ q }}{% endif %}" 
+                        class="px-4 py-2 rounded-full border {% if selected_category == category.slug %}bg-medical-blue text-white border-medical-blue{% else %}border-gray-300 text-gray-700 hover:border-medical-blue hover:text-medical-blue{% endif %} transition-colors"
+                    >
+                        {{ category.title }}
+                    </a>
+                    {% endfor %}
+                </learn:div>
+            </div>
+            
+            <!-- Sort and View -->
+            <div class="flex items-center space-x-4">
+                <div class="dropdown">
+                    <label tabindex="0" class="btn btn-outline border-gray-300 text-gray-700 hover:border-medical-blue hover:text-medical-blue">
+                        <i class="fas fa-sort mr-2"></i> Sort By
+                    </label>
+                    <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52">
+                        <li><a href="#">Most Popular</a></li>
+                        <li><a href="#">Newest First</a></li>
+                        <li><a href="#">Highest Rated</a></li>
+                        <li><a href="#">Difficulty: Low to High</a></li>
+                        <li><a href="#">Difficulty: High to Low</a></li>
+                    </ul>
+                </div>
+                
+                <div class="hidden md:flex items-center space-x-2">
+                    <button class="btn btn-square btn-ghost border border-gray-300">
+                        <i class="fas fa-th-large"></i>
+                    </button>
+                    <button class="btn btn-square btn-ghost border border-gray-300">
+                        <i class="fas fa-list"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tags Filter -->
+        {% if tags %}
+        <div class="mt-8">
+            <h3 class="font-heading font-bold text-lg text-medical-blue mb-3">Popular Topics:</h3>
+            <div class="flex flex-wrap gap-2">
+                {% for tag in tags|slice:":10" %}
+                <a 
+                    href="{% url 'learn:course_list' %}?tag={{ tag.name }}{% if q %}&q={{ q }}{% endif %}" 
+                    class="px-3 py-1 rounded-full text-sm {% if selected_tag == tag.name %}bg-medical-red text-white{% else %}bg-gray-100 text-gray-700 hover:bg-medical-red hover:text-white{% endif %} transition-colors"
+                >
+                    {{ tag.name }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- learn:Featured Courses -->
+    {% if courses|length > 0 and courses.0.featured %}
+    <div class="mb-12">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="font-heading font-bold text-2xl text-medical-blue">
+                <i class="fas fa-star text-medical-gold mr-2"></i>Featured Courses
+            </h2>
+            <a href="#" class="text-medical-red hover:text-red-700 font-medium">
+                View All <i class="fas fa-arrow-right ml-1"></i>
+            </a>
+        </div>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {% for course in courses|slice:":2" %}
+            {% if course.featured %}
+            <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-shadow">
+                <div class="md:flex">
+                    {% if course.thumbnail %}
+                    <div class="md:w-2/5">
+                        <img src="{{ course.thumbnail.url }}" alt="{{ course.title }}" class="w-full h-48 md:h-full object-cover">
+                    </div>
+                    {% endif %}
+                    <div class="p-6 md:w-{% if course.thumbnail %}3/5{% else %}full{% endif %}">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <span class="badge-medical-blue px-3 py-1 rounded-full text-sm font-medium">
+                                    {{ course.category.title|default:"General" }}
+                                </span>
+                                <span class="badge-medical-gold ml-2 px-3 py-1 rounded-full text-sm font-medium">
+                                    Featured
+                                </span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-star text-medical-gold mr-1"></i>
+                                <span class="font-bold">{{ course.avg_rating|default:"4.5" }}</span>
+                            </div>
+                        </div>
+                        
+                        <h3 class="font-heading font-bold text-xl text-gray-900 mb-2">{{ course.title }}</h3>
+                        <p class="text-gray-600 mb-4">{{ course.short_description|truncatechars:120 }}</p>
+                        
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-4 text-sm text-gray-500">
+                                <span class="flex items-center">
+                                    <i class="fas fa-signal mr-2"></i>
+                                    {{ course.get_difficulty_display|default:"All Levels" }}
+                                </span>
+                                <span class="flex items-center">
+                                    <i class="fas fa-book-open mr-2"></i>
+                                    {{ course.modules_count }} modules
+                                </span>
+                                <span class="flex items-center">
+                                    <i class="fas fa-clock mr-2"></i>
+                                    15 hours
+                                </span>
+                            </div>
+                            <a href="{% url 'course_detail' course.slug %}" class="btn bg-medical-red text-white hover:bg-red-700">
+                                Explore Course
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- All Courses -->
+    <div>
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="font-heading font-bold text-2xl text-medical-blue">
+                <i class="fas fa-graduation-cap mr-2"></i>All Laboratory Science Courses
+            </h2>
+            <div class="text-gray-600">
+                Showing <span class="font-bold text-medical-blue">{{ courses.start_index }}-{{ courses.end_index }}</span> 
+                of <span class="font-bold text-medical-blue">{{ courses.paginator.count }}</span> courses
+            </div>
+        </div>
+
+        {% if courses %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+            {% for course in courses %}
+            <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden hover:shadow-lg transition-all hover:-translate-y-1">
+                <!-- Course Thumbnail -->
+                <div class="relative">
+                    {% if course.thumbnail %}
+                    <img src="{{ course.thumbnail.url }}" alt="{{ course.title }}" class="w-full h-48 object-cover">
+                    {% else %}
+                    <div class="w-full h-48 bg-gradient-medical flex items-center justify-center">
+                        <i class="fas fa-microscope text-white text-4xl"></i>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Badges -->
+                    <div class="absolute top-4 left-4 flex flex-col space-y-2">
+                        {% if course.featured %}
+                        <span class="badge-medical-gold px-3 py-1 rounded-full text-xs font-bold">
+                            <i class="fas fa-star mr-1"></i> Featured
+                        </span>
+                        {% endif %}
+                        <span class="badge-medical-blue px-3 py-1 rounded-full text-xs font-bold">
+                            {{ course.get_difficulty_display|default:"All Levels" }}
+                        </span>
+                    </div>
+                    
+                    <!-- Category -->
+                    {% if course.category %}
+                    <div class="absolute top-4 right-4">
+                        <span class="bg-white text-medical-blue px-3 py-1 rounded-full text-xs font-bold shadow">
+                            {{ course.category.title }}
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Course Info -->
+                <div class="p-5">
+                    <!-- Title and Rating -->
+                    <div class="mb-3">
+                        <h3 class="font-heading font-bold text-lg text-gray-900 mb-2 line-clamp-2 h-14">
+                            <a href="{% url 'course_detail' course.slug %}" class="hover:text-medical-blue transition-colors">
+                                {{ course.title }}
+                            </a>
+                        </h3>
+                        <div class="flex items-center justify-between">
+                            {% if course.avg_rating %}
+                            <div class="flex items-center">
+                                <div class="flex mr-2">
+                                    {% for i in "12345"|make_list %}
+                                    {% if forloop.counter <= course.avg_rating %}
+                                    <i class="fas fa-star text-medical-gold text-sm"></i>
+                                    {% elif forloop.counter|add:"-0.5" <= course.avg_rating %}
+                                    <i class="fas fa-star-half-alt text-medical-gold text-sm"></i>
+                                    {% else %}
+                                    <i class="far fa-star text-gray-300 text-sm"></i>
+                                    {% endif %}
+                                    {% endfor %}
+                                </div>
+                                <span class="text-sm text-gray-600">({{ course.avg_rating|floatformat:1 }})</span>
+                            </div>
+                            {% else %}
+                            <span class="text-sm text-gray-500">No ratings yet</span>
+                            {% endif %}
+                            
+                            {% if course.published_at %}
+                            <span class="text-xs text-gray-500">
+                                {{ course.published_at|date:"M Y" }}
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Description -->
+                    <p class="text-gray-600 text-sm mb-4 line-clamp-2 h-10">
+                        {{ course.short_description }}
+                    </p>
+                    
+                    <!-- Tags -->
+                    {% if course.tags.all %}
+                    <div class="mb-4">
+                        <div class="flex flex-wrap gap-1">
+                            {% for tag in course.tags.all|slice:":3" %}
+                            <span class="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
+                                {{ tag.name }}
+                            </span>
+                            {% endfor %}
+                            {% if course.tags.all.count > 3 %}
+                            <span class="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
+                                +{{ course.tags.all.count|add:"-3" }}
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Stats and Actions -->
+                    <div class="flex items-center justify-between pt-4 border-t border-gray-100">
+                        <div class="flex items-center space-x-4 text-sm text-gray-500">
+                            <span class="flex items-center">
+                                <i class="fas fa-play-circle mr-1"></i>
+                                {{ course.lessons_count }} lessons
+                            </span>
+                            <span class="flex items-center">
+                                <i class="fas fa-clock mr-1"></i>
+                                8h
+                            </span>
+                        </div>
+                        
+                        <div class="flex items-center space-x-2">
+                            {% if course in enrolled_courses %}
+                            <a href="{% url 'course_learn' course.slug %}" class="btn btn-sm bg-medical-blue text-white hover:bg-blue-800">
+                                Continue
+                            </a>
+                            {% else %}
+                            <a href="{% url 'course_detail' course.slug %}" class="btn btn-sm btn-outline border-medical-blue text-medical-blue hover:bg-medical-blue hover:text-white">
+                                View Details
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Facilitators -->
+                    {% if course.facilitators.all %}
+                    <div class="mt-4 pt-4 border-t border-gray-100">
+                        <div class="flex items-center justify-between">
+                            <div class="flex -space-x-2">
+                                {% for facilitator in course.facilitators.all|slice:":3" %}
+                                <div class="w-8 h-8 rounded-full bg-medical-red text-white flex items-center justify-center text-xs font-bold border-2 border-white">
+                                    {{ facilitator.username|first|upper }}
+                                </div>
+                                {% endfor %}
+                                {% if course.facilitators.all.count > 3 %}
+                                <div class="w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center text-xs font-bold border-2 border-white">
+                                    +{{ course.facilitators.all.count|add:"-3" }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <span class="text-xs text-gray-500">Instructors</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Pagination -->
+        {% if courses.has_other_pages %}
+        <div class="flex justify-center">
+            <div class="join">
+                {% if courses.has_previous %}
+                <a href="?page={{ courses.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}" class="join-item btn btn-outline border-gray-300">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+                {% endif %}
+                
+                {% for num in courses.paginator.page_range %}
+                    {% if courses.number == num %}
+                    <a href="?page={{ num }}{% if q %}&q={{ q }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}" class="join-item btn bg-medical-blue text-white border-medical-blue">
+                        {{ num }}
+                    </a>
+                    {% elif num > courses.number|add:'-3' and num < courses.number|add:'3' %}
+                    <a href="?page={{ num }}{% if q %}&q={{ q }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}" class="join-item btn btn-outline border-gray-300">
+                        {{ num }}
+                    </a>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if courses.has_next %}
+                <a href="?page={{ courses.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}" class="join-item btn btn-outline border-gray-300">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+        {% else %}
+        <!-- No Courses Found -->
+        <div class="text-center py-16">
+            <div class="w-32 h-32 mx-auto mb-6 rounded-full bg-gradient-medical flex items-center justify-center">
+                <i class="fas fa-search text-white text-5xl"></i>
+            </div>
+            <h3 class="font-heading font-bold text-2xl text-medical-blue mb-3">
+                No courses found
+            </h3>
+            <p class="text-gray-600 mb-8 max-w-md mx-auto">
+                {% if q or selected_category or selected_tag %}
+                We couldn't find any courses matching your criteria. Try adjusting your filters.
+                {% else %}
+                No courses are currently available. Please check back soon!
+                {% endif %}
+            </p>
+            <a href="{% url 'learn:course_list' %}" class="btn bg-medical-red text-white hover:bg-red-700 px-8">
+                <i class="fas fa-redo mr-2"></i> Clear Filters
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Call to Action -->
+    <div class="mt-16 bg-gradient-to-r from-medical-blue to-blue-800 rounded-2xl p-8 text-white">
+        <div class="flex flex-col lg:flex-row items-center justify-between">
+            <div class="lg:w-2/3 mb-8 lg:mb-0">
+                <learn:h2 class="font-heading font-bold text-3xl mb-4">
+                    Ready to Advance Your Laboratory Career?
+                </h2>
+                <p class="text-blue-100 text-lg mb-6">
+                    Join thousands of medical professionals who have enhanced their skills with our certification programs.
+                </p>
+                <div class="flex flex-wrap gap-4">
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-check-circle text-medical-gold"></i>
+                        <span>Industry-recognized certifications</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-check-circle text-medical-gold"></i>
+                        <span>Flexible online learning</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-check-circle text-medical-gold"></i>
+                        <span>Expert instructor support</span>
+                    </div>
+                </div>
+            </div>
+            <div class="lg:w-1/3 text-center lg:text-right">
+                {% if not user.is_authenticated %}
+                <a href="{% url 'signup' %}" class="btn bg-medical-red text-white hover:bg-red-700 px-8 py-3 text-lg">
+                    Start Free Trial
+                </a>
+                <p class="text-blue-200 mt-3">7-day free trial • Cancel anytime</p>
+                {% else %}
+                <a href="#" class="btn bg-white text-medical-blue hover:bg-gray-100 px-8 py-3 text-lg">
+                    Browse Learning Paths
+                </a>
+                <p class="text-blue-200 mt-3">Structured career progression</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    // Active filter highlighting
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle category filter clicks
+        const categoryFilters = document.querySelectorAll('[href*="category="]');
+        categoryFilters.forEach(filter => {
+            filter.addEventListener('click', function(e) {
+                if (this.classList.contains('bg-medical-blue')) {
+                    e.preventDefault();
+                    window.location.href = "{% url 'learn:course_list' %}{% if q %}?q={{ q }}{% endif %}";
+                }
+            });
+        });
+        
+        // Handle tag filter clicks
+        const tagFilters = document.querySelectorAll('[href*="tag="]');
+        tagFilters.forEach(filter => {
+            filter.addEventListener('click', function(e) {
+                if (this.classList.contains('bg-medical-red')) {
+                    e.preventDefault();
+                    window.location.href = "{% url 'learn:course_list' %}{% if q %}?q={{ q }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}";
+                }
+            });
+        });
+        
+        // Search input focus
+        const searchInput = document.querySelector('input[name="q"]');
+        if (searchInput) {
+            searchInput.addEventListener('focus', function() {
+                this.parentElement.classList.add('ring-2', 'ring-medical-gold');
+            });
+            searchInput.addEventListener('blur', function() {
+                this.parentElement.classList.remove('ring-2', 'ring-medical-gold');
+            });
+        }
+    });
+</script>
+
+<style>
+    /* Custom line clamp for text truncation */
+    .line-clamp-2 {
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+    }
+    
+    /* Course card hover effects */
+    .course-card {
+        transition: all 0.3s ease;
+    }
+    
+    .course-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Difficulty level colors */
+    .difficulty-basic {
+        background-color: rgba(34, 197, 94, 0.1);
+        color: #16a34a;
+    }
+    
+    .difficulty-intermediate {
+        background-color: rgba(245, 158, 11, 0.1);
+        color: #d97706;
+    }
+    
+    .difficulty-advanced {
+        background-color: rgba(239, 68, 68, 0.1);
+        color: #dc2626;
+    }
+</style>
+{% endblock %}
+
+{% endblock %}

@@ -1,3 +1,8 @@
+An error occurred during submission. Please try again. Error: 'Settings' object has no attribute 'PLATFORM_ADMIN_EMAIL'
+
+[WinError 10061] No connection could be made because the target machine actively refused it
+
+
 During Vendor registration: An error occurred during submission. Please try again. Error: Module "django.core.mail.backends.smtp" does not define a "EmailBackend'" attribute/class
             Except: Registration was successfull
 
