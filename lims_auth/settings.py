@@ -11,7 +11,8 @@ import dj_database_url
 
 load_dotenv()
 
-ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+# ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+ENVIRONMENT = "production"
 
 # BASE_DIR = Path(__file__).resolve().parent.parent.parent
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -53,8 +54,8 @@ INSTALLED_APPS = [
     'widget_tweaks',
 
     # aws
-    "storages",
-    # 'django_ses',
+    # moved under production if statement
+
 ]
 
 TAILWIND_APP_NAME = "theme"
@@ -224,15 +225,15 @@ if ENVIRONMENT == "production":
         "https://firstjp-lims-web-ytsi.onrender.com",
         "https://medvuno.com",
         "https://www.medvuno.com",
-        ".medvuno.com",
     ]
+
     PLATFORM_BASE_DOMAIN = os.getenv("PLATFORM_BASE_DOMAIN", "medvuno.com",)
 
     GLOBAL_HOSTS = [f"learn.{PLATFORM_BASE_DOMAIN}"]
     
     DATABASES = {
         # Aiven console
-        'default': dj_database_url.parse(os.getenv('DATABASE_URL')), 
+        # 'default': dj_database_url.parse(os.getenv('DATABASE_URL')), 
         # AWS 
         "default": {
             "ENGINE": "django.db.backends.postgresql",
@@ -259,9 +260,12 @@ if ENVIRONMENT == "production":
                 "querystring_auth": True,
             },
         },
+        "staticfiles": {
+            "BACKEND": "storages.backends.s3.S3Storage",
+        },
     }
 
-    STATICFILES_STORAGE = "storages.backends.s3.S3Storage"
+    # STATICFILES_STORAGE = "storages.backends.s3.S3Storage"
  
     # Security settings for production
     SECURE_SSL_REDIRECT = True
