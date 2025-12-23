@@ -69,7 +69,7 @@ INTERNAL_IPS = [
     'localhost',
 ]
 
-NPM_BIN_PATH = r"C:\Program Files\nodejs\npm.cmd"
+# NPM_BIN_PATH = r"C:\Program Files\nodejs\npm.cmd"
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
@@ -132,17 +132,9 @@ TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 
-# Static files
-STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / "static"]
-STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
-
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Email setting - Gmail
-
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = os.getenv("EMAIL_HOST")
 EMAIL_PORT = os.getenv("EMAIL_PORT")
@@ -184,7 +176,11 @@ SITE_NAME = "mednovu.com"
 
 PLATFORM_ADMIN_EMAIL = "firstjpinternationalconsult@gmail.com"
 
-
+# Static files
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [BASE_DIR / "static"]
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # SMS
 PHONENUMBER_DEFAULT_REGION = "NG"
@@ -210,26 +206,46 @@ if ENVIRONMENT == "production":
     INSTALLED_APPS += [
         "storages",
     ]
+   
+    # 1. Ensure this is exactly the name of your tailwind app
+    TAILWIND_APP_NAME = 'theme' 
+
+    NPM_BIN_PATH = '/usr/bin/npm'
+
+    # 2. Add this if you are using whitenoise to serve the compiled css
+    # This helps Django find the manifest file
+    WHITENOISE_MANIFEST_STRICT = False
+
 
     ALLOWED_HOSTS = [
     "medvuno.com",
     "www.medvuno.com",
     ".medvuno.com",
-    "firstjp-lims-web-ytsi.onrender.com",
+    '16.171.161.101', 
+    'localhost', '127.0.0.1'
+   # "firstjp-lims-web-ytsi.onrender.com",
     ]
 
     # PLATFORM_BASE_DOMAIN = "medvuno"
     
     # CSRF trusted origins for production
     CSRF_TRUSTED_ORIGINS = [
-        "https://firstjp-lims-web-ytsi.onrender.com",
+        # "https://firstjp-lims-web-ytsi.onrender.com",
         "https://medvuno.com",
         "https://www.medvuno.com",
+	# "16.171.161.101",
     ]
 
     PLATFORM_BASE_DOMAIN = os.getenv("PLATFORM_BASE_DOMAIN", "medvuno.com",)
 
-    GLOBAL_HOSTS = [f"learn.{PLATFORM_BASE_DOMAIN}"]
+    # GLOBAL_HOSTS = [f"learn.{PLATFORM_BASE_DOMAIN}"]
+
+    GLOBAL_HOSTS = [
+        PLATFORM_BASE_DOMAIN,
+        f"www.{PLATFORM_BASE_DOMAIN}",
+        f"learn.{PLATFORM_BASE_DOMAIN}",
+    ]
+
     
     DATABASES = {
         # Aiven console
@@ -243,9 +259,9 @@ if ENVIRONMENT == "production":
             "HOST": os.getenv("DB_HOST"),
             "PORT": os.getenv("DB_PORT", "5432"),
             "CONN_MAX_AGE": 60,
-            "OPTIONS": {
-                "sslmode": "require",
-            },
+           # "OPTIONS": {
+           #    "sslmode": "require",
+           # },
         }
     }
     
@@ -256,12 +272,16 @@ if ENVIRONMENT == "production":
             "OPTIONS": {
                 "bucket_name": "medvuno-s3",
                 "region_name": "eu-north-1",
-                "default_acl": "public-read",
+                "default_acl": "public-private",
                 "querystring_auth": True,
             },
         },
         "staticfiles": {
             "BACKEND": "storages.backends.s3.S3Storage",
+            "OPTIONS": {
+                "bucket_name": "medvuno-s3", # Added this
+                "region_name": "eu-north-1", # Added this
+            },
         },
     }
 
@@ -278,12 +298,16 @@ if ENVIRONMENT == "production":
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
 
+    USE_X_FORWARDED_HOST = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 
 else:
     # Development settings
     DEBUG = True
     
+    NPM_BIN_PATH = r"C:\Program Files\nodejs\npm.cmd"
+
     ALLOWED_HOSTS = [
         "127.0.0.1",
         "localhost",
@@ -320,6 +344,13 @@ else:
     ]
     
     INTERNAL_IPS = ["127.0.0.1"]
+	
+
+    # Static files
+    STATIC_URL = '/static/'
+    STATICFILES_DIRS = [BASE_DIR / "static"]
+    STATIC_ROOT = BASE_DIR / "staticfiles"
+    # STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
     # Media files
     MEDIA_URL = '/media/'
