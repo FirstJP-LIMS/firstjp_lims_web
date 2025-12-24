@@ -1,0 +1,56 @@
+name: Medvuno LIMS CI/CD
+
+on:
+  push:
+    branches: [ main ]  # Triggers when you push to the main branch
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 1. Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 2. Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Tailwind v4 works best with modern Node
+
+      - name: 3. Build Tailwind v4 CSS
+        # We build the CSS on GitHub so your EC2 doesn't have to
+        run: |
+          npm install
+          npm run build:css
+
+      - name: 4. Deploy to AWS EC2 via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            # Navigate to project
+            cd /home/ubuntu/firstjp_lims_web
+            
+            # Pull latest code
+            git pull origin main
+            
+            # Activate virtual environment
+            source virt/bin/activate
+            
+            # Install Python dependencies
+            pip install -r requirements.txt
+            
+            # Run Migrations
+            python manage.py migrate --noinput
+            
+            # Collect Static (This will pick up the CSS file built in step 3 if committed, 
+            # OR we can run a simple build on server if RAM allows. 
+            # Note: For Tailwind v4, usually we commit the dist/styles.css to Git 
+            # to make this step 100% RAM-safe)
+            python manage.py collectstatic --noinput
+            
+            # Restart Application
+            sudo supervisorctl restart firstjp_lims
+            sudo systemctl restart nginx

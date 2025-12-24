@@ -1,0 +1,147 @@
+{% load static %}
+<nav class="bg-white shadow-md sticky top-0 z-50">
+     <div class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+        <div class="flex justify-between h-16">
+            <!-- Logo and Brand -->
+            <div class="flex items-center">
+                <div class="flex-shrink-0 flex items-center">
+                    {% comment %} <span class="ml-2 text-xl font-bold text-red-500">MEDVUNO</span> {% endcomment %}
+                    <img src="{% static 'assets/images/logo/med.jpg' %}" alt="MEDVUNO" style="width: 160px;">
+                </div>
+            </div>
+
+            <!-- Desktop Menu Items -->
+            <div class="hidden md:flex items-center space-x-4 nav-items">
+                <a href="/" class="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition duration-300">Home</a>
+                <a href="{{ LEARN_BASE_URL }}" class="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition duration-300">
+                    Learn
+                </a>
+
+                <!-- Services Dropdown -->
+                <div class="relative group">
+                    <button class="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium flex items-center transition duration-300">
+                        Services
+                        <svg class="ml-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+                    <div class="absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-10">
+                        <div class="py-1">
+                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600">Consulting</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Company Dropdown -->
+                <div class="relative group">
+                    <button class="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium flex items-center transition duration-300">
+                        Company
+                        <svg class="ml-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+                    <div class="absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-10">
+                        <div class="py-1">
+                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600">About Us</a>
+                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600">Our Team</a>
+                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600">Careers</a>
+                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600">Contact</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <a href="#" class="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition duration-300">Pricing</a>
+                <a href="#" class="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition duration-300">Blog</a>
+                
+                <!-- CTA Buttons -->
+                <button class="btn btn-outline btn-neutral btn-sm">Book Demo</button>
+                <button class="btn btn-neutral btn-sm text-white">
+                    <a href="{% url 'vendor_onboarding' %}">
+                        Get Started
+                    </a>
+                </button>
+            </div>
+
+            <!-- Mobile menu button -->
+            <div class="md:hidden flex items-center">
+                <button id="mobile-menu-button" type="button" class="inline-flex items-center justify-center p-2 rounded-md text-gray-600 hover:text-indigo-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500" aria-controls="mobile-menu" aria-expanded="false">
+                    <span class="sr-only">Open main menu</span>
+                    <!-- Icon when menu is closed -->
+                    <svg class="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Menu -->
+    <div id="mobile-menu" class="md:hidden hidden">
+        <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t">
+            <a href="#" class="text-gray-600 hover:text-indigo-600 block px-3 py-2 rounded-md text-base font-medium">Home</a>
+            <a href="{{ LEARN_BASE_URL }}" class="text-gray-600 hover:text-indigo-600 block px-3 py-2 rounded-md text-base font-medium">Learn</a>
+            
+            <!-- Mobile Services Dropdown -->
+            <div class="relative">
+                <button id="mobile-services-button" class="text-gray-600 hover:text-indigo-600 w-full text-left px-3 py-2 rounded-md text-base font-medium flex justify-between items-center">
+                    Services
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+                <div id="mobile-services-menu" class="hidden pl-4 mt-1">
+                    <a href="#" class="text-gray-600 hover:text-indigo-600 block px-3 py-2 rounded-md text-base font-medium">Consulting</a>
+                </div>
+            </div>
+            
+            <!-- Mobile Company Dropdown -->
+            <div class="relative">
+                <button id="mobile-company-button" class="text-gray-600 hover:text-indigo-600 w-full text-left px-3 py-2 rounded-md text-base font-medium flex justify-between items-center">
+                    Company
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+                <div id="mobile-company-menu" class="hidden pl-4 mt-1">
+                    <a href="#" class="text-gray-600 hover:text-indigo-600 block px-3 py-2 rounded-md text-base font-medium">About Us</a>
+                    <a href="#" class="text-gray-600 hover:text-indigo-600 block px-3 py-2 rounded-md text-base font-medium">Our Team</a>
+                    <a href="#" class="text-gray-600 hover:text-indigo-600 block px-3 py-2 rounded-md text-base font-medium">Careers</a>
+                    <a href="#" class="text-gray-600 hover:text-indigo-600 block px-3 py-2 rounded-md text-base font-medium">Contact</a>
+                </div>
+            </div>
+            
+            <a href="#" class="text-gray-600 hover:text-indigo-600 block px-3 py-2 rounded-md text-base font-medium">Pricing</a>
+            <a href="#" class="text-gray-600 hover:text-indigo-600 block px-3 py-2 rounded-md text-base font-medium">Blog</a>
+            
+            <div class="pt-4 pb-2 flex flex-col space-y-2">
+                <button class="btn btn-outline btn-neutral btn-sm">Book Demo</button>
+                <button class="btn btn-neutral btn-sm text-red-800">
+                    <a href="{% url 'vendor_onboarding' %}">
+                        Get Started
+                    </a>
+                </button>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- Main Content -->
+
+<script>
+    // Mobile menu toggle
+    document.getElementById('mobile-menu-button').addEventListener('click', function() {
+        const mobileMenu = document.getElementById('mobile-menu');
+        mobileMenu.classList.toggle('hidden');
+    });
+
+    // Mobile dropdown toggles
+    document.getElementById('mobile-services-button').addEventListener('click', function() {
+        const servicesMenu = document.getElementById('mobile-services-menu');
+        servicesMenu.classList.toggle('hidden');
+    });
+
+    document.getElementById('mobile-company-button').addEventListener('click', function() {
+        const companyMenu = document.getElementById('mobile-company-menu');
+        companyMenu.classList.toggle('hidden');
+    });
+</script>

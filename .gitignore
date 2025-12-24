@@ -1,10 +1,12 @@
 /.env
 
 /.venv
+/virt
+
 __pycache__/
 
 /__settings.py 
-
+/node_modules/
 /base__.html
 /dashboard__.html
 /codefile.py
@@ -28,10 +30,18 @@ __pycache__/
 
 # git rm -r --cached templates_old
 
-/test_cache.py/
+test_cache.py/
 /lims_document_control_db_schema.sql
 
 db.sqlite3
 
 billing.md
 .env.local
+
+1.1
+.DS_Store
+*.sqlite3
+*.pyc
+*.pyo
+billing_flow.md
+

@@ -15,3 +15,4 @@ def vendor_context(request):
         "vendor": vendor,
         "vendor_profile": vendor_profile,
     }
+
