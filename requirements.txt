@@ -36,9 +36,7 @@ django-ratelimit==4.1.0
 django-redis==6.0.0
 django-ses==4.5.0
 django-storages==1.14.6
-django-tailwind==4.4.1
 django-widget-tweaks==1.5.0
-djangorestframework==3.16.1
 fonttools==4.60.1
 freetype-py==2.5.1
 frozenlist==1.8.0
