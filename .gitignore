@@ -80,3 +80,10 @@ billing_flow.md
 *.sqlite3-journal
 firstjp_lims_web@1.0.0
 
+
+QUALITY_CONTROL.md
+requirements-dev.txt
+DEPLOYMENT_GUIDE.md
+ERROR-LOGS.md
+.gitignore
+test_cache.py

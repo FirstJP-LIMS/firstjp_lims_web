@@ -47,7 +47,7 @@ INSTALLED_APPS = [
     'phonenumber_field',
 
     # styling 
-    'tailwind',
+    # 'tailwind',
     # 'theme',
     'crispy_forms',
     'crispy_bootstrap5',
@@ -58,7 +58,7 @@ INSTALLED_APPS = [
 
 ]
 
-TAILWIND_APP_NAME = "theme"
+# TAILWIND_APP_NAME = "theme"
 
 MIGRATION_MODULES = {
     "debug_toolbar": None,
@@ -277,7 +277,7 @@ else:
     # Development settings
     DEBUG = True
     
-    NPM_BIN_PATH = r"C:\Program Files\nodejs\npm.cmd"
+    # NPM_BIN_PATH = r"C:\Program Files\nodejs\npm.cmd"
 
     ALLOWED_HOSTS = [
         "127.0.0.1",
