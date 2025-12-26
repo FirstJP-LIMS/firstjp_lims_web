@@ -1,0 +1,204 @@
+{% extends 'laboratory/assets/base.html' %}
+{% load static %}
+
+{% block title %}Document Categories{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h2 class="mb-0">Document Categories</h2>
+            <p class="text-muted">Manage document categories for your organization</p>
+        </div>
+        <div class="col-md-6 text-right">
+            <a href="{% url 'doc_control:category_create' %}" class="btn btn-success">
+                <i class="fas fa-plus"></i> Create New Category
+            </a>
+            <a href="{% url 'doc_control:dc_dashboard' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Categories Grid -->
+    <div class="row">
+        {% if categories %}
+            {% for category in categories %}
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card shadow h-100 {% if not category.is_active %}border-danger{% endif %}">
+                    <div class="card-header py-3 {% if category.is_active %}bg-primary{% else %}bg-secondary{% endif %} text-white">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="m-0 font-weight-bold">{{ category.code }}</h6>
+                            {% if not category.is_active %}
+                                <span class="badge badge-danger">Inactive</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">{{ category.name }}</h5>
+                        <p class="card-text text-muted">
+                            {% if category.description %}
+                                {{ category.description|truncatechars:100 }}
+                            {% else %}
+                                No description provided
+                            {% endif %}
+                        </p>
+                        
+                        <hr>
+                        
+                        <div class="mb-2">
+                            <strong>Documents:</strong> 
+                            <span class="badge badge-primary">{{ category.document_count }}</span>
+                        </div>
+                        
+                        <div class="mb-2">
+                            <strong>Training Required:</strong>
+                            {% if category.requires_training %}
+                                <i class="fas fa-check-circle text-success"></i> Yes
+                            {% else %}
+                                <i class="fas fa-times-circle text-danger"></i> No
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <strong>Retention Period:</strong>
+                            <span class="text-muted">{{ category.retention_period_days }} days</span>
+                        </div>
+                        
+                        <div class="btn-group btn-block" role="group">
+                            <a href="{% url 'doc_control:category_detail' category.pk %}" 
+                               class="btn btn-info btn-sm">
+                                <i class="fas fa-eye"></i> View
+                            </a>
+                            <a href="{% url 'doc_control:category_edit' category.pk %}" 
+                               class="btn btn-warning btn-sm">
+                                <i class="fas fa-edit"></i> Edit
+                            </a>
+                            <a href="{% url 'doc_control:document_create' %}?category={{ category.pk }}" 
+                               class="btn btn-success btn-sm">
+                                <i class="fas fa-plus"></i> New Doc
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-footer text-muted">
+                        <small>Created {{ category.created_at|date:"Y-m-d" }}</small>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <div class="card shadow">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-folder-open fa-4x text-muted mb-3"></i>
+                        <h5 class="text-muted">No categories found</h5>
+                        <p class="text-muted">Create your first document category to get started</p>
+                        <a href="{% url 'doc_control:category_create' %}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Create Category
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Categories Table View (Alternative) -->
+    {% if categories %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">All Categories (Table View)</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover" id="categoriesTable">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Name</th>
+                                    <th>Documents</th>
+                                    <th>Training Required</th>
+                                    <th>Retention (days)</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for category in categories %}
+                                <tr>
+                                    <td>
+                                        <span class="badge badge-primary">{{ category.code }}</span>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'doc_control:category_detail' category.pk %}">
+                                            {{ category.name }}
+                                        </a>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge badge-info">{{ category.document_count }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if category.requires_training %}
+                                            <i class="fas fa-check-circle text-success"></i>
+                                        {% else %}
+                                            <i class="fas fa-times-circle text-danger"></i>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">{{ category.retention_period_days }}</td>
+                                    <td class="text-center">
+                                        {% if category.is_active %}
+                                            <span class="badge badge-success">Active</span>
+                                        {% else %}
+                                            <span class="badge badge-danger">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'doc_control:category_detail' category.pk %}" 
+                                               class="btn btn-sm btn-info" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{% url 'doc_control:category_edit' category.pk %}" 
+                                               class="btn btn-sm btn-warning" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{% url 'doc_control:document_create' %}?category={{ category.pk }}" 
+                                               class="btn btn-sm btn-success" title="Create Document">
+                                                <i class="fas fa-plus"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.card {
+    transition: transform 0.2s;
+}
+.card:hover {
+    transform: translateY(-5px);
+}
+</style>
+
+<script>
+// Optional: Initialize DataTables if you have it
+$(document).ready(function() {
+    if ($.fn.DataTable) {
+        $('#categoriesTable').DataTable({
+            "pageLength": 25,
+            "order": [[0, "asc"]]
+        });
+    }
+});
+</script>
+{% endblock %}

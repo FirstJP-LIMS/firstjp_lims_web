@@ -1,0 +1,732 @@
+{% extends "laboratory/assets/base.html" %}
+{% load static %}
+
+{% block title %}Document Control Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar Navigation -->
+        <div class="col-md-3 col-lg-2 d-md-block sidebar">
+            <div class="position-sticky pt-3">
+                <div class="sidebar-header mb-4">
+                    <h5 class="text-primary-emphasis">
+                        <i class="fas fa-file-contract me-2"></i>Document Control
+                    </h5>
+                    <hr class="mt-2">
+                </div>
+                
+                <ul class="nav flex-column">
+                    <li class="nav-item mb-2">
+                        <a class="nav-link active" href="{% url 'documents:dc_dashboard' %}">
+                            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'documents:document_list' %}">
+                            <i class="fas fa-folder me-2"></i>All Documents
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'documents:document_create' %}">
+                            <i class="fas fa-plus-circle me-2"></i>Create Document
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'documents:category_list' %}">
+                            <i class="fas fa-tags me-2"></i>Categories
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'documents:review_list' %}">
+                            <i class="fas fa-clipboard-check me-2"></i>Reviews
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'documents:training_list' %}">
+                            <i class="fas fa-graduation-cap me-2"></i>Training
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="{% url 'documents:reports' %}">
+                            <i class="fas fa-chart-bar me-2"></i>Reports
+                        </a>
+                    </li>
+                </ul>
+
+                <!-- Quick Stats -->
+                <div class="card mt-5 border-0" style="background-color: rgba(44, 90, 160, 0.05);">
+                    <div class="card-body p-3">
+                        <h6 class="card-title text-primary mb-3">
+                            <i class="fas fa-chart-line me-2"></i>Quick Stats
+                        </h6>
+                        <div class="d-flex justify-content-between mb-2">
+                            <small>Total:</small>
+                            <span class="badge bg-primary">{{ total_documents }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <small>Effective:</small>
+                            <span class="badge bg-success">{{ effective_documents }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <small>Due Review:</small>
+                            <span class="badge bg-warning">{{ documents_due_review }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <small>My Tasks:</small>
+                            <span class="badge bg-danger">{{ pending_approvals|add:pending_acknowledgments|add:pending_trainings }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="card mt-3 border-0" style="background-color: rgba(44, 90, 160, 0.05);">
+                    <div class="card-body p-3">
+                        <h6 class="card-title text-primary mb-3">
+                            <i class="fas fa-bolt me-2"></i>Quick Actions
+                        </h6>
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'documents:document_create' %}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-plus me-1"></i> New Document
+                            </a>
+                            <a href="{% url 'documents:review_create' %}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-play me-1"></i> Start Review
+                            </a>
+                            <a href="{% url 'documents:training_list' %}" class="btn btn-sm btn-outline-success">
+                                <i class="fas fa-users me-1"></i> Training
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <!-- Header -->
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h2 class="h3" style="color: var(--primary-color);">
+                    <i class="fas fa-file-contract me-2"></i>Document Control System
+                </h2>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <div class="btn-group me-2">
+                        <a href="{% url 'documents:document_create' %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-1"></i> New Document
+                        </a>
+                        <a href="{% url 'documents:reports' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-download me-1"></i> Reports
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <p class="text-muted mb-4">Manage and control all laboratory documents</p>
+
+            <!-- Statistics Cards -->
+            <div class="row mb-4">
+                <div class="col-xl-3 col-md-6 mb-3">
+                    <div class="card border-0 text-white h-100" style="background: linear-gradient(135deg, var(--primary-color), #1a3d7a);">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title mb-1">Total Documents</h6>
+                                    <h3 class="mb-0">{{ total_documents }}</h3>
+                                </div>
+                                <i class="fas fa-file-alt fa-2x opacity-50"></i>
+                            </div>
+                            <a href="{% url 'documents:document_list' %}" class="text-white text-decoration-none d-block mt-3">
+                                <small><i class="fas fa-arrow-right me-1"></i> View All Documents</small>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-3 col-md-6 mb-3">
+                    <div class="card border-0 h-100" style="background: linear-gradient(135deg, var(--success-color), #157347);">
+                        <div class="card-body text-white">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title mb-1">Effective</h6>
+                                    <h3 class="mb-0">{{ effective_documents }}</h3>
+                                </div>
+                                <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                            </div>
+                            <a href="{% url 'documents:document_list' %}?status=effective" class="text-white text-decoration-none d-block mt-3">
+                                <small><i class="fas fa-arrow-right me-1"></i> View Effective</small>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-3 col-md-6 mb-3">
+                    <div class="card border-0 h-100" style="background: linear-gradient(135deg, var(--warning-color), #e0a800);">
+                        <div class="card-body text-white">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title mb-1">Due for Review</h6>
+                                    <h3 class="mb-0">{{ documents_due_review }}</h3>
+                                </div>
+                                <i class="fas fa-exclamation-triangle fa-2x opacity-75"></i>
+                            </div>
+                            <a href="#review-section" class="text-white text-decoration-none d-block mt-3">
+                                <small><i class="fas fa-arrow-right me-1"></i> View Due</small>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-3 col-md-6 mb-3">
+                    <div class="card border-0 h-100" style="background: linear-gradient(135deg, #17a2b8, #138496);">
+                        <div class="card-body text-white">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title mb-1">Pending Reviews</h6>
+                                    <h3 class="mb-0">{{ pending_reviews }}</h3>
+                                </div>
+                                <i class="fas fa-clipboard-list fa-2x opacity-75"></i>
+                            </div>
+                            <a href="{% url 'documents:review_list' %}" class="text-white text-decoration-none d-block mt-3">
+                                <small><i class="fas fa-arrow-right me-1"></i> View Reviews</small>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Cards -->
+            <div class="row mb-4">
+                <div class="col-md-4 mb-3">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-danger bg-opacity-10 border-0">
+                            <h5 class="mb-0 text-danger-emphasis">
+                                <i class="fas fa-tasks me-2"></i>My Tasks
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="task-list">
+                                <div class="task-item mb-3">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <i class="fas fa-check-circle text-danger me-2"></i>
+                                            <span class="fw-semibold">Pending Approvals</span>
+                                        </div>
+                                        <span class="badge bg-danger">{{ pending_approvals }}</span>
+                                    </div>
+                                    {% if pending_approvals > 0 %}
+                                    <a href="{% url 'documents:review_list' %}?status=pending" class="btn btn-sm btn-outline-danger mt-2 w-100">
+                                        Review Now
+                                    </a>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="task-item mb-3">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <i class="fas fa-user-check text-warning me-2"></i>
+                                            <span class="fw-semibold">Pending Acknowledgments</span>
+                                        </div>
+                                        <span class="badge bg-warning">{{ pending_acknowledgments }}</span>
+                                    </div>
+                                    {% if pending_acknowledgments > 0 %}
+                                    <a href="#acknowledgments-section" class="btn btn-sm btn-outline-warning mt-2 w-100">
+                                        Acknowledge Now
+                                    </a>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="task-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <i class="fas fa-graduation-cap text-info me-2"></i>
+                                            <span class="fw-semibold">Pending Training</span>
+                                        </div>
+                                        <span class="badge bg-info">{{ pending_trainings }}</span>
+                                    </div>
+                                    {% if pending_trainings > 0 %}
+                                    <a href="{% url 'documents:training_list' %}" class="btn btn-sm btn-outline-info mt-2 w-100">
+                                        Complete Training
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-8 mb-3">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="card border-0 shadow-sm h-100 text-center">
+                                <div class="card-body d-flex flex-column justify-content-center">
+                                    <div class="action-icon mb-3">
+                                        <i class="fas fa-file-pdf fa-3x text-primary"></i>
+                                    </div>
+                                    <h5 class="card-title mb-3">Document Management</h5>
+                                    <div class="btn-group w-100" role="group">
+                                        <a href="{% url 'documents:document_list' %}" class="btn btn-primary">
+                                            <i class="fas fa-eye me-1"></i> View All
+                                        </a>
+                                        <a href="{% url 'documents:document_create' %}" class="btn btn-outline-primary">
+                                            <i class="fas fa-plus me-1"></i> Create
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card border-0 shadow-sm h-100 text-center">
+                                <div class="card-body d-flex flex-column justify-content-center">
+                                    <div class="action-icon mb-3">
+                                        <i class="fas fa-folder fa-3x text-warning"></i>
+                                    </div>
+                                    <h5 class="card-title mb-3">Categories</h5>
+                                    <div class="btn-group w-100" role="group">
+                                        <a href="{% url 'documents:category_list' %}" class="btn btn-warning">
+                                            <i class="fas fa-cog me-1"></i> Manage
+                                        </a>
+                                        <a href="{% url 'documents:category_create' %}" class="btn btn-outline-warning">
+                                            <i class="fas fa-plus me-1"></i> Create
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Document Lists -->
+            <div class="row">
+                <!-- Recent Documents -->
+                <div class="col-lg-6 mb-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-light border-0 d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="fas fa-history me-2"></i>Recent Documents
+                            </h5>
+                            <a href="{% url 'documents:document_list' %}" class="btn btn-sm btn-outline-primary">
+                                View All
+                            </a>
+                        </div>
+                        <div class="card-body p-0">
+                            {% if recent_documents %}
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="ps-4">Document #</th>
+                                            <th>Title</th>
+                                            <th>Status</th>
+                                            <th class="pe-4">Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for doc in recent_documents %}
+                                        <tr class="document-row" onclick="window.location='{% url 'documents:document_detail' doc.pk %}'" style="cursor: pointer;">
+                                            <td class="ps-4">
+                                                <strong>{{ doc.document_number }}</strong>
+                                            </td>
+                                            <td>
+                                                <div class="text-truncate" style="max-width: 200px;" title="{{ doc.title }}">
+                                                    {{ doc.title }}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                {% if doc.status == 'effective' %}
+                                                <span class="badge bg-success">
+                                                    <i class="fas fa-check-circle me-1"></i>{{ doc.get_status_display }}
+                                                </span>
+                                                {% elif doc.status == 'draft' %}
+                                                <span class="badge bg-secondary">
+                                                    <i class="fas fa-pencil-alt me-1"></i>{{ doc.get_status_display }}
+                                                </span>
+                                                {% elif doc.status == 'under_review' %}
+                                                <span class="badge bg-warning">
+                                                    <i class="fas fa-clock me-1"></i>{{ doc.get_status_display }}
+                                                </span>
+                                                {% else %}
+                                                <span class="badge bg-info">{{ doc.get_status_display }}</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="pe-4">
+                                                <small class="text-muted">{{ doc.created_at|date:"M d, Y" }}</small>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+                                <p class="text-muted mb-0">No documents yet</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Documents Due for Review -->
+                <div class="col-lg-6 mb-4" id="review-section">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-warning bg-opacity-10 border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0 text-warning-emphasis">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>Documents Due for Review
+                                </h5>
+                                <span class="badge bg-warning">{{ review_due_documents|length }}</span>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            {% if review_due_documents %}
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="ps-4">Document #</th>
+                                            <th>Title</th>
+                                            <th>Next Review</th>
+                                            <th class="pe-4">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for doc in review_due_documents %}
+                                        <tr>
+                                            <td class="ps-4">
+                                                <strong>{{ doc.document_number }}</strong>
+                                            </td>
+                                            <td>
+                                                <div class="text-truncate" style="max-width: 150px;" title="{{ doc.title }}">
+                                                    {{ doc.title }}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                {% if doc.is_due_for_review %}
+                                                <span class="text-danger fw-bold">
+                                                    <i class="fas fa-exclamation-circle me-1"></i>{{ doc.next_review_date|date:"M d, Y" }}
+                                                </span>
+                                                {% else %}
+                                                <span class="text-muted">{{ doc.next_review_date|date:"M d, Y" }}</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="pe-4">
+                                                <a href="{% url 'documents:document_review_create' doc.pk %}" 
+                                                   class="btn btn-sm btn-warning">
+                                                    <i class="fas fa-play me-1"></i> Review
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                                <p class="text-muted mb-0">No documents due for review</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pending Tasks -->
+            <div class="row">
+                <!-- My Pending Reviews -->
+                <div class="col-lg-6 mb-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-light border-0 d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="fas fa-clipboard-check me-2"></i>My Pending Reviews
+                            </h5>
+                            <a href="{% url 'documents:review_list' %}?my_reviews=1" class="btn btn-sm btn-outline-primary">
+                                View All
+                            </a>
+                        </div>
+                        <div class="card-body p-0">
+                            {% if my_reviews %}
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="ps-4">Document</th>
+                                            <th>Type</th>
+                                            <th>Due Date</th>
+                                            <th class="pe-4">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for review in my_reviews %}
+                                        <tr>
+                                            <td class="ps-4">
+                                                <div class="fw-semibold">{{ review.document.document_number }}</div>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-primary">{{ review.get_review_type_display }}</span>
+                                            </td>
+                                            <td>
+                                                {% if review.is_overdue %}
+                                                <span class="text-danger fw-bold">
+                                                    <i class="fas fa-exclamation-circle me-1"></i>{{ review.due_date|date:"M d, Y" }}
+                                                </span>
+                                                {% else %}
+                                                <span class="text-muted">{{ review.due_date|date:"M d, Y" }}</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="pe-4">
+                                                <a href="{% url 'documents:review_detail' review.pk %}" 
+                                                   class="btn btn-sm btn-primary">
+                                                    <i class="fas fa-eye me-1"></i> Review
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                                <p class="text-muted mb-0">No pending reviews</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pending Acknowledgments -->
+                <div class="col-lg-6 mb-4" id="acknowledgments-section">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-light border-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-user-check me-2"></i>Pending Acknowledgments
+                                </h5>
+                                <span class="badge bg-success">{{ my_acknowledgments|length }}</span>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            {% if my_acknowledgments %}
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="ps-4">Document</th>
+                                            <th>Distributed</th>
+                                            <th class="pe-4">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for dist in my_acknowledgments %}
+                                        <tr>
+                                            <td class="ps-4">
+                                                <div class="fw-semibold">{{ dist.document.document_number }}</div>
+                                                <div class="text-muted small text-truncate" style="max-width: 200px;">
+                                                    {{ dist.document.title }}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">{{ dist.distributed_at|date:"M d, Y H:i" }}</small>
+                                            </td>
+                                            <td class="pe-4">
+                                                <a href="{% url 'documents:document_acknowledge' dist.pk %}" 
+                                                   class="btn btn-sm btn-success">
+                                                    <i class="fas fa-check me-1"></i> Acknowledge
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                                <p class="text-muted mb-0">No pending acknowledgments</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .sidebar {
+        background-color: var(--light-bg);
+        border-right: 1px solid #dee2e6;
+        min-height: calc(100vh - 70px);
+        padding-top: 20px;
+    }
+    
+    .nav-link {
+        color: var(--secondary-color);
+        padding: 0.75rem 1rem;
+        border-radius: var(--border-radius);
+        transition: var(--transition);
+    }
+    
+    .nav-link:hover {
+        color: var(--primary-color);
+        background-color: rgba(44, 90, 160, 0.1);
+        transform: translateX(5px);
+    }
+    
+    .nav-link.active {
+        color: var(--primary-color);
+        background-color: rgba(44, 90, 160, 0.1);
+        font-weight: 600;
+        border-left: 3px solid var(--primary-color);
+    }
+    
+    .card {
+        border-radius: var(--border-radius);
+        transition: var(--transition);
+        border: 1px solid #e9ecef;
+    }
+    
+    .card:hover {
+        box-shadow: var(--box-shadow);
+    }
+    
+    .document-row:hover {
+        background-color: rgba(44, 90, 160, 0.03);
+    }
+    
+    .task-item {
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .task-item:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+    
+    .action-icon {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(44, 90, 160, 0.1);
+    }
+    
+    .badge {
+        font-weight: 500;
+        padding: 0.35em 0.65em;
+    }
+    
+    @media (max-width: 768px) {
+        .sidebar {
+            min-height: auto;
+            border-right: none;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .btn-group {
+            flex-direction: column;
+        }
+        
+        .btn-group .btn {
+            margin-bottom: 5px;
+        }
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add click effects to document rows
+    const documentRows = document.querySelectorAll('.document-row');
+    documentRows.forEach(row => {
+        row.addEventListener('click', function() {
+            this.style.backgroundColor = 'rgba(44, 90, 160, 0.05)';
+            setTimeout(() => {
+                window.location = this.getAttribute('onclick').match(/'(.*?)'/)[1];
+            }, 200);
+        });
+        
+        row.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateX(5px)';
+        });
+        
+        row.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateX(0)';
+        });
+    });
+    
+    // Animate metric cards on load
+    const metricCards = document.querySelectorAll('.card[style*="background: linear-gradient"]');
+    metricCards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            card.style.transition = 'all 0.5s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, 100 * index);
+    });
+    
+    // Add hover effects to action cards
+    const actionCards = document.querySelectorAll('.card.border-0.shadow-sm');
+    actionCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-5px)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+    
+    // Update task counters in real-time
+    function updateTaskCounters() {
+        // This function could be extended to fetch live data via AJAX
+        const totalTasks = {{ pending_approvals|add:pending_acknowledgments|add:pending_trainings }};
+        const badge = document.querySelector('.nav-link.active + .badge');
+        if (badge) {
+            badge.textContent = totalTasks;
+        }
+    }
+    
+    // Check for urgent tasks and show notification
+    const urgentTasks = {{ pending_approvals }} + {{ documents_due_review }};
+    if (urgentTasks > 0) {
+        showUrgentNotification(urgentTasks);
+    }
+    
+    function showUrgentNotification(count) {
+        const notification = document.createElement('div');
+        notification.className = 'alert alert-warning alert-dismissible fade show position-fixed bottom-0 end-0 m-3';
+        notification.style.zIndex = '9999';
+        notification.style.maxWidth = '300px';
+        notification.innerHTML = `
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Urgent!</strong> You have ${count} urgent document tasks.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Auto-remove after 10 seconds
+        setTimeout(() => {
+            if (notification.parentNode) {
+                const bsAlert = new bootstrap.Alert(notification);
+                bsAlert.close();
+            }
+        }, 10000);
+    }
+    
+    // Initialize tooltips
+    const tooltips = document.querySelectorAll('[title]');
+    tooltips.forEach(el => {
+        new bootstrap.Tooltip(el);
+    });
+});
+</script>
+{% endblock %}

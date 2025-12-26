@@ -1,0 +1,516 @@
+{% extends 'laboratory/assets/base.html' %}
+{% load static %}
+
+{% block title %}Review Details - {{ review.document.document_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .timeline-vertical {
+        position: relative;
+        padding-left: 30px;
+    }
+    .timeline-item {
+        position: relative;
+        padding-bottom: 20px;
+    }
+    .timeline-item:not(:last-child)::before {
+        content: '';
+        position: absolute;
+        left: -23px;
+        top: 20px;
+        bottom: -10px;
+        width: 2px;
+        background: #dee2e6;
+    }
+    .timeline-marker {
+        position: absolute;
+        left: -30px;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 2px solid #fff;
+    }
+    .status-badge {
+        min-width: 100px;
+        text-align: center;
+    }
+    .action-card {
+        border-top: 3px solid #007bff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb bg-transparent p-0 mb-2">
+                    <li class="breadcrumb-item"><a href="{% url 'documents:review_list' %}">Reviews</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Review Details</li>
+                </ol>
+            </nav>
+            
+            <div class="d-flex align-items-center">
+                <h2 class="mb-0 mr-3">Review Details</h2>
+                <span class="badge 
+                    {% if review.status == 'approved' %}badge-success
+                    {% elif review.status == 'rejected' %}badge-danger
+                    {% elif review.status == 'in_progress' %}badge-primary
+                    {% elif review.status == 'on_hold' %}badge-secondary
+                    {% else %}badge-warning{% endif %} px-3 py-2">
+                    {{ review.get_status_display|upper }}
+                </span>
+                {% if review.is_overdue %}
+                <span class="badge badge-danger ml-2 px-3 py-2">OVERDUE</span>
+                {% endif %}
+            </div>
+            <p class="text-muted mb-0 mt-2">
+                {{ review.document.document_number }} - {{ review.document.title }}
+            </p>
+        </div>
+        <div class="col-md-4 text-md-right mt-3 mt-md-0">
+            <div class="btn-group" role="group">
+                <a href="{% url 'documents:document_detail' review.document.pk %}" class="btn btn-outline-primary">
+                    <i class="fas fa-file-alt mr-2"></i>Document
+                </a>
+                <a href="{% url 'documents:review_list' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left mr-2"></i>All Reviews
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Alert -->
+    {% if review.is_overdue and review.status == 'pending' %}
+    <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+        <div class="d-flex align-items-center">
+            <i class="fas fa-exclamation-triangle fa-2x mr-3"></i>
+            <div>
+                <h5 class="alert-heading mb-1">Review Overdue</h5>
+                <p class="mb-0">This review was due on {{ review.due_date|date:"F j, Y" }} ({{ review.due_date|timesince }} ago).</p>
+            </div>
+        </div>
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Review Information Card -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center bg-white">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-clipboard-check mr-2"></i>Review Information
+                    </h6>
+                    <span class="badge badge-info">{{ review.get_review_type_display }}</span>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-sm table-borderless mb-0">
+                                <tbody>
+                                    <tr>
+                                        <th width="40%" class="text-muted">Reviewer:</th>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="mr-2">
+                                                    <i class="fas fa-user-circle text-primary"></i>
+                                                </div>
+                                                <div>
+                                                    {{ review.reviewer.get_full_name|default:review.reviewer.username }}
+                                                    {% if user == review.reviewer %}
+                                                    <span class="badge badge-primary badge-pill ml-2">You</span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th class="text-muted">Approver:</th>
+                                        <td>
+                                            {% if review.approver %}
+                                            <div class="d-flex align-items-center">
+                                                <div class="mr-2">
+                                                    <i class="fas fa-user-check text-success"></i>
+                                                </div>
+                                                <div>
+                                                    {{ review.approver.get_full_name|default:review.approver.username }}
+                                                    {% if user == review.approver %}
+                                                    <span class="badge badge-success badge-pill ml-2">You</span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% else %}
+                                            <span class="text-muted">Not assigned</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th class="text-muted">Status:</th>
+                                        <td>
+                                            <span class="badge status-badge
+                                                {% if review.status == 'approved' %}badge-success
+                                                {% elif review.status == 'rejected' %}badge-danger
+                                                {% elif review.status == 'in_progress' %}badge-primary
+                                                {% elif review.status == 'on_hold' %}badge-secondary
+                                                {% else %}badge-warning{% endif %}">
+                                                {{ review.get_status_display }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-sm table-borderless mb-0">
+                                <tbody>
+                                    <tr>
+                                        <th width="40%" class="text-muted">Due Date:</th>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <i class="far fa-calendar-alt text-primary mr-2"></i>
+                                                {{ review.due_date|date:"M d, Y" }}
+                                                {% if review.is_overdue %}
+                                                <span class="badge badge-danger ml-2">OVERDUE</span>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th class="text-muted">Created:</th>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <i class="far fa-clock text-muted mr-2"></i>
+                                                {{ review.created_at|date:"M d, Y" }}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% if review.review_completed_at %}
+                                    <tr>
+                                        <th class="text-muted">Review Completed:</th>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <i class="far fa-check-circle text-success mr-2"></i>
+                                                {{ review.review_completed_at|date:"M d, Y" }}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Review Content -->
+            {% if review.comments or review.recommendations %}
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 bg-white">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-comments mr-2"></i>Review Content
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if review.comments %}
+                    <div class="mb-4">
+                        <h6 class="text-primary mb-2">
+                            <i class="fas fa-comment-dots mr-2"></i>Comments
+                        </h6>
+                        <div class="border-left pl-3 border-primary">
+                            <p class="mb-0">{{ review.comments|linebreaks }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if review.recommendations %}
+                    <div>
+                        <h6 class="text-primary mb-2">
+                            <i class="fas fa-lightbulb mr-2"></i>Recommendations
+                        </h6>
+                        <div class="border-left pl-3 border-warning">
+                            <p class="mb-0">{{ review.recommendations|linebreaks }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Action Panel -->
+            {% if is_reviewer or is_approver %}
+            <div class="card shadow mb-4 action-card">
+                <div class="card-header py-3 bg-primary text-white">
+                    <h6 class="m-0 font-weight-bold">
+                        <i class="fas fa-tasks mr-2"></i>Your Actions
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if is_reviewer and review.status == 'pending' %}
+                    <div class="alert alert-info">
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="fas fa-user-circle fa-2x text-primary mr-3"></i>
+                            <div>
+                                <h6 class="mb-1">You are assigned as the reviewer</h6>
+                                <p class="mb-0">Please review the document and submit your assessment.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex gap-2 mt-3">
+                            <a href="{% url 'documents:review_start' review.pk %}" class="btn btn-primary">
+                                <i class="fas fa-play mr-2"></i>Start Review
+                            </a>
+                            <a href="{{ review.document.file.url }}" target="_blank" class="btn btn-outline-primary">
+                                <i class="fas fa-file-download mr-2"></i>Download Document
+                            </a>
+                            <a href="{% url 'documents:document_detail' review.document.pk %}" class="btn btn-outline-info">
+                                <i class="fas fa-eye mr-2"></i>Preview Document
+                            </a>
+                        </div>
+                    </div>
+                    
+                    {% elif is_approver and review.status == 'in_progress' %}
+                    <div class="alert alert-success">
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="fas fa-user-check fa-2x text-success mr-3"></i>
+                            <div>
+                                <h6 class="mb-1">You are assigned as the approver</h6>
+                                <p class="mb-0">Please review the assessment and make your decision.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex gap-2 mt-3">
+                            <a href="{% url 'documents:review_approve' review.pk %}" class="btn btn-success">
+                                <i class="fas fa-check-circle mr-2"></i>Approve
+                            </a>
+                            <a href="{% url 'documents:review_reject' review.pk %}" class="btn btn-danger">
+                                <i class="fas fa-times-circle mr-2"></i>Reject
+                            </a>
+                            <a href="{{ review.document.file.url }}" target="_blank" class="btn btn-outline-success">
+                                <i class="fas fa-file-download mr-2"></i>Download
+                            </a>
+                        </div>
+                    </div>
+                    
+                    {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-check-circle fa-2x text-muted mb-3"></i>
+                        <p class="text-muted mb-0">No pending actions at this time.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Document Summary -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 bg-white">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-file-alt mr-2"></i>Document Summary
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <span class="badge badge-info badge-pill px-3 py-2">
+                            v{{ review.document.version }}
+                        </span>
+                        <p class="text-muted small mt-1 mb-0">Current Version</p>
+                    </div>
+                    
+                    <table class="table table-sm table-borderless mb-0">
+                        <tbody>
+                            <tr>
+                                <th width="40%" class="text-muted">Document #:</th>
+                                <td>{{ review.document.document_number }}</td>
+                            </tr>
+                            <tr>
+                                <th class="text-muted">Title:</th>
+                                <td>{{ review.document.title|truncatechars:40 }}</td>
+                            </tr>
+                            <tr>
+                                <th class="text-muted">Status:</th>
+                                <td>
+                                    <span class="badge 
+                                        {% if review.document.status == 'effective' %}badge-success
+                                        {% elif review.document.status == 'approved' %}badge-info
+                                        {% elif review.document.status == 'obsolete' %}badge-dark
+                                        {% else %}badge-secondary{% endif %}">
+                                        {{ review.document.get_status_display }}
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="text-muted">Owner:</th>
+                                <td>{{ review.document.owner.get_full_name|default:review.document.owner.username }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <div class="mt-4">
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'documents:document_detail' review.document.pk %}" class="btn btn-primary btn-sm">
+                                <i class="fas fa-eye mr-2"></i>View Full Document
+                            </a>
+                            {% if review.document.file %}
+                            <a href="{{ review.document.file.url }}" target="_blank" class="btn btn-success btn-sm">
+                                <i class="fas fa-download mr-2"></i>Download v{{ review.document.version }}
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timeline -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 bg-white">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-stream mr-2"></i>Review Timeline
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="timeline-vertical">
+                        <!-- Created -->
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-primary"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-0">Created</h6>
+                                <small class="text-muted">{{ review.created_at|date:"M d, Y" }}</small>
+                                <br>
+                                <small class="text-muted">{{ review.created_at|time:"g:i A" }}</small>
+                            </div>
+                        </div>
+
+                        <!-- Review Completed -->
+                        {% if review.review_completed_at %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-info"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-0">Review Completed</h6>
+                                <small class="text-muted">{{ review.review_completed_at|date:"M d, Y" }}</small>
+                                <br>
+                                <small class="text-muted">{{ review.review_completed_at|time:"g:i A" }}</small>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Approval Completed -->
+                        {% if review.approval_completed_at %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-success"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-0">Approval Completed</h6>
+                                <small class="text-muted">{{ review.approval_completed_at|date:"M d, Y" }}</small>
+                                <br>
+                                <small class="text-muted">{{ review.approval_completed_at|time:"g:i A" }}</small>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Due Date -->
+                        <div class="timeline-item">
+                            <div class="timeline-marker {% if review.is_overdue %}bg-danger{% else %}bg-warning{% endif %}"></div>
+                            <div class="timeline-content">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="mb-0">Due Date</h6>
+                                        <small class="text-muted">{{ review.due_date|date:"M d, Y" }}</small>
+                                    </div>
+                                    {% if review.is_overdue %}
+                                    <span class="badge badge-danger">OVERDUE</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="card shadow">
+                <div class="card-header py-3 bg-light">
+                    <h6 class="m-0 font-weight-bold text-dark">
+                        <i class="fas fa-chart-bar mr-2"></i>Review Stats
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6 mb-3">
+                            <div class="text-primary mb-1">
+                                <i class="fas fa-calendar-alt fa-2x"></i>
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold">{{ review.due_date|date:"d" }}</div>
+                            <div class="text-muted small">Day Due</div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="text-info mb-1">
+                                <i class="fas fa-hourglass-half fa-2x"></i>
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold">
+                                {% if review.status == 'pending' %}
+                                    Pending
+                                {% elif review.status == 'in_progress' %}
+                                    In Progress
+                                {% elif review.status == 'approved' %}
+                                    Approved
+                                {% elif review.status == 'rejected' %}
+                                    Rejected
+                                {% else %}
+                                    {{ review.status|title }}
+                                {% endif %}
+                            </div>
+                            <div class="text-muted small">Status</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3 pt-3 border-top">
+                        <small class="text-muted d-block mb-1">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            {% if review.is_overdue %}
+                                <strong class="text-danger">This review is overdue by {{ review.due_date|timesince }}</strong>
+                            {% elif review.status == 'pending' %}
+                                Due in {{ review.due_date|timeuntil }}
+                            {% else %}
+                                Review {{ review.get_status_display|lower }}
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Add confirmation for review actions
+    document.addEventListener('DOMContentLoaded', function() {
+        // Confirm before starting review
+        const startReviewBtn = document.querySelector('a[href*="review_start"]');
+        if (startReviewBtn) {
+            startReviewBtn.addEventListener('click', function(e) {
+                if (!confirm('Are you ready to start this review? You will be marked as the reviewer.')) {
+                    e.preventDefault();
+                }
+            });
+        }
+        
+        // Show overdue alert as toast on page load
+        {% if review.is_overdue and review.status == 'pending' %}
+        setTimeout(function() {
+            const toast = new bootstrap.Toast(document.querySelector('.alert-danger'));
+            toast.show();
+        }, 1000);
+        {% endif %}
+    });
+</script>
+{% endblock %}

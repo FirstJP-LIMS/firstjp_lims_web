@@ -1,0 +1,441 @@
+{% extends 'laboratory/assets/base.html' %}
+{% load static %}
+
+{% block title %}Document Categories{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header Section -->
+    <div class="row align-items-center mb-5">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="h3 mb-2" style="color: var(--primary-color);">
+                        <i class="fas fa-tags me-2"></i>Document Categories
+                    </h2>
+                    <p class="text-muted mb-0">Manage document categories for your organization</p>
+                </div>
+                <div>
+                    <a href="{% url 'documents:category_create' %}" class="btn btn-primary me-2">
+                        <i class="fas fa-plus me-1"></i> New Category
+                    </a>
+                    <a href="{% url 'documents:dc_dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Metrics Cards -->
+    <div class="row mb-5">
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="metric-icon mb-3">
+                        <i class="fas fa-tags fa-2x text-primary"></i>
+                    </div>
+                    <h5 class="mb-2">Total Categories</h5>
+                    <h3 class="mb-0 text-primary">{{ categories.count }}</h3>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="metric-icon mb-3">
+                        <i class="fas fa-check-circle fa-2x text-success"></i>
+                    </div>
+                    <h5 class="mb-2">Active</h5>
+                    <h3 class="mb-0 text-success">{{ active_categories|default:"0" }}</h3>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="metric-icon mb-3">
+                        <i class="fas fa-graduation-cap fa-2x text-info"></i>
+                    </div>
+                    <h5 class="mb-2">Training Required</h5>
+                    <h3 class="mb-0 text-info">{{ training_required_count|default:"0" }}</h3>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="metric-icon mb-3">
+                        <i class="fas fa-file-alt fa-2x text-warning"></i>
+                    </div>
+                    <h5 class="mb-2">Total Documents</h5>
+                    <h3 class="mb-0 text-warning">{{ total_documents|default:"0" }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Categories Grid -->
+    <div class="row">
+        {% if categories %}
+            {% for category in categories %}
+            <div class="col-xl-4 col-lg-6 col-md-6 mb-4">
+                <div class="card h-100 border-0 shadow-sm {% if not category.is_active %}border-start border-danger{% endif %}">
+                    <div class="card-header bg-light border-0 pb-0">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h5 class="mb-1">{{ category.name }}</h5>
+                                <div class="d-flex align-items-center">
+                                    <span class="badge bg-primary">{{ category.code }}</span>
+                                    {% if not category.is_active %}
+                                        <span class="badge bg-danger ms-2">Inactive</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
+                                        data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a class="dropdown-item" href="{% url 'documents:category_detail' category.pk %}">
+                                            <i class="fas fa-eye me-2"></i>View Details
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="{% url 'documents:category_edit' category.pk %}">
+                                            <i class="fas fa-edit me-2"></i>Edit Category
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item" href="{% url 'documents:document_create' %}?category={{ category.pk }}">
+                                            <i class="fas fa-plus me-2"></i>New Document
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card-body pt-3">
+                        <p class="card-text text-muted mb-3">
+                            {% if category.description %}
+                                {{ category.description|truncatechars:120 }}
+                            {% else %}
+                                <span class="text-muted"><em>No description provided</em></span>
+                            {% endif %}
+                        </p>
+                        
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-file-alt text-primary me-2"></i>
+                                    <div>
+                                        <div class="small text-muted">Documents</div>
+                                        <div class="fw-semibold">{{ category.document_count|default:"0" }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-graduation-cap text-info me-2"></i>
+                                    <div>
+                                        <div class="small text-muted">Training</div>
+                                        <div class="fw-semibold">
+                                            {% if category.requires_training %}
+                                                <span class="text-success">Required</span>
+                                            {% else %}
+                                                <span class="text-secondary">Not Required</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row g-2 mb-4">
+                            <div class="col-6">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-calendar-alt text-warning me-2"></i>
+                                    <div>
+                                        <div class="small text-muted">Retention</div>
+                                        <div class="fw-semibold">{{ category.retention_period_days }} days</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-history text-secondary me-2"></i>
+                                    <div>
+                                        <div class="small text-muted">Created</div>
+                                        <div class="fw-semibold">{{ category.created_at|date:"M d, Y" }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="btn-group w-100" role="group">
+                            <a href="{% url 'documents:document_create' %}?category={{ category.pk }}" 
+                               class="btn btn-sm btn-outline-primary flex-fill">
+                                <i class="fas fa-plus me-1"></i> New Document
+                            </a>
+                            <a href="{% url 'documents:category_detail' category.pk %}" 
+                               class="btn btn-sm btn-outline-secondary flex-fill">
+                                <i class="fas fa-eye me-1"></i> View
+                            </a>
+                            <a href="{% url 'documents:category_edit' category.pk %}" 
+                               class="btn btn-sm btn-outline-warning flex-fill">
+                                <i class="fas fa-edit me-1"></i> Edit
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <!-- Empty State -->
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body text-center py-5">
+                        <div class="empty-state-icon mb-4">
+                            <i class="fas fa-tags fa-4x text-muted"></i>
+                        </div>
+                        <h3 class="h4 text-muted mb-3">No Categories Found</h3>
+                        <p class="text-muted mb-4">Get started by creating your first document category.</p>
+                        <a href="{% url 'documents:category_create' %}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-plus me-2"></i> Create First Category
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Categories Table (Alternative View) -->
+    {% if categories %}
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light border-0 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-table me-2"></i>All Categories
+                    </h5>
+                    <span class="badge bg-primary">{{ categories.count }} categories</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4">Category</th>
+                                    <th>Code</th>
+                                    <th class="text-center">Documents</th>
+                                    <th class="text-center">Training</th>
+                                    <th class="text-center">Retention</th>
+                                    <th class="text-center">Status</th>
+                                    <th class="pe-4 text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for category in categories %}
+                                <tr>
+                                    <td class="ps-4">
+                                        <div class="d-flex align-items-center">
+                                            <div class="category-icon me-3">
+                                                <i class="fas fa-folder text-primary"></i>
+                                            </div>
+                                            <div>
+                                                <strong>{{ category.name }}</strong>
+                                                <div class="text-muted small">{{ category.description|truncatechars:50|default:"No description" }}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ category.code }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-secondary">{{ category.document_count|default:"0" }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if category.requires_training %}
+                                            <i class="fas fa-check-circle text-success" title="Training Required"></i>
+                                        {% else %}
+                                            <i class="fas fa-times-circle text-muted" title="Training Not Required"></i>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="text-muted">{{ category.retention_period_days }} days</span>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if category.is_active %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="pe-4 text-end">
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a href="{% url 'documents:document_create' %}?category={{ category.pk }}" 
+                                               class="btn btn-outline-primary" title="Create Document">
+                                                <i class="fas fa-plus"></i>
+                                            </a>
+                                            <a href="{% url 'documents:category_detail' category.pk %}" 
+                                               class="btn btn-outline-secondary" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{% url 'documents:category_edit' category.pk %}" 
+                                               class="btn btn-outline-warning" title="Edit Category">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .card {
+        border-radius: var(--border-radius);
+        transition: var(--transition);
+        border: 1px solid #e9ecef;
+    }
+    
+    .card:hover {
+        box-shadow: var(--box-shadow);
+        transform: translateY(-5px);
+    }
+    
+    .metric-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(44, 90, 160, 0.1);
+    }
+    
+    .category-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(44, 90, 160, 0.1);
+    }
+    
+    .empty-state-icon {
+        opacity: 0.5;
+    }
+    
+    .table th, .table td {
+        vertical-align: middle;
+    }
+    
+    .badge {
+        font-weight: 500;
+        padding: 0.35em 0.65em;
+    }
+    
+    .btn-group .btn {
+        min-width: 80px;
+    }
+    
+    @media (max-width: 768px) {
+        .container {
+            padding-left: 15px;
+            padding-right: 15px;
+        }
+        
+        .btn-group {
+            flex-wrap: wrap;
+        }
+        
+        .btn-group .btn {
+            flex: 1 0 45%;
+            margin-bottom: 5px;
+        }
+        
+        .card-body .row > .col-6 {
+            margin-bottom: 10px;
+        }
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add hover effects to table rows
+    const tableRows = document.querySelectorAll('.table-hover tbody tr');
+    tableRows.forEach(row => {
+        row.addEventListener('mouseenter', function() {
+            this.style.backgroundColor = 'rgba(44, 90, 160, 0.03)';
+        });
+        
+        row.addEventListener('mouseleave', function() {
+            this.style.backgroundColor = '';
+        });
+    });
+    
+    // Add click effect to cards
+    const cards = document.querySelectorAll('.card');
+    cards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-5px)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+    
+    // Add tooltips for icons
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+    tooltipTriggerList.forEach(function(element) {
+        new bootstrap.Tooltip(element);
+    });
+    
+    // Animate metric cards on scroll
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+    
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+                observer.unobserve(entry.target);
+            }
+        });
+    }, observerOptions);
+    
+    // Observe metric cards
+    document.querySelectorAll('.metric-icon').forEach(el => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(20px)';
+        el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+        observer.observe(el);
+    });
+});
+</script>
+{% endblock %}

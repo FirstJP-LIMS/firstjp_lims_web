@@ -1,0 +1,835 @@
+{% extends 'laboratory/assets/base.html' %}
+{% load static %}
+
+{% block title %}{{ document.document_number }} - {{ document.title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header -->
+    <div class="row align-items-center mb-5">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h2 class="h3 mb-2" style="color: var(--primary-color);">
+                        <i class="fas fa-file-contract me-2"></i>{{ document.document_number }}
+                    </h2>
+                    <h4 class="text-muted mb-0">{{ document.title }}</h4>
+                    <div class="mt-2">
+                        <span class="badge bg-primary">{{ document.category.code }}</span>
+                        <span class="text-muted mx-2">•</span>
+                        <span class="text-muted">v{{ document.version }}</span>
+                    </div>
+                </div>
+                <div class="btn-group" role="group">
+                    <a href="{% url 'documents:document_edit' document.pk %}" class="btn btn-outline-warning">
+                        <i class="fas fa-edit me-1"></i> Edit
+                    </a>
+                    {% if document.file %}
+                    <a href="{% url 'documents:document_download' document.pk %}" class="btn btn-outline-success">
+                        <i class="fas fa-download me-1"></i> Download
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'documents:document_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Back
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Card -->
+    <div class="card border-0 shadow-sm mb-5">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-3">
+                    <div class="d-flex align-items-center">
+                        <div class="status-icon me-3">
+                            {% if document.status == 'effective' %}
+                            <i class="fas fa-check-circle fa-2x text-success"></i>
+                            {% elif document.status == 'draft' %}
+                            <i class="fas fa-pencil-alt fa-2x text-secondary"></i>
+                            {% elif document.status == 'under_review' %}
+                            <i class="fas fa-clock fa-2x text-warning"></i>
+                            {% else %}
+                            <i class="fas fa-info-circle fa-2x text-info"></i>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <div class="small text-muted">Status</div>
+                            {% if document.status == 'effective' %}
+                            <span class="badge bg-success fs-6">Effective</span>
+                            {% elif document.status == 'draft' %}
+                            <span class="badge bg-secondary fs-6">Draft</span>
+                            {% elif document.status == 'under_review' %}
+                            <span class="badge bg-warning fs-6">Under Review</span>
+                            {% else %}
+                            <span class="badge bg-info fs-6">{{ document.get_status_display }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-9">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="small text-muted">Owner</div>
+                            <div class="fw-semibold">{{ document.owner.get_full_name }}</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="small text-muted">Category</div>
+                            <div class="fw-semibold">{{ document.category.name }}</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="small text-muted">Effective Date</div>
+                            <div class="fw-semibold">
+                                {% if document.effective_date %}
+                                {{ document.effective_date|date:"M d, Y" }}
+                                {% else %}
+                                <span class="text-muted">Not set</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bolt me-2"></i>Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-xl-2 col-md-4 col-6">
+                            <a href="{% url 'documents:version_create' document.pk %}" class="btn btn-primary w-100">
+                                <i class="fas fa-code-branch fa-lg mb-2"></i><br>
+                                New Version
+                            </a>
+                        </div>
+                        <div class="col-xl-2 col-md-4 col-6">
+                            <a href="{% url 'documents:document_review_create' document.pk %}" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-clipboard-check fa-lg mb-2"></i><br>
+                                Create Review
+                            </a>
+                        </div>
+                        <div class="col-xl-2 col-md-4 col-6">
+                            <a href="{% url 'documents:document_approve' document.pk %}" class="btn btn-outline-success w-100">
+                                <i class="fas fa-check-circle fa-lg mb-2"></i><br>
+                                Approve
+                            </a>
+                        </div>
+                        <div class="col-xl-2 col-md-4 col-6">
+                            <a href="{% url 'documents:distribution_create' document.pk %}" class="btn btn-outline-secondary w-100">
+                                <i class="fas fa-share fa-lg mb-2"></i><br>
+                                Distribute
+                            </a>
+                        </div>
+                        <div class="col-xl-2 col-md-4 col-6">
+                            <a href="{% url 'documents:training_assign' document.pk %}" class="btn btn-outline-warning w-100">
+                                <i class="fas fa-graduation-cap fa-lg mb-2"></i><br>
+                                Assign Training
+                            </a>
+                        </div>
+                        <div class="col-xl-2 col-md-4 col-6">
+                            <a href="{% url 'documents:reference_create' document.pk %}" class="btn btn-outline-dark w-100">
+                                <i class="fas fa-link fa-lg mb-2"></i><br>
+                                Add Reference
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="row g-4 mb-5">
+        <!-- Left Column - Document Details -->
+        <div class="col-lg-8">
+            <!-- Document Details Card -->
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Document Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <div class="small text-muted mb-1">Document Number</div>
+                                <div class="fw-semibold">{{ document.document_number }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-item">
+                                <div class="small text-muted mb-1">Department</div>
+                                <div class="fw-semibold">{{ document.department|default:"Not specified" }}</div>
+                            </div>
+                        </div>
+                        
+                        {% if document.description %}
+                        <div class="col-12">
+                            <div class="info-item">
+                                <div class="small text-muted mb-1">Description</div>
+                                <div class="document-content">{{ document.description|linebreaks }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if document.purpose %}
+                        <div class="col-12">
+                            <div class="info-item">
+                                <div class="small text-muted mb-1">Purpose</div>
+                                <div class="document-content">{{ document.purpose|linebreaks }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if document.scope %}
+                        <div class="col-12">
+                            <div class="info-item">
+                                <div class="small text-muted mb-1">Scope</div>
+                                <div class="document-content">{{ document.scope|linebreaks }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if keywords %}
+                        <div class="col-12">
+                            <div class="info-item">
+                                <div class="small text-muted mb-1">Keywords</div>
+                                <div>
+                                    {% for keyword in keywords %}
+                                    <span class="badge bg-info me-1 mb-1">{{ keyword }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if document.supersedes %}
+                        <div class="col-12">
+                            <div class="info-item">
+                                <div class="small text-muted mb-1">Supersedes</div>
+                                <a href="{% url 'documents:document_detail' document.supersedes.pk %}" class="text-decoration-none">
+                                    <i class="fas fa-exchange-alt me-1 text-primary"></i>
+                                    {{ document.supersedes.document_number }} v{{ document.supersedes.version }}
+                                </a>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column - Lifecycle & Compliance -->
+        <div class="col-lg-4">
+            <!-- Lifecycle Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light border-0">
+                    <h6 class="mb-0">
+                        <i class="fas fa-life-ring me-2"></i>Lifecycle
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="lifecycle-item mb-3">
+                        <div class="small text-muted mb-1">Effective Date</div>
+                        <div class="fw-semibold">{{ document.effective_date|date:"M d, Y"|default:"Not set" }}</div>
+                    </div>
+                    
+                    <div class="lifecycle-item mb-3">
+                        <div class="small text-muted mb-1">Expiry Date</div>
+                        <div class="fw-semibold">{{ document.expiry_date|date:"M d, Y"|default:"Not set" }}</div>
+                    </div>
+                    
+                    <div class="lifecycle-item mb-3">
+                        <div class="small text-muted mb-1">Review Frequency</div>
+                        <div class="fw-semibold">{{ document.review_frequency_days }} days</div>
+                    </div>
+                    
+                    <div class="lifecycle-item">
+                        <div class="small text-muted mb-1">Next Review</div>
+                        <div class="fw-semibold">
+                            {% if document.next_review_date %}
+                                {% if document.is_due_for_review %}
+                                <span class="text-danger">
+                                    <i class="fas fa-exclamation-circle me-1"></i>
+                                    {{ document.next_review_date|date:"M d, Y" }}
+                                    <span class="badge bg-danger ms-2">OVERDUE</span>
+                                </span>
+                                {% else %}
+                                {{ document.next_review_date|date:"M d, Y" }}
+                                {% endif %}
+                            {% else %}
+                            <span class="text-muted">Not scheduled</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Compliance Card -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light border-0">
+                    <h6 class="mb-0">
+                        <i class="fas fa-shield-alt me-2"></i>Compliance Settings
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="compliance-item mb-3">
+                        <div class="d-flex align-items-center">
+                            {% if document.is_controlled %}
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            {% else %}
+                            <i class="fas fa-times-circle text-secondary me-2"></i>
+                            {% endif %}
+                            <div>
+                                <div class="fw-semibold">Controlled Document</div>
+                                <div class="small text-muted">Subject to formal control procedures</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="compliance-item mb-3">
+                        <div class="d-flex align-items-center">
+                            {% if document.requires_electronic_signature %}
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            {% else %}
+                            <i class="fas fa-times-circle text-secondary me-2"></i>
+                            {% endif %}
+                            <div>
+                                <div class="fw-semibold">Electronic Signature</div>
+                                <div class="small text-muted">21 CFR Part 11 compliance</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="compliance-item">
+                        <div class="d-flex align-items-center">
+                            {% if document.requires_training %}
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            {% else %}
+                            <i class="fas fa-times-circle text-secondary me-2"></i>
+                            {% endif %}
+                            <div>
+                                <div class="fw-semibold">Training Required</div>
+                                <div class="small text-muted">Users must complete training</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- File Information -->
+    {% if document.file %}
+    <div class="card border-0 shadow-sm mb-5">
+        <div class="card-header bg-light border-0">
+            <h5 class="mb-0">
+                <i class="fas fa-paperclip me-2"></i>File Information
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <div class="d-flex align-items-center">
+                        <div class="file-icon me-3">
+                            <i class="fas fa-file fa-2x text-primary"></i>
+                        </div>
+                        <div>
+                            <div class="fw-semibold">{{ document.file.name }}</div>
+                            <div class="text-muted small">{{ document.file_size|filesizeformat }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="code-block">
+                        <div class="small text-muted mb-1">SHA-256 Checksum</div>
+                        <code class="text-primary" title="{{ document.checksum }}">
+                            {{ document.checksum|truncatechars:40 }}
+                        </code>
+                        <button class="btn btn-sm btn-outline-primary ms-2" onclick="copyToClipboard('{{ document.checksum }}')">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Tabs Section -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-light border-0">
+            <ul class="nav nav-tabs card-header-tabs" id="documentTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="audit-tab" data-bs-toggle="tab" data-bs-target="#audit" type="button" role="tab">
+                        <i class="fas fa-history me-1"></i>Audit Information
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="versions-tab" data-bs-toggle="tab" data-bs-target="#versions" type="button" role="tab">
+                        <i class="fas fa-code-branch me-1"></i>Version History
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="reviews-tab" data-bs-toggle="tab" data-bs-target="#reviews" type="button" role="tab">
+                        <i class="fas fa-clipboard-check me-1"></i>Reviews
+                        <span class="badge bg-primary ms-1">{{ reviews.count }}</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="approvals-tab" data-bs-toggle="tab" data-bs-target="#approvals" type="button" role="tab">
+                        <i class="fas fa-check-circle me-1"></i>Approvals
+                        <span class="badge bg-success ms-1">{{ approvals.count }}</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="references-tab" data-bs-toggle="tab" data-bs-target="#references" type="button" role="tab">
+                        <i class="fas fa-link me-1"></i>References
+                        <span class="badge bg-dark ms-1">{{ references.count }}</span>
+                    </button>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="card-body">
+            <div class="tab-content" id="documentTabsContent">
+                <!-- Audit Information Tab -->
+                <div class="tab-pane fade show active" id="audit" role="tabpanel">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="audit-item mb-3">
+                                <div class="small text-muted mb-1">Created By</div>
+                                <div class="fw-semibold">{{ document.created_by.get_full_name }}</div>
+                            </div>
+                            <div class="audit-item">
+                                <div class="small text-muted mb-1">Created At</div>
+                                <div class="fw-semibold">{{ document.created_at|date:"M d, Y H:i" }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="audit-item mb-3">
+                                <div class="small text-muted mb-1">Updated By</div>
+                                <div class="fw-semibold">{{ document.updated_by.get_full_name }}</div>
+                            </div>
+                            <div class="audit-item">
+                                <div class="small text-muted mb-1">Updated At</div>
+                                <div class="fw-semibold">{{ document.updated_at|date:"M d, Y H:i" }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Version History Tab -->
+                <div class="tab-pane fade" id="versions" role="tabpanel">
+                    {% if versions %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Version</th>
+                                    <th>Change Type</th>
+                                    <th>Description</th>
+                                    <th>Created</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for version in versions %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-info">v{{ version.version_number }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ version.get_change_type_display }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="text-truncate" style="max-width: 200px;">
+                                            {{ version.change_description|default:"No description" }}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">{{ version.created_at|date:"M d, Y" }}</small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-code-branch fa-3x text-muted mb-3"></i>
+                        <p class="text-muted mb-0">No version history available</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Reviews Tab -->
+                <div class="tab-pane fade" id="reviews" role="tabpanel">
+                    {% if reviews %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Reviewer</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Due Date</th>
+                                    <th>Created</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for review in reviews %}
+                                <tr>
+                                    <td>{{ review.reviewer.get_full_name|default:review.reviewer.username }}</td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ review.get_review_type_display }}</span>
+                                    </td>
+                                    <td>
+                                        {% if review.status == 'completed' %}
+                                        <span class="badge bg-success">Completed</span>
+                                        {% elif review.status == 'in_progress' %}
+                                        <span class="badge bg-warning">In Progress</span>
+                                        {% elif review.status == 'overdue' %}
+                                        <span class="badge bg-danger">Overdue</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{{ review.get_status_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ review.due_date|date:"M d, Y" }}</td>
+                                    <td>{{ review.created_at|date:"M d, Y" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-clipboard-check fa-3x text-muted mb-3"></i>
+                        <p class="text-muted mb-0">No reviews yet</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Approvals Tab -->
+                <div class="tab-pane fade" id="approvals" role="tabpanel">
+                    {% if approvals %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Approver</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Signed At</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for approval in approvals %}
+                                <tr>
+                                    <td>{{ approval.approver.get_full_name|default:approval.approver.username }}</td>
+                                    <td>
+                                        <span class="badge bg-info">{{ approval.get_approval_type_display }}</span>
+                                    </td>
+                                    <td>
+                                        {% if approval.approval_status == 'approved' %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check me-1"></i>Approved
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-danger">
+                                            <i class="fas fa-times me-1"></i>Rejected
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ approval.signed_at|date:"M d, Y H:i" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-check-circle fa-3x text-muted mb-3"></i>
+                        <p class="text-muted mb-0">No approvals yet</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- References Tab -->
+                <div class="tab-pane fade" id="references" role="tabpanel">
+                    {% if references %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Document</th>
+                                    <th>Reference Type</th>
+                                    <th>Added By</th>
+                                    <th>Created</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ref in references %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'documents:document_detail' ref.referenced_document.pk %}" class="text-decoration-none">
+                                            <i class="fas fa-file-alt me-1 text-primary"></i>
+                                            {{ ref.referenced_document.document_number }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ ref.get_reference_type_display }}</span>
+                                    </td>
+                                    <td>{{ ref.created_by.get_full_name|default:ref.created_by.username }}</td>
+                                    <td>{{ ref.created_at|date:"M d, Y" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-link fa-3x text-muted mb-3"></i>
+                        <p class="text-muted mb-0">No document references</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .card {
+        border-radius: var(--border-radius);
+        transition: var(--transition);
+        border: 1px solid #e9ecef;
+    }
+    
+    .status-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(44, 90, 160, 0.1);
+    }
+    
+    .file-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(44, 90, 160, 0.1);
+    }
+    
+    .info-item, .lifecycle-item, .compliance-item, .audit-item {
+        padding-bottom: 1rem;
+        margin-bottom: 1rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .info-item:last-child, .lifecycle-item:last-child, .compliance-item:last-child, .audit-item:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+    
+    .document-content {
+        background-color: var(--light-bg);
+        padding: 1rem;
+        border-radius: var(--border-radius);
+        border-left: 4px solid var(--primary-color);
+    }
+    
+    .code-block {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-radius: var(--border-radius);
+        border: 1px solid #e9ecef;
+        font-family: 'Courier New', monospace;
+        font-size: 0.9em;
+        word-break: break-all;
+    }
+    
+    .nav-tabs .nav-link {
+        color: var(--secondary-color);
+        border: none;
+        padding: 0.75rem 1rem;
+        border-radius: var(--border-radius) var(--border-radius) 0 0;
+        transition: var(--transition);
+    }
+    
+    .nav-tabs .nav-link:hover {
+        color: var(--primary-color);
+        background-color: rgba(44, 90, 160, 0.05);
+    }
+    
+    .nav-tabs .nav-link.active {
+        color: var(--primary-color);
+        background-color: white;
+        border-bottom: 3px solid var(--primary-color);
+        font-weight: 600;
+    }
+    
+    .badge {
+        font-weight: 500;
+        padding: 0.35em 0.65em;
+    }
+    
+    .btn-group .btn {
+        border-radius: var(--border-radius);
+    }
+    
+    @media (max-width: 768px) {
+        .container {
+            padding-left: 15px;
+            padding-right: 15px;
+        }
+        
+        .d-flex.justify-content-between {
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .btn-group {
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .btn-group .btn {
+            margin-bottom: 0.5rem;
+        }
+        
+        .row.g-3 > .col-xl-2 {
+            margin-bottom: 1rem;
+        }
+        
+        .nav-tabs {
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .nav-tabs .nav-link {
+            white-space: nowrap;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+        }
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tabs
+    const triggerTabList = document.querySelectorAll('#documentTabs button[data-bs-toggle="tab"]');
+    triggerTabList.forEach(triggerEl => {
+        const tabTrigger = new bootstrap.Tab(triggerEl);
+        triggerEl.addEventListener('click', event => {
+            event.preventDefault();
+            tabTrigger.show();
+        });
+    });
+    
+    // Copy checksum to clipboard
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            // Show toast notification
+            showToast('success', 'Checksum copied to clipboard');
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+            showToast('error', 'Failed to copy checksum');
+        });
+    }
+    
+    // Show toast notification
+    function showToast(type, message) {
+        const toastContainer = document.getElementById('toastContainer') || createToastContainer();
+        const toastId = 'toast-' + Date.now();
+        const toast = document.createElement('div');
+        toast.id = toastId;
+        toast.className = `toast align-items-center text-white bg-${type} border-0`;
+        toast.setAttribute('role', 'alert');
+        
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+        
+        toastContainer.appendChild(toast);
+        
+        const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
+        bsToast.show();
+        
+        toast.addEventListener('hidden.bs.toast', function() {
+            toast.remove();
+        });
+    }
+    
+    function createToastContainer() {
+        const container = document.createElement('div');
+        container.id = 'toastContainer';
+        container.className = 'toast-container position-fixed top-0 end-0 p-3';
+        document.body.appendChild(container);
+        return container;
+    }
+    
+    // Add hover effects to quick action buttons
+    const quickActionButtons = document.querySelectorAll('.row.g-3 .btn');
+    quickActionButtons.forEach(button => {
+        button.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-3px)';
+        });
+        
+        button.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+    
+    // Add tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+    tooltipTriggerList.forEach(function(element) {
+        new bootstrap.Tooltip(element);
+    });
+    
+    // Auto-scroll to hash if present in URL
+    if (window.location.hash) {
+        const hash = window.location.hash.substring(1);
+        const tab = document.getElementById(`${hash}-tab`);
+        if (tab) {
+            const tabTrigger = new bootstrap.Tab(tab);
+            tabTrigger.show();
+            
+            // Scroll to tab content
+            setTimeout(() => {
+                const tabContent = document.getElementById(hash);
+                if (tabContent) {
+                    tabContent.scrollIntoView({ behavior: 'smooth' });
+                }
+            }, 100);
+        }
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,669 @@
+{% extends "laboratory/assets/base.html" %}
+{% load static %}
+
+{% block title %}{{ category.code }} - {{ category.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header -->
+    <div class="row align-items-center mb-5">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="h3 mb-2" style="color: var(--primary-color);">
+                        <i class="fas fa-folder me-2"></i>{{ category.code }} - {{ category.name }}
+                    </h2>
+                    <p class="text-muted mb-0">
+                        {% if category.description %}
+                            {{ category.description|truncatechars:100 }}
+                        {% else %}
+                            <span class="text-muted"><em>No description provided</em></span>
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="btn-group" role="group">
+                    <a href="{% url 'documents:category_edit' category.pk %}" class="btn btn-outline-warning">
+                        <i class="fas fa-edit me-1"></i> Edit
+                    </a>
+                    <a href="{% url 'documents:category_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> All Categories
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Information -->
+    <div class="card border-0 shadow-sm mb-5">
+        <div class="card-header bg-light border-0">
+            <h5 class="mb-0">
+                <i class="fas fa-info-circle me-2"></i>Category Information
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="info-item mb-3">
+                        <div class="small text-muted mb-1">Category Code</div>
+                        <div class="d-flex align-items-center">
+                            <div class="category-badge me-3">
+                                <span class="badge bg-primary fs-6">{{ category.code }}</span>
+                            </div>
+                            <div class="fw-semibold">{{ category.name }}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="info-item mb-3">
+                        <div class="small text-muted mb-1">Status</div>
+                        <div>
+                            {% if category.is_active %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check-circle me-1"></i>Active
+                                </span>
+                            {% else %}
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-times-circle me-1"></i>Inactive
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="small text-muted mb-1">Created</div>
+                        <div>
+                            {{ category.created_at|date:"M d, Y" }}
+                            {% if category.created_by %}
+                                <span class="text-muted">by {{ category.created_by.get_full_name }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="info-item mb-3">
+                        <div class="small text-muted mb-1">Training Requirement</div>
+                        <div>
+                            {% if category.requires_training %}
+                                <span class="badge bg-info">
+                                    <i class="fas fa-graduation-cap me-1"></i>Training Required
+                                </span>
+                                <div class="text-muted small mt-1">ISO 17025 compliant training required</div>
+                            {% else %}
+                                <span class="badge bg-secondary">
+                                    <i class="fas fa-times me-1"></i>No Training Required
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="info-item mb-3">
+                        <div class="small text-muted mb-1">Retention Period</div>
+                        <div class="d-flex align-items-center">
+                            <div class="retention-display me-3">
+                                <i class="fas fa-calendar-alt fa-2x text-warning"></i>
+                            </div>
+                            <div>
+                                <div class="fw-semibold">{{ category.retention_period_days }} days</div>
+                                <div class="text-muted small">
+                                    ≈ {{ category.retention_period_days|floatformat:0|divisibleby:365|yesno:"years,days" }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="small text-muted mb-1">Last Updated</div>
+                        <div>{{ category.updated_at|date:"M d, Y H:i" }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-5">
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-0 text-white h-100" style="background: linear-gradient(135deg, var(--primary-color), #1a3d7a);">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-1">Total Documents</h6>
+                            <h3 class="mb-0">{{ total_documents|default:"0" }}</h3>
+                        </div>
+                        <i class="fas fa-file-alt fa-2x opacity-50"></i>
+                    </div>
+                    <div class="progress mt-3" style="height: 4px;">
+                        <div class="progress-bar bg-light" style="width: 100%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-0 h-100" style="background: linear-gradient(135deg, var(--success-color), #157347);">
+                <div class="card-body text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-1">Effective</h6>
+                            <h3 class="mb-0">{{ effective_documents|default:"0" }}</h3>
+                        </div>
+                        <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                    </div>
+                    <div class="progress mt-3" style="height: 4px;">
+                        <div class="progress-bar bg-light" style="width: {% widthratio effective_documents total_documents 100 %}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-0 h-100" style="background: linear-gradient(135deg, var(--secondary-color), #5a6268);">
+                <div class="card-body text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-1">Draft</h6>
+                            <h3 class="mb-0">{{ draft_documents|default:"0" }}</h3>
+                        </div>
+                        <i class="fas fa-file fa-2x opacity-75"></i>
+                    </div>
+                    <div class="progress mt-3" style="height: 4px;">
+                        <div class="progress-bar bg-light" style="width: {% widthratio draft_documents total_documents 100 %}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-0 h-100" style="background: linear-gradient(135deg, var(--warning-color), #e0a800);">
+                <div class="card-body text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-1">Under Review</h6>
+                            <h3 class="mb-0">{{ under_review_documents|default:"0" }}</h3>
+                        </div>
+                        <i class="fas fa-clipboard-check fa-2x opacity-75"></i>
+                    </div>
+                    <div class="progress mt-3" style="height: 4px;">
+                        <div class="progress-bar bg-light" style="width: {% widthratio under_review_documents total_documents 100 %}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Content Row -->
+    <div class="row g-4 mb-5">
+        <!-- Status Breakdown -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>Document Status Distribution
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if status_breakdown %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4">Status</th>
+                                    <th class="text-center">Count</th>
+                                    <th class="text-center">Percentage</th>
+                                    <th class="pe-4">Progress</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for status in status_breakdown %}
+                                <tr>
+                                    <td class="ps-4">
+                                        {% if status.status == 'effective' %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check-circle me-1"></i>Effective
+                                        </span>
+                                        {% elif status.status == 'draft' %}
+                                        <span class="badge bg-secondary">
+                                            <i class="fas fa-pencil-alt me-1"></i>Draft
+                                        </span>
+                                        {% elif status.status == 'under_review' %}
+                                        <span class="badge bg-warning">
+                                            <i class="fas fa-clock me-1"></i>Under Review
+                                        </span>
+                                        {% elif status.status == 'approved' %}
+                                        <span class="badge bg-primary">
+                                            <i class="fas fa-check me-1"></i>Approved
+                                        </span>
+                                        {% elif status.status == 'obsolete' %}
+                                        <span class="badge bg-danger">
+                                            <i class="fas fa-archive me-1"></i>Obsolete
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-dark">{{ status.status|title }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="fw-semibold">{{ status.count }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="text-muted">{% widthratio status.count total_documents 100 %}%</span>
+                                    </td>
+                                    <td class="pe-4" style="width: 120px;">
+                                        <div class="progress" style="height: 8px;">
+                                            <div class="progress-bar {% if status.status == 'effective' %}bg-success{% elif status.status == 'draft' %}bg-secondary{% elif status.status == 'under_review' %}bg-warning{% elif status.status == 'approved' %}bg-primary{% else %}bg-dark{% endif %}" 
+                                                 style="width: {% widthratio status.count total_documents 100 %}%"></div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-chart-pie fa-3x text-muted mb-3"></i>
+                        <p class="text-muted mb-0">No status data available</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bolt me-2"></i>Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="action-list">
+                        <a href="{% url 'documents:document_create' %}?category={{ category.pk }}" 
+                           class="action-item d-flex align-items-center p-3 mb-3 border rounded text-decoration-none">
+                            <div class="action-icon me-3">
+                                <i class="fas fa-plus-circle fa-2x text-success"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="fw-semibold">Create New Document</div>
+                                <div class="text-muted small">Add new {{ category.code }} document</div>
+                            </div>
+                            <i class="fas fa-chevron-right text-muted"></i>
+                        </a>
+                        
+                        <a href="{% url 'documents:document_list' %}?category={{ category.pk }}" 
+                           class="action-item d-flex align-items-center p-3 mb-3 border rounded text-decoration-none">
+                            <div class="action-icon me-3">
+                                <i class="fas fa-search fa-2x text-primary"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="fw-semibold">Browse All Documents</div>
+                                <div class="text-muted small">View all {{ category.code }} documents</div>
+                            </div>
+                            <i class="fas fa-chevron-right text-muted"></i>
+                        </a>
+                        
+                        <a href="{% url 'documents:category_edit' category.pk %}" 
+                           class="action-item d-flex align-items-center p-3 border rounded text-decoration-none">
+                            <div class="action-icon me-3">
+                                <i class="fas fa-cog fa-2x text-warning"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="fw-semibold">Category Settings</div>
+                                <div class="text-muted small">Edit category configuration</div>
+                            </div>
+                            <i class="fas fa See morechevron-right text-muted"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Documents Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-light border-0 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-file-alt me-2"></i>Documents in this Category
+            </h5>
+            <a href="{% url 'documents:document_create' %}?category={{ category.pk }}" 
+               class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i> New Document
+            </a>
+        </div>
+        <div class="card-body p-0">
+            {% if page_obj.object_list %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4">Document #</th>
+                            <th>Title</th>
+                            <th>Version</th>
+                            <th>Status</th>
+                            <th>Owner</th>
+                            <th>Effective Date</th>
+                            <th>Next Review</th>
+                            <th class="pe-4 text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for document in page_obj %}
+                        <tr class="document-row" onclick="window.location='{% url 'documents:document_detail' document.pk %}'" style="cursor: pointer;">
+                            <td class="ps-4">
+                                <strong>{{ document.document_number }}</strong>
+                            </td>
+                            <td>
+                                <div class="text-truncate" style="max-width: 200px;" title="{{ document.title }}">
+                                    {{ document.title }}
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">v{{ document.version }}</span>
+                            </td>
+                            <td>
+                                {% if document.status == 'effective' %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check-circle me-1"></i>{{ document.get_status_display }}
+                                </span>
+                                {% elif document.status == 'draft' %}
+                                <span class="badge bg-secondary">
+                                    <i class="fas fa-pencil-alt me-1"></i>{{ document.get_status_display }}
+                                </span>
+                                {% elif document.status == 'under_review' %}
+                                <span class="badge bg-warning">
+                                    <i class="fas fa-clock me-1"></i>{{ document.get_status_display }}
+                                </span>
+                                {% elif document.status == 'approved' %}
+                                <span class="badge bg-primary">
+                                    <i class="fas fa-check me-1"></i>{{ document.get_status_display }}
+                                </span>
+                                {% elif document.status == 'obsolete' %}
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-archive me-1"></i>{{ document.get_status_display }}
+                                </span>
+                                {% else %}
+                                <span class="badge bg-dark">{{ document.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="small">{{ document.owner.get_full_name|default:document.owner.username }}</div>
+                            </td>
+                            <td>
+                                {% if document.effective_date %}
+                                <span class="text-muted">{{ document.effective_date|date:"M d, Y" }}</span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if document.next_review_date %}
+                                    {% if document.is_due_for_review %}
+                                    <span class="text-danger fw-bold">
+                                        <i class="fas fa-exclamation-circle me-1"></i>{{ document.next_review_date|date:"M d, Y" }}
+                                    </span>
+                                    {% else %}
+                                    <span class="text-muted">{{ document.next_review_date|date:"M d, Y" }}</span>
+                                    {% endif %}
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="pe-4 text-end">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{% url 'documents:document_detail' document.pk %}" 
+                                       class="btn btn-outline-primary" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'documents:document_edit' document.pk %}" 
+                                       class="btn btn-outline-warning" title="Edit Document">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    {% if document.file %}
+                                    <a href="{% url 'documents:document_download' document.pk %}" 
+                                       class="btn btn-outline-success" title="Download">
+                                        <i class="fas fa-download"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+            <div class="card-footer bg-light border-0">
+                <nav aria-label="Page navigation">
+                    <ul class="pagination justify-content-center mb-0">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1" title="First Page">
+                                    <i class="fas fa-angle-double-left"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}" title="Previous">
+                                    <i class="fas fa-angle-left"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+                        
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ num }}</span>
+                                </li>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}" title="Next">
+                                    <i class="fas fa-angle-right"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}" title="Last Page">
+                                    <i class="fas fa-angle-double-right"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                    <div class="text-center mt-2">
+                        <small class="text-muted">
+                            Showing {{ page_obj.start_index }} - {{ page_obj.end_index }} of {{ page_obj.paginator.count }} documents
+                        </small>
+                    </div>
+                </nav>
+            </div>
+            {% endif %}
+            
+            {% else %}
+            <!-- Empty State -->
+            <div class="text-center py-5">
+                <div class="empty-state-icon mb-4">
+                    <i class="fas fa-file-alt fa-3x text-muted"></i>
+                </div>
+                <h3 class="h4 text-muted mb-3">No Documents Found</h3>
+                <p class="text-muted mb-4">Create your first {{ category.code }} document to get started.</p>
+                <a href="{% url 'documents:document_create' %}?category={{ category.pk }}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-plus me-2"></i> Create First Document
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .card {
+        border-radius: var(--border-radius);
+        transition: var(--transition);
+        border: 1px solid #e9ecef;
+    }
+    
+    .card:hover {
+        box-shadow: var(--box-shadow);
+    }
+    
+    .category-badge {
+        padding: 8px;
+        background-color: rgba(44, 90, 160, 0.1);
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .retention-display {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(255, 193, 7, 0.1);
+    }
+    
+    .action-item {
+        transition: var(--transition);
+        border-color: #e9ecef !important;
+    }
+    
+    .action-item:hover {
+        background-color: rgba(44, 90, 160, 0.05);
+        border-color: var(--primary-color) !important;
+        transform: translateX(5px);
+    }
+    
+    .action-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(44, 90, 160, 0.1);
+    }
+    
+    .document-row:hover {
+        background-color: rgba(44, 90, 160, 0.03);
+    }
+    
+    .empty-state-icon {
+        opacity: 0.5;
+    }
+    
+    .progress {
+        border-radius: 10px;
+    }
+    
+    .badge {
+        font-weight: 500;
+        padding: 0.35em 0.65em;
+    }
+    
+    .table th, .table td {
+        vertical-align: middle;
+    }
+    
+    @media (max-width: 768px) {
+        .container {
+            padding-left: 15px;
+            padding-right: 15px;
+        }
+        
+        .btn-group {
+            flex-wrap: wrap;
+        }
+        
+        .card-body .row > .col-md-6 {
+            margin-bottom: 1rem;
+        }
+        
+        .table-responsive {
+            font-size: 0.875rem;
+        }
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add click effects to document rows
+    const documentRows = document.querySelectorAll('.document-row');
+    documentRows.forEach(row => {
+        row.addEventListener('click', function() {
+            this.style.backgroundColor = 'rgba(44, 90, 160, 0.05)';
+            setTimeout(() => {
+                window.location = this.getAttribute('onclick').match(/'(.*?)'/)[1];
+            }, 200);
+        });
+        
+        row.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateX(5px)';
+        });
+        
+        row.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateX(0)';
+        });
+    });
+    
+    // Add hover effects to action items
+    const actionItems = document.querySelectorAll('.action-item');
+    actionItems.forEach(item => {
+        item.addEventListener('mouseenter', function() {
+            const icon = this.querySelector('.action-icon');
+            icon.style.transform = 'scale(1.1)';
+        });
+        
+        item.addEventListener('mouseleave', function() {
+            const icon = this.querySelector('.action-icon');
+            icon.style.transform = 'scale(1)';
+        });
+    });
+    
+    // Animate progress bars on scroll
+    const observerOptions = {
+        threshold: 0.2,
+        rootMargin: '0px 0px -50px 0px'
+    };
+    
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const progressBar = entry.target;
+                const width = progressBar.style.width;
+                progressBar.style.width = '0%';
+                setTimeout(() => {
+                    progressBar.style.transition = 'width 1.5s ease';
+                    progressBar.style.width = width;
+                }, 200);
+                observer.unobserve(progressBar);
+            }
+        });
+    }, observerOptions);
+    
+    // Observe progress bars
+    document.querySelectorAll('.progress-bar').forEach(bar => {
+        observer.observe(bar);
+    });
+    
+    // Add tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+    tooltipTriggerList.forEach(function(element) {
+        new bootstrap.Tooltip(element);
+    });
+});
+</script>
+{% endblock %}

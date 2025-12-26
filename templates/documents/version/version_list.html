@@ -1,0 +1,473 @@
+{% extends 'laboratory/assets/base.html' %}
+
+{% load static %}
+
+{% block title %}Version History - {{ document.document_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .version-timeline {
+        position: relative;
+        padding-left: 30px;
+    }
+    .version-timeline::before {
+        content: '';
+        position: absolute;
+        left: 10px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #e9ecef;
+    }
+    .timeline-item {
+        position: relative;
+        margin-bottom: 25px;
+    }
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -20px;
+        top: 0;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #6c757d;
+    }
+    .timeline-item.active::before {
+        background: #28a745;
+        box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.2);
+    }
+    .version-badge {
+        font-size: 0.85em;
+        font-weight: 600;
+    }
+    .status-badge {
+        min-width: 80px;
+    }
+    .change-type-badge {
+        font-size: 0.75em;
+        padding: 2px 8px;
+    }
+    .card-hover:hover {
+        transform: translateY(-2px);
+        transition: transform 0.2s ease-in-out;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+    }
+    .file-size {
+        font-size: 0.85em;
+        color: #6c757d;
+    }
+    .action-buttons .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+    .current-version-highlight {
+        background-color: rgba(40, 167, 69, 0.05);
+        border-left: 4px solid #28a745 !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb bg-transparent p-0 mb-2">
+                    <li class="breadcrumb-item"><a href="{% url 'documents:document_list' %}">Documents</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'documents:document_detail' document.pk %}">{{ document.document_number }}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Version History</li>
+                </ol>
+            </nav>
+            
+            <div class="d-flex align-items-center">
+                <h2 class="mb-0 mr-3">Version History</h2>
+                <span class="badge badge-primary badge-pill px-3 py-2">
+                    {{ versions|length }} version{{ versions|pluralize }}
+                </span>
+            </div>
+            <p class="text-muted mb-0 mt-2">
+                Complete audit trail for <strong>{{ document.document_number }}</strong> - {{ document.title }}
+            </p>
+        </div>
+        <div class="col-md-4 text-md-right mt-3 mt-md-0">
+            <div class="btn-group" role="group">
+                <a href="{% url 'documents:document_detail' document.pk %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Document
+                </a>
+                <a href="{% url 'documents:version_create' document.pk %}" class="btn btn-primary">
+                    <i class="fas fa-plus mr-2"></i>Create New Version
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Overview -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Current Version
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                v{{ document.version }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-code-branch fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Total Revisions
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ versions|length }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-history fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                First Version
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {% with versions|last as first_version %}
+                                    v{{ first_version.version_number }}
+                                {% endwith %}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-flag fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Active Since
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ document.effective_date|date:"M d, Y"|default:"N/A" }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-calendar-check fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Versions List -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center bg-white">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-list-ul mr-2"></i>All Versions
+                    </h6>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
+                                id="filterDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <i class="fas fa-filter mr-2"></i>Filter
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-right" aria-labelledby="filterDropdown">
+                            <a class="dropdown-item" href="?">All Versions</a>
+                            <a class="dropdown-item" href="?change_type=major">Major Changes Only</a>
+                            <a class="dropdown-item" href="?change_type=minor">Minor Changes Only</a>
+                            <a class="dropdown-item" href="?change_type=editorial">Editorial Changes Only</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    {% if versions %}
+                    <div class="list-group list-group-flush">
+                        {% for version in versions %}
+                        <div class="list-group-item list-group-item-action p-4 card-hover 
+                                    {% if version.version_number == document.version %}current-version-highlight{% endif %}">
+                            <div class="row align-items-center">
+                                <!-- Version Badge -->
+                                <div class="col-md-2 mb-3 mb-md-0">
+                                    <div class="text-center">
+                                        <span class="badge {% if version.version_number == document.version %}badge-success{% else %}badge-secondary{% endif %} 
+                                                  badge-pill px-3 py-2 version-badge d-block mb-1">
+                                            v{{ version.version_number }}
+                                        </span>
+                                        {% if version.version_number == document.version %}
+                                            <small class="text-success font-weight-bold">Current</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <!-- Version Info -->
+                                <div class="col-md-6 mb-3 mb-md-0">
+                                    <div class="mb-2">
+                                        <h6 class="mb-1">{{ version.title|default:document.title }}</h6>
+                                        <p class="text-muted small mb-2">
+                                            {{ version.change_description|truncatechars:120 }}
+                                        </p>
+                                    </div>
+                                    
+                                    <div class="d-flex flex-wrap gap-2">
+                                        {% if version.change_type %}
+                                        <span class="badge 
+                                            {% if version.change_type == 'major' %}badge-danger
+                                            {% elif version.change_type == 'minor' %}badge-warning
+                                            {% else %}badge-secondary{% endif %} change-type-badge">
+                                            {{ version.get_change_type_display }}
+                                        </span>
+                                        {% endif %}
+                                        
+                                        {% if version.status %}
+                                        <span class="badge 
+                                            {% if version.status == 'effective' %}badge-success
+                                            {% elif version.status == 'approved' %}badge-info
+                                            {% elif version.status == 'obsolete' %}badge-dark
+                                            {% else %}badge-secondary{% endif %} status-badge">
+                                            {{ version.get_status_display }}
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <!-- Metadata and Actions -->
+                                <div class="col-md-4">
+                                    <div class="text-md-right">
+                                        <!-- Metadata -->
+                                        <div class="mb-2">
+                                            <small class="text-muted d-block">
+                                                <i class="far fa-calendar mr-1"></i>
+                                                {{ version.created_at|date:"M d, Y" }}
+                                            </small>
+                                            <small class="text-muted">
+                                                <i class="far fa-clock mr-1"></i>
+                                                {{ version.created_at|time:"H:i" }}
+                                            </small>
+                                        </div>
+                                        
+                                        <!-- File Info -->
+                                        {% if version.file %}
+                                        <div class="mb-3">
+                                            <small class="file-size">
+                                                <i class="fas fa-file mr-1"></i>
+                                                {{ version.file.name|slice:"-3:"|upper }}
+                                                {% if version.file_size %}
+                                                • {{ version.file_size|filesizeformat }}
+                                                {% endif %}
+                                            </small>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        <!-- Action Buttons -->
+                                        <div class="action-buttons">
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <a href="{% url 'documents:version_detail' document.pk version.pk %}" 
+                                                   class="btn btn-outline-info" title="View Details">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                {% if version.file %}
+                                                <a href="{{ version.file.url }}" target="_blank" 
+                                                   class="btn btn-outline-primary" title="Download">
+                                                    <i class="fas fa-download"></i>
+                                                </a>
+                                                {% endif %}
+                                                {% if version.version_number != document.version and perms.documents.change_controlleddocument %}
+                                                <a href="{% url 'documents:version_restore' document.pk version.pk %}" 
+                                                   class="btn btn-outline-warning" title="Restore">
+                                                    <i class="fas fa-redo"></i>
+                                                </a>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <!-- Empty State -->
+                    <div class="text-center py-5">
+                        <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No Version History</h5>
+                        <p class="text-muted mb-4">This document has no previous versions.</p>
+                        <a href="{% url 'documents:version_create' document.pk %}" class="btn btn-primary">
+                            <i class="fas fa-plus mr-2"></i>Create First Version
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Document Summary -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 bg-primary text-white">
+                    <h6 class="m-0 font-weight-bold">
+                        <i class="fas fa-file-alt mr-2"></i>Document Summary
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-borderless mb-0">
+                        <tbody>
+                            <tr>
+                                <th width="40%" class="text-muted">Document:</th>
+                                <td>{{ document.document_number }}</td>
+                            </tr>
+                            <tr>
+                                <th class="text-muted">Title:</th>
+                                <td>{{ document.title }}</td>
+                            </tr>
+                            <tr>
+                                <th class="text-muted">Status:</th>
+                                <td>
+                                    <span class="badge 
+                                        {% if document.status == 'effective' %}badge-success
+                                        {% elif document.status == 'approved' %}badge-info
+                                        {% elif document.status == 'obsolete' %}badge-dark
+                                        {% else %}badge-secondary{% endif %}">
+                                        {{ document.get_status_display }}
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="text-muted">Owner:</th>
+                                <td>{{ document.owner.get_full_name|default:document.owner.username }}</td>
+                            </tr>
+                            <tr>
+                                <th class="text-muted">Category:</th>
+                                <td>{{ document.category.name }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Timeline View (Alternative) -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 bg-info text-white">
+                    <h6 class="m-0 font-weight-bold">
+                        <i class="fas fa-stream mr-2"></i>Version Timeline
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="version-timeline">
+                        {% for version in versions|slice:":5" %}
+                        <div class="timeline-item {% if version.version_number == document.version %}active{% endif %}">
+                            <div class="mb-2">
+                                <strong class="d-block">
+                                    v{{ version.version_number }}
+                                    {% if version.version_number == document.version %}
+                                    <span class="badge badge-success badge-pill ml-2">Current</span>
+                                    {% endif %}
+                                </strong>
+                                <small class="text-muted d-block">
+                                    {{ version.created_at|date:"M d, Y" }}
+                                </small>
+                                <small class="text-muted">
+                                    {{ version.change_type|title }}
+                                </small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        
+                        {% if versions|length > 5 %}
+                        <div class="text-center mt-3">
+                            <a href="#versions" class="btn btn-sm btn-outline-info">
+                                View All {{ versions|length }} Versions
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="card shadow">
+                <div class="card-header py-3 bg-light">
+                    <h6 class="m-0 font-weight-bold text-dark">
+                        <i class="fas fa-bolt mr-2"></i>Quick Actions
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'documents:version_create' document.pk %}" class="btn btn-primary">
+                            <i class="fas fa-plus mr-2"></i>Create New Version
+                        </a>
+                        <a href="{{ document.file.url }}" target="_blank" class="btn btn-outline-primary">
+                            <i class="fas fa-download mr-2"></i>Download Current Version
+                        </a>
+                        <a href="{% url 'documents:document_detail' document.pk %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-file-alt mr-2"></i>View Document Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Add hover effect to version cards
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add confirmation for restore actions
+        const restoreButtons = document.querySelectorAll('a[href*="version_restore"]');
+        restoreButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                if (!confirm('Are you sure you want to restore this version? The current version will be archived.')) {
+                    e.preventDefault();
+                }
+            });
+        });
+        
+        // Filter functionality
+        const filterLinks = document.querySelectorAll('.dropdown-item[href^="?change_type="]');
+        filterLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const currentFilter = urlParams.get('change_type');
+                const newFilter = this.getAttribute('href').split('=')[1];
+                
+                if (currentFilter === newFilter) {
+                    e.preventDefault();
+                    window.location.href = window.location.pathname;
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

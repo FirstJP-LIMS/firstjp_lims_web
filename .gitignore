@@ -87,3 +87,5 @@ DEPLOYMENT_GUIDE.md
 ERROR-LOGS.md
 .gitignore
 test_cache.py
+
+media/

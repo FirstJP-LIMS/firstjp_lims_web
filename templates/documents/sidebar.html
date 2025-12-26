@@ -1,0 +1,141 @@
+{% load static %}
+
+<!-- Sidebar -->
+<div class="sidebar">
+    <div class="sidebar-header">
+        <h4 class="text-white mb-0">
+            <i class="fas fa-file-medical-alt me-2"></i>Document Control
+        </h4>
+    </div>
+    
+    <div class="sidebar-menu">
+        <!-- Dashboard -->
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">Dashboard</h6>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'dc_dashboard' %}active{% endif %}" 
+                       href="{% url 'doc_control:dc_dashboard' %}">
+                        <i class="fas fa-tachometer-alt me-2"></i>Overview
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Document Management -->
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">Document Management</h6>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'document_list' %}active{% endif %}" 
+                       href="{% url 'doc_control:document_list' %}">
+                        <i class="fas fa-file-alt me-2"></i>All Documents
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'document_create' %}active{% endif %}" 
+                       href="{% url 'doc_control:document_create' %}">
+                        <i class="fas fa-plus-circle me-2"></i>Create Document
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'category_list' %}active{% endif %}" 
+                       href="{% url 'doc_control:category_list' %}">
+                        <i class="fas fa-folder me-2"></i>Categories
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Review & Approval -->
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">Review & Approval</h6>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'review_list' %}active{% endif %}" 
+                       href="{% url 'doc_control:review_list' %}">
+                        <i class="fas fa-clipboard-check me-2"></i>Reviews
+                        {% if pending_reviews > 0 %}
+                            <span class="badge bg-danger float-end">{{ pending_reviews }}</span>
+                        {% endif %}
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="fas fa-thumbs-up me-2"></i>Approvals
+                        {% if pending_approvals > 0 %}
+                            <span class="badge bg-danger float-end">{{ pending_approvals }}</span>
+                        {% endif %}
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Training & Distribution -->
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">Training & Distribution</h6>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'training_list' %}active{% endif %}" 
+                       href="{% url 'doc_control:training_list' %}">
+                        <i class="fas fa-graduation-cap me-2"></i>Training
+                        {% if pending_trainings > 0 %}
+                            <span class="badge bg-warning float-end">{{ pending_trainings }}</span>
+                        {% endif %}
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="fas fa-share-square me-2"></i>Distribution
+                        {% if pending_acknowledgments > 0 %}
+                            <span class="badge bg-warning float-end">{{ pending_acknowledgments }}</span>
+                        {% endif %}
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Reports -->
+        <div class="sidebar-section">
+            <h6 class="sidebar-section-title">Reports & Analytics</h6>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'reports' %}active{% endif %}" 
+                       href="{% url 'doc_control:reports' %}">
+                        <i class="fas fa-chart-bar me-2"></i>Reports
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="sidebar-section sidebar-quick-actions">
+            <h6 class="sidebar-section-title">Quick Actions</h6>
+            <div class="d-grid gap-2">
+                <a href="{% url 'doc_control:document_create' %}" class="btn btn-success btn-sm">
+                    <i class="fas fa-plus me-1"></i> New Document
+                </a>
+                <a href="{% url 'doc_control:review_create' %}" class="btn btn-warning btn-sm">
+                    <i class="fas fa-clipboard-list me-1"></i> New Review
+                </a>
+                <a href="{% url 'doc_control:training_assign' 0 %}" class="btn btn-info btn-sm">
+                    <i class="fas fa-user-graduate me-1"></i> Assign Training
+                </a>
+            </div>
+        </div>
+
+        <!-- User Info -->
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar">
+                    <i class="fas fa-user-circle"></i>
+                </div>
+                <div class="user-details">
+                    {% comment %} <h6 class="mb-0">{{ request.user.first_name|default:request.user.username }}</h6> {% endcomment %}
+                    <h6 class="mb-0">Name</h6>
+                    <small class="text-muted">{{ request.user.groups.first|default:"Lab Staff" }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

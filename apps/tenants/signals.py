@@ -68,16 +68,17 @@ def handle_vendor_domain(sender, instance, created, **kwargs):
 #         instance._previous_is_active = None
 
 
-# @receiver(post_save, sender=Vendor)
-# def notify_vendor_on_activation(sender, instance, created, **kwargs):
-#     """
-#     Send activation email only when vendor transitions to active.
-#     """
-#     if created:
-#         return
+@receiver(post_save, sender=Vendor)
+def notify_vendor_on_activation(sender, instance, created, **kwargs):
+    """
+    Send activation email only when vendor transitions to active.
+    """
+    if created:
+        return
 
-#     was_active = getattr(instance, '_previous_is_active', None)
-#     is_active = instance.is_active
+    was_active = getattr(instance, '_previous_is_active', None)
+    is_active = instance.is_active
 
-#     if was_active is False and is_active is True:
-#         instance.send_vendor_activation_email()
+    if was_active is False and is_active is True:
+        instance.send_vendor_activation_email()
+

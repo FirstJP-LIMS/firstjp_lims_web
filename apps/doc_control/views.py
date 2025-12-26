@@ -13,6 +13,7 @@ from .models import (
     DocumentReview, DocumentApproval, DocumentDistribution,
     DocumentTraining, DocumentAuditLog, DocumentReference
 )
+
 from .forms import (
     DocumentCategoryForm, ControlledDocumentForm, DocumentVersionForm,
     DocumentReviewForm, DocumentApprovalForm, DocumentDistributionForm,
@@ -140,11 +141,12 @@ def document_dashboard(request):
     }
     
     return render(request, 'documents/dashboard.html', context)
+    # return render(request, 'doc_control/dashboard.html', context)
 
 
-# ============================================================================
+# ========================================================
 # DOCUMENT CATEGORY VIEWS
-# ============================================================================
+# ========================================================
 
 @login_required
 def category_list(request):
@@ -162,7 +164,7 @@ def category_list(request):
         'categories': categories
     }
     
-    return render(request, 'documents/category_list.html', context)
+    return render(request, 'documents/category/category_list.html', context)
 
 
 @login_required
@@ -185,10 +187,51 @@ def category_create(request):
     
     context = {
         'form': form,
-        'title': 'Create Document Category'
+        'title': 'Create Document Category',
     }
     
-    return render(request, 'documents/category_form.html', context)
+    return render(request, 'documents/category/category_form.html', context)
+
+
+@login_required
+def category_detail(request, pk):
+    """View category details and associated documents"""
+    vendor = get_user_vendor(request)
+    category = get_object_or_404(DocumentCategory, pk=pk, vendor=vendor)
+    
+    # Get documents in this category
+    documents = ControlledDocument.objects.filter(
+        vendor=vendor,
+        category=category
+    ).order_by('-created_at')
+    
+    # Statistics
+    total_documents = documents.count()
+    effective_documents = documents.filter(status='effective').count()
+    draft_documents = documents.filter(status='draft').count()
+    under_review_documents = documents.filter(status='under_review').count()
+    
+    # Documents by status
+    status_breakdown = documents.values('status').annotate(
+        count=Count('id')
+    )
+    
+    # Pagination
+    paginator = Paginator(documents, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'category': category,
+        'page_obj': page_obj,
+        'total_documents': total_documents,
+        'effective_documents': effective_documents,
+        'draft_documents': draft_documents,
+        'under_review_documents': under_review_documents,
+        'status_breakdown': status_breakdown,
+    }
+    
+    return render(request, 'documents/category/category_detail.html', context)
 
 
 @login_required
@@ -212,12 +255,12 @@ def category_edit(request, pk):
         'title': 'Edit Document Category'
     }
     
-    return render(request, 'documents/category_form.html', context)
+    return render(request, 'documents/category/category_form.html', context)
 
 
-# ============================================================================
+# ========================================================
 # CONTROLLED DOCUMENT VIEWS
-# ============================================================================
+# ======================================================
 
 @login_required
 def document_list(request):
@@ -270,7 +313,7 @@ def document_list(request):
         'total_count': documents.count()
     }
     
-    return render(request, 'documents/document_list.html', context)
+    return render(request, 'documents/document/document_list.html', context)
 
 
 @login_required
@@ -296,10 +339,16 @@ def document_detail(request, pk):
     trainings = document.trainings.all().order_by('-assigned_at')[:10]
     audit_logs = document.audit_logs.all().order_by('-timestamp')[:20]
     references = document.references_made.all()
-    
+
+    # Process keywords
+    keywords = []
+    if document.keywords:
+        keywords = [k.strip() for k in document.keywords.split(',') if k.strip()]
+
     context = {
         'document': document,
         'versions': versions,
+        'keywords': keywords,
         'reviews': reviews,
         'approvals': approvals,
         'distributions': distributions,
@@ -307,8 +356,8 @@ def document_detail(request, pk):
         'audit_logs': audit_logs,
         'references': references,
     }
-    
-    return render(request, 'documents/document_detail.html', context)
+ 
+    return render(request, 'documents/document/document_detail.html', context)
 
 
 @login_required
@@ -349,7 +398,7 @@ def document_create(request):
         'title': 'Create Controlled Document'
     }
     
-    return render(request, 'documents/document_form.html', context)
+    return render(request, 'documents/document/document_form.html', context)
 
 
 @login_required
@@ -404,12 +453,12 @@ def document_edit(request, pk):
         'title': 'Edit Document'
     }
     
-    return render(request, 'documents/document_form.html', context)
+    return render(request, 'documents/document/document_form.html', context)
 
 
 @login_required
 def document_download(request, pk):
-    """Download document file"""
+    """Download document file uploaded by the laboratory."""
     vendor = get_user_vendor(request)
     document = get_object_or_404(ControlledDocument, pk=pk, vendor=vendor)
     
@@ -432,9 +481,9 @@ def document_download(request, pk):
     return response
 
 
-# ============================================================================
+# ======================================================
 # VERSION CONTROL VIEWS
-# ============================================================================
+# ======================================================
 
 @login_required
 def version_create(request, document_pk):
@@ -480,7 +529,7 @@ def version_create(request, document_pk):
         'title': f'Create New Version for {document.document_number}'
     }
     
-    return render(request, 'documents/version_form.html', context)
+    return render(request, 'documents/version/version_form.html', context)
 
 
 @login_required
@@ -496,12 +545,12 @@ def version_list(request, document_pk):
         'versions': versions
     }
     
-    return render(request, 'documents/version_list.html', context)
+    return render(request, 'documents/version/version_list.html', context)
 
 
-# ============================================================================
+# ===========================================
 # REVIEW & APPROVAL VIEWS
-# ============================================================================
+# ===========================================
 
 @login_required
 def review_list(request):
@@ -531,10 +580,12 @@ def review_list(request):
     
     context = {
         'page_obj': page_obj,
-        'status_filter': status_filter
+        'status_filter': status_filter,
+        'status_choices': DocumentReview.REVIEW_STATUS_CHOICES,
+        'reviews': reviews,  # The unfiltered queryset for stats
     }
     
-    return render(request, 'documents/review_list.html', context)
+    return render(request, 'documents/review/review_list.html', context)
 
 
 @login_required
@@ -568,7 +619,7 @@ def review_create(request, document_pk=None):
         'title': 'Create Document Review'
     }
     
-    return render(request, 'documents/review_form.html', context)
+    return render(request, 'documents/review/review_form.html', context)
 
 
 @login_required
@@ -587,7 +638,7 @@ def review_detail(request, pk):
         'is_approver': is_approver,
     }
     
-    return render(request, 'documents/review_detail.html', context)
+    return render(request, 'documents/review/review_detail.html', context)
 
 
 @login_required
@@ -633,12 +684,12 @@ def document_approve(request, pk):
         'title': 'Approve Document'
     }
     
-    return render(request, 'documents/approval_form.html', context)
+    return render(request, 'documents/review/approval_form.html', context)
 
 
-# ============================================================================
+# =================================================
 # DISTRIBUTION VIEWS
-# ============================================================================
+# =================================================
 
 @login_required
 def distribution_create(request, document_pk):
@@ -819,7 +870,7 @@ def training_assign(request, document_pk):
 
 # ============================================================================
 # REFERENCE VIEWS
-# ============================================================================
+# ========================================
 
 @login_required
 def reference_create(request, document_pk):
@@ -854,9 +905,9 @@ def reference_create(request, document_pk):
     return render(request, 'documents/reference_form.html', context)
 
 
-# ============================================================================
+# ============================================
 # REPORTS & ANALYTICS
-# ============================================================================
+# ============================================
 
 @login_required
 def document_reports(request):
@@ -896,499 +947,4 @@ def document_reports(request):
     }
     
     return render(request, 'documents/reports.html', context)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# from django.shortcuts import render, get_object_or_404, redirect
-# from django.contrib.auth.decorators import login_required, permission_required
-# from django.contrib import messages
-# from django.urls import reverse
-# from django.db import transaction
-# from .models import DocumentCategory, Document, DocumentVersion, ElectronicSignature, DocumentAuditTrail, DocumentTrainingRecord
-# from .forms import DocumentCategoryForm, DocumentForm, DocumentVersionUploadForm, ElectronicSignatureForm
-# from .utils import compute_sha256, create_verification_hash
-# from django.utils import timezone
-
-
-# # document_control/views.py (ADD THIS FUNCTION)
-
-
-# @login_required
-# def dashboard_view(request):
-#     """
-#     Dashboard showing the user's compliance action items and system status,
-#     filtered strictly by the current tenant (request.user.tenant).
-#     """
-#     tenant = request.user.vendor
-#     user = request.user
-    
-#     # 1. Action Item: Pending Approvals (21 CFR Part 11 & Workflow)
-#     pending_approvals = DocumentVersion.objects.filter(
-#         tenant=tenant,
-#         status='REVIEW',
-#         document__owner=user # Simplified rule: only the Document Owner can approve
-#     ).select_related('document').order_by('document__title')
-
-
-#     # 2. Action Item: Required Training (ISO 17025 Clause 6.2)
-#     # Find all APPROVED, EFFECTIVE documents that the user has NOT acknowledged.
-    
-#     # Step 1: Get the PKs of versions the user HAS acknowledged.
-#     acknowledged_versions_pks = DocumentTrainingRecord.objects.filter(
-#         tenant=tenant,
-#         user=user
-#     ).values_list('document_version__pk', flat=True)
-    
-#     # Step 2: Get all APPROVED, EFFECTIVE versions, EXCLUDING those acknowledged PKs.
-#     required_training_versions = DocumentVersion.objects.filter(
-#         tenant=tenant,
-#         status='APPROVED',
-#         is_effective=True
-#     ).exclude(
-#         pk__in=acknowledged_versions_pks
-#     ).select_related('document').order_by('document__title')
-
-
-#     # 3. Action Item: My Active Drafts (Workflow)
-#     # Drafts that the user started and are actively being worked on.
-#     my_active_drafts = DocumentVersion.objects.filter(
-#         tenant=tenant,
-#         status='DRAFT',
-#         created_by=user,
-#         is_latest_draft=True
-#     ).select_related('document').order_by('-created_at')
-
-
-#     # 4. Status Check: Documents Due for Review (ISO 17025)
-#     # Documents whose review due date is approaching (e.g., within the next 30 days).
-#     future_date = timezone.now().date() + timezone.timedelta(days=30)
-    
-#     documents_due_soon = Document.objects.filter(
-#         tenant=tenant,
-#         review_due_date__gte=timezone.now().date(),
-#         review_due_date__lte=future_date,
-#         status='ACTIVE'
-#     ).order_by('review_due_date')
-
-
-#     context = {
-#         'pending_approvals': pending_approvals,
-#         'required_training': required_training_versions,
-#         'my_active_drafts': my_active_drafts,
-#         'documents_due_soon': documents_due_soon,
-#     }
-    
-#     # Renders the main dashboard template
-#     return render(request, 'doc_control/dashboard.html', context)
-
-
-# # ----------------- Category CRUD -----------------
-# @login_required
-# def category_list(request):
-#     categories = DocumentCategory.objects.filter(tenant=request.user.vendor)
-#     return render(request, 'doc_control/category/list.html', {'categories': categories})
-
-
-# @login_required
-# def category_create(request):
-#     if request.method == 'POST':
-#         form = DocumentCategoryForm(request.POST)
-#         if form.is_valid():
-#             cat = form.save(commit=False)
-#             cat.tenant = request.user.vendor  # assign tenant here
-#             cat.created_by = request.user
-#             cat.updated_by = request.user
-#             cat.save()
-#             messages.success(request, 'Category created')
-#             return redirect('doc_control:category_list')
-#     else:
-#         form = DocumentCategoryForm()
-#     return render(request, 'doc_control/category/form.html', {'form': form})
-
-
-
-# @login_required
-# def category_edit(request, pk):
-#     cat = get_object_or_404(DocumentCategory, pk=pk, tenant=request.user.vendor)
-#     if request.method == 'POST':
-#         form = DocumentCategoryForm(request.POST, instance=cat)
-#         if form.is_valid():
-#             cat = form.save(commit=False)
-#             cat.updated_by = request.user
-#             cat.save()
-#             messages.success(request, 'Category updated')
-#             return redirect('doc_control:category_list')
-#     else:
-#         form = DocumentCategoryForm(instance=cat)
-#     return render(request, 'doc_control/category/form.html', {'form': form})
-
-
-# @login_required
-# def category_delete(request, pk):
-#     cat = get_object_or_404(DocumentCategory, pk=pk, tenant=request.user.vendor)
-#     # Soft-delete pattern: mark inactive or disallow if referenced
-#     if Document.objects.filter(category=cat).exists():
-#         messages.error(request, 'Category is in use and cannot be deleted')
-#         return redirect('doc_control:category_list')
-#     cat.delete()
-#     messages.success(request, 'Category deleted')
-#     return redirect('doc_control:category_list')
-
-
-# # ----------------- Document CRUD -----------------
-# @login_required
-# def document_list(request):
-#     docs = Document.objects.filter(tenant=request.user.vendor)
-#     return render(request, 'doc_control/document/list.html', {'documents': docs})
-
-
-# @login_required
-# def document_create(request):
-#     if request.method == 'POST':
-#         form = DocumentForm(request.POST)
-#         if form.is_valid():
-#             doc = form.save(commit=False)
-#             doc.created_by = request.user
-#             doc.updated_by = request.user
-#             doc.tenant = request.user.tenant
-#             doc.save()
-#             messages.success(request, 'Document created')
-#             return redirect('doc_control:document_list')
-#     else:
-#         form = DocumentForm(initial={'tenant': request.user.vendor})
-#     return render(request, 'doc_control/document/form.html', {'form': form})
-
-
-# @login_required
-# def document_edit(request, pk):
-#     doc = get_object_or_404(Document, pk=pk, tenant=request.user.vendor)
-#     if request.method == 'POST':
-#         form = DocumentForm(request.POST, instance=doc)
-#         if form.is_valid():
-#             doc = form.save(commit=False)
-#             doc.updated_by = request.user
-#             doc.save()
-#             messages.success(request, 'Document updated')
-#             return redirect('doc_control:document_list')
-#     else:
-#         form = DocumentForm(instance=doc)
-#     return render(request, 'doc_control/document/form.html', {'form': form})
-
-
-# @login_required
-# def document_detail(request, pk):
-#     """Shows the Document container and lists all its versions."""
-#     doc = get_object_or_404(Document, pk=pk, tenant=request.user.vendor)
-#     # Get all versions, ordered newest first
-#     versions = doc.versions.all().order_by('-version_number') 
-#     return render(request, 'doc_control/document/detail.html', {'document': doc, 'versions': versions})
-
-
-# from django.http import JsonResponse
-# # from django.views.decorators.http import require_POST
-# # from django.core.exceptions import PermissionDenied
-
-# @login_required
-# def document_delete(request, pk):
-#     """
-#     Handles the compliant retirement (deactivation) of a Document via AJAX POST request.
-#     Returns JSON response for client-side feedback.
-#     """
-#     tenant = request.user.tenant
-#     user = request.user
-    
-#     try:
-#         doc = get_object_or_404(Document, pk=pk, tenant=tenant)
-#     except AttributeError:
-#         # If the user object lacks a tenant attribute, deny access
-#         return JsonResponse({'status': 'error', 'message': 'Tenant access is undefined.'}, status=403)
-    
-#     try:
-#         with transaction.atomic():        
-#             # --- Compliance Step 1: Deactivate the Document Container ---
-#             doc.status = 'INACTIVE'
-#             doc.updated_by = user
-#             doc.save()
-
-#             # --- Compliance Step 2: Clear the current_version pointer ---
-#             if doc.current_version:
-#                  # Mark the current effective version as obsolete/superseded
-#                  doc.current_version.is_effective = False
-#                  doc.current_version.is_obsolete = True
-#                  doc.current_version.save()
-
-#             # Remove pointer from the logical container
-#             doc.current_version = None
-#             doc.save()
-
-#             # --- Compliance Step 3: Audit Trail ---
-#             # Attempt to link the audit trail to the latest version for context
-#             latest_version = doc.versions.order_by('-created_at').first()
-#             if latest_version:
-#                  version_context = {'version_pk': str(latest_version.pk)}
-#             else:
-#                  version_context = {'note': 'No previous versions found.'}
-
-#             DocumentAuditTrail.objects.create(
-#                 tenant=tenant,
-#                 document_version=latest_version, 
-#                 action='DOCUMENT.RETIRED',
-#                 details={'document_title': doc.title, **version_context},
-#                 performed_by=user,
-#             )
-            
-#             return JsonResponse({
-#                 'status': 'success',
-#                 'message': f"Document '{doc.title}' has been successfully retired.",
-#                 'doc_id': pk
-#             })
-
-#     except Exception as e:
-#         # Log the exception for debugging
-#         print(f"Error during document retirement: {e}") 
-#         return JsonResponse({'status': 'error', 'message': 'An internal error occurred during retirement.'}, status=500)
-
-
-
-# # @login_required
-# # def document_delete(request, pk):
-# #     """
-# #     Deactivates a Document (Container) to comply with regulatory requirements, 
-# #     preventing hard deletion of regulated data (DocumentVersions, Audits).
-# #     """
-# #     try:
-# #         doc = get_object_or_404(Document, pk=pk, tenant=request.user.vendor)
-# #     except AttributeError:
-# #         # Handle case where request.user might not have a 'tenant' attribute
-# #         messages.error(request, "Tenant access is undefined. Cannot perform operation.")
-# #         return redirect('doc_control:document_list')
-
-# #     # Security Check: Ensure the user has permission beyond standard login (e.g., 'can_retire_documents')
-# #     # if not request.user.has_perm('doc_control.can_retire_documents'):
-# #     #     messages.error(request, "You do not have permission to retire documents.")
-# #     #     return redirect('doc_control:document_list')
-
-# #     if request.method == 'POST':
-# #         # FIX 2: Use a database transaction to ensure all related updates succeed or fail together
-# #         with transaction.atomic():
-# #             doc.status = 'INACTIVE'
-# #             doc.updated_by = request.user
-# #             doc.save()
-
-# #             # --- Compliance Step 2: Clear the current_version pointer ---
-# #             if doc.current_version:
-# #                  doc.current_version.is_effective = False
-# #                  doc.current_version.is_obsolete = True
-# #                  doc.current_version.save()
-
-# #             doc.current_version = None
-# #             doc.save()
-
-# #             # --- Compliance Step 3: Audit Trail ---
-# #             DocumentAuditTrail.objects.create(
-# #                 tenant=request.user.tenant,
-# #                 document_version=doc.versions.order_by('-created_at').first(), # Link to the latest version for context
-# #                 action='DOCUMENT.RETIRED',
-# #                 details={'document_title': doc.title, 'reason': 'Document container deactivated by user.'},
-# #                 performed_by=request.user,
-# #             )
-            
-# #             messages.success(request, f"Document '{doc.title}' and its effective version have been safely retired.")
-# #             return redirect('doc_control:document_list')
-    
-
-# #     # If not POST, render a confirmation template
-# #     return render(request, 'doc_control/document/delete_confirm.html', {'document': doc})
-
-
-# # ----------------- Document Version Workflow -----------------
-# @login_required
-# def version_upload(request, doc_id):
-#     document = get_object_or_404(Document, pk=doc_id, tenant=request.user.tenant)
-    
-#     # Pre-Check: Only one DRAFT should exist at a time (Workflow Enforcement)
-#     if document.versions.filter(status='DRAFT', is_obsolete=False).exists():
-#         messages.error(request, 'A current draft already exists. Please review, approve, or reject it before uploading a new version.')
-#         return redirect('doc_control:document_detail', pk=document.pk)
-
-#     if request.method == 'POST':
-#         form = DocumentVersionUploadForm(request.POST, request.FILES)
-#         if form.is_valid():
-#             with transaction.atomic():
-#                 ver = form.save(commit=False)
-#                 ver.tenant = request.user.tenant
-#                 ver.document = document # Link to the parent Document
-#                 ver.created_by = request.user
-#                 ver.status = 'DRAFT'
-#                 ver.is_latest_draft = True # Set the new version as the active draft
-                
-#                 # --- Compliance Step 1: File Checksum (Integrity) ---
-#                 file_obj = request.FILES['file']
-#                 ver.file_checksum = compute_sha256(file_obj) 
-                
-#                 # --- Compliance Step 2: Version Number Calculation (Traceability) ---
-#                 latest_ver = document.versions.filter(is_obsolete=False).order_by('-created_at').first()
-#                 if latest_ver and latest_ver.status == 'APPROVED':
-#                     # Major version increment (e.g., 1.0 -> 2.0)
-#                     base_version = int(float(latest_ver.version_number))
-#                     ver.version_number = f"{base_version + 1}.0"
-#                 elif latest_ver:
-#                     # Minor version increment (e.g., 0.1 -> 0.2, if DRAFTs are tracked)
-#                     ver.version_number = f"0.{document.versions.count() + 1}"
-#                 else:
-#                     ver.version_number = '1.0'
-
-#                 ver.save()
-                
-#                 # --- Compliance Step 3: Audit Trail (Traceability) ---
-#                 DocumentAuditTrail.objects.create(
-#                     tenant=request.user.tenant,
-#                     document_version=ver,
-#                     action='VERSION.UPLOAD',
-#                     details={'checksum': ver.file_checksum, 'filename': ver.file.name, 'version_num': ver.version_number},
-#                     performed_by=request.user,
-#                 )
-#                 messages.success(request, f'Draft version {ver.version_number} uploaded.')
-#             return redirect('doc_control:document_detail', pk=document.pk)
-#     else:
-#         # Pre-filter Category/Document in the form, if needed
-#         form = DocumentVersionUploadForm()
-#     return render(request, 'doc_control/version/upload.html', {'form': form, 'document': document})
-
-
-# @login_required
-# def version_detail(request, pk):
-#     ver = get_object_or_404(DocumentVersion, pk=pk, tenant=request.user.tenant)
-#     return render(request, 'doc_control/version/detail.html', {'version': ver})
-
-
-# @login_required
-# def start_review(request, pk):
-#     ver = get_object_or_404(DocumentVersion, pk=pk, tenant=request.user.tenant)
-#     # mark in review and create audit
-#     ver.status = 'REVIEW'
-#     ver.save()
-#     DocumentAuditTrail.objects.create(tenant=request.user.tenant, document_version=ver, action='VERSION.REVIEW.START', details={}, performed_by=request.user)
-#     messages.success(request, 'Review started')
-#     return redirect('doc_control:version_detail', pk=ver.pk)
-
-
-# @login_required
-# def approve_version(request, pk):
-#     ver = get_object_or_404(DocumentVersion, pk=pk, tenant=request.user.tenant, status='REVIEW')
-
-#     # Security: Only Document Owner or authorized role should approve
-#     if ver.document.owner != request.user and not request.user.has_perm('doc_control.can_approve_documents'):
-#         messages.error(request, "You do not have permission to approve this document.")
-#         return redirect('doc_control:version_detail', pk=ver.pk)
-
-#     if request.method == 'POST':
-#         form = ElectronicSignatureForm(request.user, request.POST)
-#         if form.is_valid():
-#             reason = form.cleaned_data['reason']
-            
-#             # --- Compliance Step 1: Get Password Verification Data ---
-#             # The form.is_valid() call authenticated the user's password.
-#             # We use the user's current hashed password from the DB as part of the unique link.
-#             password_hash = request.user.password 
-#             timestamp_iso = timezone.now().isoformat()
-            
-#             # --- Compliance Step 2: Create Verification Hash (21 CFR 11 Link) ---
-#             sig_value = create_verification_hash(request.user.id, password_hash, timestamp_iso)
-
-#             with transaction.atomic():
-#                 # 1. Create the Immutable Electronic Signature Record
-#                 sig = ElectronicSignature.objects.create(
-#                     tenant=request.user.tenant,
-#                     user=request.user,
-#                     document_version=ver,
-#                     action='APPROVAL',
-#                     verification_data=sig_value, # The non-repudiable hash
-#                     reason=reason,
-#                     created_by=request.user
-#                 )
-                
-#                 # 2. Update the Version status (ISO 17025)
-#                 # This function handles setting status='APPROVED' and is_effective=True
-#                 ver.approve(request.user) 
-                
-#                 # 3. Supersede old versions and update the Document pointer
-#                 DocumentVersion.objects.filter(document=ver.document, is_effective=True, is_obsolete=False).exclude(pk=ver.pk).update(is_effective=False, is_obsolete=True)
-#                 ver.document.current_version = ver
-#                 ver.document.updated_by = request.user
-#                 ver.document.save()
-                
-#                 # 4. Audit Trail
-#                 DocumentAuditTrail.objects.create(
-#                     tenant=request.user.tenant, 
-#                     document_version=ver, 
-#                     action='VERSION.APPROVE', 
-#                     details={'signature_id': str(sig.id), 'sig_reason': reason}, 
-#                     performed_by=request.user
-#                 )
-                
-#             messages.success(request, f'Version {ver.version_number} approved and released.')
-#             return redirect('doc_control:version_detail', pk=ver.pk)
-#     else:
-#         form = ElectronicSignatureForm(request.user)
-#     return render(request, 'doc_control/approval/version.html', {'form': form, 'version': ver})
-
-
-# # ----------------- Training Acknowledgement -----------------
-# @login_required
-# def acknowledge_training(request, pk):
-#     ver = get_object_or_404(DocumentVersion, pk=pk, tenant=request.user.tenant, status='APPROVED')
-#     # create training record if not exists
-#     tr, created = DocumentTrainingRecord.objects.get_or_create(tenant=request.user.tenant, user=request.user, document_version=ver, created_by=request.user)
-#     if created:
-#         DocumentAuditTrail.objects.create(tenant=request.user.tenant, document_version=ver, action='TRAINING.ACK', details={}, performed_by=request.user)
-#         messages.success(request, 'Acknowledgement recorded')
-#     else:
-#         messages.info(request, 'Already acknowledged')
-#     return redirect('doc_control:version_detail', pk=ver.pk)
-
-
-
-# # @login_required
-# # def approve_version(request, pk):
-# #     ver = get_object_or_404(DocumentVersion, pk=pk, tenant=request.user.tenant)
-# #     if request.method == 'POST':
-# #         form = ElectronicSignatureForm(request.user, request.POST)
-# #         if form.is_valid():
-# #             reason = form.cleaned_data['reason']
-# #             # create signature
-# #             sig_value = sign_electronic_signature(request.user, ver, reason)
-# #             with transaction.atomic():
-# #                 sig = ElectronicSignature.objects.create(
-# #                     tenant=request.user.tenant,
-# #                     user=request.user,
-# #                     document_version=ver,
-# #                     action='APPROVAL',
-# #                     verification_data=sig_value,
-# #                     reason=reason,
-# #                     created_by=request.user
-# #                 )
-# #                 ver.approve(request.user)
-# #                 # set document's current_version pointer
-# #                 ver.document.current_version = ver
-# #                 ver.document.updated_by = request.user
-# #                 ver.document.save()
-# #                 # audit
-# #                 DocumentAuditTrail.objects.create(tenant=request.user.tenant, document_version=ver, action='VERSION.APPROVE', details={'signature_id': str(sig.id)}, performed_by=request.user)
-# #             messages.success(request, 'Version approved and released')
-# #             return redirect('doc_control:version_detail', pk=ver.pk)
-# #     else:
-# #         form = ElectronicSignatureForm(request.user)
-# #     return render(request, 'doc_control/approval/version.html', {'form': form, 'version': ver})
 

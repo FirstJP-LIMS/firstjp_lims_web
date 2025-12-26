@@ -3,23 +3,14 @@ from apps.accounts.models import User, VendorProfile
 
 
 """
-first@gmail.com
-first
-# lastborn.ai1@gmail.com
-passmark#1234
+ADMIN
+medvuno@gmail.com
+medvuno
 
-patient
-
-patient
-lastborn.ai2@gmail.com
-password#12345
-
-clinician
-ned@gmail.com
-password#1234
-
-samuel@gmail.com
-password#54321
+Vendor1 -- http://olulori.localhost.test:8000
+ADMIN
+lastborn.ai@gmail.com
+carboni#12345
 """
 
 

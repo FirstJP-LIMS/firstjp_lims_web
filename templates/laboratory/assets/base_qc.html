@@ -1,4 +1,4 @@
-{% load static tailwind_tags %}
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -11,7 +11,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     
-    {% tailwind_css %}
+    <!-- Tailwind cdn -->
+    <link rel="stylesheet" href="{% static 'dist/styles.css' %}">
     <link rel="stylesheet" href="{% static 'assets\css\tailwind.css' %}">
     
     <!-- Font -->

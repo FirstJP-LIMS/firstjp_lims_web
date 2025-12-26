@@ -30,11 +30,12 @@ class Vendor(models.Model):
     tenant_id = models.CharField(max_length=64, unique=True)
     name = models.CharField(max_length=255)
     contact_email = models.EmailField(unique=True)
-    subdomain_prefix = models.SlugField(
-        max_length=64, unique=True, blank=True, null=True,
-        validators=[subdomain_validator],
-        help_text="Subdomain prefix for this vendor (letters, numbers, hyphens only)"
-    )
+    subdomain_prefix = models.SlugField(max_length=64, 
+                                        unique=True, 
+                                        blank=True, null=True, 
+                                        validators=[subdomain_validator],
+                                        help_text="Subdomain prefix for this vendor (letters, numbers, hyphens only)"
+                                        )
 
     is_active = models.BooleanField(default=False)
     activation_email_sent = models.BooleanField(default=False)
@@ -86,7 +87,7 @@ class Vendor(models.Model):
 
 
 class VendorDomain(models.Model):
-    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="domains")
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="domains") # THe related name 'domains' can be used by Vendor instance to access VendorDomain objects and attributes. 
     domain_name = models.CharField(max_length=255, unique=True, db_index=True)
     is_primary = models.BooleanField(default=True)
 
@@ -97,6 +98,10 @@ class VendorDomain(models.Model):
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
+    
+    def __str__(self):
+        # return f"{self.domain_name} ({'Primary' if self.is_primary else 'Secondary'})"
+        return f"{self.domain_name} onwered by {self.vendor.name}"
 
 
 # import uuid
