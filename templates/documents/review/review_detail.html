@@ -122,7 +122,7 @@
                                                     <i class="fas fa-user-circle text-primary"></i>
                                                 </div>
                                                 <div>
-                                                    {{ review.reviewer.get_full_name|default:review.reviewer.username }}
+                                                    {{ review.reviewer.get_full_name }}
                                                     {% if user == review.reviewer %}
                                                     <span class="badge badge-primary badge-pill ml-2">You</span>
                                                     {% endif %}
@@ -349,7 +349,7 @@
                             </tr>
                             <tr>
                                 <th class="text-muted">Owner:</th>
-                                <td>{{ review.document.owner.get_full_name|default:review.document.owner.username }}</td>
+                                <td>{{ review.document.owner.get_full_name }}</td>
                             </tr>
                         </tbody>
                     </table>

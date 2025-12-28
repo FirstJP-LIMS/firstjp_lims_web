@@ -1,0 +1,483 @@
+{% extends 'laboratory/assets/base.html' %}
+{% load static %}
+
+{% block title %}Document Training Records{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header -->
+    <div class="row align-items-center mb-5">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="h3 mb-2" style="color: var(--primary-color);">
+                        <i class="fas fa-graduation-cap me-2"></i>
+                        Training Records
+                    </h2>
+                    <p class="text-muted mb-0">Document training assignments and completion tracking</p>
+                </div>
+                <div>
+                    <a href="{% url 'documents:dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Overview -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                <i class="fas fa-list-alt"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h5 class="mb-0">{{ page_obj.paginator.count }}</h5>
+                            <p class="text-muted small mb-0">Total Records</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="rounded-circle bg-warning text-white d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h5 class="mb-0">
+                                {% with pending=page_obj.object_list|filter_by_status:'required' %}
+                                    {{ pending|length }}
+                                {% endwith %}
+                            </h5>
+                            <p class="text-muted small mb-0">Pending</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h5 class="mb-0">
+                                {% with completed=page_obj.object_list|filter_by_status:'completed' %}
+                                    {{ completed|length }}
+                                {% endwith %}
+                            </h5>
+                            <p class="text-muted small mb-0">Completed</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="rounded-circle bg-info text-white d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h5 class="mb-0">
+                                {% if page_obj.paginator.count > 0 %}
+                                    {% with completed=page_obj.object_list|filter_by_status:'completed' %}
+                                        {% widthratio completed|length page_obj.paginator.count 100 %}%
+                                    {% endwith %}
+                                {% else %}
+                                    0%
+                                {% endif %}
+                            </h5>
+                            <p class="text-muted small mb-0">Completion Rate</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-light border-0">
+            <h5 class="mb-0">
+                <i class="fas fa-filter me-2"></i>Filters
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-center">
+                <div class="col-md-4">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="my_trainings" name="my_trainings" value="1" 
+                               {% if request.GET.my_trainings %}checked{% endif %}>
+                        <label class="form-check-label fw-semibold" for="my_trainings">
+                            <i class="fas fa-user me-1"></i> My Training Records Only
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-8 text-md-end">
+                    <div class="d-flex gap-2 justify-content-md-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-filter me-1"></i> Apply Filters
+                        </button>
+                        <a href="{% url 'documents:training_list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-redo me-1"></i> Clear All
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Active Filter Badge -->
+    {% if request.GET.my_trainings %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-light shadow-sm">
+                <div class="card-body py-2">
+                    <div class="d-flex align-items-center">
+                        <small class="text-muted me-3">Active Filters:</small>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% if request.GET.my_trainings %}
+                            <span class="badge bg-primary filter-badge" 
+                                  onclick="window.location.href='{% url 'documents:training_list' %}'">
+                                My Trainings
+                                <i class="fas fa-times ms-2"></i>
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Training Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-light border-0">
+            <h5 class="mb-0">
+                <i class="fas fa-list-ul me-2"></i>Training Records
+                <span class="badge bg-light text-dark ms-2">{{ page_obj.paginator.count }}</span>
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            {% if page_obj.object_list %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Document</th>
+                            <th>Trainee</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Timeline</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for training in page_obj %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-start">
+                                    <div class="me-2">
+                                        <i class="fas fa-file-alt text-primary"></i>
+                                    </div>
+                                    <div>
+                                        <a href="{% url 'documents:document_detail' training.document.pk %}" class="text-decoration-none">
+                                            <strong>{{ training.document.document_number }}</strong>
+                                        </a>
+                                        <br>
+                                        <small class="text-muted">{{ training.document.title|truncatechars:40 }}</small>
+                                        <div class="mt-1">
+                                            <span class="badge bg-info">v{{ training.document.version }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="me-2">
+                                        <i class="fas fa-user-circle"></i>
+                                    </div>
+                                    <div>
+                                        {{ training.trainee.get_full_name|default:training.trainee.username }}
+                                        {% if training.trainee == user %}
+                                        <span class="badge bg-primary badge-pill ms-1">You</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-light border">{{ training.get_training_type_display }}</span>
+                            </td>
+                            <td>
+                                <span class="badge 
+                                    {% if training.status == 'required' %}bg-warning
+                                    {% elif training.status == 'in_progress' %}bg-primary
+                                    {% elif training.status == 'completed' %}bg-success
+                                    {% else %}bg-danger{% endif %}">
+                                    {{ training.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <div>
+                                    <small class="text-muted d-block">Assigned:</small>
+                                    <strong>{{ training.assigned_at|date:"M d, Y" }}</strong>
+                                </div>
+                                {% if training.completed_at %}
+                                <div class="mt-1">
+                                    <small class="text-muted d-block">Completed:</small>
+                                    <strong class="text-success">{{ training.completed_at|date:"M d, Y" }}</strong>
+                                </div>
+                                {% endif %}
+                                {% if training.expiry_date %}
+                                <div class="mt-1">
+                                    <small class="text-muted d-block">Expires:</small>
+                                    <strong>{{ training.expiry_date|date:"M d, Y" }}</strong>
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <div class="action-buttons">
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a href="{% url 'documents:training_detail' training.pk %}" 
+                                           class="btn btn-outline-info" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        {% if training.trainee == user and training.status == 'required' %}
+                                        <a href="{% url 'documents:training_start' training.pk %}" 
+                                           class="btn btn-success" title="Start Training">
+                                            <i class="fas fa-play"></i>
+                                        </a>
+                                        {% endif %}
+                                        {% if training.completed_at %}
+                                        <a href="{% url 'documents:document_detail' training.document.pk %}" 
+                                           class="btn btn-outline-primary" title="View Document">
+                                            <i class="fas fa-file-alt"></i>
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <!-- Empty State -->
+            <div class="text-center py-5">
+                <i class="fas fa-graduation-cap fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No Training Records Found</h5>
+                <p class="text-muted mb-4">
+                    {% if request.GET.my_trainings %}
+                        You don't have any training assignments yet.
+                    {% else %}
+                        No training records have been created yet.
+                    {% endif %}
+                </p>
+                {% if not request.GET.my_trainings %}
+                <a href="{% url 'documents:training_list' %}" class="btn btn-outline-primary">
+                    <i class="fas fa-sync-alt me-2"></i>Clear Filters
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Pagination Footer -->
+        {% if page_obj.has_other_pages %}
+        <div class="card-footer py-3">
+            <div class="row">
+                <div class="col-md-6">
+                    <p class="mb-0 text-muted">
+                        Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} records
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <nav aria-label="Page navigation" class="float-md-end">
+                        <ul class="pagination pagination-sm mb-0 justify-content-center justify-content-md-end">
+                            {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1{% if request.GET.my_trainings %}&my_trainings=1{% endif %}">
+                                    <i class="fas fa-angle-double-left"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.my_trainings %}&my_trainings=1{% endif %}">
+                                    <i class="fas fa-angle-left"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                            
+                            {% for num in page_obj.paginator.page_range %}
+                                {% if page_obj.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ num }}</span>
+                                </li>
+                                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}{% if request.GET.my_trainings %}&my_trainings=1{% endif %}">
+                                        {{ num }}
+                                    </a>
+                                </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.my_trainings %}&my_trainings=1{% endif %}">
+                                    <i class="fas fa-angle-right"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.my_trainings %}&my_trainings=1{% endif %}">
+                                    <i class="fas fa-angle-double-right"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .card {
+        border-radius: var(--border-radius);
+        transition: var(--transition);
+        border: 1px solid #e9ecef;
+    }
+    
+    .table th {
+        font-weight: 600;
+        color: #495057;
+        background-color: #f8f9fa;
+        border-bottom: 2px solid #dee2e6;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.02);
+    }
+    
+    .action-buttons .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+    
+    .filter-badge {
+        cursor: pointer;
+        transition: var(--transition);
+    }
+    
+    .filter-badge:hover {
+        opacity: 0.9;
+        transform: scale(1.05);
+    }
+    
+    .rounded-circle {
+        border-radius: 50% !important;
+    }
+    
+    @media (max-width: 768px) {
+        .container {
+            padding-left: 15px;
+            padding-right: 15px;
+        }
+        
+        .d-flex.justify-content-between {
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .d-flex.justify-content-between .btn {
+            width: 100%;
+        }
+        
+        .d-flex.gap-2 {
+            flex-direction: column;
+            gap: 0.5rem !important;
+        }
+        
+        .table-responsive {
+            font-size: 0.9rem;
+        }
+        
+        .action-buttons .btn {
+            margin-bottom: 0.25rem;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .card-body .row > .col-md-3 {
+            margin-bottom: 1rem;
+        }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add confirmation for starting training
+        const startTrainingBtns = document.querySelectorAll('a[href*="training_start"]');
+        startTrainingBtns.forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                if (!confirm('Are you ready to start this training?')) {
+                    e.preventDefault();
+                }
+            });
+        });
+
+        // Make filter badges clickable
+        document.querySelectorAll('.filter-badge').forEach(badge => {
+            badge.addEventListener('click', function() {
+                window.location.href = this.getAttribute('onclick').match(/href='([^']+)'/)[1];
+            });
+        });
+
+        // Add hover effect to table rows
+        document.querySelectorAll('tbody tr').forEach(row => {
+            row.addEventListener('mouseenter', function() {
+                this.style.backgroundColor = '#f8f9fa';
+            });
+            row.addEventListener('mouseleave', function() {
+                this.style.backgroundColor = '';
+            });
+        });
+
+        // Prevent row click when clicking on buttons
+        document.querySelectorAll('.action-buttons a').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+        });
+    });
+</script>
+{% endblock %}

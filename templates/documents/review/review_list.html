@@ -37,37 +37,50 @@
 {% block content %}
 <div class="container-fluid py-4">
     <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h2 class="mb-2">Document Reviews</h2>
-            <p class="text-muted mb-0">Manage and track document review workflows</p>
-        </div>
-        <div class="col-md-4 text-md-right mt-3 mt-md-0">
-            <div class="dropdown d-inline-block mr-2">
-                <button class="btn btn-outline-primary dropdown-toggle" type="button" 
-                        id="filterDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                    <i class="fas fa-filter mr-2"></i>Filter
-                </button>
-                <div class="dropdown-menu dropdown-menu-right" aria-labelledby="filterDropdown">
-                    <a class="dropdown-item {% if not status_filter %}active{% endif %}" 
-                       href="{% url 'documents:review_list' %}">
-                        All Reviews
+    <!-- <div class="row mb-4"> -->
+    <div class="row align-items-center mb-5">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-2" style="color: var(--primary-color);">Document Reviews
+                    </h2>
+                    <p class="text-muted mb-0">Manage and track document review workflows</p>
+                </div>
+                <div>
+                    <div class="dropdown d-inline-block mr-2">
+                        <button class="btn btn-outline-primary dropdown-toggle" type="button" 
+                                id="filterDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <i class="fas fa-filter mr-2"></i>Filter
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-right" aria-labelledby="filterDropdown">
+                            <a class="dropdown-item {% if not status_filter %}active{% endif %}" 
+                            href="{% url 'documents:review_list' %}">
+                                All Reviews
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            {% for status_code, status_name in status_choices %}
+                            <a class="dropdown-item {% if status_filter == status_code %}active{% endif %}" 
+                            href="?status={{ status_code }}{% if request.GET.my_reviews %}&my_reviews=1{% endif %}">
+                                {{ status_name }}
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                                            
+                    <button class="btn btn-{% if request.GET.my_reviews %}primary{% else %}outline-primary{% endif %}" 
+                            onclick="window.location.href='?my_reviews=1{% if status_filter %}&status={{ status_filter }}{% endif %}'">
+                        <i class="fas fa-user mr-2"></i>My Reviews
+                    </button>
+                    <a href="{% url 'documents:review_create' %}" class="btn btn-primary me-2">
+                        <i class="fas fa-plus me-1"></i> Create Review
                     </a>
-                    <div class="dropdown-divider"></div>
-                    {% for status_code, status_name in status_choices %}
-                    <a class="dropdown-item {% if status_filter == status_code %}active{% endif %}" 
-                       href="?status={{ status_code }}{% if request.GET.my_reviews %}&my_reviews=1{% endif %}">
-                        {{ status_name }}
+                    <a href="{% url 'documents:dc_dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Dashboard
                     </a>
-                    {% endfor %}
                 </div>
             </div>
-            
-            <button class="btn btn-{% if request.GET.my_reviews %}primary{% else %}outline-primary{% endif %}" 
-                    onclick="window.location.href='?my_reviews=1{% if status_filter %}&status={{ status_filter }}{% endif %}'">
-                <i class="fas fa-user mr-2"></i>My Reviews
-            </button>
         </div>
+
     </div>
 
     <!-- Stats Overview -->
@@ -285,7 +298,7 @@
                                     </td>
                                     <td>
                                         <div>
-                                            <span class="badge badge-light border">
+                                            <span class="badge badge-light border" style="color:rgb(53, 2, 2);">
                                                 {{ review.get_review_type_display }}
                                             </span>
                                         </div>
@@ -297,7 +310,7 @@
                                             </div>
                                             <div>
                                                 <small class="text-muted d-block">Reviewer</small>
-                                                <strong>{{ review.reviewer.get_full_name|default:review.reviewer.username }}</strong>
+                                                <strong>{{ review.reviewer.get_full_name }}</strong>
                                                 {% if review.reviewer == user %}
                                                 <span class="badge badge-primary badge-pill ml-1">You</span>
                                                 {% endif %}
@@ -342,7 +355,7 @@
                                             {% elif review.status == 'rejected' %}badge-danger
                                             {% elif review.status == 'in_progress' %}badge-primary
                                             {% elif review.status == 'on_hold' %}badge-secondary
-                                            {% else %}badge-warning{% endif %}">
+                                            {% else %}badge-warning{% endif %}" style="color:rgb(53, 2, 2);">
                                             {{ review.get_status_display }}
                                         </span>
                                     </td>

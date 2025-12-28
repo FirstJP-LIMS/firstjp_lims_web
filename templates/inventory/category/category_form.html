@@ -1,0 +1,511 @@
+{% extends "laboratory/assets/base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header Section -->
+    <div class="row align-items-center mb-5">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="h3 mb-2" style="color: var(--primary-color);">
+                        <i class="fas fa-{% if category %}edit{% else %}plus-circle{% endif %} me-2"></i>{{ title }}
+                    </h2>
+                    <p class="text-muted mb-0">
+                        {% if category %}
+                        Update inventory category details
+                        {% else %}
+                        Create a new inventory category for your laboratory
+                        {% endif %}
+                    </p>
+                </div>
+                <div>
+                    <a href="{% url 'inventory:category_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Back to Categories
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Main Form Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light border-0 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-edit me-2"></i>Category Details
+                    </h5>
+                    <span class="badge bg-light text-dark">
+                        <i class="fas fa-hashtag me-1"></i>
+                        {% if category %}{{ category.code|default:"CAT-" }}{% else %}NEW{% endif %}
+                    </span>
+                </div>
+                
+                <div class="card-body pt-4">
+                    {% if form.errors %}
+                    <div class="alert alert-danger border-0 shadow-sm mb-4">
+                        <div class="d-flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-exclamation-circle fa-lg mt-1"></i>
+                            </div>
+                            <div class="ms-3">
+                                <h6 class="alert-heading mb-2">Please correct the errors below:</h6>
+                                <ul class="mb-0 ps-3">
+                                    {% for field, errors in form.errors.items %}
+                                        {% for error in errors %}
+                                        <li>
+                                            {% if field == '__all__' %}
+                                                {{ error }}
+                                            {% else %}
+                                                {{ field|title }}: {{ error }}
+                                            {% endif %}
+                                        </li>
+                                        {% endfor %}
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <form method="post" novalidate class="needs-validation">
+                        {% csrf_token %}
+                        
+                        <!-- Name Field -->
+                        <div class="mb-4">
+                            <label for="{{ form.name.id_for_label }}" class="form-label fw-semibold">
+                                <i class="fas fa-tag me-1 text-primary"></i>
+                                Category Name <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-tag text-muted"></i>
+                                </span>
+                                {{ form.name }}
+                            </div>
+                            {% if form.name.errors %}
+                            <div class="text-danger small mt-2">
+                                <i class="fas fa-exclamation-circle me-1"></i>
+                                {{ form.name.errors|join:", " }}
+                            </div>
+                            {% endif %}
+                            <div class="form-text mt-1">
+                                Enter a unique, descriptive name for this category
+                            </div>
+                        </div>
+
+                        <!-- Category Type Field -->
+                        <div class="mb-4">
+                            <label for="{{ form.category_type.id_for_label }}" class="form-label fw-semibold">
+                                <i class="fas fa-filter me-1 text-primary"></i>
+                                Category Type <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-filter text-muted"></i>
+                                </span>
+                                {{ form.category_type }}
+                            </div>
+                            {% if form.category_type.errors %}
+                            <div class="text-danger small mt-2">
+                                <i class="fas fa-exclamation-circle me-1"></i>
+                                {{ form.category_type.errors|join:", " }}
+                            </div>
+                            {% endif %}
+                            <div class="form-text mt-1">
+                                Select the primary use case for items in this category
+                            </div>
+                        </div>
+
+                        <!-- Description Field -->
+                        <div class="mb-4">
+                            <label for="{{ form.description.id_for_label }}" class="form-label fw-semibold">
+                                <i class="fas fa-align-left me-1 text-primary"></i>
+                                Description
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text align-items-start pt-3">
+                                    <i class="fas fa-align-left text-muted"></i>
+                                </span>
+                                {{ form.description }}
+                            </div>
+                            {% if form.description.errors %}
+                            <div class="text-danger small mt-2">
+                                <i class="fas fa-exclamation-circle me-1"></i>
+                                {{ form.description.errors|join:", " }}
+                            </div>
+                            {% endif %}
+                            <div class="form-text mt-1">
+                                Optional: Add any additional information or notes about this category
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                            <a href="{% if category %}{% url 'inventory:category_detail' category.pk %}{% else %}{% url 'inventory:category_list' %}{% endif %}" 
+                               class="btn btn-outline-secondary px-4">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="fas fa-save me-2"></i>{{ submit_text }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Existing Items Preview (for edit mode) -->
+            {% if category and category.items.count > 0 %}
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light border-0 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-boxes me-2"></i>Items in this Category
+                    </h5>
+                    <span class="badge bg-primary">{{ category.items.count }} items</span>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning border-0 shadow-sm mb-4">
+                        <div class="d-flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-exclamation-triangle fa-lg mt-1 text-warning"></i>
+                            </div>
+                            <div class="ms-3">
+                                <h6 class="alert-heading mb-2">Important Note</h6>
+                                <p class="mb-0">Changing the category type will affect how these items are organized and displayed in the inventory system.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row row-cols-1 row-cols-md-2 g-3">
+                        {% for item in category.items.all|slice:":6" %}
+                        <div class="col">
+                            <div class="card border h-100">
+                                <div class="card-body p-3">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h6 class="mb-0 text-truncate">{{ item.name }}</h6>
+                                        <span class="badge {% if item.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+                                            {% if item.is_active %}Active{% else %}Inactive{% endif %}
+                                        </span>
+                                    </div>
+                                    <p class="text-muted small mb-2">
+                                        <i class="fas fa-hashtag me-1"></i>{{ item.item_code }}
+                                    </p>
+                                    {% if item.description %}
+                                    <p class="small text-muted mb-0">{{ item.description|truncatechars:60 }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    {% if category.items.count > 6 %}
+                    <div class="text-center mt-4">
+                        <a href="{% url 'inventory:category_detail' category.pk %}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-eye me-1"></i>View all {{ category.items.count }} items
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar - Category Type Guide -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Category Type Guide
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-3">
+                        <!-- Reagent Card -->
+                        <div class="category-type-guide border-start border-3 border-primary ps-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="me-3">
+                                    <i class="fas fa-flask fa-lg text-primary"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0 fw-semibold">Reagent</h6>
+                                    <small class="text-muted">Chemical substances</small>
+                                </div>
+                            </div>
+                            <p class="small text-muted mb-0">
+                                Chemical substances used in laboratory tests (glucose reagent, creatinine kits, buffers)
+                            </p>
+                        </div>
+
+                        <!-- Consumable Card -->
+                        <div class="category-type-guide border-start border-3 border-info ps-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="me-3">
+                                    <i class="fas fa-box fa-lg text-info"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0 fw-semibold">Consumable</h6>
+                                    <small class="text-muted">Single-use items</small>
+                                </div>
+                            </div>
+                            <p class="small text-muted mb-0">
+                                Disposable items (pipette tips, test tubes, syringes, gloves, slides)
+                            </p>
+                        </div>
+
+                        <!-- Quality Control Card -->
+                        <div class="category-type-guide border-start border-3 border-warning ps-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="me-3">
+                                    <i class="fas fa-clipboard-check fa-lg text-warning"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0 fw-semibold">Quality Control</h6>
+                                    <small class="text-muted">QC materials</small>
+                                </div>
+                            </div>
+                            <p class="small text-muted mb-0">
+                                Standards and materials for verifying test accuracy and precision
+                            </p>
+                        </div>
+
+                        <!-- Calibrator Card -->
+                        <div class="category-type-guide border-start border-3 border-success ps-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="me-3">
+                                    <i class="fas fa-ruler-combined fa-lg text-success"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0 fw-semibold">Calibrator</h6>
+                                    <small class="text-muted">Calibration materials</small>
+                                </div>
+                            </div>
+                            <p class="small text-muted mb-0">
+                                Reference materials for instrument calibration and standardization
+                            </p>
+                        </div>
+
+                        <!-- Equipment Parts Card -->
+                        <div class="category-type-guide border-start border-3 border-secondary ps-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="me-3">
+                                    <i class="fas fa-cogs fa-lg text-secondary"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0 fw-semibold">Equipment Parts</h6>
+                                    <small class="text-muted">Spare parts</small>
+                                </div>
+                            </div>
+                            <p class="small text-muted mb-0">
+                                Replacement parts, accessories, and maintenance items for equipment
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-light border mt-4">
+                        <div class="d-flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-lightbulb text-warning"></i>
+                            </div>
+                            <div class="ms-3">
+                                <p class="small mb-0">
+                                    <strong>Tip:</strong> Choose the most appropriate type to ensure proper inventory classification and reporting.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Stats (for edit mode) -->
+            {% if category %}
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>Category Statistics
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center g-3">
+                        <div class="col-6">
+                            <div class="border rounded p-3">
+                                <div class="text-primary mb-2">
+                                    <i class="fas fa-box fa-2x"></i>
+                                </div>
+                                <h4 class="mb-1">{{ category.items.count }}</h4>
+                                <small class="text-muted">Total Items</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="border rounded p-3">
+                                <div class="text-success mb-2">
+                                    <i class="fas fa-check-circle fa-2x"></i>
+                                </div>
+                                <h4 class="mb-1">{{ category.items.filter.is_active.count|default:"0" }}</h4>
+                                <small class="text-muted">Active Items</small>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="border rounded p-3">
+                                <div class="text-secondary mb-2">
+                                    <i class="fas fa-calendar-alt fa-2x"></i>
+                                </div>
+                                <h6 class="mb-1">Created on</h6>
+                                <small class="text-muted">{{ category.created_at|date:"F j, Y" }}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .card {
+        border-radius: var(--border-radius);
+        transition: var(--transition);
+        border: 1px solid #e9ecef;
+    }
+    
+    .card:hover {
+        box-shadow: var(--box-shadow);
+    }
+    
+    .input-group-text {
+        background-color: #f8f9fa;
+        border-right: none;
+    }
+    
+    .form-control, .form-select, .form-control:focus, .form-select:focus {
+        border-left: none;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        box-shadow: none;
+        border-color: #dee2e6;
+    }
+    
+    .category-type-guide {
+        padding-top: 0.75rem;
+        padding-bottom: 0.75rem;
+        border-radius: 4px;
+        background-color: rgba(248, 249, 250, 0.5);
+    }
+    
+    .category-type-guide:hover {
+        background-color: rgba(248, 249, 250, 1);
+    }
+    
+    .border-3 {
+        border-width: 3px !important;
+    }
+    
+    textarea.form-control {
+        min-height: 120px;
+        resize: vertical;
+    }
+    
+    .btn {
+        padding: 0.5rem 1.5rem;
+        font-weight: 500;
+        border-radius: var(--border-radius);
+    }
+    
+    .alert {
+        border-radius: var(--border-radius);
+        border: none;
+    }
+    
+    @media (max-width: 768px) {
+        .container {
+            padding-left: 15px;
+            padding-right: 15px;
+        }
+        
+        .card-body .row > .col-6 {
+            margin-bottom: 10px;
+        }
+        
+        .btn {
+            padding: 0.5rem 1rem;
+        }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add visual feedback for form validation
+        const form = document.querySelector('form.needs-validation');
+        if (form) {
+            form.addEventListener('submit', function(event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            });
+        }
+
+        // Add dynamic border color based on category type selection
+        const categoryTypeSelect = document.querySelector('select[name="category_type"]');
+        const formCard = document.querySelector('.card');
+        
+        if (categoryTypeSelect) {
+            const updateCardBorder = () => {
+                // Remove all border color classes
+                formCard.classList.remove(
+                    'border-primary', 'border-info', 'border-warning', 
+                    'border-success', 'border-secondary'
+                );
+                
+                // Add border color based on selected type
+                const borderColorMap = {
+                    'REAGENT': 'border-primary',
+                    'CONSUMABLE': 'border-info',
+                    'CONTROL': 'border-warning',
+                    'CALIBRATOR': 'border-success',
+                    'EQUIPMENT': 'border-secondary'
+                };
+                
+                const selectedValue = categoryTypeSelect.value;
+                if (selectedValue && borderColorMap[selectedValue]) {
+                    formCard.classList.add(borderColorMap[selectedValue]);
+                }
+            };
+            
+            categoryTypeSelect.addEventListener('change', updateCardBorder);
+            
+            // Initialize on page load
+            updateCardBorder();
+        }
+
+        // Add character count for description textarea
+        const descriptionTextarea = document.querySelector('textarea[name="description"]');
+        if (descriptionTextarea) {
+            const descriptionLabel = descriptionTextarea.closest('.mb-4');
+            const counterElement = document.createElement('div');
+            counterElement.className = 'form-text mt-1 text-end';
+            counterElement.innerHTML = '<span class="char-count">0</span> / 500 characters';
+            descriptionLabel.appendChild(counterElement);
+            
+            const updateCounter = () => {
+                const charCount = descriptionTextarea.value.length;
+                counterElement.querySelector('.char-count').textContent = charCount;
+                counterElement.classList.toggle('text-danger', charCount > 500);
+            };
+            
+            descriptionTextarea.addEventListener('input', updateCounter);
+            updateCounter(); // Initialize counter
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,392 @@
+<!-- ============================================ -->
+<!-- CATEGORY LIST - Show/Hide Actions by Role -->
+<!-- ============================================ -->
+
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Action Buttons - Only for Admins -->
+    <div class="row mb-3">
+        <div class="col-12">
+            {% if user.is_vendor_admin %}
+            <a href="{% url 'inventory:category_create' %}" class="btn btn-success">
+                <i class="bi bi-plus-circle"></i> Add New Category
+            </a>
+            {% else %}
+            <!-- Show disabled button with tooltip for non-admins -->
+            <button class="btn btn-secondary" disabled 
+                    data-bs-toggle="tooltip" 
+                    title="Only administrators can create categories">
+                <i class="bi bi-plus-circle"></i> Add New Category
+            </button>
+            {% endif %}
+            
+            <a href="{% url 'inventory:item_list' %}" class="btn btn-outline-primary">
+                <i class="bi bi-box-seam"></i> View All Items
+            </a>
+        </div>
+    </div>
+
+    <!-- Categories Grid -->
+    <div class="row">
+        {% for category in categories %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card">
+                <!-- Card content -->
+                
+                <div class="card-footer">
+                    <div class="btn-group w-100" role="group">
+                        <!-- View - Everyone can view -->
+                        <a href="{% url 'inventory:category_detail' category.pk %}" 
+                           class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-eye"></i> View
+                        </a>
+                        
+                        <!-- Edit - Admin only -->
+                        {% if user.is_vendor_admin %}
+                        <a href="{% url 'inventory:category_update' category.pk %}" 
+                           class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-pencil"></i> Edit
+                        </a>
+                        {% endif %}
+                        
+                        <!-- Delete - Admin only -->
+                        {% if user.is_vendor_admin %}
+                        <a href="{% url 'inventory:category_delete' category.pk %}" 
+                           class="btn btn-outline-danger btn-sm">
+                            <i class="bi bi-trash"></i> Delete
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+
+<!-- ============================================ -->
+<!-- CATEGORY DETAIL - Role-based Action Buttons -->
+<!-- ============================================ -->
+
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Action Buttons -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <!-- Edit - Admin only -->
+            {% if user.is_vendor_admin %}
+            <a href="{% url 'inventory:category_update' category.pk %}" class="btn btn-primary">
+                <i class="bi bi-pencil"></i> Edit Category
+            </a>
+            {% endif %}
+            
+            <!-- Add Item - Staff and above -->
+            {% if user.is_vendor_staff %}
+            <a href="{% url 'inventory:item_create' %}?category={{ category.pk }}" class="btn btn-success">
+                <i class="bi bi-plus-circle"></i> Add Item to Category
+            </a>
+            {% endif %}
+            
+            <!-- Export - Everyone -->
+            <a href="{% url 'inventory:category_items_export' category.pk %}" class="btn btn-outline-secondary">
+                <i class="bi bi-download"></i> Export Items
+            </a>
+            
+            <!-- Delete - Admin only -->
+            {% if user.is_vendor_admin %}
+            <a href="{% url 'inventory:category_delete' category.pk %}" class="btn btn-outline-danger">
+                <i class="bi bi-trash"></i> Delete Category
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Rest of template -->
+</div>
+{% endblock %}
+
+
+<!-- ============================================ -->
+<!-- INVENTORY ITEM LIST - Conditional Actions -->
+<!-- ============================================ -->
+
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Action Buttons -->
+    <div class="row mb-3">
+        <div class="col-12">
+            {% if user.can_modify_inventory %}
+            <a href="{% url 'inventory:item_create' %}" class="btn btn-success">
+                <i class="bi bi-plus-circle"></i> Add New Item
+            </a>
+            {% else %}
+            <span class="text-muted" data-bs-toggle="tooltip" 
+                  title="Only administrators and managers can add items">
+                <i class="bi bi-info-circle"></i> Contact an administrator to add items
+            </span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Items Table -->
+    <table class="table">
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ item.name }}</td>
+                <td>
+                    <!-- View - Everyone -->
+                    <a href="{% url 'inventory:item_detail' item.pk %}" 
+                       class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    
+                    <!-- Edit - Managers and Admins -->
+                    {% if user.can_modify_inventory %}
+                    <a href="{% url 'inventory:item_update' item.pk %}" 
+                       class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    {% endif %}
+                    
+                    <!-- Delete - Admins only -->
+                    {% if user.is_vendor_admin %}
+                    <a href="{% url 'inventory:item_delete' item.pk %}" 
+                       class="btn btn-sm btn-outline-danger">
+                        <i class="bi bi-trash"></i>
+                    </a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+
+<!-- ============================================ -->
+<!-- DASHBOARD - Role-based Quick Actions -->
+<!-- ============================================ -->
+
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Quick Actions</h5>
+            <div class="btn-group" role="group">
+                <!-- Categories - Admin only -->
+                {% if user.is_vendor_admin %}
+                <a href="{% url 'inventory:category_list' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-tags"></i> Categories
+                </a>
+                {% endif %}
+                
+                <!-- Receive Stock - Staff and above -->
+                {% if user.is_vendor_staff %}
+                <a href="{% url 'inventory:lot_create' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Receive Stock
+                </a>
+                {% endif %}
+                
+                <!-- Record Usage - All authenticated users -->
+                <a href="{% url 'inventory:usage_create' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-arrow-down-circle"></i> Record Usage
+                </a>
+                
+                <!-- Adjust Stock - Managers and above -->
+                {% if user.is_vendor_manager %}
+                <a href="{% url 'inventory:adjustment_create' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-pencil-square"></i> Adjust Stock
+                </a>
+                {% endif %}
+                
+                <!-- Purchase Orders - Managers and above -->
+                {% if user.is_vendor_manager %}
+                <a href="{% url 'inventory:po_create' %}" class="btn btn-outline-success">
+                    <i class="bi bi-cart-plus"></i> New Purchase Order
+                </a>
+                {% endif %}
+                
+                <!-- Export - Everyone -->
+                <a href="{% url 'inventory:export_csv' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-download"></i> Export CSV
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- User Role Badge Display -->
+    <div class="mt-3">
+        <p class="text-muted">
+            Logged in as: <strong>{{ user.get_full_name }}</strong>
+            {{ user.get_role_display_badge|safe }}
+        </p>
+    </div>
+</div>
+{% endblock %}
+
+
+<!-- ============================================ -->
+<!-- CUSTOM TEMPLATE TAG FOR PERMISSIONS -->
+<!-- Create: templatetags/inventory_permissions.py -->
+<!-- ============================================ -->
+
+<!-- Python code for custom template tag -->
+"""
+# inventory/templatetags/inventory_permissions.py
+
+from django import template
+
+register = template.Library()
+
+@register.filter
+def can_edit_category(user):
+    '''Check if user can edit categories'''
+    return user.is_vendor_admin
+
+@register.filter
+def can_delete_item(user):
+    '''Check if user can delete items'''
+    return user.is_vendor_admin
+
+@register.filter
+def can_approve_po(user):
+    '''Check if user can approve purchase orders'''
+    return user.can_approve_orders
+
+@register.simple_tag
+def user_has_inventory_permission(user, action):
+    '''
+    Check specific inventory permissions
+    Usage: {% user_has_inventory_permission user 'create' %}
+    '''
+    permission_map = {
+        'create': user.can_modify_inventory,
+        'edit': user.can_modify_inventory,
+        'delete': user.is_vendor_admin,
+        'approve': user.can_approve_orders,
+        'view_reports': user.can_view_reports,
+    }
+    return permission_map.get(action, False)
+"""
+
+<!-- Usage in template -->
+{% load inventory_permissions %}
+
+{% if user|can_edit_category %}
+<a href="{% url 'inventory:category_update' category.pk %}">Edit</a>
+{% endif %}
+
+{% user_has_inventory_permission user 'create' as can_create %}
+{% if can_create %}
+<button>Create Item</button>
+{% endif %}
+
+
+<!-- ============================================ -->
+<!-- CONDITIONAL FORM FIELDS BY ROLE -->
+<!-- ============================================ -->
+
+<!-- In your form template -->
+<form method="post">
+    {% csrf_token %}
+    
+    <!-- Basic fields - everyone -->
+    {{ form.name }}
+    {{ form.description }}
+    
+    <!-- Advanced fields - only for managers -->
+    {% if user.is_vendor_manager %}
+    <div class="advanced-section">
+        <h6>Advanced Options (Managers Only)</h6>
+        {{ form.reorder_level }}
+        {{ form.minimum_stock }}
+        {{ form.unit_cost }}
+    </div>
+    {% endif %}
+    
+    <!-- Admin-only fields -->
+    {% if user.is_vendor_admin %}
+    <div class="admin-section">
+        <h6>Administrative Settings</h6>
+        {{ form.is_active }}
+        {{ form.requires_approval }}
+    </div>
+    {% endif %}
+    
+    <button type="submit">Save</button>
+</form>
+
+
+<!-- ============================================ -->
+<!-- PERMISSION-BASED NAVIGATION MENU -->
+<!-- ============================================ -->
+
+<!-- In your base.html or navigation partial -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container-fluid">
+        <ul class="navbar-nav">
+            <!-- Everyone -->
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'inventory:dashboard' %}">Dashboard</a>
+            </li>
+            
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'inventory:item_list' %}">Items</a>
+            </li>
+            
+            <!-- Staff and above -->
+            {% if user.is_vendor_staff %}
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'inventory:lot_list' %}">Stock Lots</a>
+            </li>
+            {% endif %}
+            
+            <!-- Managers and above -->
+            {% if user.is_vendor_manager %}
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" role="button" 
+                   data-bs-toggle="dropdown">
+                    Management
+                </a>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{% url 'inventory:po_list' %}">Purchase Orders</a></li>
+                    <li><a class="dropdown-item" href="{% url 'inventory:inventory_report' %}">Reports</a></li>
+                </ul>
+            </li>
+            {% endif %}
+            
+            <!-- Admin only -->
+            {% if user.is_vendor_admin %}
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" role="button" 
+                   data-bs-toggle="dropdown">
+                    Admin
+                </a>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{% url 'inventory:category_list' %}">Categories</a></li>
+                    <li><a class="dropdown-item" href="{% url 'admin:index' %}">Django Admin</a></li>
+                </ul>
+            </li>
+            {% endif %}
+        </ul>
+        
+        <!-- User info with role -->
+        <span class="navbar-text">
+            {{ user.username }} 
+            {{ user.get_role_display_badge|safe }}
+        </span>
+    </div>
+</nav>
+

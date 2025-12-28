@@ -1,0 +1,644 @@
+{% extends "laboratory/assets/base.html" %}
+
+{% block title %}Stock Lot - {{ lot.lot_number }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header Section -->
+    <div class="row align-items-center mb-5">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="h3 mb-2" style="color: var(--primary-color);">
+                        <i class="fas fa-box me-2"></i>Stock Lot: {{ lot.lot_number }}
+                    </h2>
+                    <p class="text-muted mb-0">
+                        <span class="badge 
+                            {% if lot.status == 'AVAILABLE' %}bg-success
+                            {% elif lot.status == 'IN_USE' %}bg-primary
+                            {% elif lot.status == 'EXPIRED' %}bg-danger
+                            {% elif lot.status == 'DEPLETED' %}bg-secondary
+                            {% else %}bg-warning{% endif %} me-2">
+                            {{ lot.get_status_display }}
+                        </span>
+                        {{ lot.item.name }} • {{ lot.item.item_code }}
+                    </p>
+                </div>
+                <div>
+                    <a href="{% url 'inventory:lot_list' %}" class="btn btn-outline-secondary me-2">
+                        <i class="fas fa-arrow-left me-1"></i> Back to Lots
+                    </a>
+                    {% if user.is_vendor_staff %}
+                    <a href="{% url 'inventory:lot_update' lot.pk %}" class="btn btn-primary">
+                        <i class="fas fa-edit me-1"></i> Edit Lot
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Metrics Cards -->
+    <div class="row mb-5">
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="metric-icon mb-3">
+                        <i class="fas fa-boxes fa-2x 
+                            {% if percentage_remaining > 50 %}text-success
+                            {% elif percentage_remaining > 20 %}text-warning
+                            {% else %}text-danger{% endif %}"></i>
+                    </div>
+                    <h5 class="mb-2">Quantity</h5>
+                    <h3 class="mb-0 
+                        {% if percentage_remaining > 50 %}text-success
+                        {% elif percentage_remaining > 20 %}text-warning
+                        {% else %}text-danger{% endif %}">
+                        {{ lot.quantity_remaining }}
+                    </h3>
+                    <small class="text-muted">/ {{ lot.quantity_received }} {{ lot.item.unit_of_measure }}</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="metric-icon mb-3">
+                        <i class="fas fa-percentage fa-2x text-primary"></i>
+                    </div>
+                    <h5 class="mb-2">Remaining</h5>
+                    <h3 class="mb-0 text-primary">{{ percentage_remaining|floatformat:0 }}%</h3>
+                    <div class="progress mt-2" style="height: 4px;">
+                        <div class="progress-bar 
+                            {% if percentage_remaining > 50 %}bg-success
+                            {% elif percentage_remaining > 20 %}bg-warning
+                            {% else %}bg-danger{% endif %}" 
+                             style="width: {{ percentage_remaining }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="metric-icon mb-3">
+                        <i class="fas fa-calendar-alt fa-2x 
+                            {% if days_until_expiry %}{% if days_until_expiry < 0 %}text-danger
+                            {% elif days_until_expiry <= 7 %}text-danger
+                            {% elif days_until_expiry <= 30 %}text-warning
+                            {% else %}text-success{% endif %}{% else %}text-secondary{% endif %}"></i>
+                    </div>
+                    <h5 class="mb-2">Days Left</h5>
+                    <h3 class="mb-0 
+                        {% if days_until_expiry %}{% if days_until_expiry < 0 %}text-danger
+                        {% elif days_until_expiry <= 7 %}text-danger
+                        {% elif days_until_expiry <= 30 %}text-warning
+                        {% else %}text-success{% endif %}{% else %}text-secondary{% endif %}">
+                        {{ days_until_expiry|default:"—" }}
+                    </h3>
+                    <small class="text-muted">
+                        {% if days_until_expiry and days_until_expiry < 0 %}
+                            expired {{ days_until_expiry|abs }} days ago
+                        {% else %}
+                            until expiry
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="metric-icon mb-3">
+                        <i class="fas fa-money-bill-wave fa-2x text-success"></i>
+                    </div>
+                    <h5 class="mb-2">Stock Value</h5>
+                    <h3 class="mb-0 text-success">₦{{ stock_value|default:"0"|floatformat:2 }}</h3>
+                    <small class="text-muted">
+                        {{ lot.quantity_remaining }} × ₦{{ lot.unit_cost|floatformat:2 }}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="row">
+        <!-- Left Column - Lot Information -->
+        <div class="col-lg-4">
+            <!-- Basic Information Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Lot Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold text-muted small mb-2">Item</label>
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="item-icon me-3">
+                                <i class="fas 
+                                    {% if lot.item.category.category_type == 'REAGENT' %}fa-flask text-primary
+                                    {% elif lot.item.category.category_type == 'CONSUMABLE' %}fa-box text-info
+                                    {% elif lot.item.category.category_type == 'CONTROL' %}fa-clipboard-check text-warning
+                                    {% elif lot.item.category.category_type == 'CALIBRATOR' %}fa-ruler-combined text-success
+                                    {% else %}fa-cogs text-secondary{% endif %}"></i>
+                            </div>
+                            <div>
+                                <strong>{{ lot.item.item_code }}</strong>
+                                <div class="text-muted small">{{ lot.item.name|truncatechars:40 }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-3 mb-4">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold text-muted small mb-1">Lot Number</label>
+                            <p class="mb-0 fw-semibold">{{ lot.lot_number }}</p>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold text-muted small mb-1">Status</label>
+                            <p class="mb-0">
+                                <span class="badge 
+                                    {% if lot.status == 'AVAILABLE' %}bg-success
+                                    {% elif lot.status == 'IN_USE' %}bg-primary
+                                    {% elif lot.status == 'EXPIRED' %}bg-danger
+                                    {% elif lot.status == 'DEPLETED' %}bg-secondary
+                                    {% else %}bg-warning{% endif %} p-2">
+                                    {{ lot.get_status_display }}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                    
+                    {% if lot.barcode %}
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold text-muted small mb-1">Barcode</label>
+                        <p class="mb-0">
+                            <code class="bg-light p-2 rounded">{{ lot.barcode }}</code>
+                        </p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Important Dates Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-calendar-alt me-2"></i>Important Dates
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted small">Received Date</span>
+                            <span class="fw-semibold">{{ lot.received_date|date:"M d, Y" }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted small">Manufacture Date</span>
+                            <span class="fw-semibold">{{ lot.manufacture_date|date:"M d, Y"|default:"—" }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted small">Expiry Date</span>
+                            <span class="fw-semibold">{{ lot.expiry_date|date:"M d, Y" }}</span>
+                        </div>
+                        {% if lot.opened_date %}
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-muted small">Opened Date</span>
+                            <span class="fw-semibold">{{ lot.opened_date|date:"M d, Y" }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Purchase Information Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-shopping-cart me-2"></i>Purchase Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted small">Supplier</span>
+                            <span class="fw-semibold">{{ lot.supplier }}</span>
+                        </div>
+                        {% if lot.purchase_order %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted small">Purchase Order</span>
+                            <span class="fw-semibold">{{ lot.purchase_order }}</span>
+                        </div>
+                        {% endif %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted small">Unit Cost</span>
+                            <span class="fw-semibold">₦{{ lot.unit_cost|floatformat:2 }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-muted small">Total Cost</span>
+                            <span class="fw-semibold">₦{{ lot.total_cost|floatformat:2 }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 pt-3 border-top">
+                        <label class="form-label fw-semibold text-muted small mb-2">Received By</label>
+                        <div class="d-flex align-items-center">
+                            <div class="user-icon me-3">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div>
+                                <span class="fw-semibold">{{ lot.received_by.get_full_name|default:lot.received_by.username }}</span>
+                                <div class="text-muted small">{{ lot.received_date|date:"M d, Y" }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Storage Information Card -->
+            {% if lot.storage_location %}
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-warehouse me-2"></i>Storage Location
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <i class="fas fa-map-marker-alt fa-lg text-primary"></i>
+                        </div>
+                        <div>
+                            <span class="fw-semibold">{{ lot.storage_location }}</span>
+                            <div class="text-muted small">
+                                {{ lot.item.get_storage_condition_display }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Right Column - Statistics & History -->
+        <div class="col-lg-8">
+            <!-- Quick Actions Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bolt me-2"></i>Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-3">
+                        <a href="{% url 'inventory:item_detail' lot.item.pk %}" class="btn btn-outline-primary">
+                            <i class="fas fa-box me-2"></i>View Item
+                        </a>
+                        
+                        {% if user.is_vendor_staff and lot.status == 'AVAILABLE' %}
+                        <a href="{% url 'inventory:item_usage_create' lot.item.pk %}?lot={{ lot.pk }}" 
+                           class="btn btn-success">
+                            <i class="fas fa-minus me-2"></i>Record Usage
+                        </a>
+                        {% endif %}
+                        
+                        {% if user.is_vendor_admin %}
+                        <button type="button" class="btn btn-outline-danger"
+                                onclick="if(confirm('Are you sure you want to delete this stock lot? This action cannot be undone.')) { window.location.href='{% url 'inventory:lot_delete' lot.pk %}'; }">
+                            <i class="fas fa-trash me-2"></i>Delete Lot
+                        </button>
+                        {% endif %}
+                        
+                        {% if lot.status == 'AVAILABLE' and lot.is_expired %}
+                        <button type="button" class="btn btn-warning"
+                                onclick="if(confirm('Mark this lot as expired?')) { window.location.href='{% url 'inventory:lot_mark_expired' lot.pk %}'; }">
+                            <i class="fas fa-calendar-times me-2"></i>Mark Expired
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Usage Statistics Card -->
+            {% if usage_by_type %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light border-0 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>Usage by Type
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for usage in usage_by_type %}
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex justify-content-between align-items-center border rounded p-3">
+                                <div>
+                                    <h6 class="mb-1">{{ usage.usage_type }}</h6>
+                                    <small class="text-muted">{{ usage.usage_type_description }}</small>
+                                </div>
+                                <div class="text-end">
+                                    <h4 class="mb-0 text-primary">{{ usage.total }}</h4>
+                                    <small class="text-muted">{{ lot.item.unit_of_measure }}</small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Usage History Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light border-0 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2"></i>Usage History
+                    </h5>
+                    <span class="badge bg-primary">{{ usage_history.count }} records</span>
+                </div>
+                
+                <div class="card-body p-0">
+                    {% if usage_history %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4">Date & Time</th>
+                                    <th>Quantity</th>
+                                    <th>Type</th>
+                                    <th>User</th>
+                                    <th class="pe-4">Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for usage in usage_history %}
+                                <tr>
+                                    <td class="ps-4">
+                                        <div class="d-flex flex-column">
+                                            <span class="fw-semibold">{{ usage.used_at|date:"M d, Y" }}</span>
+                                            <small class="text-muted">{{ usage.used_at|time:"H:i" }}</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ usage.quantity_used }} {{ lot.item.unit_of_measure }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ usage.get_usage_type_display }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="user-icon me-2">
+                                                <i class="fas fa-user"></i>
+                                            </div>
+                                            <span>{{ usage.used_by.username }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="pe-4">
+                                        {% if usage.notes %}
+                                        <span class="text-muted small" title="{{ usage.notes }}">
+                                            {{ usage.notes|truncatechars:30 }}
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted fst-italic">—</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <!-- Empty State -->
+                    <div class="text-center py-5">
+                        <div class="empty-state-icon mb-4">
+                            <i class="fas fa-history fa-4x text-muted"></i>
+                        </div>
+                        <h4 class="text-muted mb-3">No Usage Recorded</h4>
+                        <p class="text-muted mb-4">No usage has been recorded for this lot yet.</p>
+                        {% if user.is_vendor_staff and lot.status == 'AVAILABLE' %}
+                        <a href="{% url 'inventory:item_usage_create' lot.item.pk %}?lot={{ lot.pk }}" 
+                           class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i> Record First Usage
+                        </a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Stock Adjustments Card -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light border-0 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-exchange-alt me-2"></i>Stock Adjustments
+                    </h5>
+                    <span class="badge bg-primary">{{ adjustments.count }} adjustments</span>
+                </div>
+                
+                <div class="card-body p-0">
+                    {% if adjustments %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4">Date & Time</th>
+                                    <th>Adjustment</th>
+                                    <th>Reason</th>
+                                    <th>User</th>
+                                    <th class="pe-4">Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for adj in adjustments %}
+                                <tr>
+                                    <td class="ps-4">
+                                        <div class="d-flex flex-column">
+                                            <span class="fw-semibold">{{ adj.adjusted_at|date:"M d, Y" }}</span>
+                                            <small class="text-muted">{{ adj.adjusted_at|time:"H:i" }}</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if adj.quantity_adjusted > 0 %}bg-success{% else %}bg-danger{% endif %}">
+                                            {% if adj.quantity_adjusted > 0 %}+{% endif %}{{ adj.quantity_adjusted }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark">{{ adj.get_reason_display }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="user-icon me-2">
+                                                <i class="fas fa-user"></i>
+                                            </div>
+                                            <span>{{ adj.adjusted_by.username }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="pe-4">
+                                        {% if adj.notes %}
+                                        <span class="text-muted small" title="{{ adj.notes }}">
+                                            {{ adj.notes|truncatechars:30 }}
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted fst-italic">—</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <!-- Empty State -->
+                    <div class="text-center py-5">
+                        <div class="empty-state-icon mb-4">
+                            <i class="fas fa-exchange-alt fa-4x text-muted"></i>
+                        </div>
+                        <h4 class="text-muted mb-3">No Adjustments</h4>
+                        <p class="text-muted mb-4">No stock adjustments have been made for this lot.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .card {
+        border-radius: var(--border-radius);
+        transition: var(--transition);
+        border: 1px solid #e9ecef;
+    }
+    
+    .card:hover {
+        box-shadow: var(--box-shadow);
+    }
+    
+    .metric-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(44, 90, 160, 0.1);
+    }
+    
+    .item-icon, .user-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(44, 90, 160, 0.1);
+    }
+    
+    .empty-state-icon {
+        opacity: 0.5;
+    }
+    
+    .table th, .table td {
+        vertical-align: middle;
+    }
+    
+    .badge {
+        font-weight: 500;
+        padding: 0.35em 0.65em;
+    }
+    
+    .progress {
+        border-radius: 4px;
+    }
+    
+    .progress-bar {
+        border-radius: 4px;
+    }
+    
+    @media (max-width: 768px) {
+        .container {
+            padding-left: 15px;
+            padding-right: 15px;
+        }
+        
+        .d-flex.flex-wrap {
+            justify-content: center;
+        }
+        
+        .d-flex.flex-wrap .btn {
+            margin-bottom: 0.5rem;
+            margin-right: 0.5rem;
+        }
+        
+        .table-responsive {
+            font-size: 0.875rem;
+        }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+        
+        // Add animation for expiring soon
+        const daysLeftCard = document.querySelector('.col-md-3.col-6:nth-child(3) .card');
+        if (daysLeftCard) {
+            const daysText = daysLeftCard.querySelector('h3').textContent.trim();
+            const days = parseInt(daysText) || 0;
+            
+            if (days > 0 && days <= 30) {
+                daysLeftCard.addEventListener('mouseenter', function() {
+                    this.classList.add('animate__animated', 'animate__pulse');
+                });
+                daysLeftCard.addEventListener('mouseleave', function() {
+                    this.classList.remove('animate__animated', 'animate__pulse');
+                });
+            }
+        }
+        
+        // Add hover effect to table rows
+        const tableRows = document.querySelectorAll('table.table-hover tbody tr');
+        tableRows.forEach(row => {
+            row.addEventListener('mouseenter', function() {
+                this.style.backgroundColor = 'rgba(0, 123, 255, 0.05)';
+            });
+            row.addEventListener('mouseleave', function() {
+                this.style.backgroundColor = '';
+            });
+        });
+        
+        // Stock level warning animation
+        const quantityCard = document.querySelector('.col-md-3.col-6:nth-child(1) .card');
+        if (quantityCard) {
+            const percentage = parseFloat('{{ percentage_remaining|default:"100" }}');
+            if (percentage <= 20) {
+                const icon = quantityCard.querySelector('.metric-icon i');
+                if (icon) {
+                    icon.classList.add('animate__animated', 'animate__shakeX');
+                    quantityCard.addEventListener('mouseenter', function() {
+                        icon.classList.add('animate__infinite');
+                    });
+                    quantityCard.addEventListener('mouseleave', function() {
+                        icon.classList.remove('animate__infinite');
+                    });
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

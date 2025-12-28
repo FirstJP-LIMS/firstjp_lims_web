@@ -1,0 +1,712 @@
+{% extends "laboratory/assets/base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header Section -->
+    <div class="row align-items-center mb-5">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="h3 mb-2" style="color: var(--primary-color);">
+                        <i class="fas fa-{% if lot %}edit{% else %}plus-circle{% endif %} me-2"></i>{{ title }}
+                    </h2>
+                    <p class="text-muted mb-0">
+                        {% if lot %}
+                        Update stock lot details and information
+                        {% else %}
+                        Receive new stock for your inventory
+                        {% endif %}
+                    </p>
+                </div>
+                <div>
+                    <a href="{% if lot %}{% url 'inventory:lot_detail' lot.pk %}{% else %}{% url 'inventory:lot_list' %}{% endif %}" 
+                       class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Back
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Form Column -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light border-0 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-edit me-2"></i>Stock Lot Details
+                    </h5>
+                    <span class="badge bg-light text-dark">
+                        <i class="fas fa-hashtag me-1"></i>
+                        {% if lot %}{{ lot.lot_number }}{% else %}NEW-LOT{% endif %}
+                    </span>
+                </div>
+                
+                <div class="card-body pt-4">
+                    {% if form.errors %}
+                    <div class="alert alert-danger border-0 shadow-sm mb-4">
+                        <div class="d-flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-exclamation-circle fa-lg mt-1"></i>
+                            </div>
+                            <div class="ms-3">
+                                <h6 class="alert-heading mb-2">Please correct the errors below:</h6>
+                                <ul class="mb-0 ps-3">
+                                    {% for field, errors in form.errors.items %}
+                                        {% for error in errors %}
+                                        <li>{{ field|title|replace:"_, " }}: {{ error }}</li>
+                                        {% endfor %}
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <form method="post" novalidate class="needs-validation">
+                        {% csrf_token %}
+                        
+                        <!-- Section 1: Item Information -->
+                        <div class="section-header mb-4">
+                            <h6 class="fw-semibold text-primary mb-3">
+                                <i class="fas fa-box me-2"></i>Item Information
+                            </h6>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="{{ form.item.id_for_label }}" class="form-label fw-semibold">
+                                <i class="fas fa-box me-1 text-muted"></i>
+                                Inventory Item <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-box"></i>
+                                </span>
+                                {{ form.item }}
+                            </div>
+                            {% if form.item.help_text %}
+                            <div class="form-text mt-1">
+                                <i class="fas fa-info-circle me-1"></i>{{ form.item.help_text }}
+                            </div>
+                            {% endif %}
+                            {% if form.item.errors %}
+                            <div class="text-danger small mt-2">
+                                <i class="fas fa-exclamation-circle me-1"></i>
+                                {{ form.item.errors|join:", " }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Section 2: Lot Information -->
+                        <div class="section-header mb-4 mt-5">
+                            <h6 class="fw-semibold text-primary mb-3">
+                                <i class="fas fa-layer-group me-2"></i>Lot Information
+                            </h6>
+                        </div>
+                        
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="{{ form.lot_number.id_for_label }}" class="form-label fw-semibold">
+                                    <i class="fas fa-hashtag me-1 text-muted"></i>
+                                    Lot Number <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-hashtag"></i>
+                                    </span>
+                                    {{ form.lot_number }}
+                                </div>
+                                {% if form.lot_number.help_text %}
+                                <div class="form-text mt-1">
+                                    <i class="fas fa-info-circle me-1"></i>{{ form.lot_number.help_text }}
+                                </div>
+                                {% endif %}
+                                {% if form.lot_number.errors %}
+                                <div class="text-danger small mt-2">
+                                    <i class="fas fa-exclamation-circle me-1"></i>
+                                    {{ form.lot_number.errors|join:", " }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="{{ form.barcode.id_for_label }}" class="form-label fw-semibold">
+                                    <i class="fas fa-barcode me-1 text-muted"></i>
+                                    Barcode
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-barcode"></i>
+                                    </span>
+                                    {{ form.barcode }}
+                                </div>
+                                {% if form.barcode.errors %}
+                                <div class="text-danger small mt-2">
+                                    <i class="fas fa-exclamation-circle me-1"></i>
+                                    {{ form.barcode.errors|join:", " }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="{{ form.quantity_received.id_for_label }}" class="form-label fw-semibold">
+                                    <i class="fas fa-boxes me-1 text-muted"></i>
+                                    Quantity Received <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-boxes"></i>
+                                    </span>
+                                    {{ form.quantity_received }}
+                                </div>
+                                {% if form.quantity_received.errors %}
+                                <div class="text-danger small mt-2">
+                                    <i class="fas fa-exclamation-circle me-1"></i>
+                                    {{ form.quantity_received.errors|join:", " }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="{{ form.storage_location.id_for_label }}" class="form-label fw-semibold">
+                                    <i class="fas fa-map-marker-alt me-1 text-muted"></i>
+                                    Storage Location
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                    </span>
+                                    {{ form.storage_location }}
+                                </div>
+                                {% if form.storage_location.help_text %}
+                                <div class="form-text mt-1">
+                                    <i class="fas fa-info-circle me-1"></i>{{ form.storage_location.help_text }}
+                                </div>
+                                {% endif %}
+                                {% if form.storage_location.errors %}
+                                <div class="text-danger small mt-2">
+                                    <i class="fas fa-exclamation-circle me-1"></i>
+                                    {{ form.storage_location.errors|join:", " }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Section 3: Important Dates -->
+                        <div class="section-header mb-4 mt-5">
+                            <h6 class="fw-semibold text-primary mb-3">
+                                <i class="fas fa-calendar-alt me-2"></i>Important Dates
+                            </h6>
+                        </div>
+                        
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <label for="{{ form.received_date.id_for_label }}" class="form-label fw-semibold">
+                                    <i class="fas fa-calendar-plus me-1 text-muted"></i>
+                                    Received Date <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-calendar-plus"></i>
+                                    </span>
+                                    {{ form.received_date }}
+                                </div>
+                                {% if form.received_date.errors %}
+                                <div class="text-danger small mt-2">
+                                    <i class="fas fa-exclamation-circle me-1"></i>
+                                    {{ form.received_date.errors|join:", " }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label for="{{ form.manufacture_date.id_for_label }}" class="form-label fw-semibold">
+                                    <i class="fas fa-industry me-1 text-muted"></i>
+                                    Manufacture Date
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-industry"></i>
+                                    </span>
+                                    {{ form.manufacture_date }}
+                                </div>
+                                {% if form.manufacture_date.errors %}
+                                <div class="text-danger small mt-2">
+                                    <i class="fas fa-exclamation-circle me-1"></i>
+                                    {{ form.manufacture_date.errors|join:", " }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label for="{{ form.expiry_date.id_for_label }}" class="form-label fw-semibold">
+                                    <i class="fas fa-calendar-times me-1 text-muted"></i>
+                                    Expiry Date <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-calendar-times"></i>
+                                    </span>
+                                    {{ form.expiry_date }}
+                                </div>
+                                {% if form.expiry_date.errors %}
+                                <div class="text-danger small mt-2">
+                                    <i class="fas fa-exclamation-circle me-1"></i>
+                                    {{ form.expiry_date.errors|join:", " }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Section 4: Purchase Information -->
+                        <div class="section-header mb-4 mt-5">
+                            <h6 class="fw-semibold text-primary mb-3">
+                                <i class="fas fa-shopping-cart me-2"></i>Purchase Information
+                            </h6>
+                        </div>
+                        
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="{{ form.supplier.id_for_label }}" class="form-label fw-semibold">
+                                    <i class="fas fa-truck me-1 text-muted"></i>
+                                    Supplier <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-truck"></i>
+                                    </span>
+                                    {{ form.supplier }}
+                                </div>
+                                {% if form.supplier.errors %}
+                                <div class="text-danger small mt-2">
+                                    <i class="fas fa-exclamation-circle me-1"></i>
+                                    {{ form.supplier.errors|join:", " }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="{{ form.purchase_order.id_for_label }}" class="form-label fw-semibold">
+                                    <i class="fas fa-file-invoice me-1 text-muted"></i>
+                                    Purchase Order #
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-file-invoice"></i>
+                                    </span>
+                                    {{ form.purchase_order }}
+                                </div>
+                                {% if form.purchase_order.errors %}
+                                <div class="text-danger small mt-2">
+                                    <i class="fas fa-exclamation-circle me-1"></i>
+                                    {{ form.purchase_order.errors|join:", " }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="{{ form.unit_cost.id_for_label }}" class="form-label fw-semibold">
+                                    <i class="fas fa-money-bill-wave me-1 text-muted"></i>
+                                    Unit Cost (₦) <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">₦</span>
+                                    {{ form.unit_cost }}
+                                </div>
+                                {% if form.unit_cost.errors %}
+                                <div class="text-danger small mt-2">
+                                    <i class="fas fa-exclamation-circle me-1"></i>
+                                    {{ form.unit_cost.errors|join:", " }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    <i class="fas fa-calculator me-1 text-muted"></i>
+                                    Total Cost (₦)
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">₦</span>
+                                    <input type="text" class="form-control" id="total_cost" readonly>
+                                </div>
+                                <div class="form-text mt-1">
+                                    <i class="fas fa-calculator me-1"></i>Auto-calculated: Quantity × Unit Cost
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section 5: Additional Notes -->
+                        <div class="section-header mb-4 mt-5">
+                            <h6 class="fw-semibold text-primary mb-3">
+                                <i class="fas fa-sticky-note me-2"></i>Additional Notes
+                            </h6>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="{{ form.notes.id_for_label }}" class="form-label fw-semibold">
+                                <i class="fas fa-align-left me-1 text-muted"></i>
+                                Notes
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text align-items-start pt-3">
+                                    <i class="fas fa-align-left"></i>
+                                </span>
+                                {{ form.notes }}
+                            </div>
+                            {% if form.notes.errors %}
+                            <div class="text-danger small mt-2">
+                                <i class="fas fa-exclamation-circle me-1"></i>
+                                {{ form.notes.errors|join:", " }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between align-items-center pt-5 mt-5 border-top">
+                            <a href="{% if lot %}{% url 'inventory:lot_detail' lot.pk %}{% else %}{% url 'inventory:lot_list' %}{% endif %}" 
+                               class="btn btn-outline-secondary px-4">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="fas fa-save me-2"></i>{{ submit_text|default:"Receive Stock" }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar - Help & Information -->
+        <div class="col-lg-4">
+            <!-- Stock Receiving Guide -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Stock Receiving Guide
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-3">
+                        <div class="guide-item border-start border-3 border-primary ps-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="me-3">
+                                    <i class="fas fa-hashtag fa-lg text-primary"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0 fw-semibold">Lot Number</h6>
+                                    <small class="text-muted">Unique identifier</small>
+                                </div>
+                            </div>
+                            <p class="small text-muted mb-0">
+                                Use manufacturer's lot number for traceability. Must be unique for each batch.
+                            </p>
+                        </div>
+
+                        <div class="guide-item border-start border-3 border-success ps-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="me-3">
+                                    <i class="fas fa-calendar-times fa-lg text-success"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0 fw-semibold">Expiry Date</h6>
+                                    <small class="text-muted">Critical information</small>
+                                </div>
+                            </div>
+                            <p class="small text-muted mb-0">
+                                Always check expiry date before receiving stock. System will track and alert when near expiry.
+                            </p>
+                        </div>
+
+                        <div class="guide-item border-start border-3 border-warning ps-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="me-3">
+                                    <i class="fas fa-money-bill-wave fa-lg text-warning"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0 fw-semibold">Cost Tracking</h6>
+                                    <small class="text-muted">Financial records</small>
+                                </div>
+                            </div>
+                            <p class="small text-muted mb-0">
+                                Accurate cost information helps with inventory valuation and financial reporting.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Tips -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-lightbulb me-2"></i>Quick Tips
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-3">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-check text-success mt-1"></i>
+                                </div>
+                                <div class="ms-3">
+                                    <p class="small mb-0">Always verify quantity against packing slip</p>
+                                </div>
+                            </div>
+                        </li>
+                        <li class="mb-3">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-check text-success mt-1"></i>
+                                </div>
+                                <div class="ms-3">
+                                    <p class="small mb-0">Check for damage or temperature excursions during transit</p>
+                                </div>
+                            </div>
+                        </li>
+                        <li class="mb-3">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-check text-success mt-1"></i>
+                                </div>
+                                <div class="ms-3">
+                                    <p class="small mb-0">Store immediately in proper storage conditions</p>
+                                </div>
+                            </div>
+                        </li>
+                        <li>
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-check text-success mt-1"></i>
+                                </div>
+                                <div class="ms-3">
+                                    <p class="small mb-0">Update item stock levels immediately after receiving</p>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Selected Item Info (if editing or item selected) -->
+            {% if lot or form.initial.item %}
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-box me-2"></i>Item Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if lot %}
+                    <h6 class="mb-2">{{ lot.item.name }}</h6>
+                    <p class="small text-muted mb-2">
+                        <i class="fas fa-barcode me-1"></i>{{ lot.item.item_code }}
+                    </p>
+                    <p class="small text-muted mb-3">
+                        <i class="fas fa-folder me-1"></i>{{ lot.item.category.name }}
+                    </p>
+                    <div class="alert alert-light border small">
+                        <div class="d-flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-info-circle text-primary"></i>
+                            </div>
+                            <div class="ms-3">
+                                <p class="mb-0">
+                                    Current stock: <strong>{{ lot.item.get_current_stock }} {{ lot.item.unit_of_measure }}</strong>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <a href="{% url 'inventory:item_detail' lot.item.pk %}" 
+                       class="btn btn-sm btn-outline-primary w-100">
+                        <i class="fas fa-external-link-alt me-1"></i>View Item Details
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .card {
+        border-radius: var(--border-radius);
+        transition: var(--transition);
+        border: 1px solid #e9ecef;
+    }
+    
+    .card:hover {
+        box-shadow: var(--box-shadow);
+    }
+    
+    .section-header {
+        border-bottom: 2px solid #f0f0f0;
+        padding-bottom: 10px;
+    }
+    
+    .input-group-text {
+        background-color: #f8f9fa;
+        border-right: none;
+        min-width: 45px;
+        justify-content: center;
+    }
+    
+    .form-control, .form-select, .form-control:focus, .form-select:focus {
+        border-left: none;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        box-shadow: none;
+        border-color: #dee2e6;
+    }
+    
+    .guide-item {
+        padding: 1rem;
+        border-radius: 4px;
+        background-color: rgba(248, 249, 250, 0.5);
+    }
+    
+    .guide-item:hover {
+        background-color: rgba(248, 249, 250, 1);
+    }
+    
+    textarea.form-control {
+        min-height: 120px;
+        resize: vertical;
+    }
+    
+    .btn {
+        padding: 0.5rem 1.5rem;
+        font-weight: 500;
+        border-radius: var(--border-radius);
+    }
+    
+    .alert {
+        border-radius: var(--border-radius);
+        border: none;
+    }
+    
+    @media (max-width: 768px) {
+        .container {
+            padding-left: 15px;
+            padding-right: 15px;
+        }
+        
+        .row.g-3 > .col-md-4, .row.g-3 > .col-md-6 {
+            margin-bottom: 1rem;
+        }
+        
+        .btn {
+            padding: 0.5rem 1rem;
+        }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Form validation
+        const form = document.querySelector('form.needs-validation');
+        if (form) {
+            form.addEventListener('submit', function(event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            });
+        }
+
+        // Auto-calculate total cost
+        const quantityInput = document.querySelector('input[name="quantity_received"]');
+        const unitCostInput = document.querySelector('input[name="unit_cost"]');
+        const totalCostDisplay = document.getElementById('total_cost');
+
+        function calculateTotal() {
+            const quantity = parseFloat(quantityInput?.value) || 0;
+            const unitCost = parseFloat(unitCostInput?.value) || 0;
+            const total = quantity * unitCost;
+            if (totalCostDisplay) {
+                totalCostDisplay.value = total.toFixed(2);
+            }
+        }
+
+        if (quantityInput && unitCostInput && totalCostDisplay) {
+            quantityInput.addEventListener('input', calculateTotal);
+            unitCostInput.addEventListener('input', calculateTotal);
+            calculateTotal(); // Initial calculation
+        }
+
+        // Set default received date to today if empty
+        const receivedDateInput = document.querySelector('input[name="received_date"]');
+        if (receivedDateInput && !receivedDateInput.value) {
+            const today = new Date().toISOString().split('T')[0];
+            receivedDateInput.value = today;
+        }
+
+        // Auto-format currency inputs
+        const currencyInputs = document.querySelectorAll('input[name="unit_cost"]');
+        currencyInputs.forEach(input => {
+            input.addEventListener('blur', function() {
+                let value = this.value.replace(/[^0-9.]/g, '');
+                if (value) {
+                    this.value = parseFloat(value).toFixed(2);
+                    calculateTotal(); // Recalculate total
+                }
+            });
+        });
+
+        // Validate expiry date is after received date
+        const expiryDateInput = document.querySelector('input[name="expiry_date"]');
+        if (receivedDateInput && expiryDateInput) {
+            function validateDates() {
+                if (receivedDateInput.value && expiryDateInput.value) {
+                    const received = new Date(receivedDateInput.value);
+                    const expiry = new Date(expiryDateInput.value);
+                    
+                    if (expiry <= received) {
+                        expiryDateInput.classList.add('is-invalid');
+                    } else {
+                        expiryDateInput.classList.remove('is-invalid');
+                    }
+                }
+            }
+            
+            receivedDateInput.addEventListener('change', validateDates);
+            expiryDateInput.addEventListener('change', validateDates);
+            validateDates(); // Initial validation
+        }
+
+        // Character counter for notes
+        const notesTextarea = document.querySelector('textarea[name="notes"]');
+        if (notesTextarea) {
+            const notesLabel = notesTextarea.closest('.mb-4');
+            const counterElement = document.createElement('div');
+            counterElement.className = 'form-text mt-1 text-end';
+            counterElement.innerHTML = '<span class="char-count">0</span> / 500 characters';
+            notesLabel.appendChild(counterElement);
+            
+            const updateCounter = () => {
+                const charCount = notesTextarea.value.length;
+                counterElement.querySelector('.char-count').textContent = charCount;
+                counterElement.classList.toggle('text-danger', charCount > 500);
+            };
+            
+            notesTextarea.addEventListener('input', updateCounter);
+            updateCounter(); // Initialize counter
+        }
+    });
+</script>
+{% endblock %}

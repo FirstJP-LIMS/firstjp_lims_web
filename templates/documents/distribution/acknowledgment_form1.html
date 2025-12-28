@@ -1,0 +1,252 @@
+{% extends 'laboratory/assets/base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2 class="mb-0">{{ title }}</h2>
+            <h4 class="text-muted">{{ document.document_number }} - {{ document.title }}</h4>
+        </div>
+        <div class="col-md-4 text-right">
+            <a href="{% url 'documents:document_detail' document.pk %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Document
+            </a>
+        </div>
+    </div>
+
+    <!-- Notice -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <h5><i class="fas fa-info-circle"></i> Document Acknowledgment</h5>
+                <p class="mb-0">
+                    You are acknowledging that you have received and reviewed this document. 
+                    Your acknowledgment will be electronically signed and recorded in the audit trail.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 offset-lg-2">
+            <!-- Document Details -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 bg-primary text-white">
+                    <h6 class="m-0 font-weight-bold">Document Details</h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless">
+                        <tbody>
+                            <tr>
+                                <th width="30%">Document Number:</th>
+                                <td>{{ document.document_number }}</td>
+                            </tr>
+                            <tr>
+                                <th>Title:</th>
+                                <td>{{ document.title }}</td>
+                            </tr>
+                            <tr>
+                                <th>Version:</th>
+                                <td><span class="badge badge-info badge-lg">v{{ document.version }}</span></td>
+                            </tr>
+                            <tr>
+                                <th>Category:</th>
+                                <td>{{ document.category.name }}</td>
+                            </tr>
+                            <tr>
+                                <th>Effective Date:</th>
+                                <td>{{ document.effective_date|date:"Y-m-d"|default:"Not set" }}</td>
+                            </tr>
+                            {% if document.description %}
+                            <tr>
+                                <th>Description:</th>
+                                <td>{{ document.description }}</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+
+                    <!-- View/Download Document -->
+                    <div class="text-center mt-3">
+                        {% if document.file %}
+                        <a href="{% url 'documents:document_download' document.pk %}" 
+                           class="btn btn-success btn-lg mb-2">
+                            <i class="fas fa-download"></i> Download Document
+                        </a>
+                        {% endif %}
+                        <p class="text-muted">
+                            <small>Please review the document before acknowledging</small>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Distribution Information -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Distribution Information</h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-borderless mb-0">
+                        <tbody>
+                            <tr>
+                                <th width="30%">Distributed By:</th>
+                                <td>{{ distribution.distributed_by.get_full_name|default:distribution.distributed_by.username }}</td>
+                            </tr>
+                            <tr>
+                                <th>Distribution Date:</th>
+                                <td>{{ distribution.distributed_at|date:"Y-m-d H:i" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Distribution Method:</th>
+                                <td>
+                                    <span class="badge badge-info">{{ distribution.get_distribution_method_display }}</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Acknowledgment Form -->
+            <div class="card shadow mb-4 border-success">
+                <div class="card-header py-3 bg-success text-white">
+                    <h6 class="m-0 font-weight-bold">
+                        <i class="fas fa-signature"></i> Electronic Acknowledgment
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="acknowledgmentForm">
+                        {% csrf_token %}
+                        
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger" role="alert">
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+
+                        <div class="form-group">
+                            <label class="form-label font-weight-bold">Acknowledgment Statement:</label>
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <p class="mb-0">
+                                        I acknowledge that I have received and reviewed the document 
+                                        <strong>{{ document.document_number }} v{{ document.version }}</strong> 
+                                        titled "<strong>{{ document.title }}</strong>". 
+                                        I understand its contents and agree to comply with the procedures 
+                                        and requirements outlined in this document.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Password for Electronic Signature -->
+                        <div class="form-group">
+                            <label for="{{ form.password.id_for_label }}" class="form-label">
+                                Your Password <span class="text-danger">*</span>
+                            </label>
+                            {{ form.password }}
+                            {% if form.password.errors %}
+                                <div class="invalid-feedback d-block">{{ form.password.errors }}</div>
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                Enter your password to electronically sign this acknowledgment
+                            </small>
+                        </div>
+
+                        <!-- Confirmation Checkbox -->
+                        <div class="form-group">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input" id="confirm" required>
+                                <label class="custom-control-label" for="confirm">
+                                    I confirm that I have read and understood this document, and I agree 
+                                    to electronically sign this acknowledgment.
+                                    <span class="text-danger">*</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <div class="form-group mb-0">
+                            <button type="submit" class="btn btn-success btn-lg" id="submitBtn" disabled>
+                                <i class="fas fa-signature"></i> Acknowledge Document
+                            </button>
+                            <a href="{% url 'documents:document_detail' document.pk %}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Information Card -->
+            <div class="card shadow">
+                <div class="card-header py-3 bg-warning">
+                    <h6 class="m-0 font-weight-bold">
+                        <i class="fas fa-exclamation-triangle"></i> Important Information
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <h6>What This Acknowledgment Means:</h6>
+                    <ul>
+                        <li>You confirm receipt and review of this document</li>
+                        <li>You understand the content and requirements</li>
+                        <li>You agree to comply with documented procedures</li>
+                        <li>Your acknowledgment is electronically signed and legally binding</li>
+                    </ul>
+
+                    <h6 class="mt-3">Audit Trail:</h6>
+                    <p class="mb-0">
+                        The following information will be recorded:
+                    </p>
+                    <ul class="mb-0">
+                        <li>Your name and username</li>
+                        <li>Date and time of acknowledgment</li>
+                        <li>Electronic signature (SHA-256 hash)</li>
+                        <li>Document version acknowledged</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmCheckbox = document.getElementById('confirm');
+    const submitBtn = document.getElementById('submitBtn');
+    const passwordInput = document.querySelector('input[type="password"]');
+    const acknowledgmentForm = document.getElementById('acknowledgmentForm');
+    
+    // Enable submit button only when checkbox is checked and password is entered
+    function updateSubmitButton() {
+        if (confirmCheckbox.checked && passwordInput.value.length > 0) {
+            submitBtn.disabled = false;
+        } else {
+            submitBtn.disabled = true;
+        }
+    }
+    
+    confirmCheckbox.addEventListener('change', updateSubmitButton);
+    passwordInput.addEventListener('input', updateSubmitButton);
+    
+    // Confirmation before submission
+    acknowledgmentForm.addEventListener('submit', function(e) {
+        if (!confirm('Are you sure you want to acknowledge this document?\n\nThis action will be permanently recorded and cannot be undone.')) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+
+<style>
+.badge-lg {
+    font-size: 1rem;
+    padding: 0.5rem 0.75rem;
+}
+</style>
+{% endblock %}

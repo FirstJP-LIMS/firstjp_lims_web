@@ -1,0 +1,501 @@
+{% extends "laboratory/assets/base.html" %}
+
+{% block title %}Delete {{ item.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header Section -->
+    <div class="row align-items-center mb-5">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="h3 mb-2" style="color: var(--danger-color, #dc3545);">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Delete Inventory Item
+                    </h2>
+                    <p class="text-muted mb-0">Confirm deletion of inventory item: {{ item.name }}</p>
+                </div>
+                <div>
+                    <a href="{% url 'inventory:item_detail' item.pk %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Back to Item
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Warning Card -->
+    <div class="row mb-5">
+        <div class="col-md-8 offset-md-2">
+            <div class="card border-0 shadow-sm border-danger">
+                <div class="card-header bg-danger text-white border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-exclamation-circle me-2"></i>Warning: Permanent Deletion
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger border-0 mb-4">
+                        <div class="d-flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-exclamation-triangle fa-2x"></i>
+                            </div>
+                            <div class="ms-3">
+                                <h4 class="alert-heading mb-2">This action cannot be undone!</h4>
+                                <p class="mb-0">You are about to permanently delete this inventory item. This will remove all associated data including stock lots and usage records.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card border mb-3">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Item to be deleted:</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-2">
+                                            <div class="item-icon-large mb-3">
+                                                <i class="fas fa-box fa-3x text-danger"></i>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-10">
+                                            <h4 class="mb-2">{{ item.name }}</h4>
+                                            <div class="row mb-3">
+                                                <div class="col-md-4">
+                                                    <label class="text-muted small mb-1">Item Code</label>
+                                                    <p class="fw-semibold mb-0">{{ item.item_code }}</p>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label class="text-muted small mb-1">Category</label>
+                                                    <p class="fw-semibold mb-0">{{ item.category.name }}</p>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label class="text-muted small mb-1">Manufacturer</label>
+                                                    <p class="fw-semibold mb-0">{{ item.manufacturer }}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Associated Data Warning -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="mb-3 text-danger">
+                                <i class="fas fa-link me-2"></i>Associated Data That Will Be Deleted
+                            </h5>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <div class="card border-danger h-100">
+                                        <div class="card-body text-center">
+                                            <div class="mb-3">
+                                                <i class="fas fa-layer-group fa-2x text-danger"></i>
+                                            </div>
+                                            <h5 class="mb-1">Stock Lots</h5>
+                                            <p class="text-muted mb-0">{{ item.stock_lots.count|default:"0" }} lots</p>
+                                            {% if item.stock_lots.count > 0 %}
+                                            <small class="text-danger mt-2">
+                                                <i class="fas fa-exclamation-circle me-1"></i>All stock data will be lost
+                                            </small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="card border-danger h-100">
+                                        <div class="card-body text-center">
+                                            <div class="mb-3">
+                                                <i class="fas fa-history fa-2x text-danger"></i>
+                                            </div>
+                                            <h5 class="mb-1">Usage Records</h5>
+                                            <p class="text-muted mb-0">{{ item.usage_records.count|default:"0" }} records</p>
+                                            {% if item.usage_records.count > 0 %}
+                                            <small class="text-danger mt-2">
+                                                <i class="fas fa-exclamation-circle me-1"></i>Usage history will be removed
+                                            </small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="card border-danger h-100">
+                                        <div class="card-body text-center">
+                                            <div class="mb-3">
+                                                <i class="fas fa-link fa-2x text-danger"></i>
+                                            </div>
+                                            <h5 class="mb-1">Test Associations</h5>
+                                            <p class="text-muted mb-0">{{ item.tests.count|default:"0" }} tests</p>
+                                            {% if item.tests.count > 0 %}
+                                            <small class="text-danger mt-2">
+                                                <i class="fas fa-exclamation-circle me-1"></i>Test links will be broken
+                                            </small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Current Stock Warning -->
+                    {% with current_stock=item.get_current_stock %}
+                    {% if current_stock > 0 %}
+                    <div class="alert alert-warning border-0 mb-4">
+                        <div class="d-flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-boxes fa-2x text-warning"></i>
+                            </div>
+                            <div class="ms-3">
+                                <h5 class="alert-heading mb-2">Warning: Stock Still Available</h5>
+                                <p class="mb-0">
+                                    This item still has <strong class="text-danger">{{ current_stock }} {{ item.unit_of_measure }}</strong> in stock.
+                                    Deleting it will permanently remove all stock data.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endwith %}
+                    
+                    <!-- Delete Form -->
+                    <form method="post" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- Confirmation Check -->
+                        <div class="card border-warning mb-4">
+                            <div class="card-header bg-warning text-dark">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-check-circle me-2"></i>Confirmation Required
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="" id="confirmDelete" required>
+                                    <label class="form-check-label fw-semibold" for="confirmDelete">
+                                        I understand that this action is permanent and cannot be undone. I confirm that I want to delete this inventory item and all its associated data.
+                                    </label>
+                                    <div class="invalid-feedback">
+                                        You must confirm before deleting.
+                                    </div>
+                                </div>
+                                
+                                <!-- Additional Notes -->
+                                <div class="mt-4">
+                                    <label for="deleteNotes" class="form-label fw-semibold">
+                                        <i class="fas fa-sticky-note me-1 text-muted"></i>
+                                        Reason for deletion (optional)
+                                    </label>
+                                    <textarea class="form-control" id="deleteNotes" name="delete_notes" rows="3" 
+                                              placeholder="Enter reason for deletion..."></textarea>
+                                    <div class="form-text">
+                                        This information will be logged in the audit trail.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                            <a href="{% url 'inventory:item_detail' item.pk %}" class="btn btn-outline-secondary px-4">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-danger px-4" id="deleteButton" disabled>
+                                <i class="fas fa-trash-alt me-2"></i>Delete Item Permanently
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alternatives Section -->
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card border-0 shadow-sm border-info">
+                <div class="card-header bg-info text-white border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-lightbulb me-2"></i>Consider Alternatives
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-4">Instead of deleting, you might consider these alternatives:</p>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="card border h-100">
+                                <div class="card-body">
+                                    <div class="d-flex">
+                                        <div class="flex-shrink-0">
+                                            <i class="fas fa-toggle-off fa-2x text-secondary"></i>
+                                        </div>
+                                        <div class="ms-3">
+                                            <h6 class="mb-2">Deactivate Instead</h6>
+                                            <p class="small text-muted mb-0">Make the item inactive to preserve historical data while removing it from active views.</p>
+                                        </div>
+                                    </div>
+                                    <div class="text-center mt-3">
+                                        <a href="{% url 'inventory:item_update' item.pk %}" class="btn btn-sm btn-outline-secondary">
+                                            <i class="fas fa-edit me-1"></i>Deactivate Item
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card border h-100">
+                                <div class="card-body">
+                                    <div class="d-flex">
+                                        <div class="flex-shrink-0">
+                                            <i class="fas fa-archive fa-2x text-warning"></i>
+                                        </div>
+                                        <div class="ms-3">
+                                            <h6 class="mb-2">Archive Data</h6>
+                                            <p class="small text-muted mb-0">Export all item data before deletion for record-keeping purposes.</p>
+                                        </div>
+                                    </div>
+                                    <div class="text-center mt-3">
+                                        <a href="#" class="btn btn-sm btn-outline-warning" id="exportBeforeDelete">
+                                            <i class="fas fa-download me-1"></i>Export Item Data
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .container {
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+    
+    .card {
+        border-radius: var(--border-radius);
+        transition: var(--transition);
+    }
+    
+    .item-icon-large {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(220, 53, 69, 0.1);
+        margin: 0 auto;
+    }
+    
+    .border-danger {
+        border-color: #dc3545 !important;
+    }
+    
+    .border-warning {
+        border-color: #ffc107 !important;
+    }
+    
+    .border-info {
+        border-color: #0dcaf0 !important;
+    }
+    
+    .alert {
+        border-radius: var(--border-radius);
+        border: none;
+    }
+    
+    .form-check-input:checked {
+        background-color: #dc3545;
+        border-color: #dc3545;
+    }
+    
+    .form-check-input:focus {
+        box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25);
+        border-color: #dc3545;
+    }
+    
+    .btn {
+        padding: 0.5rem 1.5rem;
+        font-weight: 500;
+        border-radius: var(--border-radius);
+    }
+    
+    .btn-danger {
+        background-color: #dc3545;
+        border-color: #dc3545;
+    }
+    
+    .btn-danger:hover {
+        background-color: #bb2d3b;
+        border-color: #b02a37;
+    }
+    
+    @media (max-width: 768px) {
+        .container {
+            padding-left: 15px;
+            padding-right: 15px;
+        }
+        
+        .card-body .row > .col-md-4, .card-body .row > .col-md-6 {
+            margin-bottom: 1rem;
+        }
+        
+        .btn {
+            padding: 0.5rem 1rem;
+        }
+        
+        .item-icon-large {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 1rem;
+        }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Confirmation checkbox validation
+        const confirmCheckbox = document.getElementById('confirmDelete');
+        const deleteButton = document.getElementById('deleteButton');
+        const deleteForm = document.querySelector('form.needs-validation');
+        
+        // Enable/disable delete button based on checkbox
+        confirmCheckbox.addEventListener('change', function() {
+            deleteButton.disabled = !this.checked;
+        });
+        
+        // Form validation
+        deleteForm.addEventListener('submit', function(event) {
+            if (!confirmCheckbox.checked) {
+                event.preventDefault();
+                event.stopPropagation();
+                
+                // Show validation feedback
+                confirmCheckbox.classList.add('is-invalid');
+                
+                // Scroll to checkbox
+                confirmCheckbox.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center' 
+                });
+            }
+            this.classList.add('was-validated');
+        });
+        
+        // Remove invalid state when checkbox is checked
+        confirmCheckbox.addEventListener('click', function() {
+            if (this.checked) {
+                this.classList.remove('is-invalid');
+            }
+        });
+        
+        // Export before delete functionality
+        const exportButton = document.getElementById('exportBeforeDelete');
+        if (exportButton) {
+            exportButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Show loading state
+                const originalText = this.innerHTML;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Exporting...';
+                this.disabled = true;
+                
+                // Simulate export (in real implementation, this would call an export endpoint)
+                setTimeout(() => {
+                    // Create a download link
+                    const data = `Item Code: ${'{{ item.item_code }}'}\n` +
+                                 `Item Name: ${'{{ item.name }}'}\n` +
+                                 `Category: ${'{{ item.category.name }}'}\n` +
+                                 `Manufacturer: ${'{{ item.manufacturer }}'}\n` +
+                                 `Unit Cost: ₦${'{{ item.unit_cost|floatformat:2 }}'}\n` +
+                                 `Current Stock: ${'{{ item.get_current_stock }}'}\n` +
+                                 `Stock Lots: ${'{{ item.stock_lots.count }}'}\n` +
+                                 `Usage Records: ${'{{ item.usage_records.count }}'}\n` +
+                                 `Export Date: ${new Date().toLocaleString()}\n`;
+                    
+                    const blob = new Blob([data], { type: 'text/plain' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `item_export_${'{{ item.item_code }}'}_${new Date().toISOString().slice(0,10)}.txt`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    
+                    // Restore button state
+                    this.innerHTML = originalText;
+                    this.disabled = false;
+                    
+                    // Show success message
+                    showToast('Export completed successfully!', 'success');
+                }, 1500);
+            });
+        }
+        
+        // Danger animation for delete button
+        deleteButton.addEventListener('mouseenter', function() {
+            if (!this.disabled) {
+                this.classList.add('animate__animated', 'animate__headShake');
+            }
+        });
+        
+        deleteButton.addEventListener('mouseleave', function() {
+            this.classList.remove('animate__animated', 'animate__headShake');
+        });
+        
+        // Warning pulse animation for stock warning
+        const stockWarning = document.querySelector('.alert-warning .fa-boxes');
+        if (stockWarning) {
+            stockWarning.classList.add('animate__animated', 'animate__pulse', 'animate__infinite', 'animate__slower');
+        }
+        
+        // Toast notification function
+        function showToast(message, type = 'info') {
+            const toastId = 'custom-toast-' + Date.now();
+            const toastHtml = `
+                <div id="${toastId}" class="toast align-items-center text-white bg-${type === 'success' ? 'success' : 'info'} border-0" 
+                     role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            `;
+            
+            // Create toast container if it doesn't exist
+            let toastContainer = document.querySelector('.toast-container');
+            if (!toastContainer) {
+                toastContainer = document.createElement('div');
+                toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+                document.body.appendChild(toastContainer);
+            }
+            
+            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+            
+            // Show the toast
+            const toastEl = document.getElementById(toastId);
+            const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+            toast.show();
+            
+            // Remove toast from DOM after it's hidden
+            toastEl.addEventListener('hidden.bs.toast', function() {
+                this.remove();
+            });
+        }
+    });
+</script>
+{% endblock %}

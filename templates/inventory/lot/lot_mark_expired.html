@@ -1,0 +1,429 @@
+{% extends "laboratory/assets/base.html" %}
+
+{% block title %}Mark Lot as Expired - {{ lot.lot_number }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header Section -->
+    <div class="row align-items-center mb-5">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="h3 mb-2" style="color: var(--primary-color);">
+                        <i class="fas fa-calendar-times me-2"></i>Mark Lot as Expired
+                    </h2>
+                    <p class="text-muted mb-0">
+                        Confirm expiration of stock lot <strong>{{ lot.lot_number }}</strong>
+                    </p>
+                </div>
+                <div>
+                    <a href="{% url 'inventory:lot_detail' lot.pk %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Back to Lot
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Main Warning Card -->
+            <div class="card border-0 shadow-sm border-warning mb-4">
+                <div class="card-header bg-warning border-0">
+                    <h5 class="mb-0 text-dark">
+                        <i class="fas fa-exclamation-triangle me-2"></i> Confirm Action
+                    </h5>
+                </div>
+                
+                <div class="card-body">
+                    <div class="alert alert-warning border-0 mb-4">
+                        <div class="d-flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-calendar-times fa-2x mt-1"></i>
+                            </div>
+                            <div class="ms-3">
+                                <h5 class="alert-heading">Mark Stock Lot as Expired</h5>
+                                <p class="mb-0">
+                                    Are you sure you want to mark this stock lot as expired? 
+                                    This action cannot be easily reversed and will affect inventory availability.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lot Information Card -->
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-light border-0">
+                            <h6 class="mb-0">
+                                <i class="fas fa-info-circle me-2"></i> Stock Lot Details
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold text-muted small mb-1">Item</label>
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="item-icon me-3">
+                                            <i class="fas 
+                                                {% if lot.item.category.category_type == 'REAGENT' %}fa-flask text-primary
+                                                {% elif lot.item.category.category_type == 'CONSUMABLE' %}fa-box text-info
+                                                {% elif lot.item.category.category_type == 'CONTROL' %}fa-clipboard-check text-warning
+                                                {% elif lot.item.category.category_type == 'CALIBRATOR' %}fa-ruler-combined text-success
+                                                {% else %}fa-cogs text-secondary{% endif %}"></i>
+                                        </div>
+                                        <div>
+                                            <strong>{{ lot.item.item_code }}</strong>
+                                            <div class="text-muted small">{{ lot.item.name|truncatechars:40 }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold text-muted small mb-1">Lot Number</label>
+                                    <p class="mb-3 fw-semibold">{{ lot.lot_number }}</p>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold text-muted small mb-1">Current Status</label>
+                                    <p class="mb-3">
+                                        <span class="badge 
+                                            {% if lot.status == 'AVAILABLE' %}bg-success
+                                            {% elif lot.status == 'IN_USE' %}bg-primary
+                                            {% else %}bg-secondary{% endif %} p-2">
+                                            {{ lot.get_status_display }}
+                                        </span>
+                                    </p>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold text-muted small mb-1">Expiry Date</label>
+                                    <p class="mb-3">
+                                        <span class="fw-semibold">{{ lot.expiry_date|date:"M d, Y" }}</span>
+                                        <br>
+                                        <small class="
+                                            {% if lot.is_expired %}text-danger
+                                            {% else %}text-muted{% endif %}">
+                                            <i class="fas 
+                                                {% if lot.is_expired %}fa-exclamation-circle
+                                                {% else %}fa-clock{% endif %}"></i>
+                                            {% if lot.is_expired %}
+                                                Expired {{ lot.days_until_expiry|abs }} days ago
+                                            {% else %}
+                                                Expires in {{ lot.days_until_expiry }} days
+                                            {% endif %}
+                                        </small>
+                                    </p>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold text-muted small mb-1">Quantity Remaining</label>
+                                    <p class="mb-3">
+                                        <span class="fw-semibold">{{ lot.quantity_remaining }}</span>
+                                        <small class="text-muted">/ {{ lot.quantity_received }} {{ lot.item.unit_of_measure }}</small>
+                                    </p>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold text-muted small mb-1">Supplier</label>
+                                    <p class="mb-3">{{ lot.supplier }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- What Will Happen Card -->
+                    <div class="card border-0 shadow-sm border-info mb-4">
+                        <div class="card-header bg-info border-0">
+                            <h6 class="mb-0 text-white">
+                                <i class="fas fa-info-circle me-2"></i> What Will Happen
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-unstyled mb-0">
+                                <li class="mb-3">
+                                    <div class="d-flex">
+                                        <div class="flex-shrink-0">
+                                            <i class="fas fa-exchange-alt text-info"></i>
+                                        </div>
+                                        <div class="ms-3">
+                                            <p class="mb-0">
+                                                Status will change from <strong>{{ lot.get_status_display }}</strong> to <span class="badge bg-danger">EXPIRED</span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </li>
+                                <li class="mb-3">
+                                    <div class="d-flex">
+                                        <div class="flex-shrink-0">
+                                            <i class="fas fa-ban text-info"></i>
+                                        </div>
+                                        <div class="ms-3">
+                                            <p class="mb-0">
+                                                Lot will be marked as unavailable for use in new tests or procedures
+                                            </p>
+                                        </div>
+                                    </div>
+                                </li>
+                                <li class="mb-3">
+                                    <div class="d-flex">
+                                        <div class="flex-shrink-0">
+                                            <i class="fas fa-chart-line text-info"></i>
+                                        </div>
+                                        <div class="ms-3">
+                                            <p class="mb-0">
+                                                Stock will be removed from available inventory calculations
+                                            </p>
+                                        </div>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="d-flex">
+                                        <div class="flex-shrink-0">
+                                            <i class="fas fa-history text-info"></i>
+                                        </div>
+                                        <div class="ms-3">
+                                            <p class="mb-0">
+                                                Lot will remain in system for audit and historical reference
+                                            </p>
+                                        </div>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Remaining Stock Warning (if applicable) -->
+                    {% if lot.quantity_remaining > 0 %}
+                    <div class="card border-0 shadow-sm border-warning mb-4">
+                        <div class="card-header bg-warning border-0">
+                            <h6 class="mb-0 text-dark">
+                                <i class="fas fa-exclamation-triangle me-2"></i> Remaining Stock Warning
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-warning border-0 mb-0">
+                                <div class="d-flex">
+                                    <div class="flex-shrink-0">
+                                        <i class="fas fa-boxes fa-lg"></i>
+                                    </div>
+                                    <div class="ms-3">
+                                        <h6 class="alert-heading">
+                                            <strong>{{ lot.quantity_remaining }} {{ lot.item.unit_of_measure }}</strong> still available
+                                        </h6>
+                                        <p class="mb-0">
+                                            This lot has remaining stock. After marking as expired, consider:
+                                        </p>
+                                        <ul class="mb-0 mt-2">
+                                            <li>Creating a stock adjustment to record disposal</li>
+                                            <li>Documenting disposal method in lot notes</li>
+                                            <li>Following proper disposal procedures for laboratory materials</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Action Form -->
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="d-flex justify-content-between align-items-center pt-4 mt-4 border-top">
+                            <a href="{% url 'inventory:lot_detail' lot.pk %}" 
+                               class="btn btn-outline-secondary px-4">
+                                <i class="fas fa-times me-2"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-warning px-4" id="confirmBtn">
+                                <i class="fas fa-calendar-times me-2"></i> Mark as Expired
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Important Notes Card -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-lightbulb me-2 text-primary"></i> Important Notes
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-check-circle text-success mt-1"></i>
+                                </div>
+                                <div class="ms-3">
+                                    <p class="small mb-0">
+                                        This action does not delete the lot record - it remains in the system for audit purposes
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-check-circle text-success mt-1"></i>
+                                </div>
+                                <div class="ms-3">
+                                    <p class="small mb-0">
+                                        You can view expired lots by filtering the stock lot list by status
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-check-circle text-success mt-1"></i>
+                                </div>
+                                <div class="ms-3">
+                                    <p class="small mb-0">
+                                        Expired lots are automatically excluded from inventory calculations and reports
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-check-circle text-success mt-1"></i>
+                                </div>
+                                <div class="ms-3">
+                                    <p class="small mb-0">
+                                        If marked in error, contact an administrator to reverse the status
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-check-circle text-success mt-1"></i>
+                                </div>
+                                <div class="ms-3">
+                                    <p class="small mb-0">
+                                        Consider documenting the disposal in the lot notes for compliance and record-keeping
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .container {
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+    
+    .card {
+        border-radius: var(--border-radius);
+        border: 1px solid #e9ecef;
+    }
+    
+    .border-warning {
+        border-color: #ffc107 !important;
+    }
+    
+    .border-info {
+        border-color: #17a2b8 !important;
+    }
+    
+    .item-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(44, 90, 160, 0.1);
+    }
+    
+    .badge {
+        font-weight: 500;
+        padding: 0.35em 0.65em;
+    }
+    
+    .alert {
+        border-radius: var(--border-radius);
+    }
+    
+    .btn {
+        padding: 0.5rem 1.5rem;
+        font-weight: 500;
+        border-radius: var(--border-radius);
+    }
+    
+    @media (max-width: 768px) {
+        .container {
+            padding-left: 15px;
+            padding-right: 15px;
+        }
+        
+        .d-flex.justify-content-between {
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .d-flex.justify-content-between .btn {
+            width: 100%;
+        }
+        
+        .col-md-6 {
+            margin-bottom: 1rem;
+        }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add confirmation dialog to the submit button
+        const confirmBtn = document.getElementById('confirmBtn');
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', function(e) {
+                const quantityRemaining = {{ lot.quantity_remaining|default:"0" }};
+                let message = 'Are you absolutely sure you want to mark this stock lot as expired?';
+                
+                if (quantityRemaining > 0) {
+                    message += `\n\n⚠️ WARNING: This lot still has ${quantityRemaining} {{ lot.item.unit_of_measure }} remaining. Ensure proper disposal procedures are followed.`;
+                }
+                
+                if (!confirm(message)) {
+                    e.preventDefault();
+                }
+            });
+        }
+        
+        // Add visual warning for expiring items
+        const expiryStatus = document.querySelector('.card-body .text-danger, .card-body .text-muted');
+        if (expiryStatus && expiryStatus.classList.contains('text-danger')) {
+            const warningCard = document.querySelector('.border-warning .card-header');
+            if (warningCard) {
+                warningCard.classList.add('animate__animated', 'animate__pulse');
+            }
+        }
+        
+        // Highlight remaining stock warning
+        const remainingStock = {{ lot.quantity_remaining|default:"0" }};
+        if (remainingStock > 0) {
+            const warningSection = document.querySelector('.border-warning .card-body');
+            if (warningSection) {
+                warningSection.addEventListener('mouseenter', function() {
+                    this.querySelector('.alert').classList.add('animate__animated', 'animate__shakeX');
+                });
+                warningSection.addEventListener('mouseleave', function() {
+                    this.querySelector('.alert').classList.remove('animate__animated', 'animate__shakeX');
+                });
+            }
+        }
+    });
+</script>
+{% endblock %}

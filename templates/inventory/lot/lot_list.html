@@ -1,0 +1,688 @@
+{% extends "laboratory/assets/base.html" %}
+
+{% block title %}Stock Lots{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header Section -->
+    <div class="row align-items-center mb-5">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="h3 mb-2" style="color: var(--primary-color);">
+                        <i class="fas fa-layer-group me-2"></i>Stock Lots
+                    </h2>
+                    <p class="text-muted mb-0">Manage stock lots, track expiry dates, and monitor inventory levels</p>
+                </div>
+                <div>
+                    {% if user.is_vendor_staff %}
+                    <a href="{% url 'inventory:lot_create' %}" class="btn btn-primary me-2">
+                        <i class="fas fa-plus me-1"></i> Receive Stock
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'inventory:dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Metrics Cards -->
+    <div class="row mb-5">
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="metric-icon mb-3">
+                        <i class="fas fa-boxes fa-2x text-primary"></i>
+                    </div>
+                    <h5 class="mb-2">Total Lots</h5>
+                    <h3 class="mb-0 text-primary">{{ total_lots|default:"0" }}</h3>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="metric-icon mb-3">
+                        <i class="fas fa-clock fa-2x text-warning"></i>
+                    </div>
+                    <h5 class="mb-2">Expiring Soon</h5>
+                    <h3 class="mb-0 text-warning">{{ expiring_soon_count|default:"0" }}</h3>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="metric-icon mb-3">
+                        <i class="fas fa-skull-crossbones fa-2x text-danger"></i>
+                    </div>
+                    <h5 class="mb-2">Expired</h5>
+                    <h3 class="mb-0 text-danger">{{ expired_count|default:"0" }}</h3>
+                </div>
+            </div>
+        </div>
+        
+        {% comment %} <div class="col-md-3 col-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="metric-icon mb-3">
+                        <i class="fas fa-check-circle fa-2x text-success"></i>
+                    </div>
+                    <h5 class="mb-2">Available</h5>
+                    <h3 class="mb-0 text-success">{{ available_count|default:"0" }}</h3>
+                </div>
+            </div>
+        </div> {% endcomment %}
+    </div>
+
+    <!-- Search and Filter Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-filter me-2"></i>Filter & Search
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-box"></i>
+                                </span>
+                                {{ form.item }}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-tag"></i>
+                                </span>
+                                {{ form.status }}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-calendar-alt"></i>
+                                </span>
+                                {{ form.expiry_range }}
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-search me-1"></i> Filter
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <!-- Quick Filter Buttons -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="d-flex flex-wrap gap-2">
+                                <a href="?status=AVAILABLE" class="btn btn-sm btn-outline-success">
+                                    <i class="fas fa-check-circle me-1"></i> Available
+                                </a>
+                                <a href="?expiry_range=expiring_soon" class="btn btn-sm btn-outline-warning">
+                                    <i class="fas fa-clock me-1"></i> Expiring Soon
+                                </a>
+                                <a href="?status=EXPIRED" class="btn btn-sm btn-outline-danger">
+                                    <i class="fas fa-skull-crossbones me-1"></i> Expired
+                                </a>
+                                {% if request.GET %}
+                                <a href="{% url 'inventory:lot_list' %}" class="btn btn-sm btn-outline-secondary">
+                                    <i class="fas fa-times me-1"></i> Clear Filters
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Action Buttons -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex flex-wrap gap-2">
+                {% if user.is_vendor_staff %}
+                <a href="{% url 'inventory:lot_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-1"></i> Receive Stock
+                </a>
+                {% endif %}
+                <a href="{% url 'inventory:item_list' %}" class="btn btn-outline-primary">
+                    <i class="fas fa-box me-1"></i> View Items
+                </a>
+                <a href="{% url 'inventory:export_lots_csv' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-download me-1"></i> Export CSV
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stock Lots Grid (Alternative View) -->
+    <div class="row mb-4">
+        {% for lot_data in lots %}
+        {% with lot=lot_data.lot %}
+        <div class="col-xl-4 col-lg-6 col-md-6 mb-4">
+            <div class="card h-100 border-0 shadow-sm {% if lot.status == 'EXPIRED' %}border-danger{% elif lot_data.days_to_expiry <= 7 %}border-warning{% endif %}">
+                <div class="card-header bg-light border-0 pb-0">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1 text-truncate">{{ lot.item.name|truncatechars:30 }}</h6>
+                            <div class="d-flex align-items-center">
+                                <span class="badge bg-primary">{{ lot.item.item_code }}</span>
+                                <span class="badge 
+                                    {% if lot.item.category.category_type == 'REAGENT' %}bg-info
+                                    {% elif lot.item.category.category_type == 'CONSUMABLE' %}bg-success
+                                    {% elif lot.item.category.category_type == 'CONTROL' %}bg-warning
+                                    {% else %}bg-secondary{% endif %} ms-2">
+                                    {{ lot.item.category.name|truncatechars:15 }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
+                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'inventory:lot_detail' lot.pk %}">
+                                        <i class="fas fa-eye me-2"></i>View Details
+                                    </a>
+                                </li>
+                                {% if user.is_vendor_staff %}
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'inventory:lot_update' lot.pk %}">
+                                        <i class="fas fa-edit me-2"></i>Edit Lot
+                                    </a>
+                                </li>
+                                {% endif %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'inventory:item_usage_create' lot.item.pk %}?lot={{ lot.pk }}">
+                                        <i class="fas fa-minus me-2"></i>Record Usage
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-body pt-3">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted small">Lot Number:</span>
+                            <span class="fw-semibold">{{ lot.lot_number }}</span>
+                        </div>
+                        {% if lot.barcode %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted small">Barcode:</span>
+                            <span class="fw-semibold">{{ lot.barcode }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-calendar-plus text-primary me-2"></i>
+                                <div>
+                                    <div class="small text-muted">Received</div>
+                                    <div class="fw-semibold">{{ lot.received_date|date:"M d, Y" }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-calendar-times 
+                                    {% if lot.status == 'EXPIRED' %}text-danger
+                                    {% elif lot_data.days_to_expiry <= 7 %}text-warning
+                                    {% else %}text-success{% endif %} me-2"></i>
+                                <div>
+                                    <div class="small text-muted">Expiry</div>
+                                    <div class="fw-semibold">{{ lot.expiry_date|date:"M d, Y" }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-2 mb-4">
+                        <div class="col-6">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-box text-info me-2"></i>
+                                <div>
+                                    <div class="small text-muted">Quantity</div>
+                                    <div class="fw-semibold">
+                                        {{ lot.quantity_remaining }} / {{ lot.quantity_received }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-percentage text-warning me-2"></i>
+                                <div>
+                                    <div class="small text-muted">Remaining</div>
+                                    <div class="fw-semibold">{{ lot_data.percentage_remaining|floatformat:0 }}%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="progress mb-3" style="height: 8px;">
+                        <div class="progress-bar 
+                            {% if lot_data.percentage_remaining < 20 %}bg-danger
+                            {% elif lot_data.percentage_remaining < 50 %}bg-warning
+                            {% else %}bg-success{% endif %}" 
+                             style="width: {{ lot_data.percentage_remaining }}%"
+                             title="{{ lot_data.percentage_remaining|floatformat:0 }}% remaining"></div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <span class="badge 
+                            {% if lot.status == 'AVAILABLE' %}bg-success
+                            {% elif lot.status == 'IN_USE' %}bg-primary
+                            {% elif lot.status == 'EXPIRED' %}bg-danger
+                            {% elif lot.status == 'DEPLETED' %}bg-secondary
+                            {% else %}bg-warning{% endif %}">
+                            {{ lot.get_status_display }}
+                        </span>
+                        {% if lot_data.days_to_expiry is not None %}
+                        <span class="small 
+                            {% if lot_data.days_to_expiry < 0 %}text-danger
+                            {% elif lot_data.days_to_expiry <= 7 %}text-danger
+                            {% elif lot_data.days_to_expiry <= 30 %}text-warning
+                            {% else %}text-muted{% endif %}">
+                            {% if lot_data.days_to_expiry < 0 %}
+                                Expired {{ lot_data.days_to_expiry|abs }} days ago
+                            {% else %}
+                                {{ lot_data.days_to_expiry }} days left
+                            {% endif %}
+                        </span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="btn-group w-100" role="group">
+                        <a href="{% url 'inventory:item_usage_create' lot.item.pk %}?lot={{ lot.pk }}" 
+                           class="btn btn-sm btn-outline-success flex-fill">
+                            <i class="fas fa-minus me-1"></i> Usage
+                        </a>
+                        <a href="{% url 'inventory:lot_detail' lot.pk %}" 
+                           class="btn btn-sm btn-outline-primary flex-fill">
+                            <i class="fas fa-eye me-1"></i> View
+                        </a>
+                        {% if user.is_vendor_staff %}
+                        <a href="{% url 'inventory:lot_update' lot.pk %}" 
+                           class="btn btn-sm btn-outline-warning flex-fill">
+                            <i class="fas fa-edit me-1"></i> Edit
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endwith %}
+        {% empty %}
+        <!-- Empty State -->
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center py-5">
+                    <div class="empty-state-icon mb-4">
+                        <i class="fas fa-layer-group fa-4x text-muted"></i>
+                    </div>
+                    <h3 class="h4 text-muted mb-3">No Stock Lots Found</h3>
+                    <p class="text-muted mb-4">
+                        {% if request.GET %}
+                        Try adjusting your search or filter criteria
+                        {% else %}
+                        Get started by receiving your first stock lot
+                        {% endif %}
+                    </p>
+                    {% if user.is_vendor_staff %}
+                    <a href="{% url 'inventory:lot_create' %}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-plus me-2"></i> Receive First Stock
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Stock Lots Table (Main View) -->
+    {% if lots %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light border-0 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-table me-2"></i>All Stock Lots
+                    </h5>
+                    <span class="badge bg-primary">{{ lots.paginator.count }} lots</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4">Item</th>
+                                    <th>Lot Number</th>
+                                    <th class="text-center">Received</th>
+                                    <th class="text-center">Expiry</th>
+                                    <th class="text-center">Quantity</th>
+                                    <th class="text-center">Status</th>
+                                    <th class="text-center">Days Left</th>
+                                    <th class="pe-4 text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for lot_data in lots %}
+                                {% with lot=lot_data.lot %}
+                                <tr class="{% if lot.status == 'EXPIRED' %}table-danger{% elif lot_data.days_to_expiry <= 7 %}table-warning{% endif %}">
+                                    <td class="ps-4">
+                                        <div class="d-flex align-items-center">
+                                            <div class="item-icon me-3">
+                                                <i class="fas 
+                                                    {% if lot.item.category.category_type == 'REAGENT' %}fa-flask text-primary
+                                                    {% elif lot.item.category.category_type == 'CONSUMABLE' %}fa-box text-info
+                                                    {% elif lot.item.category.category_type == 'CONTROL' %}fa-clipboard-check text-warning
+                                                    {% elif lot.item.category.category_type == 'CALIBRATOR' %}fa-ruler-combined text-success
+                                                    {% else %}fa-cogs text-secondary{% endif %}"></i>
+                                            </div>
+                                            <div>
+                                                <strong>{{ lot.item.item_code }}</strong>
+                                                <div class="text-muted small">{{ lot.item.name|truncatechars:30 }}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <strong>{{ lot.lot_number }}</strong>
+                                        {% if lot.barcode %}
+                                        <div class="text-muted small">{{ lot.barcode }}</div>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="text-muted">{{ lot.received_date|date:"M d, Y" }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="fw-semibold">{{ lot.expiry_date|date:"M d, Y" }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="d-flex flex-column align-items-center">
+                                            <span class="fw-semibold">{{ lot.quantity_remaining }}</span>
+                                            <small class="text-muted">/ {{ lot.quantity_received }}</small>
+                                            <div class="progress mt-1" style="width: 80px; height: 4px;">
+                                                <div class="progress-bar 
+                                                    {% if lot_data.percentage_remaining < 20 %}bg-danger
+                                                    {% elif lot_data.percentage_remaining < 50 %}bg-warning
+                                                    {% else %}bg-success{% endif %}" 
+                                                     style="width: {{ lot_data.percentage_remaining }}%"></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge 
+                                            {% if lot.status == 'AVAILABLE' %}bg-success
+                                            {% elif lot.status == 'IN_USE' %}bg-primary
+                                            {% elif lot.status == 'EXPIRED' %}bg-danger
+                                            {% elif lot.status == 'DEPLETED' %}bg-secondary
+                                            {% else %}bg-warning{% endif %}">
+                                            {{ lot.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if lot_data.days_to_expiry is not None %}
+                                        <span class="fw-semibold 
+                                            {% if lot_data.days_to_expiry < 0 %}text-danger
+                                            {% elif lot_data.days_to_expiry <= 7 %}text-danger
+                                            {% elif lot_data.days_to_expiry <= 30 %}text-warning
+                                            {% else %}text-success{% endif %}">
+                                            {% if lot_data.days_to_expiry < 0 %}
+                                                {{ lot_data.days_to_expiry|abs }}<small>d ago</small>
+                                            {% else %}
+                                                {{ lot_data.days_to_expiry }}<small>d</small>
+                                            {% endif %}
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="pe-4 text-end">
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a href="{% url 'inventory:item_usage_create' lot.item.pk %}?lot={{ lot.pk }}" 
+                                               class="btn btn-outline-success" title="Record Usage">
+                                                <i class="fas fa-minus"></i>
+                                            </a>
+                                            <a href="{% url 'inventory:lot_detail' lot.pk %}" 
+                                               class="btn btn-outline-primary" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            {% if user.is_vendor_staff %}
+                                            <a href="{% url 'inventory:lot_update' lot.pk %}" 
+                                               class="btn btn-outline-warning" title="Edit Lot">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endwith %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Pagination -->
+    {% if lots.has_other_pages %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if lots.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ lots.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            <i class="fas fa-chevron-left"></i> Previous
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% for num in lots.paginator.page_range %}
+                    {% if lots.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > lots.number|add:'-3' and num < lots.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            {{ num }}
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+
+                    {% if lots.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ lots.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            Next <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .card {
+        border-radius: var(--border-radius);
+        transition: var(--transition);
+        border: 1px solid #e9ecef;
+    }
+    
+    .card:hover {
+        box-shadow: var(--box-shadow);
+        transform: translateY(-5px);
+    }
+    
+    .metric-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items-center: center;
+        justify-content: center;
+        background-color: rgba(44, 90, 160, 0.1);
+    }
+    
+    .item-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(44, 90, 160, 0.1);
+    }
+    
+    .empty-state-icon {
+        opacity: 0.5;
+    }
+    
+    .table th, .table td {
+        vertical-align: middle;
+    }
+    
+    .badge {
+        font-weight: 500;
+        padding: 0.35em 0.65em;
+    }
+    
+    .btn-group .btn {
+        min-width: 80px;
+    }
+    
+    .input-group-text {
+        background-color: #f8f9fa;
+        border-right: none;
+        min-width: 45px;
+        justify-content: center;
+    }
+    
+    .form-control, .form-select, .form-control:focus, .form-select:focus {
+        border-left: none;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        box-shadow: none;
+        border-color: #dee2e6;
+    }
+    
+    .table-danger {
+        background-color: rgba(220, 53, 69, 0.05);
+    }
+    
+    .table-warning {
+        background-color: rgba(255, 193, 7, 0.05);
+    }
+    
+    .progress {
+        border-radius: 4px;
+    }
+    
+    @media (max-width: 768px) {
+        .container {
+            padding-left: 15px;
+            padding-right: 15px;
+        }
+        
+        .btn-group {
+            flex-wrap: wrap;
+        }
+        
+        .btn-group .btn {
+            flex: 1 0 45%;
+            margin-bottom: 5px;
+        }
+        
+        .card-body .row > .col-6 {
+            margin-bottom: 10px;
+        }
+        
+        .table-responsive {
+            font-size: 0.875rem;
+        }
+        
+        .d-flex.flex-wrap {
+            justify-content: center;
+        }
+        
+        .d-flex.flex-wrap .btn {
+            margin-bottom: 0.5rem;
+            margin-right: 0.5rem;
+        }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+        
+        // Add animation for expiring soon lots
+        const warningRows = document.querySelectorAll('.table-warning, .border-warning');
+        warningRows.forEach(row => {
+            row.addEventListener('mouseenter', function() {
+                this.classList.add('animate__animated', 'animate__pulse');
+            });
+            row.addEventListener('mouseleave', function() {
+                this.classList.remove('animate__animated', 'animate__pulse');
+            });
+        });
+        
+        // Filter form persistence
+        const filterForm = document.querySelector('form[method="get"]');
+        if (filterForm) {
+            const urlParams = new URLSearchParams(window.location.search);
+            urlParams.forEach((value, key) => {
+                const input = filterForm.querySelector(`[name="${key}"]`);
+                if (input) {
+                    input.value = value;
+                }
+            });
+        }
+        
+        // Quick filter button highlighting
+        const quickFilterBtns = document.querySelectorAll('.d-flex.flex-wrap.gap-2 .btn');
+        quickFilterBtns.forEach(btn => {
+            const href = btn.getAttribute('href');
+            if (href && href !== '#' && window.location.search.includes(href.split('?')[1])) {
+                btn.classList.remove('btn-outline-success', 'btn-outline-warning', 'btn-outline-danger', 'btn-outline-secondary');
+                btn.classList.add('btn-success', 'btn-warning', 'btn-danger', 'btn-secondary');
+            }
+        });
+    });
+</script>
+{% endblock %}

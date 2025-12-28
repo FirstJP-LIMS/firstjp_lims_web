@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block title %}Mark Lot as Expired - {{ lot.lot_number }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2>Mark Stock Lot as Expired</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">Inventory</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:lot_list' %}">Stock Lots</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:lot_detail' lot.pk %}">{{ lot.lot_number }}</a></li>
+                    <li class="breadcrumb-item active">Mark Expired</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="bi bi-exclamation-triangle"></i> Confirm Action
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <h5 class="alert-heading">
+                            <i class="bi bi-calendar-x"></i> Mark Lot as Expired
+                        </h5>
+                        <p class="mb-0">
+                            Are you sure you want to mark this stock lot as expired? 
+                            This will remove it from available stock and prevent it from being used for new tests.
+                        </p>
+                    </div>
+
+                    <!-- Lot Information -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">Stock Lot Details</h6>
+                        </div>
+                        <div class="card-body">
+                            <dl class="row mb-0">
+                                <dt class="col-sm-4">Item:</dt>
+                                <dd class="col-sm-8">
+                                    <strong>{{ lot.item.item_code }}</strong> - {{ lot.item.name }}
+                                </dd>
+                                
+                                <dt class="col-sm-4">Lot Number:</dt>
+                                <dd class="col-sm-8"><strong>{{ lot.lot_number }}</strong></dd>
+                                
+                                <dt class="col-sm-4">Current Status:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge 
+                                        {% if lot.status == 'AVAILABLE' %}bg-success
+                                        {% elif lot.status == 'IN_USE' %}bg-primary
+                                        {% else %}bg-secondary{% endif %}">
+                                        {{ lot.get_status_display }}
+                                    </span>
+                                </dd>
+                                
+                                <dt class="col-sm-4">Expiry Date:</dt>
+                                <dd class="col-sm-8">
+                                    {{ lot.expiry_date|date:"M d, Y" }}
+                                    {% if lot.is_expired %}
+                                    <br>
+                                    <small class="text-danger">
+                                        <i class="bi bi-exclamation-circle"></i> 
+                                        Expired {{ lot.days_until_expiry|abs }} days ago
+                                    </small>
+                                    {% else %}
+                                    <br>
+                                    <small class="text-muted">
+                                        Expires in {{ lot.days_until_expiry }} days
+                                    </small>
+                                    {% endif %}
+                                </dd>
+                                
+                                <dt class="col-sm-4">Quantity Remaining:</dt>
+                                <dd class="col-sm-8">
+                                    <strong>{{ lot.quantity_remaining }}</strong> of {{ lot.quantity_received }} {{ lot.item.unit_of_measure }}
+                                </dd>
+                                
+                                <dt class="col-sm-4">Supplier:</dt>
+                                <dd class="col-sm-8">{{ lot.supplier }}</dd>
+                            </dl>
+                        </div>
+                    </div>
+
+                    <!-- What will happen -->
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">
+                            <i class="bi bi-info-circle"></i> What will happen:
+                        </h6>
+                        <ul class="mb-0">
+                            <li>Status will change from <strong>{{ lot.get_status_display }}</strong> to <strong>EXPIRED</strong></li>
+                            <li>Lot will be marked as unavailable for use</li>
+                            <li>Stock will be removed from available inventory count</li>
+                            <li>Lot will still appear in history and reports</li>
+                            {% if lot.quantity_remaining > 0 %}
+                            <li class="text-warning">
+                                <strong>Note:</strong> This lot still has {{ lot.quantity_remaining }} {{ lot.item.unit_of_measure }} remaining. 
+                                Consider creating an adjustment to account for disposal.
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+
+                    <!-- Disposal Information -->
+                    {% if lot.quantity_remaining > 0 %}
+                    <div class="alert alert-warning">
+                        <h6 class="alert-heading">
+                            <i class="bi bi-exclamation-triangle"></i> Remaining Stock
+                        </h6>
+                        <p class="mb-0">
+                            This lot has <strong>{{ lot.quantity_remaining }} {{ lot.item.unit_of_measure }}</strong> remaining. 
+                            After marking as expired, you may want to:
+                        </p>
+                        <ul class="mb-0">
+                            <li>Create a stock adjustment to record disposal</li>
+                            <li>Document the disposal method in your records</li>
+                            <li>Follow proper disposal procedures for expired reagents</li>
+                        </ul>
+                    </div>
+                    {% endif %}
+
+                    <!-- Form -->
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="d-flex justify-content-between gap-2 mt-4">
+                            <a href="{% url 'inventory:lot_detail' lot.pk %}" 
+                               class="btn btn-secondary flex-grow-1">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-warning flex-grow-1">
+                                <i class="bi bi-calendar-x"></i> Yes, Mark as Expired
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Additional Information -->
+            <div class="card mt-3">
+                <div class="card-body bg-light">
+                    <h6 class="card-title">
+                        <i class="bi bi-lightbulb text-primary"></i> Important Notes
+                    </h6>
+                    <ul class="small mb-0">
+                        <li>This action does not delete the lot record - it remains in the system for audit purposes</li>
+                        <li>You can view expired lots by filtering the stock lot list</li>
+                        <li>Expired lots are excluded from inventory calculations</li>
+                        <li>If this was marked in error, contact an administrator to reverse the status</li>
+                        <li>Consider documenting the disposal in the lot notes for compliance</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Optional: Add confirmation on submit
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.querySelector('form');
+        form.addEventListener('submit', function(e) {
+            const confirmed = confirm('Are you absolutely sure you want to mark this lot as expired?');
+            if (!confirmed) {
+                e.preventDefault();
+            }
+        });
+    });
+</script>
+{% endblock %}

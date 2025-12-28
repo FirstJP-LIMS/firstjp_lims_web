@@ -1,0 +1,594 @@
+{% extends "laboratory/assets/base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header Section -->
+    <div class="row align-items-center mb-5">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="h3 mb-2" style="color: var(--primary-color);">
+                        <i class="fas fa-minus-circle me-2"></i>{{ title }}
+                    </h2>
+                    <p class="text-muted mb-0">Record reagent usage from inventory stock</p>
+                </div>
+                <div>
+                    <a href="{% url 'inventory:dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light border-0 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-edit me-2"></i>Record Usage
+                    </h5>
+                    <span class="badge bg-light text-dark">
+                        <i class="fas fa-clock me-1"></i> {{ now|date:"M d, Y H:i" }}
+                    </span>
+                </div>
+                
+                <div class="card-body pt-4">
+                    {% if form.errors %}
+                    <div class="alert alert-danger border-0 shadow-sm mb-4">
+                        <div class="d-flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-exclamation-circle fa-lg mt-1"></i>
+                            </div>
+                            <div class="ms-3">
+                                <h6 class="alert-heading mb-2">Please correct the errors below:</h6>
+                                <ul class="mb-0 ps-3">
+                                    {% for field, errors in form.errors.items %}
+                                        {% for error in errors %}
+                                        <li>{{ field|title|replace:"_, " }}: {{ error }}</li>
+                                        {% endfor %}
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <form method="post" id="usageForm" novalidate class="needs-validation">
+                        {% csrf_token %}
+                        
+                        <!-- Stock Lot Selection -->
+                        <div class="mb-4">
+                            <label for="{{ form.stock_lot.id_for_label }}" class="form-label fw-semibold">
+                                <i class="fas fa-box me-1 text-muted"></i>
+                                Stock Lot <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-box"></i>
+                                </span>
+                                {{ form.stock_lot }}
+                            </div>
+                            <div class="form-text mt-1">
+                                <i class="fas fa-info-circle me-1"></i>Select the lot from which reagent is being used
+                            </div>
+                            {% if form.stock_lot.errors %}
+                            <div class="text-danger small mt-2">
+                                <i class="fas fa-exclamation-circle me-1"></i>
+                                {{ form.stock_lot.errors|join:", " }}
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Stock Info Display -->
+                            <div id="stockInfo" class="alert alert-info border-0 shadow-sm mt-3" style="display: none;">
+                                <div class="d-flex">
+                                    <div class="flex-shrink-0">
+                                        <i class="fas fa-info-circle fa-lg mt-1"></i>
+                                    </div>
+                                    <div class="ms-3">
+                                        <h6 class="alert-heading mb-2">Stock Information</h6>
+                                        <p class="mb-1 small">
+                                            <strong>Available:</strong> <span id="availableQty" class="fw-semibold"></span> 
+                                            <span id="unitMeasure"></span>
+                                        </p>
+                                        <p class="mb-0 small">
+                                            <strong>Expiry:</strong> <span id="expiryDate" class="fw-semibold"></span>
+                                            • <span id="expiryStatus" class="small"></span>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quantity Used -->
+                        <div class="mb-4">
+                            <label for="{{ form.quantity_used.id_for_label }}" class="form-label fw-semibold">
+                                <i class="fas fa-balance-scale me-1 text-muted"></i>
+                                Quantity Used <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-balance-scale"></i>
+                                </span>
+                                {{ form.quantity_used }}
+                                <span class="input-group-text" id="quantityUnitDisplay">units</span>
+                            </div>
+                            <div class="form-text mt-1">
+                                <i class="fas fa-info-circle me-1"></i>Enter the exact amount of reagent used
+                            </div>
+                            {% if form.quantity_used.errors %}
+                            <div class="text-danger small mt-2">
+                                <i class="fas fa-exclamation-circle me-1"></i>
+                                {{ form.quantity_used.errors|join:", " }}
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Quantity Validation -->
+                            <div id="quantityWarning" class="alert alert-warning border-0 shadow-sm mt-3" style="display: none;">
+                                <div class="d-flex">
+                                    <div class="flex-shrink-0">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                    </div>
+                                    <div class="ms-3">
+                                        <p class="mb-0 small" id="warningMessage"></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Usage Type -->
+                        <div class="mb-4">
+                            <label for="{{ form.usage_type.id_for_label }}" class="form-label fw-semibold">
+                                <i class="fas fa-tag me-1 text-muted"></i>
+                                Usage Type <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-tag"></i>
+                                </span>
+                                {{ form.usage_type }}
+                            </div>
+                            <div class="form-text mt-1">
+                                <i class="fas fa-info-circle me-1"></i>Select the purpose of this usage
+                            </div>
+                            {% if form.usage_type.errors %}
+                            <div class="text-danger small mt-2">
+                                <i class="fas fa-exclamation-circle me-1"></i>
+                                {{ form.usage_type.errors|join:", " }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Conditional Fields Based on Usage Type -->
+                        <div id="linkedRecordsSection" class="mt-4">
+                            <!-- Test Assignment -->
+                            <div class="mb-4" id="testAssignmentField" style="display: none;">
+                                <label for="{{ form.test_assignment.id_for_label }}" class="form-label fw-semibold">
+                                    <i class="fas fa-vial me-1 text-muted"></i>
+                                    Test Assignment
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-vial"></i>
+                                    </span>
+                                    {{ form.test_assignment }}
+                                </div>
+                                <div class="form-text mt-1">
+                                    <i class="fas fa-info-circle me-1"></i>Link to specific test if applicable
+                                </div>
+                                {% if form.test_assignment.errors %}
+                                <div class="text-danger small mt-2">
+                                    <i class="fas fa-exclamation-circle me-1"></i>
+                                    {{ form.test_assignment.errors|join:", " }}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- QC Result -->
+                            <div class="mb-4" id="qcResultField" style="display: none;">
+                                <label for="{{ form.qc_result.id_for_label }}" class="form-label fw-semibold">
+                                    <i class="fas fa-clipboard-check me-1 text-muted"></i>
+                                    Quality Control
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-clipboard-check"></i>
+                                    </span>
+                                    {{ form.qc_result }}
+                                </div>
+                                <div class="form-text mt-1">
+                                    <i class="fas fa-info-circle me-1"></i>Link to QC run if applicable
+                                </div>
+                                {% if form.qc_result.errors %}
+                                <div class="text-danger small mt-2">
+                                    <i class="fas fa-exclamation-circle me-1"></i>
+                                    {{ form.qc_result.errors|join:", " }}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Calibration -->
+                            <div class="mb-4" id="calibrationField" style="display: none;">
+                                <label for="{{ form.calibration.id_for_label }}" class="form-label fw-semibold">
+                                    <i class="fas fa-ruler-combined me-1 text-muted"></i>
+                                    Equipment/Calibration
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-ruler-combined"></i>
+                                    </span>
+                                    {{ form.calibration }}
+                                </div>
+                                <div class="form-text mt-1">
+                                    <i class="fas fa-info-circle me-1"></i>Link to calibration if applicable
+                                </div>
+                                {% if form.calibration.errors %}
+                                <div class="text-danger small mt-2">
+                                    <i class="fas fa-exclamation-circle me-1"></i>
+                                    {{ form.calibration.errors|join:", " }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="mb-4 mt-5">
+                            <label for="{{ form.notes.id_for_label }}" class="form-label fw-semibold">
+                                <i class="fas fa-sticky-note me-1 text-muted"></i>
+                                Notes
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text align-items-start pt-3">
+                                    <i class="fas fa-sticky-note"></i>
+                                </span>
+                                {{ form.notes }}
+                            </div>
+                            <div class="form-text mt-1">
+                                <i class="fas fa-info-circle me-1"></i>Optional: Add any additional information or observations
+                            </div>
+                            {% if form.notes.errors %}
+                            <div class="text-danger small mt-2">
+                                <i class="fas fa-exclamation-circle me-1"></i>
+                                {{ form.notes.errors|join:", " }}
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Character Counter -->
+                            <div class="form-text mt-1 text-end">
+                                <span class="char-count">0</span> / 500 characters
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between align-items-center pt-5 mt-5 border-top">
+                            <a href="{% url 'inventory:dashboard' %}" class="btn btn-outline-secondary px-4">
+                                <i class="fas fa-times me-2"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="fas fa-save me-2"></i> Record Usage
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Usage Tips Card -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-lightbulb me-2 text-primary"></i> Tips for Recording Usage
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-check-circle text-success mt-1"></i>
+                                </div>
+                                <div class="ms-3">
+                                    <p class="small mb-0">
+                                        Always verify the lot number before recording usage
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-check-circle text-success mt-1"></i>
+                                </div>
+                                <div class="ms-3">
+                                    <p class="small mb-0">
+                                        Enter the exact quantity used for accurate inventory tracking
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-check-circle text-success mt-1"></i>
+                                </div>
+                                <div class="ms-3">
+                                    <p class="small mb-0">
+                                        Link to specific tests or QC runs for better traceability
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-check-circle text-success mt-1"></i>
+                                </div>
+                                <div class="ms-3">
+                                    <p class="small mb-0">
+                                        Record waste or spillage separately for proper documentation
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-exclamation-triangle text-warning mt-1"></i>
+                                </div>
+                                <div class="ms-3">
+                                    <p class="small mb-0">
+                                        <strong>Note:</strong> Usage is recorded immediately and cannot be easily undone
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+    
+    .card {
+        border-radius: var(--border-radius);
+        border: 1px solid #e9ecef;
+    }
+    
+    .input-group-text {
+        background-color: #f8f9fa;
+        border-right: none;
+        min-width: 45px;
+        justify-content: center;
+    }
+    
+    .form-control, .form-select, .form-control:focus, .form-select:focus {
+        border-left: none;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        box-shadow: none;
+        border-color: #dee2e6;
+    }
+    
+    textarea.form-control {
+        min-height: 120px;
+        resize: vertical;
+    }
+    
+    .alert {
+        border-radius: var(--border-radius);
+    }
+    
+    .btn {
+        padding: 0.5rem 1.5rem;
+        font-weight: 500;
+        border-radius: var(--border-radius);
+    }
+    
+    @media (max-width: 768px) {
+        .container {
+            padding-left: 15px;
+            padding-right: 15px;
+        }
+        
+        .d-flex.justify-content-between {
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .d-flex.justify-content-between .btn {
+            width: 100%;
+        }
+        
+        .col-md-6 {
+            margin-bottom: 1rem;
+        }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Form validation
+        const form = document.querySelector('form.needs-validation');
+        if (form) {
+            form.addEventListener('submit', function(event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            });
+        }
+
+        // Show/hide linked record fields based on usage type
+        const usageTypeSelect = document.querySelector('select[name="usage_type"]');
+        if (usageTypeSelect) {
+            const toggleLinkedFields = () => {
+                const usageType = usageTypeSelect.value;
+                
+                // Hide all linked fields
+                document.getElementById('testAssignmentField').style.display = 'none';
+                document.getElementById('qcResultField').style.display = 'none';
+                document.getElementById('calibrationField').style.display = 'none';
+                
+                // Show relevant field with animation
+                let fieldToShow = null;
+                if (usageType === 'TEST') {
+                    fieldToShow = document.getElementById('testAssignmentField');
+                } else if (usageType === 'QC') {
+                    fieldToShow = document.getElementById('qcResultField');
+                } else if (usageType === 'CALIBRATION') {
+                    fieldToShow = document.getElementById('calibrationField');
+                }
+                
+                if (fieldToShow) {
+                    fieldToShow.style.display = 'block';
+                    fieldToShow.classList.add('animate__animated', 'animate__fadeIn');
+                }
+            };
+            
+            usageTypeSelect.addEventListener('change', toggleLinkedFields);
+            toggleLinkedFields(); // Initial call
+        }
+
+        // Stock lot selection handling
+        const stockLotSelect = document.querySelector('select[name="stock_lot"]');
+        const quantityInput = document.querySelector('input[name="quantity_used"]');
+        
+        if (stockLotSelect) {
+            stockLotSelect.addEventListener('change', function() {
+                const selectedOption = this.options[this.selectedIndex];
+                const stockInfo = document.getElementById('stockInfo');
+                
+                if (this.value && selectedOption.dataset.quantity && selectedOption.dataset.unit) {
+                    // Show stock information
+                    document.getElementById('availableQty').textContent = selectedOption.dataset.quantity;
+                    document.getElementById('unitMeasure').textContent = selectedOption.dataset.unit;
+                    document.getElementById('quantityUnitDisplay').textContent = selectedOption.dataset.unit;
+                    
+                    if (selectedOption.dataset.expiry) {
+                        document.getElementById('expiryDate').textContent = selectedOption.dataset.expiry;
+                        
+                        // Calculate and show expiry status
+                        if (selectedOption.dataset.daysUntilExpiry) {
+                            const days = parseInt(selectedOption.dataset.daysUntilExpiry);
+                            const expiryStatus = document.getElementById('expiryStatus');
+                            if (days < 0) {
+                                expiryStatus.textContent = `Expired ${Math.abs(days)} days ago`;
+                                expiryStatus.className = 'small text-danger';
+                            } else if (days <= 7) {
+                                expiryStatus.textContent = `Expiring in ${days} days`;
+                                expiryStatus.className = 'small text-danger';
+                            } else if (days <= 30) {
+                                expiryStatus.textContent = `Expiring in ${days} days`;
+                                expiryStatus.className = 'small text-warning';
+                            } else {
+                                expiryStatus.textContent = `Valid for ${days} days`;
+                                expiryStatus.className = 'small text-success';
+                            }
+                        }
+                    }
+                    
+                    stockInfo.style.display = 'block';
+                    stockInfo.classList.add('animate__animated', 'animate__fadeIn');
+                    
+                    // Set max quantity
+                    if (quantityInput) {
+                        const availableQty = parseFloat(selectedOption.dataset.quantity);
+                        quantityInput.max = availableQty;
+                        quantityInput.setAttribute('max', availableQty);
+                    }
+                } else {
+                    stockInfo.style.display = 'none';
+                }
+            });
+            
+            // Trigger change on load if there's a value
+            if (stockLotSelect.value) {
+                stockLotSelect.dispatchEvent(new Event('change'));
+            }
+        }
+
+        // Quantity validation
+        if (quantityInput) {
+            const quantityWarning = document.getElementById('quantityWarning');
+            const warningMessage = document.getElementById('warningMessage');
+            
+            quantityInput.addEventListener('input', function() {
+                const quantity = parseFloat(this.value) || 0;
+                const availableQty = parseFloat(stockLotSelect?.options[stockLotSelect.selectedIndex]?.dataset.quantity) || 0;
+                
+                if (quantity > 0) {
+                    if (quantity > availableQty) {
+                        warningMessage.textContent = `Warning: Quantity (${quantity}) exceeds available stock (${availableQty}).`;
+                        quantityWarning.style.display = 'block';
+                        this.classList.add('is-invalid');
+                    } else if (quantity > availableQty * 0.9) {
+                        warningMessage.textContent = `Note: Using ${Math.round((quantity/availableQty)*100)}% of available stock.`;
+                        quantityWarning.style.display = 'block';
+                        quantityWarning.classList.remove('alert-warning');
+                        quantityWarning.classList.add('alert-info');
+                        this.classList.remove('is-invalid');
+                    } else {
+                        quantityWarning.style.display = 'none';
+                        this.classList.remove('is-invalid');
+                    }
+                } else {
+                    quantityWarning.style.display = 'none';
+                    this.classList.remove('is-invalid');
+                }
+            });
+        }
+
+        // Character counter for notes
+        const notesTextarea = document.querySelector('textarea[name="notes"]');
+        if (notesTextarea) {
+            const charCount = document.querySelector('.char-count');
+            
+            const updateCounter = () => {
+                const count = notesTextarea.value.length;
+                charCount.textContent = count;
+                charCount.classList.toggle('text-danger', count > 500);
+            };
+            
+            notesTextarea.addEventListener('input', updateCounter);
+            updateCounter(); // Initialize counter
+        }
+
+        // Form submission confirmation
+        form.addEventListener('submit', function(e) {
+            const quantity = parseFloat(quantityInput?.value) || 0;
+            const usageType = usageTypeSelect?.value || '';
+            const lotNumber = stockLotSelect?.options[stockLotSelect?.selectedIndex]?.text || '';
+            
+            if (quantity <= 0) {
+                e.preventDefault();
+                alert('Quantity must be greater than zero');
+                quantityInput.focus();
+                return false;
+            }
+            
+            // Optional: Add confirmation for large quantities
+            const availableQty = parseFloat(stockLotSelect?.options[stockLotSelect?.selectedIndex]?.dataset.quantity) || 0;
+            if (quantity > availableQty * 0.5) {
+                const confirmLarge = confirm(
+                    `You are using ${quantity} units (${Math.round((quantity/availableQty)*100)}% of available stock) from lot ${lotNumber}.\n\nContinue?`
+                );
+                if (!confirmLarge) {
+                    e.preventDefault();
+                    return false;
+                }
+            }
+            
+            return true;
+        });
+    });
+</script>
+{% endblock %}

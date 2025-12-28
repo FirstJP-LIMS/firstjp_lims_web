@@ -1,0 +1,662 @@
+{% extends "laboratory/assets/base.html" %}
+
+{% block title %}{{ item.name }} - Details{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header Section -->
+    <div class="row align-items-center mb-5">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="h3 mb-2" style="color: var(--primary-color);">
+                        <i class="fas fa-box me-2"></i>{{ item.name }}
+                    </h2>
+                    <p class="text-muted mb-0">
+                        <span class="badge 
+                            {% if item.category.category_type == 'REAGENT' %}bg-primary
+                            {% elif item.category.category_type == 'CONSUMABLE' %}bg-info
+                            {% elif item.category.category_type == 'CONTROL' %}bg-warning
+                            {% elif item.category.category_type == 'CALIBRATOR' %}bg-success
+                            {% else %}bg-secondary{% endif %} me-2">
+                            {{ item.category.name }}
+                        </span>
+                        {{ item.item_code }} • {{ item.manufacturer }}
+                        {% if item.catalog_number %}• {{ item.catalog_number }}{% endif %}
+                    </p>
+                </div>
+                <div>
+                    <a href="{% url 'inventory:item_list' %}" class="btn btn-outline-secondary me-2">
+                        <i class="fas fa-arrow-left me-1"></i> Back to Items
+                    </a>
+                    <a href="{% url 'inventory:item_update' item.pk %}" class="btn btn-primary">
+                        <i class="fas fa-edit me-1"></i> Edit Item
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Metrics Cards -->
+    <div class="row mb-5">
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="metric-icon mb-3">
+                        <i class="fas fa-boxes fa-2x 
+                            {% if current_stock == 0 %}text-danger
+                            {% elif current_stock <= item.reorder_level %}text-warning
+                            {% else %}text-success{% endif %}"></i>
+                    </div>
+                    <h5 class="mb-2">Current Stock</h5>
+                    <h3 class="mb-0 
+                        {% if current_stock == 0 %}text-danger
+                        {% elif current_stock <= item.reorder_level %}text-warning
+                        {% else %}text-success{% endif %}">
+                        {{ current_stock }}
+                    </h3>
+                    <small class="text-muted">{{ item.unit_of_measure }}</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="metric-icon mb-3">
+                        <i class="fas fa-chart-line fa-2x text-primary"></i>
+                    </div>
+                    <h5 class="mb-2">Monthly Usage</h5>
+                    <h3 class="mb-0 text-primary">{{ monthly_consumption|default:"0" }}</h3>
+                    <small class="text-muted">{{ item.unit_of_measure }}/month</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="metric-icon mb-3">
+                        <i class="fas fa-calendar-alt fa-2x 
+                            {% if days_remaining %}{% if days_remaining < 7 %}text-danger
+                            {% elif days_remaining < 30 %}text-warning
+                            {% else %}text-success{% endif %}{% else %}text-secondary{% endif %}"></i>
+                    </div>
+                    <h5 class="mb-2">Days Remaining</h5>
+                    <h3 class="mb-0 
+                        {% if days_remaining %}{% if days_remaining < 7 %}text-danger
+                        {% elif days_remaining < 30 %}text-warning
+                        {% else %}text-success{% endif %}{% else %}text-secondary{% endif %}">
+                        {{ days_remaining|default:"—" }}
+                    </h3>
+                    <small class="text-muted">days of supply</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="metric-icon mb-3">
+                        <i class="fas fa-money-bill-wave fa-2x text-success"></i>
+                    </div>
+                    <h5 class="mb-2">Stock Value</h5>
+                    <h3 class="mb-0 text-success">₦{{ stock_value|default:"0"|floatformat:2 }}</h3>
+                    <small class="text-muted">total inventory value</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="row">
+        <!-- Left Column - Item Information -->
+        <div class="col-lg-4">
+            <!-- Basic Information Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Basic Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold text-muted small mb-1">Item Code</label>
+                            <p class="mb-3 fw-semibold">{{ item.item_code }}</p>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold text-muted small mb-1">Category</label>
+                            <p class="mb-3">
+                                <span class="badge 
+                                    {% if item.category.category_type == 'REAGENT' %}bg-primary
+                                    {% elif item.category.category_type == 'CONSUMABLE' %}bg-info
+                                    {% elif item.category.category_type == 'CONTROL' %}bg-warning
+                                    {% elif item.category.category_type == 'CALIBRATOR' %}bg-success
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ item.category.name }}
+                                </span>
+                            </p>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold text-muted small mb-1">Manufacturer</label>
+                            <p class="mb-3">{{ item.manufacturer }}</p>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold text-muted small mb-1">Catalog #</label>
+                            <p class="mb-3">{{ item.catalog_number|default:"—" }}</p>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold text-muted small mb-1">Unit of Measure</label>
+                            <p class="mb-3">{{ item.unit_of_measure }}</p>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold text-muted small mb-1">Pack Size</label>
+                            <p class="mb-3">{{ item.pack_size }}</p>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold text-muted small mb-1">Unit Cost</label>
+                            <p class="mb-3 fw-semibold">₦{{ item.unit_cost|floatformat:2 }}</p>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold text-muted small mb-1">Status</label>
+                            <p class="mb-0">
+                                {% if item.is_active %}
+                                <span class="badge bg-success">Active</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Inactive</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Storage Information Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-warehouse me-2"></i>Storage Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label fw-semibold text-muted small mb-1">Storage Condition</label>
+                            <p class="mb-3">
+                                <span class="badge bg-info p-2">
+                                    <i class="fas 
+                                        {% if item.storage_condition == 'ROOM_TEMP' %}fa-thermometer-half
+                                        {% elif item.storage_condition == 'REFRIGERATED' %}fa-snowflake
+                                        {% elif item.storage_condition == 'FROZEN' %}fa-ice-cream
+                                        {% elif item.storage_condition == 'CRYO' %}fa-temperature-low
+                                        {% else %}fa-temperature-high{% endif %} me-2"></i>
+                                    {{ item.get_storage_condition_display }}
+                                </span>
+                            </p>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold text-muted small mb-1">Storage Location</label>
+                            <p class="mb-0">
+                                {% if item.storage_location %}
+                                <i class="fas fa-map-marker-alt me-2 text-muted"></i>{{ item.storage_location }}
+                                {% else %}
+                                <span class="text-muted fst-italic">Not specified</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stock Level Settings Card -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-sliders-h me-2"></i>Stock Level Settings
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="fw-semibold">Minimum Stock</span>
+                            <span class="badge bg-secondary">{{ item.minimum_stock }} {{ item.unit_of_measure }}</span>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-secondary" 
+                                 style="width: {{ item.minimum_stock|div:item.maximum_stock|mul:100 }}%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="fw-semibold text-warning">Reorder Level</span>
+                            <span class="badge bg-warning">{{ item.reorder_level }} {{ item.unit_of_measure }}</span>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-warning" 
+                                 style="width: {{ item.reorder_level|div:item.maximum_stock|mul:100 }}%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="fw-semibold text-success">Maximum Stock</span>
+                            <span class="badge bg-success">{{ item.maximum_stock }} {{ item.unit_of_measure }}</span>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-success" 
+                                 style="width: 100%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="fw-semibold">Current Stock</span>
+                            <span class="badge 
+                                {% if current_stock == 0 %}bg-danger
+                                {% elif current_stock <= item.reorder_level %}bg-warning
+                                {% else %}bg-success{% endif %}">
+                                {{ current_stock }} {{ item.unit_of_measure }}
+                            </span>
+                        </div>
+                        <div class="progress mt-2" style="height: 10px;">
+                            <div class="progress-bar 
+                                {% if current_stock == 0 %}bg-danger
+                                {% elif current_stock <= item.reorder_level %}bg-warning
+                                {% else %}bg-success{% endif %}" 
+                                 style="width: {{ current_stock|div:item.maximum_stock|mul:100|default:0 }}%">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column - Stock Lots & Usage -->
+        <div class="col-lg-8">
+            <!-- Quick Actions Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bolt me-2"></i>Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-3">
+                        <a href="{% url 'inventory:lot_create_for_item' item.pk %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Receive Stock
+                        </a>
+                        <a href="{% url 'inventory:item_usage_create' item.pk %}" class="btn btn-success">
+                            <i class="fas fa-minus me-2"></i>Record Usage
+                        </a>
+                        <a href="{% url 'inventory:item_delete' item.pk %}" 
+                           class="btn btn-outline-danger"
+                           onclick="return confirm('Are you sure you want to delete this item? This action cannot be undone.');">
+                            <i class="fas fa-trash me-2"></i>Delete Item
+                        </a>
+                        <a href="{% url 'inventory:item_update' item.pk %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-edit me-2"></i>Edit Settings
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stock Lots Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light border-0 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-layer-group me-2"></i>Stock Lots
+                        <span class="badge bg-primary ms-2">{{ stock_lots.count }}</span>
+                    </h5>
+                    <div>
+                        <a href="{% url 'inventory:lot_create_for_item' item.pk %}" class="btn btn-sm btn-success">
+                            <i class="fas fa-plus me-1"></i>Add Lot
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="card-body p-0">
+                    {% if stock_lots %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4">Lot Number</th>
+                                    <th class="text-center">Received</th>
+                                    <th class="text-center">Expiry</th>
+                                    <th class="text-center">Quantity</th>
+                                    <th class="text-center">Status</th>
+                                    <th class="pe-4 text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for lot in stock_lots %}
+                                <tr {% if lot.is_expired %}class="table-danger"{% elif lot.is_expiring_soon %}class="table-warning"{% endif %}>
+                                    <td class="ps-4">
+                                        <div class="d-flex align-items-center">
+                                            <div class="lot-icon me-3">
+                                                <i class="fas fa-box 
+                                                    {% if lot.is_expired %}text-danger
+                                                    {% elif lot.is_expiring_soon %}text-warning
+                                                    {% elif lot.status == 'DEPLETED' %}text-secondary
+                                                    {% else %}text-success{% endif %}"></i>
+                                            </div>
+                                            <div>
+                                                <strong>{{ lot.lot_number }}</strong>
+                                                {% if lot.supplier %}
+                                                <div class="text-muted small">{{ lot.supplier|truncatechars:20 }}</div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="text-muted">{{ lot.received_date|date:"M d, Y" }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="d-flex flex-column align-items-center">
+                                            <span>{{ lot.expiry_date|date:"M d, Y" }}</span>
+                                            {% if lot.is_expiring_soon %}
+                                            <small class="text-warning">
+                                                <i class="fas fa-exclamation-circle"></i> {{ lot.days_until_expiry }} days
+                                            </small>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="d-flex flex-column align-items-center">
+                                            <span class="fw-semibold">{{ lot.quantity_remaining }}</span>
+                                            <small class="text-muted">/ {{ lot.quantity_received }}</small>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge 
+                                            {% if lot.status == 'AVAILABLE' %}bg-success
+                                            {% elif lot.status == 'EXPIRED' %}bg-danger
+                                            {% elif lot.status == 'DEPLETED' %}bg-secondary
+                                            {% else %}bg-warning{% endif %}">
+                                            {{ lot.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td class="pe-4 text-end">
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a href="{% url 'inventory:lot_detail' lot.pk %}" 
+                                               class="btn btn-outline-primary" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{% url 'inventory:lot_update' lot.pk %}" 
+                                               class="btn btn-outline-secondary" title="Edit Lot">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{% url 'inventory:item_usage_create' item.pk %}?lot={{ lot.pk }}" 
+                                               class="btn btn-outline-success" title="Record Usage">
+                                                <i class="fas fa-minus"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <!-- Empty State -->
+                    <div class="text-center py-5">
+                        <div class="empty-state-icon mb-4">
+                            <i class="fas fa-boxes fa-4x text-muted"></i>
+                        </div>
+                        <h4 class="text-muted mb-3">No Stock Lots</h4>
+                        <p class="text-muted mb-4">No stock lots have been created for this item yet.</p>
+                        <a href="{% url 'inventory:lot_create_for_item' item.pk %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i> Create First Lot
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Recent Usage Card -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light border-0 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2"></i>Recent Usage
+                    </h5>
+                    <span class="badge bg-primary">{{ recent_usage.count }} records</span>
+                </div>
+                
+                <div class="card-body p-0">
+                    {% if recent_usage %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4">Date & Time</th>
+                                    <th>Lot Number</th>
+                                    <th class="text-center">Quantity</th>
+                                    <th>Type</th>
+                                    <th>User</th>
+                                    <th class="pe-4">Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for usage in recent_usage %}
+                                <tr>
+                                    <td class="ps-4">
+                                        <div class="d-flex flex-column">
+                                            <span class="fw-semibold">{{ usage.used_at|date:"M d, Y" }}</span>
+                                            <small class="text-muted">{{ usage.used_at|time:"H:i" }}</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark">{{ usage.stock_lot.lot_number }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-info">{{ usage.quantity_used }} {{ item.unit_of_measure }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ usage.get_usage_type_display }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="user-icon me-2">
+                                                <i class="fas fa-user"></i>
+                                            </div>
+                                            <span>{{ usage.used_by.username }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="pe-4">
+                                        {% if usage.notes %}
+                                        <span class="text-muted small" title="{{ usage.notes }}">
+                                            {{ usage.notes|truncatechars:30 }}
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted fst-italic">—</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="card-footer bg-white border-0 text-center">
+                        <a href="{% url 'inventory:item_usage_history' item.pk %}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-list me-1"></i>View Full Usage History
+                        </a>
+                    </div>
+                    {% else %}
+                    <!-- Empty State -->
+                    <div class="text-center py-5">
+                        <div class="empty-state-icon mb-4">
+                            <i class="fas fa-history fa-4x text-muted"></i>
+                        </div>
+                        <h4 class="text-muted mb-3">No Usage Recorded</h4>
+                        <p class="text-muted mb-4">No usage has been recorded for this item yet.</p>
+                        <a href="{% url 'inventory:item_usage_create' item.pk %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i> Record First Usage
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .card {
+        border-radius: var(--border-radius);
+        transition: var(--transition);
+        border: 1px solid #e9ecef;
+    }
+    
+    .card:hover {
+        box-shadow: var(--box-shadow);
+    }
+    
+    .metric-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(44, 90, 160, 0.1);
+    }
+    
+    .lot-icon, .user-icon {
+        width: 35px;
+        height: 35px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(44, 90, 160, 0.1);
+    }
+    
+    .empty-state-icon {
+        opacity: 0.5;
+    }
+    
+    .table th, .table td {
+        vertical-align: middle;
+    }
+    
+    .badge {
+        font-weight: 500;
+        padding: 0.35em 0.65em;
+    }
+    
+    .btn-group .btn {
+        min-width: 40px;
+    }
+    
+    .progress {
+        border-radius: 4px;
+    }
+    
+    .progress-bar {
+        border-radius: 4px;
+    }
+    
+    .table-danger {
+        background-color: rgba(220, 53, 69, 0.05);
+    }
+    
+    .table-warning {
+        background-color: rgba(255, 193, 7, 0.05);
+    }
+    
+    @media (max-width: 768px) {
+        .container {
+            padding-left: 15px;
+            padding-right: 15px;
+        }
+        
+        .btn-group {
+            flex-wrap: wrap;
+        }
+        
+        .btn-group .btn {
+            flex: 1 0 45%;
+            margin-bottom: 5px;
+        }
+        
+        .card-body .row > .col-6 {
+            margin-bottom: 10px;
+        }
+        
+        .table-responsive {
+            font-size: 0.875rem;
+        }
+        
+        .d-flex.flex-wrap {
+            justify-content: center;
+        }
+        
+        .d-flex.flex-wrap .btn {
+            margin-bottom: 0.5rem;
+            margin-right: 0.5rem;
+        }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+        
+        // Add hover effect to table rows
+        const tableRows = document.querySelectorAll('table.table-hover tbody tr');
+        tableRows.forEach(row => {
+            row.addEventListener('mouseenter', function() {
+                if (!this.classList.contains('table-danger') && !this.classList.contains('table-warning')) {
+                    this.style.backgroundColor = 'rgba(0, 123, 255, 0.05)';
+                }
+            });
+            row.addEventListener('mouseleave', function() {
+                if (!this.classList.contains('table-danger') && !this.classList.contains('table-warning')) {
+                    this.style.backgroundColor = '';
+                }
+            });
+        });
+        
+        // Stock level indicator animation
+        const currentStockBadge = document.querySelector('.metric-icon .fa-boxes');
+        if (currentStockBadge) {
+            if (currentStockBadge.classList.contains('text-danger')) {
+                // Out of stock - pulsing animation
+                currentStockBadge.classList.add('animate__animated', 'animate__pulse', 'animate__infinite');
+            } else if (currentStockBadge.classList.contains('text-warning')) {
+                // Low stock - heartbeat animation
+                currentStockBadge.classList.add('animate__animated', 'animate__heartBeat');
+            }
+        }
+        
+        // Expiring soon warning
+        const expiringRows = document.querySelectorAll('.table-warning');
+        expiringRows.forEach(row => {
+            row.addEventListener('mouseenter', function() {
+                const icon = this.querySelector('.lot-icon i');
+                if (icon) {
+                    icon.classList.add('animate__animated', 'animate__shakeX');
+                }
+            });
+            row.addEventListener('mouseleave', function() {
+                const icon = this.querySelector('.lot-icon i');
+                if (icon) {
+                    icon.classList.remove('animate__animated', 'animate__shakeX');
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

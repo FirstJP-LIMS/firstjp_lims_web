@@ -1,0 +1,508 @@
+{% extends 'laboratory/assets/base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header -->
+    <div class="row align-items-center mb-5">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="h3 mb-2" style="color: var(--primary-color);">
+                        <i class="fas fa-signature me-2"></i>
+                        {{ title }}
+                    </h2>
+                    <p class="text-muted mb-0">
+                        Document: <strong>{{ document.document_number }} - {{ document.title|truncatechars:50 }}</strong>
+                    </p>
+                </div>
+                <div>
+                    <a href="{% url 'documents:document_detail' document.pk %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Back
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notice -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <div class="d-flex">
+                    <div class="me-3">
+                        <i class="fas fa-info-circle fa-2x"></i>
+                    </div>
+                    <div>
+                        <h5 class="alert-heading mb-2">Document Acknowledgment</h5>
+                        <p class="mb-0">
+                            You are acknowledging that you have received and reviewed this document. 
+                            Your acknowledgment will be electronically signed and recorded in the audit trail.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Document Details -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file-alt me-2"></i>Document Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <table class="table table-sm table-borderless mb-0">
+                                <tbody>
+                                    <tr>
+                                        <th width="40%" class="text-muted">Document:</th>
+                                        <td>{{ document.document_number }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="text-muted">Title:</th>
+                                        <td>{{ document.title|truncatechars:40 }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="text-muted">Version:</th>
+                                        <td>
+                                            <span class="badge bg-info">v{{ document.version }}</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-sm table-borderless mb-0">
+                                <tbody>
+                                    <tr>
+                                        <th width="40%" class="text-muted">Category:</th>
+                                        <td>{{ document.category.name }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="text-muted">Effective Date:</th>
+                                        <td>{{ document.effective_date|date:"Y-m-d"|default:"Not set" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="text-muted">Status:</th>
+                                        <td>
+                                            <span class="badge 
+                                                {% if document.status == 'effective' %}bg-success
+                                                {% elif document.status == 'draft' %}bg-secondary
+                                                {% elif document.status == 'under_review' %}bg-warning
+                                                {% elif document.status == 'approved' %}bg-primary
+                                                {% elif document.status == 'obsolete' %}bg-danger
+                                                {% else %}bg-dark{% endif %}">
+                                                {{ document.get_status_display }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Document Description -->
+                    {% if document.description %}
+                    <div class="mt-4 pt-3 border-top">
+                        <h6 class="text-primary mb-2">
+                            <i class="fas fa-align-left me-1"></i> Description
+                        </h6>
+                        <div class="card border">
+                            <div class="card-body">
+                                {{ document.description|linebreaks }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- View/Download Document -->
+                    <div class="mt-4 pt-3 border-top text-center">
+                        {% if document.file %}
+                        <a href="{% url 'documents:document_download' document.pk %}" 
+                           class="btn btn-success mb-2">
+                            <i class="fas fa-download me-1"></i> Download Document
+                        </a>
+                        {% endif %}
+                        <p class="text-muted small mt-2">
+                            <i class="fas fa-eye me-1"></i> Please review the document before acknowledging
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Distribution Information -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-paper-plane me-2"></i>Distribution Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="card border h-100">
+                                <div class="card-body">
+                                    <h6 class="text-primary mb-2">Distributed By:</h6>
+                                    <p class="mb-0">{{ distribution.distributed_by.get_full_name|default:distribution.distributed_by.username }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card border h-100">
+                                <div class="card-body">
+                                    <h6 class="text-primary mb-2">Distribution Date:</h6>
+                                    <p class="mb-0">{{ distribution.distributed_at|date:"Y-m-d" }}</p>
+                                    <small class="text-muted">{{ distribution.distributed_at|time:"H:i" }}</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card border h-100">
+                                <div class="card-body">
+                                    <h6 class="text-primary mb-2">Distribution Method:</h6>
+                                    <p class="mb-0">
+                                        <span class="badge bg-info">{{ distribution.get_distribution_method_display }}</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Acknowledgment Form -->
+            <div class="card border-0 shadow-sm mb-4 border-success">
+                <div class="card-header bg-success text-white border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file-contract me-2"></i>Electronic Acknowledgment
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="acknowledgmentForm">
+                        {% csrf_token %}
+                        
+                        <!-- Form Errors -->
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            {{ form.non_field_errors }}
+                        </div>
+                        {% endif %}
+
+                        <!-- Acknowledgment Statement -->
+                        <div class="card mb-4 border border-primary">
+                            <div class="card-header bg-light border-bottom">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-scroll me-2"></i>Acknowledgment Statement
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <p class="mb-0">
+                                    I acknowledge that I have received and reviewed the document 
+                                    <strong>{{ document.document_number }} v{{ document.version }}</strong> 
+                                    titled "<strong>{{ document.title }}</strong>". 
+                                    I understand its contents and agree to comply with the procedures 
+                                    and requirements outlined in this document.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Password for Electronic Signature -->
+                        <div class="card mb-4 border">
+                            <div class="card-header bg-light border-bottom">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-lock me-2"></i>Authentication Required
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-12">
+                                        <label for="{{ form.password.id_for_label }}" class="form-label fw-semibold">
+                                            <i class="fas fa-key me-1"></i> Your Password *
+                                        </label>
+                                        <div class="input-group">
+                                            {{ form.password }}
+                                            <span class="input-group-text bg-light">
+                                                <i class="fas fa-lock text-muted"></i>
+                                            </span>
+                                        </div>
+                                        {% if form.password.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {% for error in form.password.errors %}
+                                            <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                        <div class="form-text">Enter your password to electronically sign this acknowledgment</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Confirmation -->
+                        <div class="card mb-4 border border-primary">
+                            <div class="card-header bg-light border-bottom">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-check-double me-2"></i>Confirmation Required
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="confirm" required>
+                                    <label class="form-check-label fw-semibold" for="confirm">
+                                        <i class="fas fa-shield-alt me-1"></i> I confirm and agree:
+                                    </label>
+                                    <div class="mt-2 ps-4">
+                                        <ul class="mb-0">
+                                            <li>I have read and understood this document</li>
+                                            <li>I agree to comply with documented procedures</li>
+                                            <li>I am electronically signing this acknowledgment</li>
+                                            <li>This acknowledgment is legally binding</li>
+                                        </ul>
+                                        <div class="text-danger small mt-2">* Required confirmation</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between mt-5 pt-4 border-top">
+                            <a href="{% url 'documents:document_detail' document.pk %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-success" id="submitBtn" disabled>
+                                <i class="fas fa-signature me-1"></i> Acknowledge Document
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Important Information -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Important Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h6 class="text-primary mb-2">
+                            <i class="fas fa-info-circle me-1"></i> What This Means:
+                        </h6>
+                        <ul class="mb-0 ps-3">
+                            <li>You confirm receipt and review of this document</li>
+                            <li>You understand the content and requirements</li>
+                            <li>You agree to comply with documented procedures</li>
+                            <li>Your acknowledgment is legally binding</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6 class="text-primary mb-2">
+                            <i class="fas fa-history me-1"></i> Audit Trail Recorded:
+                        </h6>
+                        <ul class="mb-0 ps-3">
+                            <li>Your name and username</li>
+                            <li>Date and time of acknowledgment</li>
+                            <li>Electronic signature (SHA-256 hash)</li>
+                            <li>Document version acknowledged</li>
+                        </ul>
+                    </div>
+                    
+                    <div>
+                        <h6 class="text-primary mb-2">
+                            <i class="fas fa-user-check me-1"></i> Your Responsibility:
+                        </h6>
+                        <ul class="mb-0 ps-3">
+                            <li>Ensure you understand the document</li>
+                            <li>Ask questions if anything is unclear</li>
+                            <li>Follow documented procedures</li>
+                            <li>Report any issues or concerns</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Document Status -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-clipboard-check me-2"></i>Acknowledgment Status
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        {% if distribution.acknowledged_at %}
+                        <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center mx-auto" style="width: 60px; height: 60px;">
+                            <i class="fas fa-check fa-2x"></i>
+                        </div>
+                        <p class="text-success fw-bold mt-2 mb-0">Already Acknowledged</p>
+                        <small class="text-muted">{{ distribution.acknowledged_at|date:"M d, Y" }}</small>
+                        {% else %}
+                        <div class="rounded-circle bg-warning text-white d-flex align-items-center justify-content-center mx-auto" style="width: 60px; height: 60px;">
+                            <i class="fas fa-clock fa-2x"></i>
+                        </div>
+                        <p class="text-warning fw-bold mt-2 mb-0">Pending Acknowledgment</p>
+                        <small class="text-muted">Distributed {{ distribution.distributed_at|timesince }} ago</small>
+                        {% endif %}
+                    </div>
+                    
+                    <table class="table table-sm table-borderless mb-0">
+                        <tbody>
+                            <tr>
+                                <th width="40%" class="text-muted">Distribution ID:</th>
+                                <td>{{ distribution.id }}</td>
+                            </tr>
+                            <tr>
+                                <th class="text-muted">Requires Acknowledgment:</th>
+                                <td>
+                                    {% if distribution.requires_acknowledgment %}
+                                    <span class="badge bg-success">Yes</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">No</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="text-muted">Due Date:</th>
+                                <td>{{ distribution.due_date|date:"Y-m-d"|default:"N/A" }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .card {
+        border-radius: var(--border-radius);
+        transition: var(--transition);
+        border: 1px solid #e9ecef;
+    }
+    
+    .form-control {
+        border-radius: var(--border-radius);
+        border: 1px solid #ced4da;
+        transition: var(--transition);
+    }
+    
+    .form-control:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.25rem rgba(44, 90, 160, 0.25);
+    }
+    
+    .input-group-text {
+        background-color: var(--light-bg);
+        border: 1px solid #ced4da;
+    }
+    
+    .form-check-input {
+        width: 1.2em;
+        height: 1.2em;
+        margin-top: 0.2em;
+    }
+    
+    .form-check-input:checked {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+    
+    .rounded-circle {
+        border-radius: 50% !important;
+    }
+    
+    @media (max-width: 768px) {
+        .container {
+            padding-left: 15px;
+            padding-right: 15px;
+        }
+        
+        .card-body .row > .col-md-4,
+        .card-body .row > .col-md-6 {
+            margin-bottom: 1rem;
+        }
+        
+        .d-flex.justify-content-between {
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .d-flex.justify-content-between .btn {
+            width: 100%;
+        }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const confirmCheckbox = document.getElementById('confirm');
+        const submitBtn = document.getElementById('submitBtn');
+        const passwordInput = document.querySelector('input[type="password"]');
+        const acknowledgmentForm = document.getElementById('acknowledgmentForm');
+        
+        // Enable submit button only when checkbox is checked and password is entered
+        function updateSubmitButton() {
+            if (confirmCheckbox.checked && passwordInput.value.length > 0) {
+                submitBtn.disabled = false;
+            } else {
+                submitBtn.disabled = true;
+            }
+        }
+        
+        confirmCheckbox.addEventListener('change', updateSubmitButton);
+        passwordInput.addEventListener('input', updateSubmitButton);
+        
+        // Confirmation before submission
+        acknowledgmentForm.addEventListener('submit', function(e) {
+            const docNumber = '{{ document.document_number }}';
+            const version = '{{ document.version }}';
+            const title = '{{ document.title|truncatechars:50 }}';
+            
+            const confirmationMessage = `Are you sure you want to acknowledge this document?\n\nDocument: ${docNumber} v${version}\nTitle: ${title}\n\nThis action will:\n• Apply your electronic signature\n• Be permanently recorded in the audit trail\n• Cannot be undone\n\nConfirm acknowledgment?`;
+            
+            if (!confirm(confirmationMessage)) {
+                e.preventDefault();
+            }
+        });
+        
+        // Initialize button state
+        updateSubmitButton();
+        
+        // Show/hide password
+        const passwordToggle = document.createElement('span');
+        passwordToggle.className = 'input-group-text';
+        passwordToggle.style.cursor = 'pointer';
+        passwordToggle.innerHTML = '<i class="fas fa-eye"></i>';
+        
+        const passwordInputGroup = passwordInput.closest('.input-group');
+        if (passwordInputGroup) {
+            passwordInputGroup.appendChild(passwordToggle);
+            
+            passwordToggle.addEventListener('click', function() {
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+                this.innerHTML = type === 'password' ? '<i class="fas fa-eye"></i>' : '<i class="fas fa-eye-slash"></i>';
+            });
+        }
+    });
+</script>
+{% endblock %}

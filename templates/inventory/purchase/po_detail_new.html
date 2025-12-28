@@ -1,0 +1,656 @@
+{% extends "laboratory/assets/base.html" %}
+
+{% block title %}Purchase Order - {{ po.po_number }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header Section -->
+    <div class="row align-items-center mb-5">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="h3 mb-2" style="color: var(--primary-color);">
+                        <i class="fas fa-file-invoice me-2"></i>Purchase Order: {{ po.po_number }}
+                    </h2>
+                    <p class="text-muted mb-0">
+                        <span class="badge 
+                            {% if po.status == 'DRAFT' %}bg-secondary
+                            {% elif po.status == 'SUBMITTED' %}bg-info
+                            {% elif po.status == 'APPROVED' %}bg-primary
+                            {% elif po.status == 'ORDERED' %}bg-warning
+                            {% elif po.status == 'PARTIAL' %}bg-warning
+                            {% elif po.status == 'COMPLETE' %}bg-success
+                            {% elif po.status == 'CANCELLED' %}bg-danger{% endif %} me-2">
+                            {{ po.get_status_display }}
+                        </span>
+                        {{ po.supplier }} • {{ po.order_date|date:"F d, Y" }}
+                    </p>
+                </div>
+                <div>
+                    <a href="{% url 'inventory:po_list' %}" class="btn btn-outline-secondary me-2">
+                        <i class="fas fa-arrow-left me-1"></i> Back to List
+                    </a>
+                    <button type="button" class="btn btn-outline-primary" onclick="window.print()">
+                        <i class="fas fa-print me-1"></i> Print
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Metrics Cards -->
+    <div class="row mb-5">
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="metric-icon mb-3">
+                        <i class="fas fa-boxes fa-2x text-primary"></i>
+                    </div>
+                    <h5 class="mb-2">Total Items</h5>
+                    <h3 class="mb-0 text-primary">{{ po.items.count }}</h3>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="metric-icon mb-3">
+                        <i class="fas fa-check-circle fa-2x 
+                            {% if po.status == 'COMPLETE' %}text-success
+                            {% elif po.status == 'PARTIAL' %}text-warning
+                            {% else %}text-secondary{% endif %}"></i>
+                    </div>
+                    <h5 class="mb-2">Items Received</h5>
+                    <h3 class="mb-0 
+                        {% if po.status == 'COMPLETE' %}text-success
+                        {% elif po.status == 'PARTIAL' %}text-warning
+                        {% else %}text-secondary{% endif %}">
+                        {{ po.received_items_count|default:"0" }}
+                    </h3>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="metric-icon mb-3">
+                        <i class="fas fa-calendar-alt fa-2x 
+                            {% if po.expected_delivery and po.expected_delivery < today and po.status not in 'COMPLETE,CANCELLED' %}text-danger
+                            {% else %}text-info{% endif %}"></i>
+                    </div>
+                    <h5 class="mb-2">Delivery Status</h5>
+                    <h4 class="mb-0 
+                        {% if po.expected_delivery and po.expected_delivery < today and po.status not in 'COMPLETE,CANCELLED' %}text-danger
+                        {% else %}text-info{% endif %}">
+                        {% if po.actual_delivery %}
+                            Delivered
+                        {% elif po.expected_delivery and po.expected_delivery < today %}
+                            Overdue
+                        {% elif po.expected_delivery %}
+                            Pending
+                        {% else %}
+                            Not Set
+                        {% endif %}
+                    </h4>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="metric-icon mb-3">
+                        <i class="fas fa-money-bill-wave fa-2x text-success"></i>
+                    </div>
+                    <h5 class="mb-2">Total Value</h5>
+                    <h3 class="mb-0 text-success">₦{{ po.total|floatformat:2 }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="row">
+        <!-- Left Column - PO Information -->
+        <div class="col-lg-4">
+            <!-- Quick Actions Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bolt me-2"></i>Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        {% if user.is_vendor_manager and po.status in 'DRAFT,SUBMITTED' %}
+                        <a href="{% url 'inventory:po_update' po.pk %}" class="btn btn-primary">
+                            <i class="fas fa-edit me-2"></i>Edit Purchase Order
+                        </a>
+                        {% endif %}
+                        
+                        {% if po.status == 'ORDERED' %}
+                        <button type="button" class="btn btn-success" onclick="receivePO({{ po.pk }})">
+                            <i class="fas fa-truck me-2"></i>Receive Stock
+                        </button>
+                        {% endif %}
+                        
+                        {% if user.is_vendor_admin and po.status == 'DRAFT' %}
+                        <button type="button" class="btn btn-outline-danger"
+                                onclick="if(confirm('Are you sure you want to delete this purchase order? This action cannot be undone.')) { window.location.href='{% url 'inventory:po_delete' po.pk %}'; }">
+                            <i class="fas fa-trash me-2"></i>Delete PO
+                        </button>
+                        {% endif %}
+                        
+                        <a href="{% url 'inventory:po_print' po.pk %}" class="btn btn-outline-primary" target="_blank">
+                            <i class="fas fa-external-link-alt me-2"></i>View Printable Version
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PO Information Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Purchase Order Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label fw-semibold text-muted small mb-1">PO Number</label>
+                            <p class="mb-3 fw-semibold">{{ po.po_number }}</p>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label class="form-label fw-semibold text-muted small mb-1">Supplier</label>
+                            <p class="mb-3">{{ po.supplier }}</p>
+                        </div>
+                        
+                        <div class="col-6">
+                            <label class="form-label fw-semibold text-muted small mb-1">Created By</label>
+                            <p class="mb-3">{{ po.created_by.get_full_name|default:po.created_by.username }}</p>
+                        </div>
+                        
+                        <div class="col-6">
+                            <label class="form-label fw-semibold text-muted small mb-1">Created On</label>
+                            <p class="mb-3">{{ po.created_at|date:"M d, Y" }}</p>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label class="form-label fw-semibold text-muted small mb-1">Status</label>
+                            <p class="mb-0">
+                                <span class="badge 
+                                    {% if po.status == 'DRAFT' %}bg-secondary
+                                    {% elif po.status == 'SUBMITTED' %}bg-info
+                                    {% elif po.status == 'APPROVED' %}bg-primary
+                                    {% elif po.status == 'ORDERED' %}bg-warning
+                                    {% elif po.status == 'PARTIAL' %}bg-warning
+                                    {% elif po.status == 'COMPLETE' %}bg-success
+                                    {% elif po.status == 'CANCELLED' %}bg-danger{% endif %} p-2">
+                                    {{ po.get_status_display }}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Delivery Information Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-truck me-2"></i>Delivery Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold text-muted small mb-1">Order Date</label>
+                            <p class="mb-3 fw-semibold">{{ po.order_date|date:"M d, Y" }}</p>
+                        </div>
+                        
+                        <div class="col-6">
+                            <label class="form-label fw-semibold text-muted small mb-1">Expected Delivery</label>
+                            <p class="mb-3 {% if po.expected_delivery and po.expected_delivery < today and po.status not in 'COMPLETE,CANCELLED' %}text-danger{% endif %}">
+                                {{ po.expected_delivery|date:"M d, Y"|default:"—" }}
+                            </p>
+                        </div>
+                        
+                        <div class="col-6">
+                            <label class="form-label fw-semibold text-muted small mb-1">Actual Delivery</label>
+                            <p class="mb-3">{{ po.actual_delivery|date:"M d, Y"|default:"Pending" }}</p>
+                        </div>
+                        
+                        <div class="col-6">
+                            <label class="form-label fw-semibold text-muted small mb-1">Delivery Status</label>
+                            <p class="mb-0">
+                                {% if po.actual_delivery %}
+                                <span class="badge bg-success">Delivered</span>
+                                {% elif po.expected_delivery and po.expected_delivery < today %}
+                                <span class="badge bg-danger">Overdue</span>
+                                {% else %}
+                                <span class="badge bg-warning">Pending</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cost Breakdown Card -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-calculator me-2"></i>Cost Breakdown
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted">Subtotal:</span>
+                            <span class="fw-semibold">₦{{ po.subtotal|floatformat:2 }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted">Tax:</span>
+                            <span class="fw-semibold">₦{{ po.tax|floatformat:2 }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted">Shipping:</span>
+                            <span class="fw-semibold">₦{{ po.shipping|floatformat:2 }}</span>
+                        </div>
+                        <hr class="my-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="fw-bold">Total:</span>
+                            <span class="fw-bold text-primary fs-5">₦{{ po.total|floatformat:2 }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column - Line Items & Details -->
+        <div class="col-lg-8">
+            <!-- Order Items Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light border-0 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-boxes me-2"></i>Order Items
+                    </h5>
+                    <span class="badge bg-primary">{{ po.items.count }} items</span>
+                </div>
+                
+                <div class="card-body p-0">
+                    {% if po.items.exists %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4">Item</th>
+                                    <th class="text-center">Ordered</th>
+                                    <th class="text-center">Received</th>
+                                    <th class="text-center">Status</th>
+                                    <th class="text-center">Unit Price</th>
+                                    <th class="pe-4 text-end">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in po.items.all %}
+                                <tr class="{% if item.is_fully_received %}table-success{% elif item.quantity_received > 0 %}table-warning{% endif %}">
+                                    <td class="ps-4">
+                                        <div class="d-flex align-items-center">
+                                            <div class="item-icon me-3">
+                                                <i class="fas 
+                                                    {% if item.inventory_item.category.category_type == 'REAGENT' %}fa-flask text-primary
+                                                    {% elif item.inventory_item.category.category_type == 'CONSUMABLE' %}fa-box text-info
+                                                    {% elif item.inventory_item.category.category_type == 'CONTROL' %}fa-clipboard-check text-warning
+                                                    {% elif item.inventory_item.category.category_type == 'CALIBRATOR' %}fa-ruler-combined text-success
+                                                    {% else %}fa-cogs text-secondary{% endif %}"></i>
+                                            </div>
+                                            <div>
+                                                <strong>{{ item.inventory_item.item_code }}</strong>
+                                                <div class="text-muted small">{{ item.inventory_item.name|truncatechars:40 }}</div>
+                                                {% if item.notes %}
+                                                <small class="text-info">
+                                                    <i class="fas fa-info-circle"></i> {{ item.notes|truncatechars:30 }}
+                                                </small>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="d-flex flex-column align-items-center">
+                                            <span class="fw-semibold">{{ item.quantity_ordered }}</span>
+                                            <small class="text-muted">{{ item.inventory_item.unit_of_measure }}</small>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="d-flex flex-column align-items-center">
+                                            <span class="badge 
+                                                {% if item.is_fully_received %}bg-success
+                                                {% elif item.quantity_received > 0 %}bg-warning
+                                                {% else %}bg-secondary{% endif %}">
+                                                {{ item.quantity_received }}
+                                            </span>
+                                            {% if not item.is_fully_received and item.quantity_ordered > 0 %}
+                                            <small class="text-muted mt-1">
+                                                {{ item.quantity_ordered|add:'-'|add:item.quantity_received }} pending
+                                            </small>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if item.is_fully_received %}
+                                        <span class="badge bg-success">Complete</span>
+                                        {% elif item.quantity_received > 0 %}
+                                        <span class="badge bg-warning">Partial</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">Pending</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="fw-semibold">₦{{ item.unit_price|floatformat:2 }}</span>
+                                    </td>
+                                    <td class="pe-4 text-end">
+                                        <span class="fw-semibold">₦{{ item.total_price|floatformat:2 }}</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td colspan="5" class="text-end fw-bold">Subtotal:</td>
+                                    <td class="pe-4 text-end fw-bold">₦{{ po.subtotal|floatformat:2 }}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    {% else %}
+                    <!-- Empty State -->
+                    <div class="text-center py-5">
+                        <div class="empty-state-icon mb-4">
+                            <i class="fas fa-boxes fa-4x text-muted"></i>
+                        </div>
+                        <h4 class="text-muted mb-3">No Items</h4>
+                        <p class="text-muted mb-4">This purchase order doesn't have any items yet.</p>
+                        {% if user.is_vendor_manager and po.status in 'DRAFT,SUBMITTED' %}
+                        <a href="{% url 'inventory:po_update' po.pk %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i> Add Items
+                        </a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Notes Card -->
+            {% if po.notes %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-sticky-note me-2"></i>Notes
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">{{ po.notes|linebreaks }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Activity Timeline Card -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2"></i>Activity Timeline
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        <div class="timeline-item mb-3">
+                            <div class="d-flex">
+                                <div class="timeline-icon me-3">
+                                    <i class="fas fa-plus-circle text-primary"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Purchase Order Created</h6>
+                                    <p class="small text-muted mb-0">
+                                        {{ po.created_at|date:"F d, Y H:i" }} by {{ po.created_by.username }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {% if po.updated_at != po.created_at %}
+                        <div class="timeline-item mb-3">
+                            <div class="d-flex">
+                                <div class="timeline-icon me-3">
+                                    <i class="fas fa-edit text-info"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Last Updated</h6>
+                                    <p class="small text-muted mb-0">
+                                        {{ po.updated_at|date:"F d, Y H:i" }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if po.actual_delivery %}
+                        <div class="timeline-item">
+                            <div class="d-flex">
+                                <div class="timeline-icon me-3">
+                                    <i class="fas fa-check-circle text-success"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Delivered</h6>
+                                    <p class="small text-muted mb-0">
+                                        {{ po.actual_delivery|date:"F d, Y" }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        {% elif po.expected_delivery and po.expected_delivery < today %}
+                        <div class="timeline-item">
+                            <div class="d-flex">
+                                <div class="timeline-icon me-3">
+                                    <i class="fas fa-exclamation-triangle text-danger"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Delivery Overdue</h6>
+                                    <p class="small text-muted mb-0">
+                                        Expected {{ po.expected_delivery|date:"F d, Y" }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .card {
+        border-radius: var(--border-radius);
+        border: 1px solid #e9ecef;
+    }
+    
+    .card:hover {
+        box-shadow: var(--box-shadow);
+    }
+    
+    .metric-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(44, 90, 160, 0.1);
+    }
+    
+    .item-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(44, 90, 160, 0.1);
+    }
+    
+    .empty-state-icon {
+        opacity: 0.5;
+    }
+    
+    .table th, .table td {
+        vertical-align: middle;
+    }
+    
+    .badge {
+        font-weight: 500;
+        padding: 0.35em 0.65em;
+    }
+    
+    .table-success {
+        background-color: rgba(25, 135, 84, 0.05);
+    }
+    
+    .table-warning {
+        background-color: rgba(255, 193, 7, 0.05);
+    }
+    
+    .timeline-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(44, 90, 160, 0.1);
+    }
+    
+    .btn {
+        border-radius: var(--border-radius);
+        font-weight: 500;
+        padding: 0.5rem 1.5rem;
+    }
+    
+    @media (max-width: 768px) {
+        .container {
+            padding-left: 15px;
+            padding-right: 15px;
+        }
+        
+        .d-grid.gap-2 .btn {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+        
+        .table-responsive {
+            font-size: 0.875rem;
+        }
+        
+        .timeline .d-flex {
+            flex-direction: column;
+        }
+        
+        .timeline-icon {
+            margin-bottom: 0.5rem;
+        }
+    }
+    
+    @media print {
+        .btn, .no-print {
+            display: none !important;
+        }
+        
+        .container {
+            max-width: 100%;
+            padding: 0;
+        }
+        
+        .card {
+            border: 1px solid #000;
+            box-shadow: none;
+        }
+        
+        .table {
+            border: 1px solid #000;
+        }
+        
+        .table th, .table td {
+            border: 1px solid #000;
+        }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+        
+        // Add hover animation to table rows
+        const tableRows = document.querySelectorAll('table.table-hover tbody tr');
+        tableRows.forEach(row => {
+            row.addEventListener('mouseenter', function() {
+                if (!this.classList.contains('table-success') && !this.classList.contains('table-warning')) {
+                    this.style.backgroundColor = 'rgba(0, 123, 255, 0.05)';
+                }
+            });
+            row.addEventListener('mouseleave', function() {
+                if (!this.classList.contains('table-success') && !this.classList.contains('table-warning')) {
+                    this.style.backgroundColor = '';
+                }
+            });
+        });
+        
+        // Highlight overdue delivery
+        const expectedDelivery = new Date('{{ po.expected_delivery|date:"Y-m-d" }}');
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        if (expectedDelivery && expectedDelivery < today && '{{ po.status }}' !== 'COMPLETE' && '{{ po.status }}' !== 'CANCELLED') {
+            const deliveryCard = document.querySelector('.col-md-3:nth-child(3) .card');
+            if (deliveryCard) {
+                deliveryCard.classList.add('animate__animated', 'animate__pulse');
+                deliveryCard.addEventListener('mouseenter', function() {
+                    this.classList.add('animate__infinite');
+                });
+                deliveryCard.addEventListener('mouseleave', function() {
+                    this.classList.remove('animate__infinite');
+                });
+            }
+        }
+        
+        // Print functionality enhancement
+        window.addEventListener('beforeprint', function() {
+            // Add print-specific styling
+            document.body.classList.add('print-mode');
+        });
+        
+        window.addEventListener('afterprint', function() {
+            document.body.classList.remove('print-mode');
+        });
+    });
+    
+    function receivePO(poId) {
+        if (confirm('Ready to receive stock for this purchase order?')) {
+            window.location.href = `/inventory/purchase-orders/${poId}/receive/`;
+        }
+    }
+</script>
+{% endblock %}

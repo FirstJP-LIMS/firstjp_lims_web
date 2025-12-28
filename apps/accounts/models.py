@@ -57,10 +57,14 @@ class CustomUserManager(BaseUserManager):
 class User(AbstractBaseUser, PermissionsMixin):
     ROLE_CHOICES = [
         ('platform_admin', 'Platform Admin'),
+        # laboratory roles
         ('vendor_admin', 'Vendor Admin'),
+        ('lab_manager', 'Lab Manager'),
         ('lab_staff', 'Lab Staff'),
+        # laboratory extended roles
         ('clinician', 'Clinician'),
         ('patient', 'Patient'),
+        
         ('learner', 'Learner'), # Student
         ('facilitator', 'Facilitator'),
     ]
@@ -83,25 +87,38 @@ class User(AbstractBaseUser, PermissionsMixin):
     class Meta:
         unique_together = [['email', 'vendor']] 
 
-    # Suppress the warning since we have custom authentication
+    # Suppress W004 warning about non-unique USERNAME_FIELD
     @classmethod
     def check(cls, **kwargs):
         errors = super().check(**kwargs)
-        # Filter out the W004 warning about non-unique USERNAME_FIELD
         errors = [e for e in errors if e.id != 'auth.W004']
         return errors
     
+    # roles 
     @property
     def is_platform_admin(self):
         return self.is_superuser or self.role == 'platform_admin'
 
+    @property
+    def is_vendor_admin(self):
+        return self.role == 'vendor_admin' or self.is_superuser
+    
+    @property
+    def is_lab_staff(self):
+        return self.role == 'lab_staff'
+
+    @property
+    def can_modify_inventory(self):
+        """Check if user can create/edit/delete inventory items"""
+        return self.role in ['platform_admin', 'vendor_admin', 'lab_staff'] or self.is_superuser
+    
     def get_full_name(self):
         """ Full name"""
         full_name = f"{self.first_name} {self.last_name}".strip()
         return full_name if full_name else self.email
     
     def __str__(self):
-        return f"{self.first_name} ({self.email}) is a/an {self.role}"
+        return f"{self.first_name} - Role ({self.role})"
 
 
 class BaseProfile(models.Model):

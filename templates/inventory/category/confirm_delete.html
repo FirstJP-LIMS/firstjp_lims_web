@@ -1,0 +1,155 @@
+{% extends "laboratory/assets/base.html" %}
+
+{% block title %}Delete Category - {{ category.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2>Delete Category</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">Inventory</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:category_list' %}">Categories</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:category_detail' category.pk %}">{{ category.name }}</a></li>
+                    <li class="breadcrumb-item active">Delete</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-exclamation-triangle"></i> Confirm Deletion
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if item_count > 0 %}
+                    <!-- Category has items - cannot delete -->
+                    <div class="alert alert-danger">
+                        <h5 class="alert-heading">
+                            <i class="bi bi-x-circle"></i> Cannot Delete This Category
+                        </h5>
+                        <p class="mb-0">
+                            This category contains <strong>{{ item_count }} item(s)</strong> and cannot be deleted.
+                            You must first remove or reassign all items to another category.
+                        </p>
+                    </div>
+
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h6 class="mb-0">Category: {{ category.name }}</h6>
+                        </div>
+                        <div class="card-body">
+                            <dl class="row mb-0">
+                                <dt class="col-sm-4">Type:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge bg-secondary">{{ category.get_category_type_display }}</span>
+                                </dd>
+                                
+                                <dt class="col-sm-4">Total Items:</dt>
+                                <dd class="col-sm-8"><strong class="text-danger">{{ item_count }}</strong></dd>
+                                
+                                <dt class="col-sm-4">Description:</dt>
+                                <dd class="col-sm-8">{{ category.description|default:"—" }}</dd>
+                            </dl>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">
+                            <i class="bi bi-lightbulb"></i> What to do next:
+                        </h6>
+                        <ol class="mb-0">
+                            <li>Go to <a href="{% url 'inventory:category_detail' category.pk %}" class="alert-link">category details</a> to see all items</li>
+                            <li>Edit each item and change its category, or</li>
+                            <li>Delete items that are no longer needed</li>
+                            <li>Once all items are removed, you can delete this category</li>
+                        </ol>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'inventory:category_detail' category.pk %}" class="btn btn-primary">
+                            <i class="bi bi-arrow-left"></i> View Category Items
+                        </a>
+                        <a href="{% url 'inventory:category_list' %}" class="btn btn-secondary">
+                            <i class="bi bi-list"></i> Back to Categories
+                        </a>
+                    </div>
+
+                    {% else %}
+                    <!-- Category is empty - can delete -->
+                    <div class="alert alert-warning">
+                        <h5 class="alert-heading">
+                            <i class="bi bi-exclamation-triangle"></i> Warning
+                        </h5>
+                        <p class="mb-0">
+                            Are you sure you want to delete the category <strong>"{{ category.name }}"</strong>?
+                            This action cannot be undone.
+                        </p>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">Category Details</h6>
+                        </div>
+                        <div class="card-body">
+                            <dl class="row mb-0">
+                                <dt class="col-sm-4">Name:</dt>
+                                <dd class="col-sm-8"><strong>{{ category.name }}</strong></dd>
+                                
+                                <dt class="col-sm-4">Type:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge bg-secondary">{{ category.get_category_type_display }}</span>
+                                </dd>
+                                
+                                <dt class="col-sm-4">Items:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge bg-success">{{ item_count }}</span>
+                                    <small class="text-muted">(Empty - safe to delete)</small>
+                                </dd>
+                                
+                                <dt class="col-sm-4">Description:</dt>
+                                <dd class="col-sm-8">{{ category.description|default:"—" }}</dd>
+                            </dl>
+                        </div>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between gap-2">
+                            <a href="{% url 'inventory:category_detail' category.pk %}" 
+                               class="btn btn-secondary flex-grow-1">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-danger flex-grow-1">
+                                <i class="bi bi-trash"></i> Yes, Delete Category
+                            </button>
+                        </div>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Additional Context -->
+            <div class="card mt-3">
+                <div class="card-body bg-light">
+                    <h6 class="card-title">
+                        <i class="bi bi-info-circle text-primary"></i> About Category Deletion
+                    </h6>
+                    <ul class="small mb-0">
+                        <li>Categories organize your inventory items by type and purpose</li>
+                        <li>You cannot delete a category that contains items</li>
+                        <li>Deleting a category does not delete the items within it</li>
+                        <li>Consider deactivating items instead of deleting the category if you might need it later</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

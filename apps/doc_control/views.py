@@ -739,7 +739,7 @@ def distribution_create(request, document_pk):
         'title': 'Distribute Document'
     }
     
-    return render(request, 'documents/distribution_form.html', context)
+    return render(request, 'documents/distribution/distribution_form.html', context)
 
 
 @login_required
@@ -781,12 +781,12 @@ def document_acknowledge(request, distribution_pk):
         'title': 'Acknowledge Document'
     }
     
-    return render(request, 'documents/acknowledgment_form.html', context)
+    return render(request, 'documents/distribution/acknowledgment_form.html', context)
 
 
-# ============================================================================
+# =======================================
 # TRAINING VIEWS
-# ============================================================================
+# =======================================
 
 @login_required
 def training_list(request):
@@ -811,7 +811,7 @@ def training_list(request):
         'page_obj': page_obj
     }
     
-    return render(request, 'documents/training_list.html', context)
+    return render(request, 'documents/training/training_list.html', context)
 
 
 @login_required
@@ -865,10 +865,10 @@ def training_assign(request, document_pk):
         'title': 'Assign Training'
     }
     
-    return render(request, 'documents/training_form.html', context)
+    return render(request, 'documents/training/training_form.html', context)
 
 
-# ============================================================================
+# ========================================
 # REFERENCE VIEWS
 # ========================================
 
@@ -902,7 +902,7 @@ def reference_create(request, document_pk):
         'title': 'Add Document Reference'
     }
     
-    return render(request, 'documents/reference_form.html', context)
+    return render(request, 'documents/reference/reference_form.html', context)
 
 
 # ============================================
@@ -946,5 +946,5 @@ def document_reports(request):
         'overdue_reviews': overdue_reviews,
     }
     
-    return render(request, 'documents/reports.html', context)
+    return render(request, 'documents/report/report.html', context)
 

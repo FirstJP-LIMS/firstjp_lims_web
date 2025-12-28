@@ -3,322 +3,300 @@
 
 {% block title %}{{ title }}{% endblock %}
 
-{% block extra_css %}
-<style>
-    .review-type-card {
-        cursor: pointer;
-        transition: all 0.2s ease-in-out;
-        height: 100%;
-    }
-    .review-type-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
-    }
-    .review-type-card.selected {
-        border-color: #007bff !important;
-        border-width: 2px;
-    }
-    .form-card {
-        border-top: 4px solid #007bff;
-    }
-    .assignee-avatar {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        background: #007bff;
-        color: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        margin-right: 10px;
-    }
-    .date-input-group .input-group-prepend {
-        min-width: 140px;
-    }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="container-fluid py-4">
+<div class="container">
     <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb bg-transparent p-0 mb-2">
-                    <li class="breadcrumb-item"><a href="{% url 'documents:review_list' %}">Reviews</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">{{ title }}</li>
-                </ol>
-            </nav>
-            
-            <h2 class="mb-0">{{ title }}</h2>
-            {% if document %}
-            <p class="text-muted mb-0 mt-2">
-                For document: <strong>{{ document.document_number }} - {{ document.title }}</strong>
-            </p>
-            {% endif %}
-        </div>
-        <div class="col-md-4 text-md-right mt-3 mt-md-0">
-            <a href="{% if document %}{% url 'documents:document_detail' document.pk %}{% else %}{% url 'documents:review_list' %}{% endif %}" 
-               class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left mr-2"></i>Cancel
-            </a>
+    <div class="row align-items-center mb-5">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="h3 mb-2" style="color: var(--primary-color);">
+                        <i class="fas fa-clipboard-check me-2"></i>
+                        {% if review %}Edit Review{% else %}Create New Review{% endif %}
+                    </h2>
+                    {% if document %}
+                    <p class="text-muted mb-0">
+                        For document: <strong>{{ document.document_number }} - {{ document.title|truncatechars:50 }}</strong>
+                    </p>
+                    {% else %}
+                    <p class="text-muted mb-0">Create a new document review assignment</p>
+                    {% endif %}
+                </div>
+                <div>
+                    <a href="{% if document %}{% url 'documents:document_detail' document.pk %}{% else %}{% url 'documents:review_list' %}{% endif %}" 
+                       class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Back
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 
+    <!-- Form Section -->
     <div class="row">
-        <div class="col-lg-10 offset-lg-1">
-            <!-- Main Form Card -->
-            <div class="card shadow form-card mb-4">
-                <div class="card-header py-3 bg-white">
-                    <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-clipboard-check mr-2"></i>Review Assignment
-                    </h6>
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-check me-2"></i>Review Assignment
+                    </h5>
                 </div>
                 <div class="card-body">
                     <form method="post" id="reviewForm">
                         {% csrf_token %}
                         
+                        <!-- Form Errors -->
                         {% if form.non_field_errors %}
-                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            <i class="fas fa-exclamation-triangle mr-2"></i>
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle me-2"></i>
                             {{ form.non_field_errors }}
-                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
                         </div>
                         {% endif %}
 
                         <!-- Document Selection -->
-                        <div class="form-group">
-                            <label for="{{ form.document.id_for_label }}" class="form-label font-weight-bold">
-                                Document to Review <span class="text-danger">*</span>
-                            </label>
-                            <div class="input-group">
-                                <div class="input-group-prepend">
-                                    <span class="input-group-text"><i class="fas fa-file-alt"></i></span>
-                                </div>
-                                {{ form.document }}
+                        <div class="card mb-4 border">
+                            <div class="card-header bg-light border-bottom">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-file-alt me-2"></i>Document Selection
+                                </h6>
                             </div>
-                            {% if form.document.errors %}
-                                <div class="invalid-feedback d-block">{{ form.document.errors }}</div>
-                            {% endif %}
-                            {% if document %}
-                            <small class="form-text text-muted">
-                                <i class="fas fa-info-circle mr-1"></i>
-                                Pre-selected document: {{ document.document_number }} v{{ document.version }}
-                            </small>
-                            {% else %}
-                            <small class="form-text text-muted">
-                                <i class="fas fa-info-circle mr-1"></i>
-                                Select the document that requires review
-                            </small>
-                            {% endif %}
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-12">
+                                        <label for="{{ form.document.id_for_label }}" class="form-label fw-semibold">
+                                            <i class="fas fa-file-contract me-1"></i> Document to Review *
+                                        </label>
+                                        <div class="input-group">
+                                            {{ form.document }}
+                                            <span class="input-group-text bg-light">
+                                                <i class="fas fa-search text-muted"></i>
+                                            </span>
+                                        </div>
+                                        {% if form.document.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {% for error in form.document.errors %}
+                                            <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                        {% if document %}
+                                        <div class="form-text">
+                                            Pre-selected: {{ document.document_number }} v{{ document.version }}
+                                        </div>
+                                        {% else %}
+                                        <div class="form-text">Select the document that requires review</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <hr class="my-4">
-
-                        <!-- Review Type Selection -->
-                        <div class="form-group">
-                            <label class="form-label font-weight-bold">
-                                Review Type <span class="text-danger">*</span>
-                            </label>
-                            <div class="row">
-                                {% for choice in form.review_type.field.choices %}
-                                <div class="col-md-6 mb-3">
-                                    <div class="card review-type-card border 
-                                        {% if form.review_type.value == choice.0 %}selected border-primary{% else %}border-light{% endif %}"
-                                         onclick="selectReviewType('{{ choice.0 }}')">
-                                        <div class="card-body text-center p-3">
-                                            <div class="mb-3">
-                                                {% if choice.0 == 'initial' %}
-                                                <i class="fas fa-flag fa-2x text-primary"></i>
-                                                {% elif choice.0 == 'periodic' %}
-                                                <i class="fas fa-calendar-alt fa-2x text-info"></i>
-                                                {% elif choice.0 == 'change' %}
-                                                <i class="fas fa-exchange-alt fa-2x text-warning"></i>
-                                                {% elif choice.0 == 'audit' %}
-                                                <i class="fas fa-search fa-2x text-danger"></i>
-                                                {% endif %}
-                                            </div>
-                                            <h6 class="card-title mb-1">{{ choice.1 }}</h6>
-                                            <p class="card-text small text-muted mb-0">
-                                                {% if choice.0 == 'initial' %}
-                                                First review of new document
-                                                {% elif choice.0 == 'periodic' %}
-                                                Scheduled periodic review
-                                                {% elif choice.0 == 'change' %}
-                                                Review after significant changes
-                                                {% elif choice.0 == 'audit' %}
-                                                Compliance or audit review
-                                                {% endif %}
-                                            </p>
+                        <!-- Review Type -->
+                        <div class="card mb-4 border">
+                            <div class="card-header bg-light border-bottom">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-tasks me-2"></i>Review Type
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-12">
+                                        <label for="{{ form.review_type.id_for_label }}" class="form-label fw-semibold">
+                                            <i class="fas fa-clipboard-list me-1"></i> Review Type *
+                                        </label>
+                                        {{ form.review_type }}
+                                        {% if form.review_type.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {% for error in form.review_type.errors %}
+                                            <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                        <div class="form-text">
+                                            Type of review being requested (Initial, Periodic, Change Control, or Audit)
                                         </div>
                                     </div>
                                 </div>
-                                {% endfor %}
                             </div>
-                            {{ form.review_type }}
-                            {% if form.review_type.errors %}
-                                <div class="invalid-feedback d-block">{{ form.review_type.errors }}</div>
-                            {% endif %}
                         </div>
 
-                        <hr class="my-4">
-
-                        <!-- Review Assignment -->
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="{{ form.reviewer.id_for_label }}" class="form-label font-weight-bold">
-                                        Reviewer <span class="text-danger">*</span>
-                                    </label>
-                                    <div class="input-group">
-                                        <div class="input-group-prepend">
-                                            <span class="input-group-text"><i class="fas fa-user-circle"></i></span>
+                        <!-- Assignment Details -->
+                        <div class="card mb-4 border">
+                            <div class="card-header bg-light border-bottom">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-users me-2"></i>Assignment Details
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="{{ form.reviewer.id_for_label }}" class="form-label fw-semibold">
+                                            <i class="fas fa-user-circle me-1"></i> Reviewer *
+                                        </label>
+                                        <div class="input-group">
+                                            {{ form.reviewer }}
+                                            <span class="input-group-text bg-light">
+                                                <i class="fas fa-user text-muted"></i>
+                                            </span>
                                         </div>
-                                        {{ form.reviewer }}
-                                    </div>
-                                    {% if form.reviewer.errors %}
-                                        <div class="invalid-feedback d-block">{{ form.reviewer.errors }}</div>
-                                    {% endif %}
-                                    <small class="form-text text-muted">
-                                        <i class="fas fa-info-circle mr-1"></i>
-                                        Person responsible for conducting the review
-                                    </small>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="{{ form.approver.id_for_label }}" class="form-label font-weight-bold">
-                                        Approver (Optional)
-                                    </label>
-                                    <div class="input-group">
-                                        <div class="input-group-prepend">
-                                            <span class="input-group-text"><i class="fas fa-user-check"></i></span>
+                                        {% if form.reviewer.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {% for error in form.reviewer.errors %}
+                                            <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                                            {% endfor %}
                                         </div>
-                                        {{ form.approver }}
+                                        {% endif %}
+                                        <div class="form-text">Person responsible for conducting the review</div>
                                     </div>
-                                    {% if form.approver.errors %}
-                                        <div class="invalid-feedback d-block">{{ form.approver.errors }}</div>
-                                    {% endif %}
-                                    <small class="form-text text-muted">
-                                        <i class="fas fa-info-circle mr-1"></i>
-                                        Person responsible for final approval (optional)
-                                    </small>
+                                    
+                                    <div class="col-md-6">
+                                        <label for="{{ form.approver.id_for_label }}" class="form-label fw-semibold">
+                                            <i class="fas fa-user-check me-1"></i> Approver (Optional)
+                                        </label>
+                                        <div class="input-group">
+                                            {{ form.approver }}
+                                            <span class="input-group-text bg-light">
+                                                <i class="fas fa-check-circle text-muted"></i>
+                                            </span>
+                                        </div>
+                                        {% if form.approver.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {% for error in form.approver.errors %}
+                                            <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                        <div class="form-text">Person responsible for final approval (optional)</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Due Date -->
-                        <div class="form-group">
-                            <label for="{{ form.due_date.id_for_label }}" class="form-label font-weight-bold">
-                                Due Date <span class="text-danger">*</span>
-                            </label>
-                            <div class="input-group date-input-group">
-                                <div class="input-group-prepend">
-                                    <span class="input-group-text">
-                                        <i class="fas fa-calendar-day mr-2"></i>
-                                        Review Due By
-                                    </span>
-                                </div>
-                                {{ form.due_date }}
+                        <!-- Timeline & Status -->
+                        <div class="card mb-4 border">
+                            <div class="card-header bg-light border-bottom">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-calendar-alt me-2"></i>Timeline & Status
+                                </h6>
                             </div>
-                            {% if form.due_date.errors %}
-                                <div class="invalid-feedback d-block">{{ form.due_date.errors }}</div>
-                            {% endif %}
-                            <small class="form-text text-muted">
-                                <i class="fas fa-info-circle mr-1"></i>
-                                When should this review be completed?
-                                <span id="dueDateInfo" class="ml-2 text-info"></span>
-                            </small>
-                        </div>
-
-                        <!-- Status -->
-                        <div class="form-group">
-                            <label for="{{ form.status.id_for_label }}" class="form-label font-weight-bold">
-                                Initial Status
-                            </label>
-                            <div class="input-group">
-                                <div class="input-group-prepend">
-                                    <span class="input-group-text"><i class="fas fa-tasks"></i></span>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="{{ form.due_date.id_for_label }}" class="form-label fw-semibold">
+                                            <i class="fas fa-calendar-day me-1"></i> Due Date *
+                                        </label>
+                                        <div class="input-group">
+                                            {{ form.due_date }}
+                                            <span class="input-group-text bg-light">
+                                                <i class="fas fa-calendar text-muted"></i>
+                                            </span>
+                                        </div>
+                                        {% if form.due_date.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {% for error in form.due_date.errors %}
+                                            <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                        <div class="form-text">When should this review be completed?</div>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label for="{{ form.status.id_for_label }}" class="form-label fw-semibold">
+                                            <i class="fas fa-info-circle me-1"></i> Initial Status *
+                                        </label>
+                                        {{ form.status }}
+                                        {% if form.status.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {% for error in form.status.errors %}
+                                            <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                        <div class="form-text">Set to "Pending Review" for new assignments</div>
+                                    </div>
                                 </div>
-                                {{ form.status }}
                             </div>
-                            {% if form.status.errors %}
-                                <div class="invalid-feedback d-block">{{ form.status.errors }}</div>
-                            {% endif %}
-                            <small class="form-text text-muted">
-                                <i class="fas fa-info-circle mr-1"></i>
-                                Set to "Pending Review" for new assignments
-                            </small>
                         </div>
 
-                        <hr class="my-4">
-
-                        <!-- Comments -->
-                        <div class="form-group">
-                            <label for="{{ form.comments.id_for_label }}" class="form-label font-weight-bold">
-                                Instructions/Comments
-                            </label>
-                            {{ form.comments }}
-                            {% if form.comments.errors %}
-                                <div class="invalid-feedback d-block">{{ form.comments.errors }}</div>
-                            {% endif %}
-                            <small class="form-text text-muted">
-                                <i class="fas fa-info-circle mr-1"></i>
-                                Optional instructions or context for the reviewer
-                            </small>
-                        </div>
-
-                        <!-- Recommendations (Optional) -->
-                        <div class="form-group mb-0">
-                            <label for="{{ form.recommendations.id_for_label }}" class="form-label font-weight-bold">
-                                Expected Recommendations
-                            </label>
-                            {{ form.recommendations }}
-                            {% if form.recommendations.errors %}
-                                <div class="invalid-feedback d-block">{{ form.recommendations.errors }}</div>
-                            {% endif %}
-                            <small class="form-text text-muted">
-                                <i class="fas fa-info-circle mr-1"></i>
-                                What kind of recommendations are you expecting? (optional)
-                            </small>
+                        <!-- Instructions & Comments -->
+                        <div class="card mb-4 border">
+                            <div class="card-header bg-light border-bottom">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-comments me-2"></i>Instructions & Comments
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-12">
+                                        <label for="{{ form.comments.id_for_label }}" class="form-label fw-semibold">
+                                            <i class="fas fa-sticky-note me-1"></i> Instructions/Comments
+                                        </label>
+                                        {{ form.comments }}
+                                        {% if form.comments.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {% for error in form.comments.errors %}
+                                            <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                        <div class="form-text">Optional instructions or context for the reviewer</div>
+                                    </div>
+                                    
+                                    <div class="col-md-12">
+                                        <label for="{{ form.recommendations.id_for_label }}" class="form-label fw-semibold">
+                                            <i class="fas fa-lightbulb me-1"></i> Expected Recommendations
+                                        </label>
+                                        {{ form.recommendations }}
+                                        {% if form.recommendations.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {% for error in form.recommendations.errors %}
+                                            <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                        <div class="form-text">What kind of recommendations are you expecting? (optional)</div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Form Actions -->
-                        <div class="form-group mt-5 pt-4 border-top">
-                            <div class="d-flex justify-content-between">
-                                <button type="submit" class="btn btn-primary btn-lg px-4">
-                                    <i class="fas fa-save mr-2"></i>Create Review Assignment
+                        <div class="d-flex justify-content-between mt-5 pt-4 border-top">
+                            <a href="{% if document %}{% url 'documents:document_detail' document.pk %}{% else %}{% url 'documents:review_list' %}{% endif %}" 
+                               class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i> Cancel
+                            </a>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-outline-info" onclick="previewAssignment()">
+                                    <i class="fas fa-eye me-1"></i> Preview
                                 </button>
-                                <div class="d-flex gap-2">
-                                    <button type="button" class="btn btn-outline-info" onclick="previewAssignment()">
-                                        <i class="fas fa-eye mr-2"></i>Preview
-                                    </button>
-                                    <a href="{% if document %}{% url 'documents:document_detail' document.pk %}{% else %}{% url 'documents:review_list' %}{% endif %}" 
-                                       class="btn btn-outline-secondary btn-lg px-4">
-                                        <i class="fas fa-times mr-2"></i>Cancel
-                                    </a>
-                                </div>
+                                <button type="submit" class="btn btn-primary" id="submitBtn">
+                                    <i class="fas fa-save me-1"></i>
+                                    {% if review %}Update Review{% else %}Create Review{% endif %}
+                                </button>
                             </div>
                         </div>
                     </form>
                 </div>
             </div>
+        </div>
+    </div>
 
-            <!-- Quick Guide -->
-            <div class="card shadow mb-4">
-                <div class="card-header py-3 bg-light">
-                    <h6 class="m-0 font-weight-bold text-dark">
-                        <i class="fas fa-lightbulb mr-2"></i>Review Assignment Guide
-                    </h6>
+    <!-- Quick Guide -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-lightbulb me-2"></i>Review Assignment Guide
+                    </h5>
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-4 mb-3">
+                    <div class="row g-3">
+                        <div class="col-md-4">
                             <div class="d-flex align-items-start">
-                                <div class="mr-3">
+                                <div class="me-3">
                                     <i class="fas fa-calendar-alt text-primary fa-lg"></i>
                                 </div>
                                 <div>
@@ -329,9 +307,9 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-4 mb-3">
+                        <div class="col-md-4">
                             <div class="d-flex align-items-start">
-                                <div class="mr-3">
+                                <div class="me-3">
                                     <i class="fas fa-users text-success fa-lg"></i>
                                 </div>
                                 <div>
@@ -342,9 +320,9 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-4 mb-3">
+                        <div class="col-md-4">
                             <div class="d-flex align-items-start">
-                                <div class="mr-3">
+                                <div class="me-3">
                                     <i class="fas fa-comments text-warning fa-lg"></i>
                                 </div>
                                 <div>
@@ -358,17 +336,21 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
 
-            <!-- Document Preview (if document is selected) -->
-            {% if document %}
-            <div class="card shadow">
-                <div class="card-header py-3 bg-info text-white">
-                    <h6 class="m-0 font-weight-bold">
-                        <i class="fas fa-file-alt mr-2"></i>Document Preview
-                    </h6>
+    <!-- Document Preview (if document is selected) -->
+    {% if document %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-info border-0 text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file-alt me-2"></i>Document Preview
+                    </h5>
                 </div>
                 <div class="card-body">
-                    <div class="row">
+                    <div class="row g-3">
                         <div class="col-md-6">
                             <table class="table table-sm table-borderless mb-0">
                                 <tbody>
@@ -382,7 +364,7 @@
                                     </tr>
                                     <tr>
                                         <th class="text-muted">Version:</th>
-                                        <td><span class="badge badge-info">v{{ document.version }}</span></td>
+                                        <td><span class="badge bg-info">v{{ document.version }}</span></td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -394,10 +376,10 @@
                                         <th width="40%" class="text-muted">Status:</th>
                                         <td>
                                             <span class="badge 
-                                                {% if document.status == 'effective' %}badge-success
-                                                {% elif document.status == 'approved' %}badge-info
-                                                {% elif document.status == 'obsolete' %}badge-dark
-                                                {% else %}badge-secondary{% endif %}">
+                                                {% if document.status == 'effective' %}bg-success
+                                                {% elif document.status == 'approved' %}bg-info
+                                                {% elif document.status == 'obsolete' %}bg-dark
+                                                {% else %}bg-secondary{% endif %}">
                                                 {{ document.get_status_display }}
                                             </span>
                                         </td>
@@ -415,125 +397,89 @@
                         </div>
                     </div>
                     <div class="mt-3 text-center">
-                        <a href="{% url 'documents:document_detail' document.pk %}" class="btn btn-outline-primary btn-sm mr-2">
-                            <i class="fas fa-eye mr-1"></i>View Full Details
+                        <a href="{% url 'documents:document_detail' document.pk %}" class="btn btn-outline-primary btn-sm me-2">
+                            <i class="fas fa-eye me-1"></i>View Full Details
                         </a>
                         <a href="{{ document.file.url }}" target="_blank" class="btn btn-outline-success btn-sm">
-                            <i class="fas fa-download mr-1"></i>Download v{{ document.version }}
+                            <i class="fas fa-download me-1"></i>Download v{{ document.version }}
                         </a>
                     </div>
                 </div>
             </div>
-            {% endif %}
         </div>
     </div>
+    {% endif %}
 </div>
-{% endblock %}
 
-{% block extra_js %}
+<style>
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .card {
+        border-radius: var(--border-radius);
+        transition: var(--transition);
+        border: 1px solid #e9ecef;
+    }
+    
+    .form-control, .form-select {
+        border-radius: var(--border-radius);
+        border: 1px solid #ced4da;
+        transition: var(--transition);
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.25rem rgba(44, 90, 160, 0.25);
+    }
+    
+    textarea.form-control {
+        min-height: 100px;
+        resize: vertical;
+    }
+    
+    .input-group-text {
+        background-color: var(--light-bg);
+        border: 1px solid #ced4da;
+    }
+    
+    .form-text {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+    
+    @media (max-width: 768px) {
+        .container {
+            padding-left: 15px;
+            padding-right: 15px;
+        }
+        
+        .card-body .row > .col-md-6,
+        .card-body .row > .col-md-8,
+        .card-body .row > .col-md-4,
+        .card-body .row > .col-md-12 {
+            margin-bottom: 1rem;
+        }
+        
+        .d-flex.justify-content-between {
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .d-flex.justify-content-between .btn {
+            width: 100%;
+        }
+        
+        .d-flex.gap-2 {
+            flex-direction: column;
+            gap: 0.5rem !important;
+        }
+    }
+</style>
+
 <script>
-    // Review type selection
-    function selectReviewType(type) {
-        document.getElementById('{{ form.review_type.auto_id }}').value = type;
-        
-        // Update card selection
-        document.querySelectorAll('.review-type-card').forEach(card => {
-            card.classList.remove('selected', 'border-primary');
-        });
-        
-        // Add selected class to clicked card
-        document.querySelectorAll('.review-type-card').forEach(card => {
-            if (card.querySelector('i').classList.contains('fa-flag') && type === 'initial') {
-                card.classList.add('selected', 'border-primary');
-            } else if (card.querySelector('i').classList.contains('fa-calendar-alt') && type === 'periodic') {
-                card.classList.add('selected', 'border-primary');
-            } else if (card.querySelector('i').classList.contains('fa-exchange-alt') && type === 'change') {
-                card.classList.add('selected', 'border-primary');
-            } else if (card.querySelector('i').classList.contains('fa-search') && type === 'audit') {
-                card.classList.add('selected', 'border-primary');
-            }
-        });
-        
-        // Update due date suggestion
-        updateDueDateSuggestion();
-    }
-    
-    // Calculate and display due date suggestion
-    function updateDueDateSuggestion() {
-        const reviewType = document.getElementById('{{ form.review_type.auto_id }}').value;
-        const today = new Date();
-        const dueDateInfo = document.getElementById('dueDateInfo');
-        
-        if (!reviewType) {
-            dueDateInfo.textContent = '';
-            return;
-        }
-        
-        let suggestion = '';
-        switch(reviewType) {
-            case 'initial':
-                suggestion = 'Suggested: 2-5 business days';
-                break;
-            case 'periodic':
-                suggestion = 'Suggested: 10-14 business days';
-                break;
-            case 'change':
-                suggestion = 'Suggested: 3-7 business days';
-                break;
-            case 'audit':
-                suggestion = 'Suggested: 15-30 business days';
-                break;
-            default:
-                suggestion = '';
-        }
-        
-        dueDateInfo.textContent = suggestion;
-    }
-    
-    // Due date input handling
-    document.getElementById('{{ form.due_date.auto_id }}').addEventListener('change', function(e) {
-        const selectedDate = new Date(e.target.value);
-        const today = new Date();
-        const timeDiff = selectedDate.getTime() - today.getTime();
-        const dayDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
-        
-        const dueDateInfo = document.getElementById('dueDateInfo');
-        if (dayDiff < 0) {
-            dueDateInfo.innerHTML = '<span class="text-danger">Date is in the past</span>';
-        } else if (dayDiff === 0) {
-            dueDateInfo.textContent = 'Due today';
-        } else if (dayDiff === 1) {
-            dueDateInfo.textContent = 'Due tomorrow';
-        } else if (dayDiff <= 7) {
-            dueDateInfo.textContent = `Due in ${dayDiff} days`;
-        } else if (dayDiff <= 30) {
-            dueDateInfo.textContent = `Due in ${Math.ceil(dayDiff / 7)} weeks`;
-        } else {
-            dueDateInfo.textContent = `Due in ${Math.ceil(dayDiff / 30)} months`;
-        }
-    });
-    
-    // Initialize due date if set
-    document.addEventListener('DOMContentLoaded', function() {
-        const dueDateField = document.getElementById('{{ form.due_date.auto_id }}');
-        if (dueDateField.value) {
-            dueDateField.dispatchEvent(new Event('change'));
-        }
-        
-        // Set min date to today
-        const today = new Date().toISOString().split('T')[0];
-        dueDateField.setAttribute('min', today);
-        
-        // Initialize review type selection if already set
-        const initialType = document.getElementById('{{ form.review_type.auto_id }}').value;
-        if (initialType) {
-            selectReviewType(initialType);
-        } else {
-            // Set default to initial
-            selectReviewType('initial');
-        }
-    });
-    
     // Form preview
     function previewAssignment() {
         const documentSelect = document.getElementById('{{ form.document.auto_id }}');
@@ -555,5 +501,14 @@
             document.getElementById('reviewForm').submit();
         }
     }
+    
+    // Set minimum date to today for due date
+    document.addEventListener('DOMContentLoaded', function() {
+        const dueDateField = document.getElementById('{{ form.due_date.auto_id }}');
+        if (dueDateField) {
+            const today = new Date().toISOString().split('T')[0];
+            dueDateField.setAttribute('min', today);
+        }
+    });
 </script>
 {% endblock %}

@@ -1,0 +1,624 @@
+{% extends "laboratory/assets/base.html" %}
+
+{% block title %}Inventory Items{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header Section -->
+    <div class="row align-items-center mb-5">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="h3 mb-2" style="color: var(--primary-color);">
+                        <i class="fas fa-boxes me-2"></i>Inventory Items
+                    </h2>
+                    <p class="text-muted mb-0">Manage all inventory items in your laboratory</p>
+                </div>
+                <div>
+                    <a href="{% url 'inventory:item_create' %}" class="btn btn-primary me-2">
+                        <i class="fas fa-plus me-1"></i> New Item
+                    </a>
+                    <a href="{% url 'inventory:dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Metrics Cards -->
+    <div class="row mb-5">
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="metric-icon mb-3">
+                        <i class="fas fa-box fa-2x text-primary"></i>
+                    </div>
+                    <h5 class="mb-2">Total Items</h5>
+                    <h3 class="mb-0 text-primary">{{ total_items|default:"0" }}</h3>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="metric-icon mb-3">
+                        <i class="fas fa-check-circle fa-2x text-success"></i>
+                    </div>
+                    <h5 class="mb-2">Active</h5>
+                    <h3 class="mb-0 text-success">{{ active_items|default:"0" }}</h3>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="metric-icon mb-3">
+                        <i class="fas fa-exclamation-triangle fa-2x text-warning"></i>
+                    </div>
+                    <h5 class="mb-2">Low Stock</h5>
+                    <h3 class="mb-0 text-warning">{{ low_stock_items|default:"0" }}</h3>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="metric-icon mb-3">
+                        <i class="fas fa-money-bill-wave fa-2x text-success"></i>
+                    </div>
+                    <h5 class="mb-2">Total Value</h5>
+                    <h3 class="mb-0 text-success">₦{{ total_value|default:"0"|floatformat:2 }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Filter Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-filter me-2"></i>Filter & Search
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                                {{ form.search }}
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-folder"></i>
+                                </span>
+                                {{ form.category }}
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-temperature-low"></i>
+                                </span>
+                                {{ form.storage_condition }}
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-toggle-on"></i>
+                                </span>
+                                {{ form.status }}
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-search me-1"></i> Filter
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <!-- Quick Action Buttons -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="d-flex flex-wrap gap-2">
+                                <a href="{% url 'inventory:export_csv' %}" class="btn btn-sm btn-outline-secondary">
+                                    <i class="fas fa-download me-1"></i> Export CSV
+                                </a>
+                                <a href="{% url 'inventory:category_list' %}" class="btn btn-sm btn-outline-info">
+                                    <i class="fas fa-folder me-1"></i> View Categories
+                                </a>
+                                {% if request.GET %}
+                                <a href="{% url 'inventory:item_list' %}" class="btn btn-sm btn-outline-danger">
+                                    <i class="fas fa-times me-1"></i> Clear Filters
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Items Grid (Alternative View) -->
+    <div class="row mb-4">
+        {% for item in items %}
+        <div class="col-xl-3 col-lg-4 col-md-6 mb-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-header bg-light border-0 pb-0">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1 text-truncate">{{ item.name|truncatechars:30 }}</h6>
+                            <div class="d-flex align-items-center">
+                                <span class="badge 
+                                    {% if item.category.category_type == 'REAGENT' %}bg-primary
+                                    {% elif item.category.category_type == 'CONSUMABLE' %}bg-info
+                                    {% elif item.category.category_type == 'CONTROL' %}bg-warning
+                                    {% elif item.category.category_type == 'CALIBRATOR' %}bg-success
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ item.category.name|truncatechars:15 }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
+                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'inventory:item_detail' item.pk %}">
+                                        <i class="fas fa-eye me-2"></i>View Details
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'inventory:item_update' item.pk %}">
+                                        <i class="fas fa-edit me-2"></i>Edit Item
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'inventory:lot_create_for_item' item.pk %}">
+                                        <i class="fas fa-plus me-2"></i>Add Stock
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-body pt-3">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted small">Item Code:</span>
+                            <span class="fw-semibold">{{ item.item_code }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted small">Manufacturer:</span>
+                            <span class="fw-semibold text-truncate" style="max-width: 100px;">{{ item.manufacturer|truncatechars:15 }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-box text-primary me-2"></i>
+                                <div>
+                                    <div class="small text-muted">Current Stock</div>
+                                    <div class="fw-semibold 
+                                        {% with current_stock=item.get_current_stock %}
+                                        {% if current_stock == 0 %}text-danger
+                                        {% elif current_stock <= item.reorder_level %}text-warning
+                                        {% else %}text-success{% endif %}
+                                        {% endwith %}">
+                                        {% with current_stock=item.get_current_stock %}
+                                        {{ current_stock }} {{ item.unit_of_measure }}
+                                        {% endwith %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                                <div>
+                                    <div class="small text-muted">Reorder Level</div>
+                                    <div class="fw-semibold">{{ item.reorder_level }} {{ item.unit_of_measure }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-2 mb-4">
+                        <div class="col-6">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-money-bill-wave text-success me-2"></i>
+                                <div>
+                                    <div class="small text-muted">Unit Cost</div>
+                                    <div class="fw-semibold">₦{{ item.unit_cost|floatformat:2 }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-toggle-on 
+                                    {% if item.is_active %}text-success{% else %}text-secondary{% endif %} me-2"></i>
+                                <div>
+                                    <div class="small text-muted">Status</div>
+                                    <div class="fw-semibold">
+                                        {% if item.is_active %}Active{% else %}Inactive{% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="btn-group w-100" role="group">
+                        <a href="{% url 'inventory:lot_create_for_item' item.pk %}" 
+                           class="btn btn-sm btn-outline-success flex-fill">
+                            <i class="fas fa-plus me-1"></i> Stock
+                        </a>
+                        <a href="{% url 'inventory:item_detail' item.pk %}" 
+                           class="btn btn-sm btn-outline-primary flex-fill">
+                            <i class="fas fa-eye me-1"></i> View
+                        </a>
+                        <a href="{% url 'inventory:item_update' item.pk %}" 
+                           class="btn btn-sm btn-outline-warning flex-fill">
+                            <i class="fas fa-edit me-1"></i> Edit
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <!-- Empty State -->
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center py-5">
+                    <div class="empty-state-icon mb-4">
+                        <i class="fas fa-boxes fa-4x text-muted"></i>
+                    </div>
+                    <h3 class="h4 text-muted mb-3">No Items Found</h3>
+                    <p class="text-muted mb-4">
+                        {% if request.GET %}
+                        Try adjusting your search or filter criteria
+                        {% else %}
+                        Get started by creating your first inventory item
+                        {% endif %}
+                    </p>
+                    <a href="{% url 'inventory:item_create' %}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-plus me-2"></i> Create First Item
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Items Table (Main View) -->
+    {% if items %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light border-0 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-table me-2"></i>All Inventory Items
+                    </h5>
+                    <span class="badge bg-primary">{{ items.paginator.count }} items</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4">Item</th>
+                                    <th>Category</th>
+                                    <th>Manufacturer</th>
+                                    <th class="text-center">Current Stock</th>
+                                    <th class="text-center">Reorder Level</th>
+                                    <th class="text-center">Unit Cost</th>
+                                    <th class="text-center">Status</th>
+                                    <th class="pe-4 text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in items %}
+                                <tr>
+                                    <td class="ps-4">
+                                        <div class="d-flex align-items-center">
+                                            <div class="item-icon me-3">
+                                                <i class="fas 
+                                                    {% if item.category.category_type == 'REAGENT' %}fa-flask text-primary
+                                                    {% elif item.category.category_type == 'CONSUMABLE' %}fa-box text-info
+                                                    {% elif item.category.category_type == 'CONTROL' %}fa-clipboard-check text-warning
+                                                    {% elif item.category.category_type == 'CALIBRATOR' %}fa-ruler-combined text-success
+                                                    {% else %}fa-cogs text-secondary{% endif %}"></i>
+                                            </div>
+                                            <div>
+                                                <strong>{{ item.item_code }}</strong>
+                                                <div class="text-muted small">{{ item.name|truncatechars:30 }}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if item.category.category_type == 'REAGENT' %}bg-primary
+                                            {% elif item.category.category_type == 'CONSUMABLE' %}bg-info
+                                            {% elif item.category.category_type == 'CONTROL' %}bg-warning
+                                            {% elif item.category.category_type == 'CALIBRATOR' %}bg-success
+                                            {% else %}bg-secondary{% endif %}">
+                                            {{ item.category.name|truncatechars:15 }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted small">{{ item.manufacturer|truncatechars:20 }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        {% with current_stock=item.get_current_stock %}
+                                        <div class="d-flex flex-column align-items-center">
+                                            <span class="badge 
+                                                {% if current_stock == 0 %}bg-danger
+                                                {% elif current_stock <= item.reorder_level %}bg-warning
+                                                {% else %}bg-success{% endif %}">
+                                                {{ current_stock }} {{ item.unit_of_measure }}
+                                            </span>
+                                            {% if current_stock <= item.reorder_level %}
+                                            <small class="text-warning mt-1">
+                                                <i class="fas fa-exclamation-circle"></i> Low
+                                            </small>
+                                            {% endif %}
+                                        </div>
+                                        {% endwith %}
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="fw-semibold">{{ item.reorder_level }} {{ item.unit_of_measure }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="fw-semibold">₦{{ item.unit_cost|floatformat:2 }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if item.is_active %}
+                                        <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="pe-4 text-end">
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a href="{% url 'inventory:lot_create_for_item' item.pk %}" 
+                                               class="btn btn-outline-success" title="Add Stock">
+                                                <i class="fas fa-plus"></i>
+                                            </a>
+                                            <a href="{% url 'inventory:item_detail' item.pk %}" 
+                                               class="btn btn-outline-primary" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{% url 'inventory:item_update' item.pk %}" 
+                                               class="btn btn-outline-warning" title="Edit Item">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Pagination -->
+    {% if items.has_other_pages %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if items.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ items.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            <i class="fas fa-chevron-left"></i> Previous
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% for num in items.paginator.page_range %}
+                    {% if items.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > items.number|add:'-3' and num < items.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            {{ num }}
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+
+                    {% if items.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ items.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            Next <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .card {
+        border-radius: var(--border-radius);
+        transition: var(--transition);
+        border: 1px solid #e9ecef;
+    }
+    
+    .card:hover {
+        box-shadow: var(--box-shadow);
+        transform: translateY(-5px);
+    }
+    
+    .metric-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(44, 90, 160, 0.1);
+    }
+    
+    .item-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(44, 90, 160, 0.1);
+    }
+    
+    .empty-state-icon {
+        opacity: 0.5;
+    }
+    
+    .table th, .table td {
+        vertical-align: middle;
+    }
+    
+    .badge {
+        font-weight: 500;
+        padding: 0.35em 0.65em;
+    }
+    
+    .btn-group .btn {
+        min-width: 80px;
+    }
+    
+    .input-group-text {
+        background-color: #f8f9fa;
+        border-right: none;
+        min-width: 45px;
+        justify-content: center;
+    }
+    
+    .form-control, .form-select, .form-control:focus, .form-select:focus {
+        border-left: none;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        box-shadow: none;
+        border-color: #dee2e6;
+    }
+    
+    @media (max-width: 768px) {
+        .container {
+            padding-left: 15px;
+            padding-right: 15px;
+        }
+        
+        .btn-group {
+            flex-wrap: wrap;
+        }
+        
+        .btn-group .btn {
+            flex: 1 0 45%;
+            margin-bottom: 5px;
+        }
+        
+        .card-body .row > .col-6 {
+            margin-bottom: 10px;
+        }
+        
+        .table-responsive {
+            font-size: 0.875rem;
+        }
+        
+        .input-group-text {
+            min-width: 40px;
+        }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+        
+        // Add click animation to cards
+        const cards = document.querySelectorAll('.card.h-100');
+        cards.forEach(card => {
+            card.addEventListener('click', function(e) {
+                if (!e.target.closest('.dropdown') && !e.target.closest('.btn-group')) {
+                    const viewLink = this.querySelector('a[href*="detail"]');
+                    if (viewLink) {
+                        viewLink.click();
+                    }
+                }
+            });
+        });
+        
+        // Stock level color coding
+        const stockCells = document.querySelectorAll('td .badge');
+        stockCells.forEach(cell => {
+            const text = cell.textContent.trim();
+            const stockMatch = text.match(/(\d+)/);
+            if (stockMatch) {
+                const stock = parseInt(stockMatch[1]);
+                const row = cell.closest('tr');
+                if (row) {
+                    const reorderCell = row.querySelector('td:nth-child(5) span');
+                    if (reorderCell) {
+                        const reorderMatch = reorderCell.textContent.match(/(\d+)/);
+                        if (reorderMatch) {
+                            const reorder = parseInt(reorderMatch[1]);
+                            if (stock === 0) {
+                                row.style.backgroundColor = 'rgba(220, 53, 69, 0.05)';
+                            } else if (stock <= reorder) {
+                                row.style.backgroundColor = 'rgba(255, 193, 7, 0.05)';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Filter form persistence
+        const filterForm = document.querySelector('form[method="get"]');
+        if (filterForm) {
+            // Preserve form values on page load
+            const urlParams = new URLSearchParams(window.location.search);
+            urlParams.forEach((value, key) => {
+                const input = filterForm.querySelector(`[name="${key}"]`);
+                if (input) {
+                    input.value = value;
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

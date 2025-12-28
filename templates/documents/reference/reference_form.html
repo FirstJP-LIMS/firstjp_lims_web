@@ -1,0 +1,397 @@
+{% extends 'laboratory/assets/base.html' %}
+
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header -->
+    <div class="row align-items-center mb-5">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="h3 mb-2" style="color: var(--primary-color);">
+                        <i class="fas fa-link me-2"></i>
+                        Add Document Reference
+                    </h2>
+                    <p class="text-muted mb-0">
+                        Linking document: <strong>{{ document.document_number }} - {{ document.title|truncatechars:50 }}</strong>
+                    </p>
+                </div>
+                <div>
+                    <a href="{% url 'documents:document_detail' document.pk %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Back
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Form Section -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file-contract me-2"></i>Reference Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="referenceForm">
+                        {% csrf_token %}
+                        
+                        <!-- Form Errors -->
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            {{ form.non_field_errors }}
+                        </div>
+                        {% endif %}
+
+                        <!-- Source Document Info -->
+                        <div class="card mb-4 border">
+                            <div class="card-header bg-light border-bottom">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-file-alt me-2"></i>Source Document
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <table class="table table-sm table-borderless mb-0">
+                                            <tbody>
+                                                <tr>
+                                                    <th width="40%" class="text-muted">Document:</th>
+                                                    <td>{{ document.document_number }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th class="text-muted">Title:</th>
+                                                    <td>{{ document.title|truncatechars:40 }}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <table class="table table-sm table-borderless mb-0">
+                                            <tbody>
+                                                <tr>
+                                                    <th width="40%" class="text-muted">Version:</th>
+                                                    <td>
+                                                        <span class="badge bg-info">v{{ document.version }}</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <th class="text-muted">Category:</th>
+                                                    <td>{{ document.category.name }}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Reference Details -->
+                        <div class="card mb-4 border">
+                            <div class="card-header bg-light border-bottom">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-exchange-alt me-2"></i>Reference Information
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-12">
+                                        <label for="{{ form.referenced_document.id_for_label }}" class="form-label fw-semibold">
+                                            <i class="fas fa-file me-1"></i> Referenced Document *
+                                        </label>
+                                        <div class="input-group">
+                                            {{ form.referenced_document }}
+                                            <span class="input-group-text bg-light">
+                                                <i class="fas fa-search text-muted"></i>
+                                            </span>
+                                        </div>
+                                        {% if form.referenced_document.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {% for error in form.referenced_document.errors %}
+                                            <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                        <div class="form-text">Select the document that this document references</div>
+                                    </div>
+                                    
+                                    <div class="col-md-12">
+                                        <label for="{{ form.reference_type.id_for_label }}" class="form-label fw-semibold">
+                                            <i class="fas fa-link me-1"></i> Reference Type *
+                                        </label>
+                                        <div class="input-group">
+                                            {{ form.reference_type }}
+                                            <span class="input-group-text bg-light">
+                                                <i class="fas fa-tag text-muted"></i>
+                                            </span>
+                                        </div>
+                                        {% if form.reference_type.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {% for error in form.reference_type.errors %}
+                                            <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                        <div class="form-text">
+                                            <strong>Related:</strong> General related document<br>
+                                            <strong>Supersedes:</strong> This document replaces the referenced one<br>
+                                            <strong>Supplement:</strong> Additional supporting information<br>
+                                            <strong>Procedure:</strong> Referenced procedure or method
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-12">
+                                        <label for="{{ form.notes.id_for_label }}" class="form-label fw-semibold">
+                                            <i class="fas fa-sticky-note me-1"></i> Notes
+                                        </label>
+                                        {{ form.notes }}
+                                        {% if form.notes.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {% for error in form.notes.errors %}
+                                            <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                        <div class="form-text">Optional notes about this reference relationship</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between mt-5 pt-4 border-top">
+                            <a href="{% url 'documents:document_detail' document.pk %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary" id="submitBtn">
+                                <i class="fas fa-link me-1"></i> Add Reference
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- About Document References -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-lightbulb me-2"></i>About Document References
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h6 class="text-primary mb-2">
+                            <i class="fas fa-question-circle me-1"></i> Why Link Documents?
+                        </h6>
+                        <ul class="mb-0 ps-3">
+                            <li>Establish relationships between related procedures</li>
+                            <li>Track document dependencies</li>
+                            <li>Ensure consistency across documentation</li>
+                            <li>Support document change impact analysis</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6 class="text-primary mb-2">
+                            <i class="fas fa-info-circle me-1"></i> Reference Types Explained:
+                        </h6>
+                        <div class="d-flex flex-column gap-2">
+                            <div class="d-flex align-items-start">
+                                <span class="badge bg-primary me-2">Related</span>
+                                <small class="text-muted">General reference for additional information</small>
+                            </div>
+                            <div class="d-flex align-items-start">
+                                <span class="badge bg-warning me-2">Supersedes</span>
+                                <small class="text-muted">Indicates this document replaces an older one</small>
+                            </div>
+                            <div class="d-flex align-items-start">
+                                <span class="badge bg-info me-2">Supplement</span>
+                                <small class="text-muted">Provides additional supporting details</small>
+                            </div>
+                            <div class="d-flex align-items-start">
+                                <span class="badge bg-success me-2">Procedure</span>
+                                <small class="text-muted">Points to methods or procedures used</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h6 class="text-primary mb-2">
+                            <i class="fas fa-check-circle me-1"></i> Best Practices:
+                        </h6>
+                        <ul class="mb-0 ps-3">
+                            <li>Link documents that are commonly used together</li>
+                            <li>Reference parent procedures from child documents</li>
+                            <li>Document supersession relationships clearly</li>
+                            <li>Include notes when relationship is not obvious</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Document Status -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Document Status
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-borderless mb-0">
+                        <tbody>
+                            <tr>
+                                <th width="40%" class="text-muted">Status:</th>
+                                <td>
+                                    <span class="badge 
+                                        {% if document.status == 'effective' %}bg-success
+                                        {% elif document.status == 'draft' %}bg-secondary
+                                        {% elif document.status == 'under_review' %}bg-warning
+                                        {% elif document.status == 'approved' %}bg-primary
+                                        {% elif document.status == 'obsolete' %}bg-danger
+                                        {% else %}bg-dark{% endif %}">
+                                        {{ document.get_status_display }}
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="text-muted">Owner:</th>
+                                <td>{{ document.owner.get_full_name }}</td>
+                            </tr>
+                            <tr>
+                                <th class="text-muted">Effective:</th>
+                                <td>{{ document.effective_date|date:"Y-m-d"|default:"N/A" }}</td>
+                            </tr>
+                            <tr>
+                                <th class="text-muted">Reviews:</th>
+                                <td>{{ document.reviews.count }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <div class="mt-3 pt-3 border-top">
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'documents:document_detail' document.pk %}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-eye me-1"></i>View Full Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .card {
+        border-radius: var(--border-radius);
+        transition: var(--transition);
+        border: 1px solid #e9ecef;
+    }
+    
+    .form-control, .form-select {
+        border-radius: var(--border-radius);
+        border: 1px solid #ced4da;
+        transition: var(--transition);
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.25rem rgba(44, 90, 160, 0.25);
+    }
+    
+    textarea.form-control {
+        min-height: 100px;
+        resize: vertical;
+    }
+    
+    .input-group-text {
+        background-color: var(--light-bg);
+        border: 1px solid #ced4da;
+    }
+    
+    @media (max-width: 768px) {
+        .container {
+            padding-left: 15px;
+            padding-right: 15px;
+        }
+        
+        .card-body .row > .col-md-6,
+        .card-body .row > .col-md-12 {
+            margin-bottom: 1rem;
+        }
+        
+        .d-flex.justify-content-between {
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .d-flex.justify-content-between .btn {
+            width: 100%;
+        }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Form preview before submission
+        const referenceForm = document.getElementById('referenceForm');
+        const submitBtn = document.getElementById('submitBtn');
+        
+        if (referenceForm && submitBtn) {
+            submitBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                const referencedDocSelect = document.getElementById('{{ form.referenced_document.auto_id }}');
+                const referenceTypeSelect = document.getElementById('{{ form.reference_type.auto_id }}');
+                const notesTextarea = document.getElementById('{{ form.notes.auto_id }}');
+                
+                if (!referencedDocSelect.value) {
+                    alert('Please select a document to reference.');
+                    referencedDocSelect.focus();
+                    return;
+                }
+                
+                if (!referenceTypeSelect.value) {
+                    alert('Please select a reference type.');
+                    referenceTypeSelect.focus();
+                    return;
+                }
+                
+                const referencedDocText = referencedDocSelect.options[referencedDocSelect.selectedIndex].text;
+                const referenceTypeText = referenceTypeSelect.options[referenceTypeSelect.selectedIndex].text;
+                const notes = notesTextarea.value;
+                
+                let message = 'Add Reference Confirmation:\n\n';
+                message += `Source Document: ${document.document_number} v${document.version}\n`;
+                message += `Referenced Document: ${referencedDocText}\n`;
+                message += `Reference Type: ${referenceTypeText}\n`;
+                
+                if (notes) {
+                    message += `Notes: ${notes.substring(0, 100)}${notes.length > 100 ? '...' : ''}\n`;
+                }
+                
+                message += '\nDo you want to add this reference?';
+                
+                if (confirm(message)) {
+                    referenceForm.submit();
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}
