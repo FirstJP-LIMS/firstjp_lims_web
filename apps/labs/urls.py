@@ -119,10 +119,10 @@ urlpatterns = [
 #     # Result List & Detail
     path('results/', views.result_list, name='result_list'),
     
-#     path('result/<int:result_id>/', views.result_detail, name='result_detail'),
+    path('result/<int:result_id>/', views.result_detail, name='result_detail'),
     
-#     # Result Edit (before verification)
-#     path('result/<int:result_id>/edit/', views.edit_result, name='edit_result'),
+    # Result Edit (before verification)
+    path('result/<int:result_id>/edit/', views.edit_result, name='edit_result'),
     
 #     # Result Verification
 #     path('result/<int:result_id>/verify/', views.verify_result, name='verify_result'),

@@ -4,7 +4,7 @@
 {% block title %}Result Detail - {{ result.assignment.lab_test.name }}{% endblock %}
 
 {% block breadcrumbs %}
-<li class="breadcrumb-item"><a href="{% url 'laboratory:result_list' %}">Results</a></li>
+<li class="breadcrumb-item"><a href="{% url 'labs:result_list' %}">Results</a></li>
 <li class="breadcrumb-item active">{{ result.assignment.request.request_id }}</li>
 {% endblock %}
 
@@ -17,18 +17,18 @@
             <i class="bi bi-clipboard-data"></i> Test Result Detail
         </h2>
         <div class="btn-group">
-            <a href="{% url 'laboratory:result_list' %}" class="btn btn-outline-secondary">
+            <a href="{% url 'labs:result_list' %}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i> Back to List
             </a>
             
             {% if can_edit %}
-            <a href="{% url 'laboratory:edit_result' result.id %}" class="btn btn-warning">
+            <a href="{% url 'labs:edit_result' result.id %}" class="btn btn-warning">
                 <i class="bi bi-pencil"></i> Edit Result
             </a>
             {% endif %}
             
             {% if can_verify %}
-            <form method="post" action="{% url 'laboratory:verify_result' result.id %}" class="d-inline">
+            <form method="post" action="{% url 'labs:verify_result' result.id %}" class="d-inline">
                 {% csrf_token %}
                 <button type="submit" 
                         class="btn btn-success"
@@ -39,7 +39,7 @@
             {% endif %}
             
             {% if can_release %}
-            <form method="post" action="{% url 'laboratory:release_result' result.id %}" class="d-inline">
+            <form method="post" action="{% url 'labs:release_result' result.id %}" class="d-inline">
                 {% csrf_token %}
                 <button type="submit" 
                         class="btn btn-primary"
@@ -50,7 +50,7 @@
             {% endif %}
             
             {% if result.released %}
-            <a href="{% url 'laboratory:print_result' result.id %}" 
+            <a href="{% url 'labs:print_result' result.id %}" 
                target="_blank"
                class="btn btn-outline-primary">
                 <i class="bi bi-printer"></i> Print
@@ -58,7 +58,7 @@
             {% endif %}
             
             {% if can_amend %}
-            <a href="{% url 'laboratory:amend_result' result.id %}" class="btn btn-warning">
+            <a href="{% url 'labs:amend_result' result.id %}" class="btn btn-warning">
                 <i class="bi bi-exclamation-triangle"></i> Amend Result
             </a>
             {% endif %}

@@ -305,13 +305,13 @@
                                 <small class="text-dark fw-medium d-block">{{ result.entered_at|date:"M d, Y" }}</small>
                                 <small class="text-muted">{{ result.entered_at|time:"H:i" }}</small>
                                 <br>
-                                <small class="text-muted">by {{ result.entered_by.get_full_name|default:result.entered_by.username }}</small>
+                                <small class="text-muted">by {{ result.entered_by.get_full_name }}</small>
                             </td>
                             
                             <td class="pe-4 text-end">
                                 <div class="d-flex gap-1 justify-content-end">
                                     <!-- View Details -->
-                                    <a href="{% url 'labs:test_assignment_detail' result.assignment.id %}" 
+                                    <a href="{% url 'labs:result_detail' result.id %}" 
                                        class="btn btn-outline-primary btn-sm rounded-2 px-3"
                                        data-bs-toggle="tooltip" title="View Assignment">
                                         <i class="bi bi-eye me-1"></i>View
@@ -319,7 +319,7 @@
                                     
                                     <!-- Verify Button -->
                                     {% if not result.verified_at and not result.released %}
-                                    <form method="post" action="{% url 'labs:verify_test_result' result.id %}" class="d-inline">
+                                    <form method="post" action="{% url 'labs:verify_result' result.id %}" class="d-inline">
                                         {% csrf_token %}
                                         <button type="submit" class="btn btn-outline-success btn-sm rounded-2 px-3"
                                                 data-bs-toggle="tooltip" title="Verify Result">
@@ -341,7 +341,7 @@
                                     
                                     <!-- Amend Button -->
                                     {% if not result.released %}
-                                    <a href="{% url 'labs:amend_test_result' result.id %}" 
+                                    <a href="{% url 'labs:edit_result' result.id %}" 
                                        class="btn btn-outline-warning btn-sm rounded-2 px-3"
                                        data-bs-toggle="tooltip" title="Amend Result">
                                         <i class="bi bi-pencil me-1"></i>Amend

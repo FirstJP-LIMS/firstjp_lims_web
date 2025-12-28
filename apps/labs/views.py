@@ -1,43 +1,57 @@
-# import libraries 
-from django.http import HttpResponse, JsonResponse
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required, user_passes_test
-from django.http import HttpResponseForbidden
-from django.core.paginator import Paginator
-from django.db.models import Count, F, Q, Avg, ExpressionWrapper, DurationField, Sum
+import json
+import logging
 from datetime import timedelta
-from django.utils import timezone
-from django.db import IntegrityError
+from decimal import Decimal, InvalidOperation
 from functools import wraps
-from .utils import check_tenant_access
+
+# Django Core
 from django.contrib import messages
-from django.db import transaction
-from django.urls import reverse_lazy, reverse
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
+from django.db import IntegrityError, transaction
+from django.db.models import (
+    Avg, Count, DurationField, ExpressionWrapper, F, Q, Sum, Prefetch
+)
+from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse, reverse_lazy
+from django.utils import timezone
+from django.views.decorators.http import require_http_methods, require_POST
+
+# App-Specific Imports
+from apps.accounts.models import VendorProfile
+from apps.tenants.models import Vendor
+
 from .forms import (
     DepartmentForm,
-    VendorLabTestForm,
+    SampleForm,
     TestRequestForm,
-    SampleForm
+    VendorLabTestForm
 )
 from .models import (
-    VendorTest, 
+    AuditLog,
+    Department,
+    Equipment,
     Patient,
-    TestRequest,
+    QualitativeOption,
     Sample,
     TestAssignment,
-    Department,
-    AuditLog,
-    Equipment
+    TestRequest,
+    TestResult,
+    VendorTest
 )
-from apps.tenants.models import Vendor
-from apps.accounts.models import VendorProfile
-import logging
+from .services import (
+    InstrumentAPIError,
+    InstrumentService,
+    fetch_assignment_result,
+    send_assignment_to_instrument
+)
+from .utils import check_tenant_access
 
-
-# Logger instance
+# Logger Setup
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-
 
 
 # --- Decorator Definition ---
@@ -930,56 +944,6 @@ def download_test_request(request, pk=None, blank=False):
 # Test Assignment
 # ******************
 
-from django.views.decorators.http import require_POST, require_http_methods
-from django.db import transaction
-from django.core.exceptions import ValidationError
-from .models import TestAssignment, TestResult, Equipment, AuditLog
-from .services import (
-    InstrumentService, 
-    InstrumentAPIError,
-    send_assignment_to_instrument,
-    fetch_assignment_result
-)
-
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.views.decorators.http import require_POST
-from django.contrib import messages
-from django.http import JsonResponse
-from django.db import transaction
-from django.core.paginator import Paginator
-from django.db.models import Q, Prefetch
-from django.utils import timezone
-import json
-import logging
-
-from .models import TestAssignment, TestResult, Equipment, Department, AuditLog
-
-logger = logging.getLogger(__name__)
-
-
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.db.models import Q, Count, Prefetch
-from django.core.paginator import Paginator
-from django.http import JsonResponse
-from django.views.decorators.http import require_POST
-
-from .models import TestAssignment, TestResult, QualitativeOption, AuditLog, Department, Equipment
-from .services import send_assignment_to_instrument, InstrumentAPIError
-from django.views.decorators.http import require_http_methods
-from django.db import transaction
-from django.utils import timezone
-
-from decimal import Decimal, InvalidOperation
-import logging
-
-
-logger = logging.getLogger(__name__)
-
-
-
 @login_required
 def test_assignment_list(request):
     """
@@ -1315,6 +1279,207 @@ def fetch_result_from_instrument(request, assignment_id):
     return redirect('test_assignment_detail', assignment_id=assignment.id)
 
 
+# @login_required
+# @require_http_methods(["GET", "POST"])
+# def enter_manual_result(request, assignment_id):
+#     """
+#     Manually enter test result - handles both QUALITATIVE and QUANTITATIVE tests.
+
+#     Flow:
+#       - Validate assignment status and that result is not verified
+#       - For QLT: accept option ID (preferred) or free text (validated)
+#       - For QNT: accept numeric value and optional unit
+#       - Create or update TestResult, call auto_flag_result()
+#       - Mark assignment analyzed and create audit log
+#     """
+#     assignment = get_object_or_404(
+#         TestAssignment.objects.select_related(
+#             "lab_test", "vendor", "request__patient", "sample", "instrument"
+#         ),
+#         id=assignment_id,
+#         vendor=getattr(request.user, "vendor", None),
+#     )
+
+#     # --- Basic validation ---
+#     if assignment.status not in ["P", "Q", "I"]:
+#         messages.error(
+#             request,
+#             "Cannot enter result. Test must be Pending, Queued or In Progress.",
+#         )
+#         return redirect("labs:test_assignment_detail", assignment_id=assignment.id)
+
+#     if hasattr(assignment, "result") and assignment.result.verified_at:
+#         messages.error(
+#             request,
+#             "Cannot modify verified result. Contact supervisor for amendments.",
+#         )
+#         return redirect("laboratory:test_assignment_detail", assignment_id=assignment.id)
+
+#     lab_test = assignment.lab_test
+#     is_quantitative = lab_test.result_type == "QNT"
+#     is_qualitative = lab_test.result_type == "QLT"
+
+#     # POST: process submission
+#     if request.method == "POST":
+#         # Raw inputs
+#         raw_value = request.POST.get("result_value", "").strip()
+#         unit = request.POST.get("unit", "").strip()
+#         remarks = request.POST.get("remarks", "").strip()
+#         interpretation = request.POST.get("interpretation", "").strip()
+
+#         # For qualitative prefer selecting option ID
+#         selected_option = None
+#         if is_qualitative:
+#             option_id = request.POST.get("qualitative_option")
+#             if option_id:
+#                 try:
+#                     selected_option = lab_test.qlt_options.get(id=int(option_id))
+#                     raw_value = selected_option.value
+#                 except (QualitativeOption.DoesNotExist, ValueError):
+#                     messages.error(request, "Invalid qualitative option selected.")
+#                     # fall through to re-render form
+#                     selected_option = None
+
+#         # required value check
+#         if not raw_value:
+#             messages.error(request, "Result value is required.")
+#             # render below with context
+#         else:
+#             # Validate quantitative numeric input
+#             if is_quantitative:
+#                 try:
+#                     numeric_value = Decimal(str(raw_value).strip())
+#                 except (InvalidOperation, ValueError):
+#                     messages.error(request, f"Invalid numeric value: '{raw_value}'.")
+#                     numeric_value = None
+
+#                 # optional heuristic warnings (not authoritative; auto_flag_result will set flags)
+#                 if numeric_value is not None and lab_test.min_reference_value:
+#                     try:
+#                         if lab_test.min_reference_value and numeric_value < (lab_test.min_reference_value * Decimal("0.1")):
+#                             messages.warning(request, "Value unusually low — double-check entry.")
+#                     except Exception:
+#                         pass
+#                 if numeric_value is not None and lab_test.max_reference_value:
+#                     try:
+#                         if lab_test.max_reference_value and numeric_value > (lab_test.max_reference_value * Decimal("10")):
+#                             messages.warning(request, "Value unusually high — double-check entry.")
+#                     except Exception:
+#                         pass
+
+#             # # If no errors so far, persist
+#             # if not messages.get_messages(request):  # no messages = no errors/warnings to block saving
+
+#             # Check specifically for errors
+#             from django.contrib.messages import get_messages, ERROR
+
+#             has_errors = any(m.level == ERROR for m in get_messages(request))
+#             if not has_errors:
+#                 # Proceed with save
+#                 try:
+#                     with transaction.atomic():
+#                         # get or create TestResult
+#                         result, created = TestResult.objects.get_or_create(
+#                             assignment=assignment,
+#                             defaults={
+#                                 "data_source": "manual",
+#                                 "entered_by": request.user,
+#                                 "entered_at": timezone.now(),
+#                             },
+#                         )
+
+#                         # If existing and different value, use update_result to preserve audit trail
+#                         if not created and str(result.result_value).strip() != str(raw_value).strip():
+#                             # update_result checks verified_at and raises if not allowed
+#                             result.update_result(new_value=raw_value, user=request.user, reason=f"Manual correction")
+#                             # note: update_result already calls auto_flag_result inside your model,
+#                             # but we'll call auto_flag_result() again after setting other fields to guarantee consistency.
+#                         else:
+#                             result.result_value = raw_value
+
+#                         # Units
+#                         if is_quantitative:
+#                             result.units = unit or (lab_test.default_units or "")
+#                         else:
+#                             result.units = ""
+
+#                         # Qualitative option linking (if field exists on model)
+#                         if is_qualitative and selected_option:
+#                             # Only assign if TestResult model has attribute qualitative_option
+#                             if hasattr(result, "qualitative_option"):
+#                                 result.qualitative_option = selected_option
+
+#                         # Reference range population
+#                         if is_quantitative:
+#                             if lab_test.min_reference_value is not None and lab_test.max_reference_value is not None:
+#                                 result.reference_range = f"{lab_test.min_reference_value} - {lab_test.max_reference_value}"
+#                             else:
+#                                 result.reference_range = ""
+#                         else:
+#                             # Build a friendly reference from normal qualitative options
+#                             normal_opts = lab_test.qlt_options.filter(is_normal=True).values_list("value", flat=True)
+#                             result.reference_range = ", ".join(normal_opts) if normal_opts else ""
+
+#                         # Other metadata
+#                         result.remarks = remarks
+#                         result.interpretation = interpretation
+#                         result.data_source = "manual"
+#                         result.entered_by = result.entered_by or request.user
+#                         # entered_at is auto_now_add; do not override normally
+
+#                         result.save()  # persist intermediate changes
+
+#                         # Apply auto-flagging using your engine (AMR, CRR, panic, ref range, qualitative)
+#                         result.auto_flag_result()
+
+#                         # Mark assignment analyzed (A)
+#                         assignment.mark_analyzed()
+
+#                         # Audit log
+#                         AuditLog.objects.create(
+#                             vendor=assignment.vendor,
+#                             user=request.user,
+#                             action=(
+#                                 f"Manual result entered for {assignment.request.request_id} - "
+#                                 f"{assignment.lab_test.code}: {result.result_value} "
+#                                 f"{(' ' + result.units) if result.units else ''} "
+#                                 f"[manual]"
+#                             ),
+#                             ip_address=request.META.get("REMOTE_ADDR"),
+#                         )
+
+#                         messages.success(request, f"Result saved. Flag: {result.get_flag_display()}. Awaiting verification.")
+#                         return redirect("laboratory:test_assignment_detail", assignment_id=assignment.id)
+
+#                 except ValidationError as ve:
+#                     messages.error(request, f"Validation error: {ve}")
+#                     logger.exception("Validation error saving manual result")
+#                 except Exception as e:
+#                     messages.error(request, f"Error saving result: {str(e)}")
+#                     logger.exception("Unexpected error saving manual result")
+
+#     # GET (or POST with errors) - prepare context for form rendering
+#     qualitative_options = lab_test.qlt_options.all() if is_qualitative else []
+#     existing_result = getattr(assignment, "result", None)
+
+#     context = {
+#         "assignment": assignment,
+#         "lab_test": lab_test,
+#         "is_quantitative": is_quantitative,
+#         "is_qualitative": is_qualitative,
+#         "qualitative_options": qualitative_options,
+#         "existing_result": existing_result,
+#         "default_unit": lab_test.default_units,
+#         "reference_range": (
+#             f"{lab_test.min_reference_value} - {lab_test.max_reference_value}"
+#             if is_quantitative and lab_test.min_reference_value is not None and lab_test.max_reference_value is not None
+#             else ", ".join(lab_test.qlt_options.filter(is_normal=True).values_list("value", flat=True)) if is_qualitative else ""
+#         ),
+#     }
+
+#     return render(request, "laboratory/result/manual_result_form1.html", context)
+
+
 @login_required
 @require_http_methods(["GET", "POST"])
 def enter_manual_result(request, assignment_id):
@@ -1342,14 +1507,14 @@ def enter_manual_result(request, assignment_id):
             request,
             "Cannot enter result. Test must be Pending, Queued or In Progress.",
         )
-        return redirect("laboratory:test_assignment_detail", assignment_id=assignment.id)
+        return redirect("labs:test_assignment_detail", assignment_id=assignment.id)
 
     if hasattr(assignment, "result") and assignment.result.verified_at:
         messages.error(
             request,
             "Cannot modify verified result. Contact supervisor for amendments.",
         )
-        return redirect("laboratory:test_assignment_detail", assignment_id=assignment.id)
+        return redirect("labs:test_assignment_detail", assignment_id=assignment.id)
 
     lab_test = assignment.lab_test
     is_quantitative = lab_test.result_type == "QNT"
@@ -1357,6 +1522,9 @@ def enter_manual_result(request, assignment_id):
 
     # POST: process submission
     if request.method == "POST":
+        # Flag to track if we should proceed with save
+        has_validation_errors = False
+        
         # Raw inputs
         raw_value = request.POST.get("result_value", "").strip()
         unit = request.POST.get("unit", "").strip()
@@ -1373,126 +1541,128 @@ def enter_manual_result(request, assignment_id):
                     raw_value = selected_option.value
                 except (QualitativeOption.DoesNotExist, ValueError):
                     messages.error(request, "Invalid qualitative option selected.")
-                    # fall through to re-render form
-                    selected_option = None
+                    has_validation_errors = True
 
-        # required value check
+        # Required value check
         if not raw_value:
             messages.error(request, "Result value is required.")
-            # render below with context
-        else:
-            # Validate quantitative numeric input
-            if is_quantitative:
-                try:
-                    numeric_value = Decimal(str(raw_value).strip())
-                except (InvalidOperation, ValueError):
-                    messages.error(request, f"Invalid numeric value: '{raw_value}'.")
-                    numeric_value = None
-
-                # optional heuristic warnings (not authoritative; auto_flag_result will set flags)
-                if numeric_value is not None and lab_test.min_reference_value:
+            has_validation_errors = True
+        
+        # Validate quantitative numeric input
+        if not has_validation_errors and is_quantitative:
+            try:
+                numeric_value = Decimal(str(raw_value).strip())
+                
+                # Optional heuristic warnings (don't block save, just warn)
+                if lab_test.min_reference_value:
                     try:
-                        if lab_test.min_reference_value and numeric_value < (lab_test.min_reference_value * Decimal("0.1")):
+                        if numeric_value < (lab_test.min_reference_value * Decimal("0.1")):
                             messages.warning(request, "Value unusually low — double-check entry.")
                     except Exception:
                         pass
-                if numeric_value is not None and lab_test.max_reference_value:
+                        
+                if lab_test.max_reference_value:
                     try:
-                        if lab_test.max_reference_value and numeric_value > (lab_test.max_reference_value * Decimal("10")):
+                        if numeric_value > (lab_test.max_reference_value * Decimal("10")):
                             messages.warning(request, "Value unusually high — double-check entry.")
                     except Exception:
                         pass
+                        
+            except (InvalidOperation, ValueError):
+                messages.error(request, f"Invalid numeric value: '{raw_value}'.")
+                has_validation_errors = True
 
-            # # If no errors so far, persist
-            # if not messages.get_messages(request):  # no messages = no errors/warnings to block saving
+        # Only proceed if no validation errors
+        if not has_validation_errors:
+            try:
+                with transaction.atomic():
+                    # Get or create TestResult
+                    result, created = TestResult.objects.get_or_create(
+                        assignment=assignment,
+                        defaults={
+                            "data_source": "manual",
+                            "entered_by": request.user,
+                            "entered_at": timezone.now(),
+                        },
+                    )
 
-            # Check specifically for errors
-            from django.contrib.messages import get_messages, ERROR
-
-            has_errors = any(m.level == ERROR for m in get_messages(request))
-            if not has_errors:
-                # Proceed with save
-                try:
-                    with transaction.atomic():
-                        # get or create TestResult
-                        result, created = TestResult.objects.get_or_create(
-                            assignment=assignment,
-                            defaults={
-                                "data_source": "manual",
-                                "entered_by": request.user,
-                                "entered_at": timezone.now(),
-                            },
+                    # If existing and different value, use update_result to preserve audit trail
+                    if not created and str(result.result_value).strip() != str(raw_value).strip():
+                        # update_result checks verified_at and raises if not allowed
+                        result.update_result(
+                            new_value=raw_value, 
+                            user=request.user, 
+                            reason="Manual correction"
                         )
+                    else:
+                        result.result_value = raw_value
 
-                        # If existing and different value, use update_result to preserve audit trail
-                        if not created and str(result.result_value).strip() != str(raw_value).strip():
-                            # update_result checks verified_at and raises if not allowed
-                            result.update_result(new_value=raw_value, user=request.user, reason=f"Manual correction")
-                            # note: update_result already calls auto_flag_result inside your model,
-                            # but we'll call auto_flag_result() again after setting other fields to guarantee consistency.
+                    # Units
+                    if is_quantitative:
+                        result.units = unit or (lab_test.default_units or "")
+                    else:
+                        result.units = ""
+
+                    # Qualitative option linking (if field exists on model)
+                    if is_qualitative and selected_option:
+                        if hasattr(result, "qualitative_option"):
+                            result.qualitative_option = selected_option
+
+                    # Reference range population
+                    if is_quantitative:
+                        if lab_test.min_reference_value is not None and lab_test.max_reference_value is not None:
+                            result.reference_range = f"{lab_test.min_reference_value} - {lab_test.max_reference_value}"
                         else:
-                            result.result_value = raw_value
+                            result.reference_range = ""
+                    else:
+                        # Build a friendly reference from normal qualitative options
+                        normal_opts = lab_test.qlt_options.filter(is_normal=True).values_list("value", flat=True)
+                        result.reference_range = ", ".join(normal_opts) if normal_opts else ""
 
-                        # Units
-                        if is_quantitative:
-                            result.units = unit or (lab_test.default_units or "")
-                        else:
-                            result.units = ""
+                    # Other metadata
+                    result.remarks = remarks
+                    result.interpretation = interpretation
+                    result.data_source = "manual"
+                    
+                    # Only set entered_by if this is a new result
+                    if created:
+                        result.entered_by = request.user
 
-                        # Qualitative option linking (if field exists on model)
-                        if is_qualitative and selected_option:
-                            # Only assign if TestResult model has attribute qualitative_option
-                            if hasattr(result, "qualitative_option"):
-                                result.qualitative_option = selected_option
+                    result.save()
 
-                        # Reference range population
-                        if is_quantitative:
-                            if lab_test.min_reference_value is not None and lab_test.max_reference_value is not None:
-                                result.reference_range = f"{lab_test.min_reference_value} - {lab_test.max_reference_value}"
-                            else:
-                                result.reference_range = ""
-                        else:
-                            # Build a friendly reference from normal qualitative options
-                            normal_opts = lab_test.qlt_options.filter(is_normal=True).values_list("value", flat=True)
-                            result.reference_range = ", ".join(normal_opts) if normal_opts else ""
+                    # Apply auto-flagging using your engine (AMR, CRR, panic, ref range, qualitative)
+                    result.auto_flag_result()
 
-                        # Other metadata
-                        result.remarks = remarks
-                        result.interpretation = interpretation
-                        result.data_source = "manual"
-                        result.entered_by = result.entered_by or request.user
-                        # entered_at is auto_now_add; do not override normally
+                    # Mark assignment analyzed (A)
+                    assignment.mark_analyzed()
 
-                        result.save()  # persist intermediate changes
+                    # Audit log
+                    AuditLog.objects.create(
+                        vendor=assignment.vendor,
+                        user=request.user,
+                        action=(
+                            f"Manual result {'entered' if created else 'updated'} for "
+                            f"{assignment.request.request_id} - "
+                            f"{assignment.lab_test.code}: {result.result_value} "
+                            f"{(' ' + result.units) if result.units else ''} "
+                            f"[manual]"
+                        ),
+                        ip_address=request.META.get("REMOTE_ADDR"),
+                    )
 
-                        # Apply auto-flagging using your engine (AMR, CRR, panic, ref range, qualitative)
-                        result.auto_flag_result()
+                    messages.success(
+                        request, 
+                        f"Result {'saved' if created else 'updated'}. "
+                        f"Flag: {result.get_flag_display()}. Awaiting verification."
+                    )
+                    return redirect("labs:test_assignment_detail", assignment_id=assignment.id)
 
-                        # Mark assignment analyzed (A)
-                        assignment.mark_analyzed()
-
-                        # Audit log
-                        AuditLog.objects.create(
-                            vendor=assignment.vendor,
-                            user=request.user,
-                            action=(
-                                f"Manual result entered for {assignment.request.request_id} - "
-                                f"{assignment.lab_test.code}: {result.result_value} "
-                                f"{(' ' + result.units) if result.units else ''} "
-                                f"[manual]"
-                            ),
-                            ip_address=request.META.get("REMOTE_ADDR"),
-                        )
-
-                        messages.success(request, f"Result saved. Flag: {result.get_flag_display()}. Awaiting verification.")
-                        return redirect("laboratory:test_assignment_detail", assignment_id=assignment.id)
-
-                except ValidationError as ve:
-                    messages.error(request, f"Validation error: {ve}")
-                    logger.exception("Validation error saving manual result")
-                except Exception as e:
-                    messages.error(request, f"Error saving result: {str(e)}")
-                    logger.exception("Unexpected error saving manual result")
+            except ValidationError as ve:
+                messages.error(request, f"Validation error: {ve}")
+                logger.exception("Validation error saving manual result")
+            except Exception as e:
+                messages.error(request, f"Error saving result: {str(e)}")
+                logger.exception("Unexpected error saving manual result")
 
     # GET (or POST with errors) - prepare context for form rendering
     qualitative_options = lab_test.qlt_options.all() if is_qualitative else []
@@ -1514,6 +1684,7 @@ def enter_manual_result(request, assignment_id):
     }
 
     return render(request, "laboratory/result/manual_result_form.html", context)
+
 
 # ===== RESULT DETAIL VIEW =====
 @login_required
@@ -1612,63 +1783,6 @@ def result_list(request):
     
     return render(request, 'laboratory/result/result_list.html', context)
 
-# @login_required
-# def result_detail(request, result_id):
-#     """
-#     Display detailed view of a single result with full audit trail.
-#     """
-#     result = get_object_or_404(
-#         TestResult.objects.select_related(
-#             'assignment__lab_test',
-#             'assignment__request__patient',
-#             'assignment__request__ordered_by',
-#             'assignment__instrument',
-#             'assignment__department',
-#             'assignment__sample',
-#             'entered_by',
-#             'verified_by',
-#             'released_by'
-#         ),
-#         id=result_id,
-#         assignment__vendor=request.user.vendor
-#     )
-    
-#     # Get patient's previous results for same test (for trending)
-#     previous_results = TestResult.objects.filter(
-#         assignment__request__patient=result.assignment.request.patient,
-#         assignment__lab_test=result.assignment.lab_test,
-#         released=True
-#     ).exclude(id=result.id).order_by('-entered_at')[:5]
-    
-#     # Check permissions
-#     can_verify = (
-#         request.user.has_perm('labs.can_verify_results') and
-#         result.can_be_verified and
-#         result.entered_by != request.user
-#     )
-    
-#     can_release = (
-#         request.user.has_perm('labs.can_release_results') and
-#         result.can_be_released
-#     )
-    
-#     can_amend = (
-#         request.user.has_perm('labs.can_amend_results') and
-#         result.released
-#     )
-    
-#     can_edit = not result.verified_at and not result.released
-    
-#     context = {
-#         'result': result,
-#         'previous_results': previous_results,
-#         'can_verify': can_verify,
-#         'can_release': can_release,
-#         'can_amend': can_amend,
-#         'can_edit': can_edit,
-#     }
-    
-#     return render(request, 'laboratory/results/result_detail.html', context)
 
 @login_required
 def result_detail(request, result_id):
@@ -1680,7 +1794,7 @@ def result_detail(request, result_id):
         TestResult.objects.select_related(
             'assignment__lab_test',
             'assignment__request__patient',
-            'assignment__request__ordered_by',
+            'assignment__request__ordering_clinician',
             'assignment__instrument',
             'assignment__department',
             'assignment__sample',
@@ -1689,7 +1803,7 @@ def result_detail(request, result_id):
             'released_by'
         ),
         id=result_id,
-        assignment__vendor=request.user.vendor  # ✅ Multi-tenant security
+        assignment__vendor=request.user.vendor
     )
     
     # Get patient's previous results for same test (for trending)
@@ -1743,7 +1857,7 @@ def result_detail(request, result_id):
         'workflow_stage': _get_workflow_stage(result),
     }
     
-    return render(request, 'laboratory/results/result_detail.html', context)
+    return render(request, 'laboratory/result/result_detail.html', context)
 
 
 def _get_workflow_stage(result):
@@ -1871,19 +1985,19 @@ def verify_result(request, assignment_id):
     
     if not hasattr(assignment, "result"):
         messages.error(request, "No result found to verify.")
-        return redirect('test_assignment_detail', assignment_id=assignment.id)
+        return redirect('labs:test_assignment_detail', assignment_id=assignment.id)
     
     result = assignment.result
     
     # Check if already verified
     if result.verified_at:
         messages.warning(request, "This result has already been verified.")
-        return redirect('test_assignment_detail', assignment_id=assignment.id)
+        return redirect('labs:test_assignment_detail', assignment_id=assignment.id)
     
     # Prevent self-verification (optional policy)
     if result.entered_by == request.user:
         messages.error(request, "You cannot verify results you entered yourself.")
-        return redirect('test_assignment_detail', assignment_id=assignment.id)
+        return redirect('labs:test_assignment_detail', assignment_id=assignment.id)
     
     try:
         result.mark_verified(request.user)
@@ -1892,7 +2006,7 @@ def verify_result(request, assignment_id):
     except ValidationError as e:
         messages.error(request, str(e))
     
-    return redirect('test_assignment_detail', assignment_id=assignment.id)
+    return redirect('labs:test_assignment_detail', assignment_id=assignment.id)
 
 
 @login_required
@@ -1920,20 +2034,6 @@ def release_result(request, assignment_id):
     
     return redirect('test_assignment_detail', assignment_id=assignment.id)
 
-
-@login_required
-def instrument_status_check(request, instrument_id):
-    """Check instrument connection status (AJAX endpoint)"""
-    instrument = get_object_or_404(
-        Equipment,
-        id=instrument_id,
-        vendor=request.user.vendor
-    )
-    
-    service = InstrumentService(instrument)
-    status = service.check_instrument_status()
-    
-    return JsonResponse(status)
 
 
 @login_required
@@ -1971,6 +2071,22 @@ def pending_results_dashboard(request):
     }
     
     return render(request, 'laboratory/pending_results_dashboard.html', context)
+
+
+@login_required
+def instrument_status_check(request, instrument_id):
+    """Check instrument connection status (AJAX endpoint)"""
+    instrument = get_object_or_404(
+        Equipment,
+        id=instrument_id,
+        vendor=request.user.vendor
+    )
+    
+    service = InstrumentService(instrument)
+    status = service.check_instrument_status()
+    
+    return JsonResponse(status)
+
 
 @login_required
 @require_POST

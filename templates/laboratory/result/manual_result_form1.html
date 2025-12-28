@@ -124,20 +124,12 @@
                             <label class="form-label"><strong>Select Result</strong> <span class="text-danger">*</span></label>
                             <div class="btn-group-vertical w-100" role="group">
                                 {% for option in qualitative_options %}
-                                <input type="radio" 
-                                       class="btn-check" 
-                                       name="qualitative_option" 
-                                       id="option_{{ option.id }}" 
-                                       value="{{ option.id }}"
-                                       {% if existing_result and existing_result.result_value == option.value %}checked{% endif %}
-                                       {% if forloop.first and not existing_result %}checked{% endif %} 
-                                       required>
-                                <label class="btn btn-outline-primary text-start py-3" for="option_{{ option.id }}">
-                                    <i class="bi bi-circle{% if option.is_normal %}-fill text-success{% endif %} me-2"></i>
-                                    <strong>{{ option.value }}</strong>
-                                    {% if option.is_normal %}
-                                        <span class="badge bg-success ms-2">Normal</span>
-                                    {% endif %}
+                                <input type="radio" class="btn-check" name="qualitative_option" 
+                                       id="option_{{ forloop.counter }}" value="{{ option }}"
+                                       {% if existing_result and existing_result.result_value == option %}checked{% endif %}
+                                       {% if forloop.first and not existing_result %}checked{% endif %} required>
+                                <label class="btn btn-outline-primary text-start py-3" for="option_{{ forloop.counter }}">
+                                    <i class="bi bi-circle me-2"></i><strong>{{ option }}</strong>
                                 </label>
                                 {% endfor %}
                             </div>
@@ -271,4 +263,3 @@ document.addEventListener('DOMContentLoaded', function() {
 @media (max-width: 768px) { .input-group-lg .form-control { font-size: 1.2rem; } }
 </style>
 {% endblock %}
-
