@@ -827,9 +827,7 @@ class TestResult(models.Model):
 
     flag = models.CharField(max_length=1, choices=FLAG_CHOICES, default='N')
 
-    # ===================
-    # CONTEXT
-    # ===================
+    # CONTEXTUAL FIELDS
     remarks = models.TextField(blank=True)
     interpretation = models.TextField(blank=True)
 
@@ -927,8 +925,9 @@ class TestResult(models.Model):
         """Mark result as verified"""
         if self.verified_at:
             raise ValidationError("Result already verified")
-        if self.entered_by == user:
-            raise ValidationError("Cannot verify your own result")
+        
+        # if self.entered_by == user:
+        #     raise ValidationError("Cannot verify your own result")
         
         self.verified_by = user
         self.verified_at = timezone.now()
@@ -989,11 +988,15 @@ class TestResult(models.Model):
     def can_be_verified(self):
         """Check if result can be verified"""
         return (
-            not self.verified_at and 
-            not self.released and
+            # not self.verified_at and 
+            # not self.released and
+            self.entered_at is not None and
+            self.verified_at is None and
+            self.released is False and
             self.qc_passed
         )
 
+    
     @property
     def can_be_released(self):
         """Check if result can be released"""
@@ -1002,7 +1005,13 @@ class TestResult(models.Model):
             not self.released and
             self.qc_passed
         )
-
+# @property
+#     def can_be_released(self):
+#         return (
+#             self.verified_at is not None and
+#             self.released is False
+#         )
+    
     @property
     def test(self):
         return self.assignment.lab_test
@@ -1038,9 +1047,9 @@ class TestResult(models.Model):
             except (InvalidOperation, ValueError):
                 raise ValidationError({"result_value": "Quantitative result must be numeric."})
 
-        # Prevent self-verification
-        if self.verified_by and self.verified_by == self.entered_by:
-            raise ValidationError("Cannot verify your own result.")
+        # # Prevent self-verification
+        # if self.verified_by and self.verified_by == self.entered_by:
+        #     raise ValidationError("Cannot verify your own result.")
 
     # ======================================================
     #  A U T O  F L A G G I N G  (OPTIMIZED VERSION)

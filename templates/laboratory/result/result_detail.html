@@ -4,47 +4,51 @@
 {% block title %}Result Detail - {{ result.assignment.lab_test.name }}{% endblock %}
 
 {% block breadcrumbs %}
-<li class="breadcrumb-item"><a href="{% url 'labs:result_list' %}">Results</a></li>
+<li class="breadcrumb-item"><a href="{% url 'labs:result_list' %}" class="text-navy">Results</a></li>
 <li class="breadcrumb-item active">{{ result.assignment.request.request_id }}</li>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
+<div class="container-fluid py-4 bg-white">
     
-    <!-- Action Buttons -->
+    <!-- HEADER WITH ACTIONS -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>
-            <i class="bi bi-clipboard-data"></i> Test Result Detail
-        </h2>
+        <div>
+            <h2 class="text-navy mb-1">
+                <i class="bi bi-clipboard-data me-2"></i>Test Result Detail
+            </h2>
+            <p class="text-muted mb-0">
+                <small>Viewing as: <span class="badge bg-gold text-dark">{{ user_role }}</span></small>
+            </p>
+        </div>
+        
         <div class="btn-group">
-            <a href="{% url 'labs:result_list' %}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left"></i> Back to List
+            <a href="{% url 'labs:result_list' %}" class="btn btn-outline-navy">
+                <i class="bi bi-arrow-left me-1"></i> Back
             </a>
-            
+
             {% if can_edit %}
             <a href="{% url 'labs:edit_result' result.id %}" class="btn btn-warning">
-                <i class="bi bi-pencil"></i> Edit Result
+                <i class="bi bi-pencil me-1"></i> Edit Result
             </a>
             {% endif %}
             
             {% if can_verify %}
-            <form method="post" action="{% url 'labs:verify_result' result.id %}" class="d-inline">
+            <form method="post" action="{% url 'labs:verify_result' result.id %}" class="d-inline" 
+                  onsubmit="return confirmVerify()">
                 {% csrf_token %}
-                <button type="submit" 
-                        class="btn btn-success"
-                        onclick="return confirm('Verify this result?')">
-                    <i class="bi bi-check-circle"></i> Verify Result
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-check-circle me-1"></i> Verify
                 </button>
             </form>
             {% endif %}
             
             {% if can_release %}
-            <form method="post" action="{% url 'labs:release_result' result.id %}" class="d-inline">
+            <form method="post" action="{% url 'labs:release_result' result.id %}" class="d-inline"
+                  onsubmit="return confirmRelease()">
                 {% csrf_token %}
-                <button type="submit" 
-                        class="btn btn-primary"
-                        onclick="return confirm('Release this result to patient/doctor?')">
-                    <i class="bi bi-send"></i> Release Result
+                <button type="submit" class="btn btn-primary bg-navy border-navy">
+                    <i class="bi bi-send me-1"></i> Release
                 </button>
             </form>
             {% endif %}
@@ -52,262 +56,345 @@
             {% if result.released %}
             <a href="{% url 'labs:print_result' result.id %}" 
                target="_blank"
-               class="btn btn-outline-primary">
-                <i class="bi bi-printer"></i> Print
+               class="btn btn-outline-navy">
+                <i class="bi bi-printer me-1"></i> Print
             </a>
             {% endif %}
             
             {% if can_amend %}
-            <a href="{% url 'labs:amend_result' result.id %}" class="btn btn-warning">
-                <i class="bi bi-exclamation-triangle"></i> Amend Result
+            <a href="{% url 'labs:amend_result' result.id %}" class="btn btn-danger">
+                <i class="bi bi-exclamation-triangle me-1"></i> Amend
             </a>
             {% endif %}
         </div>
     </div>
 
-    <!-- Status Banner -->
+    <!-- STATUS ALERT WITH CRITICAL INDICATOR -->
     <div class="alert 
-        {% if result.released %}alert-success
-        {% elif result.verified_at %}alert-info
-        {% elif result.is_critical %}alert-danger
-        {% else %}alert-warning{% endif %} mb-4">
-        <div class="row align-items-center">
-            <div class="col-md-6">
-                <h4 class="alert-heading mb-0">
+        {% if result.released %}alert-success border-left-success
+        {% elif result.verified_at %}alert-info border-left-info
+        {% elif result.is_critical %}alert-danger border-left-danger
+        {% else %}alert-warning border-left-warning{% endif %} 
+        mb-4 border-start border-4" role="alert">
+        <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+                <h5 class="alert-heading mb-1">
                     {% if result.released %}
-                        <i class="bi bi-check-circle"></i> Result Released
+                        <i class="bi bi-check-circle-fill me-2 text-success"></i>Result Released
                     {% elif result.verified_at %}
-                        <i class="bi bi-shield-check"></i> Result Verified
+                        <i class="bi bi-shield-check me-2 text-info"></i>Result Verified - Awaiting Release
                     {% elif result.is_critical %}
-                        <i class="bi bi-exclamation-triangle"></i> Critical Value Alert
+                        <i class="bi bi-exclamation-triangle-fill me-2 text-danger"></i>CRITICAL VALUE
                     {% else %}
-                        <i class="bi bi-clock"></i> Pending Verification
+                        <i class="bi bi-clock-history me-2 text-warning"></i>Pending Verification
                     {% endif %}
-                </h4>
+                </h5>
+                <p class="mb-0">
+                    {% if workflow_stage %}<strong>Stage:</strong> {{ workflow_stage }} | {% endif %}
+                    <strong>Status:</strong> 
+                    <span class="badge 
+                        {% if result.released %}bg-success
+                        {% elif result.verified_at %}bg-info
+                        {% elif result.is_critical %}bg-danger
+                        {% else %}bg-warning text-dark{% endif %}">
+                        {% if result.released %}RELEASED
+                        {% elif result.verified_at %}VERIFIED
+                        {% elif result.is_critical %}CRITICAL
+                        {% else %}ENTERED{% endif %}
+                    </span>
+                </p>
             </div>
-            <div class="col-md-6 text-end">
-                {% if result.is_critical %}
-                    <strong class="text-danger">🚨 Notify ordering physician immediately!</strong>
-                {% endif %}
+            {% if result.is_critical %}
+            <div class="text-end">
+                <button class="btn btn-danger btn-sm">
+                    <i class="bi bi-telephone me-1"></i> Notify Physician
+                </button>
             </div>
+            {% endif %}
         </div>
     </div>
 
     <div class="row">
-        <!-- Main Result Card -->
+        <!-- LEFT COLUMN - MAIN CONTENT -->
         <div class="col-lg-8">
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-primary text-white">
+            <!-- TEST RESULT CARD -->
+            <div class="card border-navy shadow-sm mb-4">
+                <div class="card-header bg-navy text-white">
                     <h5 class="mb-0">
-                        <i class="bi bi-clipboard-data"></i> Test Result
+                        <i class="bi bi-clipboard-data me-2"></i>Test Result
                     </h5>
                 </div>
                 <div class="card-body">
-                    <!-- Test Information -->
+                    <!-- QUICK INFO ROW -->
                     <div class="row mb-4">
                         <div class="col-md-6">
-                            <h6 class="text-muted mb-3">Test Information</h6>
-                            <table class="table table-sm table-borderless">
-                                <tr>
-                                    <td width="40%"><strong>Test Name:</strong></td>
-                                    <td>{{ result.assignment.lab_test.name }}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Test Code:</strong></td>
-                                    <td><code>{{ result.assignment.lab_test.code }}</code></td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Test Type:</strong></td>
-                                    <td>
-                                        <span class="badge {% if result.is_quantitative %}bg-info{% else %}bg-secondary{% endif %}">
-                                            {{ result.test_type }} - 
-                                            {% if result.is_quantitative %}Quantitative{% else %}Qualitative{% endif %}
-                                        </span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Department:</strong></td>
-                                    <td>{{ result.assignment.department.name }}</td>
-                                </tr>
-                            </table>
+                            <div class="card bg-light border-0 h-100">
+                                <div class="card-body">
+                                    <h6 class="text-navy mb-3">
+                                        <i class="bi bi-vial me-2"></i>Test Information
+                                    </h6>
+                                    <dl class="row mb-0">
+                                        <dt class="col-sm-5 text-muted">Test Name</dt>
+                                        <dd class="col-sm-7">{{ result.assignment.lab_test.name }}</dd>
+                                        
+                                        <dt class="col-sm-5 text-muted">Test Code</dt>
+                                        <dd class="col-sm-7"><code class="text-navy">{{ result.assignment.lab_test.code }}</code></dd>
+                                        
+                                        <dt class="col-sm-5 text-muted">Department</dt>
+                                        <dd class="col-sm-7">{{ result.assignment.department.name }}</dd>
+                                        
+                                        <dt class="col-sm-5 text-muted">Method</dt>
+                                        <dd class="col-sm-7">{{ result.assignment.lab_test.method|default:"--" }}</dd>
+                                    </dl>
+                                </div>
+                            </div>
                         </div>
                         <div class="col-md-6">
-                            <h6 class="text-muted mb-3">Patient Information</h6>
-                            <table class="table table-sm table-borderless">
-                                <tr>
-                                    <td width="40%"><strong>Name:</strong></td>
-                                    <td>{{ result.assignment.request.patient.get_full_name }}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Patient ID:</strong></td>
-                                    <td>{{ result.assignment.request.patient.patient_id }}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Age/Sex:</strong></td>
-                                    <td>
-                                        {{ result.assignment.request.patient.age|default:"--" }} / 
-                                        {{ result.assignment.request.patient.get_sex_display|default:"--" }}
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Request ID:</strong></td>
-                                    <td>
-                                        <a href="{% url 'labs:request_detail' result.assignment.request.pk %}">
-                                            {{ result.assignment.request.request_id }}
-                                        </a>
-                                    </td>
-                                </tr>
-                            </table>
+                            <div class="card bg-light border-0 h-100">
+                                <div class="card-body">
+                                    <h6 class="text-navy mb-3">
+                                        <i class="bi bi-person me-2"></i>Patient Information
+                                    </h6>
+                                    <dl class="row mb-0">
+                                        <dt class="col-sm-5 text-muted">Patient Name</dt>
+                                        <dd class="col-sm-7">{{ result.assignment.request.patient.get_full_name }}</dd>
+                                        
+                                        <dt class="col-sm-5 text-muted">Patient ID</dt>
+                                        <dd class="col-sm-7">{{ result.assignment.request.patient.patient_id }}</dd>
+                                        
+                                        <dt class="col-sm-5 text-muted">Age / Sex</dt>
+                                        <dd class="col-sm-7">
+                                            {{ result.assignment.request.patient.age|default:"--" }} / 
+                                            {{ result.assignment.request.patient.get_sex_display|default:"--" }}
+                                        </dd>
+                                        
+                                        <dt class="col-sm-5 text-muted">Request ID</dt>
+                                        <dd class="col-sm-7">
+                                            <a href="{% url 'labs:request_detail' result.assignment.request.pk %}" 
+                                               class="text-navy">
+                                                {{ result.assignment.request.request_id }}
+                                            </a>
+                                        </dd>
+                                    </dl>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <hr>
-
-                    <!-- Result Value - Prominent Display -->
-                    <div class="text-center py-4 bg-light rounded mb-4">
-                        <h6 class="text-muted mb-2">RESULT VALUE</h6>
-                        <h1 class="display-4 mb-2">
+                    <!-- MAIN RESULT DISPLAY -->
+                    <div class="text-center py-5 bg-gradient-light rounded mb-4 position-relative">
+                        <div class="position-absolute top-0 start-0 m-3">
+                            <span class="badge 
+                                {% if result.test_type == 'quantitative' %}bg-info
+                                {% else %}bg-secondary{% endif %}">
+                                {% if result.is_quantitative %}Quantitative{% else %}Qualitative{% endif %}
+                            </span>
+                        </div>
+                        
+                        <h6 class="text-uppercase text-muted letter-spacing mb-3">Result Value</h6>
+                        <div class="display-2 fw-bold mb-2 
+                            {% if result.flag == 'H' %}text-warning
+                            {% elif result.flag == 'L' %}text-info
+                            {% elif result.flag == 'C' %}text-danger
+                            {% else %}text-navy{% endif %}">
                             {{ result.result_value }}
                             {% if result.units %}
-                                <span class="fs-4 text-muted">{{ result.units }}</span>
+                            <span class="display-6 text-muted">{{ result.units }}</span>
                             {% endif %}
-                        </h1>
+                        </div>
                         
-                        <!-- Flag Badge -->
-                        <div class="mb-3">
-                            <span class="badge badge-lg 
+                        <!-- FLAG BADGE -->
+                        <div class="mb-4">
+                            <span class="badge fs-6 px-4 py-2 
                                 {% if result.flag == 'N' %}bg-success
                                 {% elif result.flag == 'H' %}bg-warning text-dark
                                 {% elif result.flag == 'L' %}bg-info
                                 {% elif result.flag == 'C' %}bg-danger
-                                {% elif result.flag == '*' %}bg-primary
-                                {% else %}bg-secondary{% endif %}"
-                                style="font-size: 1.2rem; padding: 0.5rem 1rem;">
-                                {{ result.get_flag_display }}
+                                {% elif result.flag == '*' %}bg-navy
+                                {% else %}bg-secondary{% endif %}">
+                                <i class="bi bi-flag me-1"></i>{{ result.get_flag_display }}
                             </span>
                         </div>
                         
-                        <!-- Reference Range -->
+                        <!-- REFERENCE RANGE -->
                         {% if result.reference_range %}
-                        <div>
-                            <small class="text-muted">
-                                <strong>Reference Range:</strong> {{ result.reference_range }}
-                            </small>
+                        <div class="alert alert-light border d-inline-block">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-graph-up text-navy me-2"></i>
+                                <div>
+                                    <strong class="text-navy">Reference Range:</strong>
+                                    <span class="text-muted ms-2">{{ result.reference_range }}</span>
+                                </div>
+                            </div>
                         </div>
                         {% endif %}
                     </div>
 
-                    <!-- Additional Information -->
-                    {% if result.interpretation %}
-                    <div class="mb-3">
-                        <h6 class="text-muted">Clinical Interpretation</h6>
-                        <div class="alert alert-info">
-                            {{ result.interpretation }}
+                    <!-- INTERPRETATION & REMARKS -->
+                    {% if result.interpretation or result.remarks %}
+                    <div class="row">
+                        {% if result.interpretation %}
+                        <div class="col-md-6">
+                            <div class="card border-gold">
+                                <div class="card-header bg-gold-light">
+                                    <h6 class="mb-0 text-dark">
+                                        <i class="bi bi-clipboard-heart me-2"></i>Clinical Interpretation
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="mb-0">{{ result.interpretation }}</p>
+                                </div>
+                            </div>
                         </div>
+                        {% endif %}
+                        
+                        {% if result.remarks %}
+                        <div class="col-md-6">
+                            <div class="card border-secondary">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0 text-muted">
+                                        <i class="bi bi-chat-left-text me-2"></i>Technical Remarks
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="mb-0">{{ result.remarks }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
                     </div>
                     {% endif %}
 
-                    {% if result.remarks %}
-                    <div class="mb-3">
-                        <h6 class="text-muted">Technical Remarks</h6>
-                        <div class="alert alert-secondary">
-                            {{ result.remarks }}
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    <!-- Data Source -->
+                    <!-- INSTRUMENT & TAT -->
                     <div class="row mt-4">
                         <div class="col-md-6">
-                            <h6 class="text-muted">Data Source</h6>
-                            <p>
-                                {{ result.get_source_icon }} 
-                                <strong>{{ result.get_data_source_display }}</strong>
-                            </p>
-                            {% if result.instrument_name %}
-                            <p class="mb-0">
-                                <small class="text-muted">
-                                    Instrument: {{ result.instrument_name }}
-                                    {% if result.instrument_run_id %}
-                                        <br>Run ID: <code>{{ result.instrument_run_id }}</code>
-                                    {% endif %}
-                                </small>
-                            </p>
-                            {% endif %}
+                            <div class="d-flex align-items-center">
+                                <div class="bg-navy text-white rounded-circle p-3 me-3">
+                                    <i class="bi bi-cpu fs-4"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Data Source</h6>
+                                    <p class="mb-0">
+                                        <strong>{{ result.get_data_source_display }}</strong>
+                                        {% if result.instrument_name %}
+                                        <br>
+                                        <small class="text-muted">
+                                            {{ result.instrument_name }}
+                                            {% if result.instrument_run_id %}
+                                            | Run: <code>{{ result.instrument_run_id }}</code>
+                                            {% endif %}
+                                        </small>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                         
                         {% if result.turnaround_time %}
                         <div class="col-md-6">
-                            <h6 class="text-muted">Turnaround Time</h6>
-                            <p>
-                                <strong>{{ result.turnaround_time }} hours</strong>
-                                <br><small class="text-muted">From sample collection to result</small>
-                            </p>
+                            <div class="d-flex align-items-center">
+                                <div class="bg-info text-white rounded-circle p-3 me-3">
+                                    <i class="bi bi-stopwatch fs-4"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Turnaround Time</h6>
+                                    <p class="mb-0">
+                                        <strong>{{ result.turnaround_time }} hours</strong>
+                                        <br>
+                                        <small class="text-muted">From collection to result</small>
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                         {% endif %}
                     </div>
                 </div>
             </div>
 
-            <!-- Amendment History -->
+            <!-- AMENDMENT HISTORY -->
             {% if result.is_amended or result.version > 1 %}
             <div class="card border-warning mb-4">
-                <div class="card-header bg-warning text-dark">
+                <div class="card-header bg-warning text-dark d-flex justify-content-between">
                     <h6 class="mb-0">
-                        <i class="bi bi-clock-history"></i> Amendment History
+                        <i class="bi bi-clock-history me-2"></i>Amendment History
                     </h6>
+                    <span class="badge bg-dark">Version {{ result.version }}</span>
                 </div>
                 <div class="card-body">
-                    {% if result.previous_value %}
-                    <p><strong>Previous Value:</strong> {{ result.previous_value }}</p>
-                    {% endif %}
-                    {% if result.amendment_reason %}
-                    <p><strong>Reason:</strong> {{ result.amendment_reason }}</p>
-                    {% endif %}
-                    <p class="mb-0">
-                        <small class="text-muted">Version {{ result.version }}</small>
+                    <div class="row">
+                        {% if result.previous_value %}
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>Previous Value:</strong></p>
+                            <p class="text-danger fs-5">{{ result.previous_value }}</p>
+                        </div>
+                        {% endif %}
+                        {% if result.amendment_reason %}
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>Reason for Amendment:</strong></p>
+                            <p class="text-muted">{{ result.amendment_reason }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% if result.amended_by %}
+                    <p class="mb-0 text-end">
+                        <small class="text-muted">
+                            Amended by {{ result.amended_by.get_full_name }} on 
+                            {{ result.amended_at|date:"M d, Y H:i" }}
+                        </small>
                     </p>
+                    {% endif %}
                 </div>
             </div>
             {% endif %}
 
-            <!-- Previous Results (Trend) -->
+            <!-- PREVIOUS RESULTS TREND -->
             {% if previous_results %}
             <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white">
+                <div class="card-header bg-white border-bottom">
                     <h6 class="mb-0">
-                        <i class="bi bi-graph-up"></i> Previous Results (Same Test)
+                        <i class="bi bi-graph-up me-2 text-navy"></i>Result Trend (Last 5 Tests)
                     </h6>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-sm">
-                            <thead>
+                        <table class="table table-hover">
+                            <thead class="bg-light">
                                 <tr>
-                                    <th>Date</th>
+                                    <th>Date/Time</th>
                                     <th>Result</th>
                                     <th>Flag</th>
-                                    <th>Source</th>
+                                    <th>Reference Range</th>
+                                    <th>Status</th>
+                                    <th>Entered By</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for prev in previous_results %}
-                                <tr>
+                                <tr class="{% if forloop.first %}table-active{% endif %}">
                                     <td>{{ prev.entered_at|date:"Y-m-d H:i" }}</td>
                                     <td>
-                                        <strong>{{ prev.result_value }}</strong> {{ prev.units }}
+                                        <strong>{{ prev.result_value }}</strong> 
+                                        {% if prev.units %}{{ prev.units }}{% endif %}
                                     </td>
                                     <td>
-                                        <span class="badge badge-sm 
+                                        <span class="badge 
                                             {% if prev.flag == 'N' %}bg-success
-                                            {% elif prev.flag == 'H' %}bg-warning
+                                            {% elif prev.flag == 'H' %}bg-warning text-dark
                                             {% elif prev.flag == 'L' %}bg-info
                                             {% elif prev.flag == 'C' %}bg-danger
                                             {% else %}bg-secondary{% endif %}">
                                             {{ prev.get_flag_display }}
                                         </span>
                                     </td>
-                                    <td>{{ prev.get_source_icon }}</td>
+                                    <td><small class="text-muted">{{ prev.reference_range|default:"--" }}</small></td>
+                                    <td>
+                                        {% if prev.released %}
+                                        <span class="badge bg-success">Released</span>
+                                        {% elif prev.verified_at %}
+                                        <span class="badge bg-info">Verified</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><small>{{ prev.entered_by.get_short_name|default:"System" }}</small></td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -318,109 +405,189 @@
             {% endif %}
         </div>
 
-        <!-- Sidebar -->
+        <!-- RIGHT COLUMN - SIDEBAR -->
         <div class="col-lg-4">
-            <!-- Status Timeline -->
-            <div class="card border-0 shadow-sm mb-4">
+            <!-- WORKFLOW TIMELINE -->
+            <div class="card border-navy shadow-sm mb-4">
                 <div class="card-header bg-white">
-                    <h6 class="mb-0">
-                        <i class="bi bi-clock-history"></i> Status Timeline
+                    <h6 class="mb-0 text-navy">
+                        <i class="bi bi-diagram-3 me-2"></i>Workflow Timeline
                     </h6>
                 </div>
                 <div class="card-body">
-                    <ul class="timeline">
-                        <!-- Entered -->
-                        <li class="timeline-item">
-                            <div class="timeline-marker bg-primary"></div>
+                    <div class="timeline-vertical">
+                        <!-- ENTERED -->
+                        <div class="timeline-step">
+                            <div class="timeline-marker bg-navy">
+                                <i class="bi bi-keyboard"></i>
+                            </div>
                             <div class="timeline-content">
-                                <h6>Result Entered</h6>
-                                <p class="mb-1">{{ result.entered_at|date:"M d, Y H:i" }}</p>
-                                <small class="text-muted">
-                                    by {{ result.entered_by.get_full_name|default:"System" }}
+                                <h6 class="mb-1">Result Entered</h6>
+                                <p class="text-muted mb-1">{{ result.entered_at|date:"M d, Y H:i" }}</p>
+                                <small class="text-navy">
+                                    <i class="bi bi-person-circle me-1"></i>
+                                    {{ result.entered_by.get_full_name|default:"System" }}
                                 </small>
                             </div>
-                        </li>
+                        </div>
                         
-                        <!-- Verified -->
+                        <!-- VERIFIED -->
                         {% if result.verified_at %}
-                        <li class="timeline-item">
-                            <div class="timeline-marker bg-success"></div>
+                        <div class="timeline-step">
+                            <div class="timeline-marker bg-success">
+                                <i class="bi bi-shield-check"></i>
+                            </div>
                             <div class="timeline-content">
-                                <h6>Result Verified</h6>
-                                <p class="mb-1">{{ result.verified_at|date:"M d, Y H:i" }}</p>
-                                <small class="text-muted">
-                                    by {{ result.verified_by.get_full_name }}
+                                <h6 class="mb-1">Result Verified</h6>
+                                <p class="text-muted mb-1">{{ result.verified_at|date:"M d, Y H:i" }}</p>
+                                <small class="text-success">
+                                    <i class="bi bi-person-check me-1"></i>
+                                    {{ result.verified_by.get_full_name }}
                                 </small>
                             </div>
-                        </li>
+                        </div>
                         {% endif %}
                         
-                        <!-- Released -->
+                        <!-- RELEASED -->
                         {% if result.released %}
-                        <li class="timeline-item">
-                            <div class="timeline-marker bg-info"></div>
+                        <div class="timeline-step">
+                            <div class="timeline-marker bg-info">
+                                <i class="bi bi-send-check"></i>
+                            </div>
                             <div class="timeline-content">
-                                <h6>Result Released</h6>
-                                <p class="mb-1">{{ result.released_at|date:"M d, Y H:i" }}</p>
-                                <small class="text-muted">
-                                    by {{ result.released_by.get_full_name|default:"System" }}
+                                <h6 class="mb-1">Result Released</h6>
+                                <p class="text-muted mb-1">{{ result.released_at|date:"M d, Y H:i" }}</p>
+                                <small class="text-info">
+                                    <i class="bi bi-person-badge me-1"></i>
+                                    {{ result.released_by.get_full_name|default:"System" }}
                                 </small>
                             </div>
-                        </li>
+                        </div>
                         {% endif %}
-                    </ul>
+                        
+                        <!-- CURRENT POSITION -->
+                        <div class="timeline-step">
+                            <div class="timeline-marker 
+                                {% if result.released %}bg-success
+                                {% elif result.verified_at %}bg-info
+                                {% else %}bg-warning{% endif %} 
+                                pulse">
+                                <i class="bi bi-record-circle"></i>
+                            </div>
+                            <div class="timeline-content">
+                                <h6 class="mb-1">Current Position</h6>
+                                <p class="mb-0">
+                                    <strong class="text-navy">{{ workflow_stage|default:"In Progress" }}</strong>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Quality Control -->
-            <div class="card border-0 shadow-sm mb-4">
+            <!-- QUALITY CONTROL -->
+            <div class="card border-navy shadow-sm mb-4">
                 <div class="card-header bg-white">
-                    <h6 class="mb-0">
-                        <i class="bi bi-shield-check"></i> Quality Control
+                    <h6 class="mb-0 text-navy">
+                        <i class="bi bi-shield-check me-2"></i>Quality Control
                     </h6>
                 </div>
                 <div class="card-body">
-                    <p>
-                        <strong>QC Status:</strong>
-                        {% if result.qc_passed %}
-                            <span class="badge bg-success">Passed</span>
-                        {% else %}
-                            <span class="badge bg-danger">Failed</span>
-                        {% endif %}
-                    </p>
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="me-3">
+                            <div class="bg-{% if result.qc_passed %}success{% else %}danger{% endif %} 
+                                text-white rounded-circle p-3">
+                                <i class="bi bi-{% if result.qc_passed %}check{% else %}x{% endif %}-circle fs-4"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <h5 class="mb-0">QC Status</h5>
+                            <p class="mb-0">
+                                <span class="badge bg-{% if result.qc_passed %}success{% else %}danger{% endif %}">
+                                    {% if result.qc_passed %}PASSED{% else %}FAILED{% endif %}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
                     
                     {% if result.delta_flag %}
-                    <div class="alert alert-warning">
-                        <strong>⚠️ Delta Check Alert</strong>
-                        <p class="mb-0">
-                            {{ result.delta_percent }}% change from previous result
-                        </p>
+                    <div class="alert alert-warning border-warning">
+                        <div class="d-flex">
+                            <i class="bi bi-exclamation-triangle-fill me-2 text-warning"></i>
+                            <div>
+                                <strong>Delta Check Alert</strong>
+                                <p class="mb-0 small">
+                                    {{ result.delta_percent|floatformat:1 }}% change from previous result
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if has_delta_check %}
+                    <div class="alert alert-info border-info">
+                        <div class="d-flex">
+                            <i class="bi bi-info-circle me-2 text-info"></i>
+                            <div>
+                                <strong>Delta Check Performed</strong>
+                                <p class="mb-0 small">Result compared with historical data</p>
+                            </div>
+                        </div>
                     </div>
                     {% endif %}
                     
                     {% if result.qc_comment %}
-                    <p class="mb-0">
-                        <small class="text-muted">{{ result.qc_comment }}</small>
-                    </p>
+                    <div class="mt-3">
+                        <label class="form-label text-muted">QC Comment:</label>
+                        <p class="mb-0 border rounded p-2 bg-light">{{ result.qc_comment }}</p>
+                    </div>
                     {% endif %}
                 </div>
             </div>
 
-            <!-- Sample Information -->
+            <!-- SAMPLE INFORMATION -->
             {% if result.assignment.sample %}
-            <div class="card border-0 shadow-sm">
+            <div class="card border-navy shadow-sm">
                 <div class="card-header bg-white">
-                    <h6 class="mb-0">
-                        <i class="bi bi-droplet"></i> Sample Information
+                    <h6 class="mb-0 text-navy">
+                        <i class="bi bi-droplet me-2"></i>Sample Information
                     </h6>
                 </div>
                 <div class="card-body">
-                    <p><strong>Sample Type:</strong> {{ result.assignment.sample.sample_type }}</p>
-                    <p><strong>Sample ID:</strong> <code>{{ result.assignment.sample.sample_id }}</code></p>
+                    <div class="row">
+                        <div class="col-6">
+                            <p class="mb-2">
+                                <small class="text-muted">Sample Type</small><br>
+                                <strong>{{ result.assignment.sample.sample_type }}</strong>
+                            </p>
+                        </div>
+                        <div class="col-6">
+                            <p class="mb-2">
+                                <small class="text-muted">Sample ID</small><br>
+                                <code class="text-navy">{{ result.assignment.sample.sample_id }}</code>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6">
+                            <p class="mb-2">
+                                <small class="text-muted">Collection</small><br>
+                                <strong>{{ result.assignment.sample.collected_at|date:"M d, Y" }}</strong>
+                            </p>
+                        </div>
+                        <div class="col-6">
+                            <p class="mb-2">
+                                <small class="text-muted">Time</small><br>
+                                <strong>{{ result.assignment.sample.collected_at|date:"H:i" }}</strong>
+                            </p>
+                        </div>
+                    </div>
+                    {% if result.assignment.sample.collected_by %}
                     <p class="mb-0">
-                        <strong>Collected:</strong> 
-                        {{ result.assignment.sample.collected_at|date:"M d, Y H:i" }}
+                        <small class="text-muted">Collected by:</small><br>
+                        {{ result.assignment.sample.collected_by.get_full_name }}
                     </p>
+                    {% endif %}
                 </div>
             </div>
             {% endif %}
@@ -428,51 +595,119 @@
     </div>
 </div>
 
+<!-- STYLES FOR BRAND COLORS AND ENHANCEMENTS -->
 <style>
-.timeline {
-    list-style: none;
-    padding: 0;
-    position: relative;
+:root {
+    --navy: #001f3f;
+    --navy-light: #2c3e50;
+    --red: #dc3545;
+    --gold: #ffd700;
+    --gold-light: #fff9e6;
+    --cool-white: #f8fafc;
 }
 
-.timeline::before {
+.bg-navy { background-color: var(--navy) !important; }
+.text-navy { color: var(--navy) !important; }
+.border-navy { border-color: var(--navy) !important; }
+.btn-outline-navy { 
+    border-color: var(--navy); 
+    color: var(--navy);
+}
+.btn-outline-navy:hover {
+    background-color: var(--navy);
+    color: white;
+}
+
+.bg-gold { background-color: var(--gold) !important; }
+.bg-gold-light { background-color: var(--gold-light) !important; }
+.text-gold { color: var(--gold) !important; }
+.border-gold { border-color: var(--gold) !important; }
+
+.bg-gradient-light {
+    background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+}
+
+.letter-spacing {
+    letter-spacing: 0.1em;
+}
+
+/* TIMELINE */
+.timeline-vertical {
+    position: relative;
+    padding-left: 2rem;
+}
+
+.timeline-vertical::before {
     content: '';
     position: absolute;
-    left: 10px;
+    left: 1rem;
     top: 0;
     bottom: 0;
     width: 2px;
-    background: #e9ecef;
+    background: linear-gradient(to bottom, var(--navy) 0%, #e9ecef 100%);
 }
 
-.timeline-item {
+.timeline-step {
     position: relative;
-    padding-left: 40px;
-    margin-bottom: 30px;
+    padding-bottom: 2rem;
 }
 
 .timeline-marker {
     position: absolute;
-    left: 0;
-    width: 20px;
-    height: 20px;
+    left: -2rem;
+    width: 2.5rem;
+    height: 2.5rem;
     border-radius: 50%;
-    border: 3px solid #fff;
-    box-shadow: 0 0 0 2px #e9ecef;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    border: 3px solid white;
+    box-shadow: 0 0 0 3px #e9ecef;
+    z-index: 2;
 }
 
-.timeline-content h6 {
-    margin-bottom: 5px;
-    font-size: 0.9rem;
+.timeline-content {
+    padding-left: 1.5rem;
 }
 
-.timeline-content p {
-    font-size: 0.85rem;
+/* PULSE ANIMATION */
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(0, 123, 255, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0); }
 }
 
-.badge-lg {
-    font-size: 1.2rem;
-    padding: 0.5rem 1rem;
+.pulse {
+    animation: pulse 2s infinite;
+}
+
+/* CUSTOM BADGES */
+.badge {
+    font-weight: 500;
+}
+
+/* TABLE ENHANCEMENTS */
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 31, 63, 0.05);
+}
+
+/* ACTION BUTTON SPACING */
+.btn-group .btn {
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
 }
 </style>
+
+<!-- JAVASCRIPT FOR CONFIRMATIONS -->
+<script>
+function confirmVerify() {
+    return confirm('Are you sure you want to verify this result?\n\nOnce verified, it can only be changed via amendment.');
+}
+
+function confirmRelease() {
+    return confirm('Are you sure you want to release this result?\n\nThis will make the result available to the patient and ordering clinician.');
+}
+</script>
 {% endblock %}
+

@@ -30,18 +30,26 @@ urlpatterns = [
 
     # download Test Request 
     path('test-request/<int:pk>/download/', views.download_test_request, name='download_test_request'),
-    
-    path("requests/download/blank/", views.download_test_request, {"blank": True}, name="download_blank_test_request"
-    ),
+    path("requests/download/blank/", views.download_test_request, {"blank": True}, name="download_blank_test_request"),
 
     # examination
     path('examination/samples/', views.sample_examination_list, name='sample-exam-list'),
     path('examination/sample/<str:sample_id>/', views.sample_examination_detail, name='sample-exam-detail'),
 
-   # Test Assignment Management
     # ===== Test Assignment List & Management =====
     path('assignments/', views.test_assignment_list, name='test_assignment_list'),
     path('assignment/<int:assignment_id>/', views.test_assignment_detail, name='test_assignment_detail'),
+
+
+  # Result Management URLs
+    path('results/', views.result_list, name='result_list'),
+    path('result/<int:result_id>/', views.result_detail, name='result_detail'),
+    path('result/<int:result_id>/edit/', views.edit_result, name='edit_result'),
+    path('result/<int:result_id>/verify/', views.verify_result, name='verify_result'),
+    path('result/<int:result_id>/release/', views.release_result, name='release_result'),
+    
+    # ===== Manual Result Entry =====
+    path('assignment/<int:assignment_id>/enter-result/', views.enter_manual_result, name='enter_test_result'),
     
     
     # ===== Quick Instrument Assignment =====
@@ -82,22 +90,8 @@ urlpatterns = [
         views.fetch_result_from_instrument,
         name='fetch_result_from_instrument'
     ),
-    
-    # ===== Manual Result Entry =====
-    path('assignment/<int:assignment_id>/enter-manual-result/',views.enter_manual_result,name='enter_test_result'),
-    
-    # ===== Result Verification & Release =====
-    path(
-        'assignment/<int:assignment_id>/verify/',
-        views.verify_result,
-        name='verify_result'
-    ),
-    
-    path(
-        'assignment/<int:assignment_id>/release/',
-        views.release_result,
-        name='release_result'
-    ),
+
+
     
     # ===== Instrument Status =====
     path(
@@ -116,13 +110,13 @@ urlpatterns = [
 
 #       # ===== RESULT MANAGEMENT =====
     
-#     # Result List & Detail
-    path('results/', views.result_list, name='result_list'),
+# #     # Result List & Detail
+#     path('results/', views.result_list, name='result_list'),
     
-    path('result/<int:result_id>/', views.result_detail, name='result_detail'),
+#     path('result/<int:result_id>/', views.result_detail, name='result_detail'),
     
-    # Result Edit (before verification)
-    path('result/<int:result_id>/edit/', views.edit_result, name='edit_result'),
+#     # Result Edit (before verification)
+#     path('result/<int:result_id>/edit/', views.edit_result, name='edit_result'),
     
 #     # Result Verification
 #     path('result/<int:result_id>/verify/', views.verify_result, name='verify_result'),

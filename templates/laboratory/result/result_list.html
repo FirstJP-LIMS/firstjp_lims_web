@@ -177,6 +177,7 @@
                 </div>
             </div>
         </div>
+
         <div class="card-body p-0">
             {% if page_obj.object_list %}
             <div class="table-responsive">
@@ -228,7 +229,7 @@
                             
                             <td>
                                 <div class="d-flex align-items-center">
-                                    <strong class="text-dark fs-6 me-2">{{ result.value }}</strong>
+                                    <strong class="text-dark fs-6 me-2">{{ result.result_value }}</strong>
                                     {% if result.units %}
                                     <small class="text-muted">{{ result.units }}</small>
                                     {% endif %}
@@ -254,6 +255,14 @@
                                 {% elif result.flag == 'A' %}
                                     <span class="badge bg-warning bg-opacity-15 text-warning border-0">
                                         <i class="bi bi-exclamation-circle me-1"></i>Abnormal
+                                    </span>
+                                {% elif result.flag == 'M' %}
+                                    <span class="badge bg-secondary bg-opacity-15 text-secondary border-0">
+                                        <i class="bi bi-x-circle me-1"></i>Unmeasurable
+                                    </span>
+                                {% elif result.flag == 'R' %}
+                                    <span class="badge bg-danger bg-opacity-15 text-danger border-0">
+                                        <i class="bi bi-exclamation me-1"></i>Out of Range
                                     </span>
                                 {% else %}
                                     <span class="badge bg-success bg-opacity-15 text-success border-0">
@@ -312,39 +321,57 @@
                                 <div class="d-flex gap-1 justify-content-end">
                                     <!-- View Details -->
                                     <a href="{% url 'labs:result_detail' result.id %}" 
-                                       class="btn btn-outline-primary btn-sm rounded-2 px-3"
-                                       data-bs-toggle="tooltip" title="View Assignment">
+                                    class="btn btn-outline-primary btn-sm rounded-2 px-3"
+                                    data-bs-toggle="tooltip" title="View Details">
                                         <i class="bi bi-eye me-1"></i>View
                                     </a>
                                     
-                                    <!-- Verify Button -->
-                                    {% if not result.verified_at and not result.released %}
-                                    <form method="post" action="{% url 'labs:verify_result' result.id %}" class="d-inline">
+                                    <!-- Verify Button - Only if pending verification -->
+                                    {% if not result.verified_at and not result.released and result.entered_by != request.user %}
+                                    <form method="post" 
+                                        action="{% url 'labs:verify_result' result.id %}" 
+                                        class="d-inline"
+                                        onsubmit="return confirm('Verify this result?');">
                                         {% csrf_token %}
-                                        <button type="submit" class="btn btn-outline-success btn-sm rounded-2 px-3"
+                                        <button type="submit" 
+                                                class="btn btn-outline-success btn-sm rounded-2 px-3"
                                                 data-bs-toggle="tooltip" title="Verify Result">
                                             <i class="bi bi-check-circle me-1"></i>Verify
                                         </button>
                                     </form>
                                     {% endif %}
                                     
-                                    <!-- Release Button -->
+                                    <!-- Release Button - Only if verified but not released -->
                                     {% if result.verified_at and not result.released %}
-                                    <form method="post" action="{% url 'labs:release_test_result' result.id %}" class="d-inline">
+                                    <form method="post" 
+                                        action="{% url 'labs:release_result' result.id %}" 
+                                        class="d-inline"
+                                        onsubmit="return confirm('Release this result to patient/doctor?');">
                                         {% csrf_token %}
-                                        <button type="submit" class="btn btn-outline-info btn-sm rounded-2 px-3"
+                                        <button type="submit" 
+                                                class="btn btn-outline-info btn-sm rounded-2 px-3"
                                                 data-bs-toggle="tooltip" title="Release to Patient">
                                             <i class="bi bi-send me-1"></i>Release
                                         </button>
                                     </form>
                                     {% endif %}
                                     
-                                    <!-- Amend Button -->
-                                    {% if not result.released %}
+                                    <!-- Edit Button - Only if not verified -->
+                                    {% if not result.verified_at and not result.released %}
                                     <a href="{% url 'labs:edit_result' result.id %}" 
-                                       class="btn btn-outline-warning btn-sm rounded-2 px-3"
-                                       data-bs-toggle="tooltip" title="Amend Result">
-                                        <i class="bi bi-pencil me-1"></i>Amend
+                                    class="btn btn-outline-warning btn-sm rounded-2 px-3"
+                                    data-bs-toggle="tooltip" title="Edit Result">
+                                        <i class="bi bi-pencil me-1"></i>Edit
+                                    </a>
+                                    {% endif %}
+                                    
+                                    <!-- Download/Print - Only if released -->
+                                    {% if result.released %}
+                                    <a href="{% url 'labs:download_result_pdf' result.id %}" 
+                                    class="btn btn-outline-secondary btn-sm rounded-2 px-3"
+                                    data-bs-toggle="tooltip" title="Download PDF"
+                                    target="_blank">
+                                        <i class="bi bi-download me-1"></i>PDF
                                     </a>
                                     {% endif %}
                                 </div>
@@ -512,3 +539,11 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
+
+
+
+
+
+
+
+

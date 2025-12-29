@@ -49,6 +49,9 @@ from .services import (
 )
 from .utils import check_tenant_access
 
+from .decorators import lab_supervisor_required, lab_technician_required
+
+
 # Logger Setup
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -1279,208 +1282,19 @@ def fetch_result_from_instrument(request, assignment_id):
     return redirect('test_assignment_detail', assignment_id=assignment.id)
 
 
-# @login_required
-# @require_http_methods(["GET", "POST"])
-# def enter_manual_result(request, assignment_id):
-#     """
-#     Manually enter test result - handles both QUALITATIVE and QUANTITATIVE tests.
+# ===== RESULT MANUAL CREATE =====
 
-#     Flow:
-#       - Validate assignment status and that result is not verified
-#       - For QLT: accept option ID (preferred) or free text (validated)
-#       - For QNT: accept numeric value and optional unit
-#       - Create or update TestResult, call auto_flag_result()
-#       - Mark assignment analyzed and create audit log
-#     """
-#     assignment = get_object_or_404(
-#         TestAssignment.objects.select_related(
-#             "lab_test", "vendor", "request__patient", "sample", "instrument"
-#         ),
-#         id=assignment_id,
-#         vendor=getattr(request.user, "vendor", None),
-#     )
-
-#     # --- Basic validation ---
-#     if assignment.status not in ["P", "Q", "I"]:
-#         messages.error(
-#             request,
-#             "Cannot enter result. Test must be Pending, Queued or In Progress.",
-#         )
-#         return redirect("labs:test_assignment_detail", assignment_id=assignment.id)
-
-#     if hasattr(assignment, "result") and assignment.result.verified_at:
-#         messages.error(
-#             request,
-#             "Cannot modify verified result. Contact supervisor for amendments.",
-#         )
-#         return redirect("laboratory:test_assignment_detail", assignment_id=assignment.id)
-
-#     lab_test = assignment.lab_test
-#     is_quantitative = lab_test.result_type == "QNT"
-#     is_qualitative = lab_test.result_type == "QLT"
-
-#     # POST: process submission
-#     if request.method == "POST":
-#         # Raw inputs
-#         raw_value = request.POST.get("result_value", "").strip()
-#         unit = request.POST.get("unit", "").strip()
-#         remarks = request.POST.get("remarks", "").strip()
-#         interpretation = request.POST.get("interpretation", "").strip()
-
-#         # For qualitative prefer selecting option ID
-#         selected_option = None
-#         if is_qualitative:
-#             option_id = request.POST.get("qualitative_option")
-#             if option_id:
-#                 try:
-#                     selected_option = lab_test.qlt_options.get(id=int(option_id))
-#                     raw_value = selected_option.value
-#                 except (QualitativeOption.DoesNotExist, ValueError):
-#                     messages.error(request, "Invalid qualitative option selected.")
-#                     # fall through to re-render form
-#                     selected_option = None
-
-#         # required value check
-#         if not raw_value:
-#             messages.error(request, "Result value is required.")
-#             # render below with context
-#         else:
-#             # Validate quantitative numeric input
-#             if is_quantitative:
-#                 try:
-#                     numeric_value = Decimal(str(raw_value).strip())
-#                 except (InvalidOperation, ValueError):
-#                     messages.error(request, f"Invalid numeric value: '{raw_value}'.")
-#                     numeric_value = None
-
-#                 # optional heuristic warnings (not authoritative; auto_flag_result will set flags)
-#                 if numeric_value is not None and lab_test.min_reference_value:
-#                     try:
-#                         if lab_test.min_reference_value and numeric_value < (lab_test.min_reference_value * Decimal("0.1")):
-#                             messages.warning(request, "Value unusually low — double-check entry.")
-#                     except Exception:
-#                         pass
-#                 if numeric_value is not None and lab_test.max_reference_value:
-#                     try:
-#                         if lab_test.max_reference_value and numeric_value > (lab_test.max_reference_value * Decimal("10")):
-#                             messages.warning(request, "Value unusually high — double-check entry.")
-#                     except Exception:
-#                         pass
-
-#             # # If no errors so far, persist
-#             # if not messages.get_messages(request):  # no messages = no errors/warnings to block saving
-
-#             # Check specifically for errors
-#             from django.contrib.messages import get_messages, ERROR
-
-#             has_errors = any(m.level == ERROR for m in get_messages(request))
-#             if not has_errors:
-#                 # Proceed with save
-#                 try:
-#                     with transaction.atomic():
-#                         # get or create TestResult
-#                         result, created = TestResult.objects.get_or_create(
-#                             assignment=assignment,
-#                             defaults={
-#                                 "data_source": "manual",
-#                                 "entered_by": request.user,
-#                                 "entered_at": timezone.now(),
-#                             },
-#                         )
-
-#                         # If existing and different value, use update_result to preserve audit trail
-#                         if not created and str(result.result_value).strip() != str(raw_value).strip():
-#                             # update_result checks verified_at and raises if not allowed
-#                             result.update_result(new_value=raw_value, user=request.user, reason=f"Manual correction")
-#                             # note: update_result already calls auto_flag_result inside your model,
-#                             # but we'll call auto_flag_result() again after setting other fields to guarantee consistency.
-#                         else:
-#                             result.result_value = raw_value
-
-#                         # Units
-#                         if is_quantitative:
-#                             result.units = unit or (lab_test.default_units or "")
-#                         else:
-#                             result.units = ""
-
-#                         # Qualitative option linking (if field exists on model)
-#                         if is_qualitative and selected_option:
-#                             # Only assign if TestResult model has attribute qualitative_option
-#                             if hasattr(result, "qualitative_option"):
-#                                 result.qualitative_option = selected_option
-
-#                         # Reference range population
-#                         if is_quantitative:
-#                             if lab_test.min_reference_value is not None and lab_test.max_reference_value is not None:
-#                                 result.reference_range = f"{lab_test.min_reference_value} - {lab_test.max_reference_value}"
-#                             else:
-#                                 result.reference_range = ""
-#                         else:
-#                             # Build a friendly reference from normal qualitative options
-#                             normal_opts = lab_test.qlt_options.filter(is_normal=True).values_list("value", flat=True)
-#                             result.reference_range = ", ".join(normal_opts) if normal_opts else ""
-
-#                         # Other metadata
-#                         result.remarks = remarks
-#                         result.interpretation = interpretation
-#                         result.data_source = "manual"
-#                         result.entered_by = result.entered_by or request.user
-#                         # entered_at is auto_now_add; do not override normally
-
-#                         result.save()  # persist intermediate changes
-
-#                         # Apply auto-flagging using your engine (AMR, CRR, panic, ref range, qualitative)
-#                         result.auto_flag_result()
-
-#                         # Mark assignment analyzed (A)
-#                         assignment.mark_analyzed()
-
-#                         # Audit log
-#                         AuditLog.objects.create(
-#                             vendor=assignment.vendor,
-#                             user=request.user,
-#                             action=(
-#                                 f"Manual result entered for {assignment.request.request_id} - "
-#                                 f"{assignment.lab_test.code}: {result.result_value} "
-#                                 f"{(' ' + result.units) if result.units else ''} "
-#                                 f"[manual]"
-#                             ),
-#                             ip_address=request.META.get("REMOTE_ADDR"),
-#                         )
-
-#                         messages.success(request, f"Result saved. Flag: {result.get_flag_display()}. Awaiting verification.")
-#                         return redirect("laboratory:test_assignment_detail", assignment_id=assignment.id)
-
-#                 except ValidationError as ve:
-#                     messages.error(request, f"Validation error: {ve}")
-#                     logger.exception("Validation error saving manual result")
-#                 except Exception as e:
-#                     messages.error(request, f"Error saving result: {str(e)}")
-#                     logger.exception("Unexpected error saving manual result")
-
-#     # GET (or POST with errors) - prepare context for form rendering
-#     qualitative_options = lab_test.qlt_options.all() if is_qualitative else []
-#     existing_result = getattr(assignment, "result", None)
-
-#     context = {
-#         "assignment": assignment,
-#         "lab_test": lab_test,
-#         "is_quantitative": is_quantitative,
-#         "is_qualitative": is_qualitative,
-#         "qualitative_options": qualitative_options,
-#         "existing_result": existing_result,
-#         "default_unit": lab_test.default_units,
-#         "reference_range": (
-#             f"{lab_test.min_reference_value} - {lab_test.max_reference_value}"
-#             if is_quantitative and lab_test.min_reference_value is not None and lab_test.max_reference_value is not None
-#             else ", ".join(lab_test.qlt_options.filter(is_normal=True).values_list("value", flat=True)) if is_qualitative else ""
-#         ),
-#     }
-
-#     return render(request, "laboratory/result/manual_result_form1.html", context)
+from .decorators import (
+    lab_technician_required,
+    lab_supervisor_required,
+    lab_pathologist_required,
+    can_amend_results,
+    lab_staff_required
+)
 
 
 @login_required
+@lab_technician_required
 @require_http_methods(["GET", "POST"])
 def enter_manual_result(request, assignment_id):
     """
@@ -1686,8 +1500,122 @@ def enter_manual_result(request, assignment_id):
     return render(request, "laboratory/result/manual_result_form.html", context)
 
 
-# ===== RESULT DETAIL VIEW =====
+# ===== RESULT VERIFICATION =====
 @login_required
+@lab_supervisor_required
+@require_POST
+def verify_result(request, result_id):
+    """
+    Verify a test result by result ID.
+    Updates both TestResult and TestAssignment status.
+    """
+    result = get_object_or_404(
+        TestResult.objects.select_related('assignment', 'assignment__vendor'),
+        id=result_id,
+        assignment__vendor=request.user.vendor
+    )
+    
+    assignment = result.assignment
+    
+    # Permission check
+    if not request.user.has_perm('laboratory.can_verify_results'):
+        messages.error(request, "You don't have permission to verify results.")
+        return redirect('labs:result_detail', result_id=result.id)
+    
+    # Already verified check
+    if result.verified_at:
+        messages.warning(request, "This result has already been verified.")
+        return redirect('labs:result_detail', result_id=result.id)
+    
+    # Self-verification check
+    if result.entered_by == request.user:
+        messages.error(request, "You cannot verify results you entered yourself.")
+        return redirect('labs:result_detail', result_id=result.id)
+    
+    # QC check
+    if not result.qc_passed:
+        messages.error(request, "Cannot verify result that failed QC checks.")
+        return redirect('labs:result_detail', result_id=result.id)
+    
+    try:
+        with transaction.atomic():
+            result.mark_verified(request.user)
+            
+            # Audit log
+            AuditLog.objects.create(
+                vendor=assignment.vendor,
+                user=request.user,
+                action=(
+                    f"Result verified for {assignment.request.request_id} - "
+                    f"{assignment.lab_test.code}: {result.result_value} "
+                    f"{result.units if result.units else ''}"
+                ),
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
+            messages.success(request, "Result verified successfully. Ready for release.")
+        
+    except ValidationError as e:
+        messages.error(request, str(e))
+        logger.exception("Validation error verifying result")
+    except Exception as e:
+        messages.error(request, f"Error verifying result: {str(e)}")
+        logger.exception("Unexpected error verifying result")
+    
+    return redirect('labs:result_detail', result_id=result.id)
+
+
+# ===== RESULT RELEASE =====
+@login_required
+@lab_pathologist_required
+@require_POST
+def release_result(request, result_id):
+    """
+    Release verified result to patient/doctor.
+    """
+    result = get_object_or_404(
+        TestResult.objects.select_related('assignment', 'assignment__vendor'),
+        id=result_id,
+        assignment__vendor=request.user.vendor
+    )
+    
+    assignment = result.assignment
+    
+    # Permission check
+    if not request.user.has_perm('laboratory.can_release_results'):
+        messages.error(request, "You don't have permission to release results.")
+        return redirect('labs:result_detail', result_id=result.id)
+    
+    try:
+        with transaction.atomic():
+            result.release_result(request.user)
+            
+            # Audit log
+            AuditLog.objects.create(
+                vendor=assignment.vendor,
+                user=request.user,
+                action=(
+                    f"Result released for {assignment.request.request_id} - "
+                    f"{assignment.lab_test.code}"
+                ),
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
+            messages.success(request, "Result released successfully. Patient/doctor can now access it.")
+        
+    except ValidationError as e:
+        messages.error(request, str(e))
+        logger.exception("Validation error releasing result")
+    except Exception as e:
+        messages.error(request, f"Error releasing result: {str(e)}")
+        logger.exception("Unexpected error releasing result")
+    
+    return redirect('labs:result_detail', result_id=result.id)
+
+
+# ===== RESULT VIEW =====
+@login_required
+@lab_staff_required
 def result_list(request):
     """
     List all test results with filtering and search.
@@ -1784,80 +1712,277 @@ def result_list(request):
     return render(request, 'laboratory/result/result_list.html', context)
 
 
+
+# ===== RESULT DETAIL (All Lab Staff) =====
+# @login_required
+# @lab_staff_required
+# def result_detail(request, result_id):
+#     """
+#     Display detailed view of a single result.
+#     Accessible by: All lab staff
+#     """
+#     result = get_object_or_404(
+#         TestResult.objects.select_related(
+#             'assignment__lab_test',
+#             'assignment__request__patient',
+#             'assignment__request__ordering_clinician',
+#             'assignment__request__requested_by',
+#             'assignment__instrument',
+#             'assignment__department',
+#             'assignment__sample',
+#             'entered_by',
+#             'verified_by',
+#             'released_by'
+#         ),
+#         id=result_id,
+#         assignment__vendor=request.user.vendor
+#     )
+    
+#     previous_results = TestResult.objects.filter(
+#         assignment__request__patient=result.assignment.request.patient,
+#         assignment__lab_test=result.assignment.lab_test,
+#         released=True
+#     ).exclude(id=result.id).order_by('-entered_at')[:5]
+    
+#     # Determine what actions current user can perform
+#     user = request.user
+    
+#     # Can edit if not verified and user is technician+
+#     can_edit = (
+#         not result.verified_at and 
+#         not result.released and
+#         (user.is_lab_technician or user.is_lab_supervisor or user.is_vendor_admin)
+#     )
+    
+#     # Can verify if pending, user is supervisor+, and didn't enter it
+#     can_verify = (
+#         not result.verified_at and
+#         result.entered_by != user and
+#         result.qc_passed and
+#         (user.is_lab_supervisor or user.is_vendor_admin)
+#     )
+    
+    
+#     # Can release if verified, user is pathologist+
+#     can_release = (
+#         result.verified_at and
+#         not result.released and
+#         (user.is_pathologist or user.is_vendor_admin)
+#     )
+    
+#     # Can amend if released and user is admin
+#     can_amend = (
+#         result.released and
+#         (user.is_vendor_admin or user.has_perm('laboratory.can_amend_results'))
+#     )
+    
+#     context = {
+#         'result': result,
+#         'previous_results': previous_results,
+#         'can_verify': can_verify,
+#         'can_release': can_release,
+#         'can_amend': can_amend,
+#         'can_edit': can_edit,
+#         'is_critical': result.is_critical,
+#         'has_delta_check': result.delta_flag,
+#         'workflow_stage': _get_workflow_stage(result),
+        
+#         # User role info for template
+#         'user_role': _get_user_role_display(user),
+#     }
+    
+#     return render(request, 'laboratory/result/result_detail.html', context)
+
+
+# ===== RESULT DETAIL (All Lab Staff) =====
 @login_required
+@lab_staff_required
 def result_detail(request, result_id):
     """
-    Display detailed view of a single result with full audit trail.
-    Includes permission checks for verify, release, and amend actions.
+    Display detailed view of a single test result.
+    Accessible by: All laboratory staff.
     """
+    user = request.user
+
     result = get_object_or_404(
         TestResult.objects.select_related(
             'assignment__lab_test',
             'assignment__request__patient',
             'assignment__request__ordering_clinician',
+            'assignment__request__requested_by',
             'assignment__instrument',
             'assignment__department',
             'assignment__sample',
             'entered_by',
             'verified_by',
-            'released_by'
+            'released_by',
+        ),
+        id=result_id,
+        assignment__vendor=user.vendor,
+    )
+
+    # ==============================
+    # Previous released results (trend)
+    # ==============================
+    previous_results = (
+        TestResult.objects.filter(
+            assignment__request__patient=result.assignment.request.patient,
+            assignment__lab_test=result.assignment.lab_test,
+            released=True,
+        )
+        .exclude(id=result.id)
+        .order_by('-entered_at')[:5]
+    )
+
+    # ==============================
+    # ACTION PERMISSIONS (ROLE-BASED)
+    # ==============================
+
+    # Can edit: result not verified or released, technician+
+    can_edit = (
+        not result.verified_at
+        and not result.released
+        and user.can_enter_results
+    )
+
+    # Can verify: supervisor+, QC passed, not self-entered
+    can_verify = (
+        user.can_verify_results
+        and not result.verified_at
+        and not result.released
+        and result.qc_passed
+        # and result.entered_by != user  # Optional: allow self-verification if policy allows
+    )
+
+    # Can release: pathologist+, already verified, not yet released
+    can_release = (
+        user.can_release_results
+        and result.verified_at
+        and not result.released
+    )
+
+    # Can amend: released results, admin-only
+    can_amend = (
+        user.can_amend_results
+        and result.released
+    )
+
+    # ==============================
+    # TEMPLATE CONTEXT
+    # ==============================
+    context = {
+        'result': result,
+        'previous_results': previous_results,
+
+        # Action flags
+        'can_edit': can_edit,
+        'can_verify': can_verify,
+        'can_release': can_release,
+        'can_amend': can_amend,
+
+        # Status helpers
+        'is_critical': result.is_critical,
+        'has_delta_check': result.delta_flag,
+        'workflow_stage': _get_workflow_stage(result),
+
+        # Display helpers
+        'user_role': _get_user_role_display(user),
+    }
+
+    return render(request, 'laboratory/result/result_detail.html', context)
+
+
+# ===== RESULT EDIT =====
+@login_required
+@lab_technician_required
+@require_http_methods(["GET", "POST"])
+def edit_result(request, result_id):
+    """Edit result before verification."""
+    result = get_object_or_404(
+        TestResult.objects.select_related(
+            'assignment__lab_test',
+            'assignment__request__patient'
         ),
         id=result_id,
         assignment__vendor=request.user.vendor
     )
-    
-    # Get patient's previous results for same test (for trending)
-    previous_results = TestResult.objects.filter(
-        assignment__request__patient=result.assignment.request.patient,
-        assignment__lab_test=result.assignment.lab_test,
-        released=True
-    ).exclude(id=result.id).order_by('-entered_at')[:5]
-    
-    # ======================================================
-    # ✅ PERMISSION CHECKS (using custom permissions)
-    # ======================================================
-    
-    # Can verify: has permission + result state allows it + didn't enter it
-    can_verify = (
-        request.user.has_perm('laboratory.can_verify_results') and  # ✅ Custom permission
-        result.can_be_verified and
-        result.entered_by != request.user  # Prevent self-verification
-    )
-    
-    # Can release: has permission + result is verified but not released
-    can_release = (
-        request.user.has_perm('laboratory.can_release_results') and  # ✅ Custom permission
-        result.can_be_released
-    )
-    
-    # Can amend: has permission + result is already released
-    can_amend = (
-        request.user.has_perm('laboratory.can_amend_results') and  # ✅ Custom permission
-        result.released
-    )
-    
-    # Can edit: result not yet verified or released (basic editing)
-    can_edit = not result.verified_at and not result.released
-    
-    # ======================================================
-    # CONTEXT FOR TEMPLATE
-    # ======================================================
-    
-    context = {
-        'result': result,
-        'previous_results': previous_results,
-        'can_verify': can_verify,
-        'can_release': can_release,
-        'can_amend': can_amend,
-        'can_edit': can_edit,
+
+    if result.verified_at:
+        messages.error(request, "Cannot edit verified result. Contact supervisor for amendment.")
+        return redirect('labs:result_detail', result_id=result.id)
+
+    if result.released:
+        messages.error(request, "Cannot edit released result. Use the amendment process.")
+        return redirect('labs:result_detail', result_id=result.id)
+
+    test_type = result.assignment.lab_test.result_type
+    is_quantitative = test_type == 'QNT'
+
+    if request.method == "POST":
+        new_value = request.POST.get("result_value", "").strip()
+        units = request.POST.get("units", "").strip()
+        remarks = request.POST.get("remarks", "").strip()
+        interpretation = request.POST.get("interpretation", "").strip()
+        reason = request.POST.get("reason", "").strip()
+
+        if not new_value:
+            messages.error(request, "Result value is required.")
+            return render(request, 'laboratory/result/edit_result.html', {
+                'result': result,
+                'is_quantitative': is_quantitative
+            })
+
+        if is_quantitative:
+            try:
+                Decimal(new_value)
+            except:
+                messages.error(request, "Invalid numeric value for quantitative test.")
+                return render(request, 'laboratory/result/edit_result.html', {
+                    'result': result,
+                    'is_quantitative': is_quantitative
+                })
+
+        try:
+            with transaction.atomic():
+                if result.result_value != new_value:
+                    result.update_result(
+                        new_value=new_value,
+                        user=request.user,
+                        reason=reason
+                    )
+
+                result.units = units if is_quantitative else ''
+                result.remarks = remarks
+                result.interpretation = interpretation
+                result.save(update_fields=['units', 'remarks', 'interpretation'])
+
+                result.auto_flag_result()
+                result.check_delta()
+
+                AuditLog.objects.create(
+                    vendor=request.user.vendor,
+                    user=request.user,
+                    action=(
+                        f"Updated result for {result.assignment.request.request_id} - "
+                        f"{result.assignment.lab_test.code}: {new_value}"
+                    ),
+                    ip_address=request.META.get('REMOTE_ADDR')
+                )
+
+                messages.success(request, "Result updated successfully.")
+                return redirect('labs:result_detail', result_id=result.id)
+
+        except Exception as e:
+            logger.error(f"Error updating result: {e}", exc_info=True)
+            messages.error(request, f"Error: {str(e)}")
         
-        # Additional helpful context
-        'is_critical': result.is_critical,
-        'has_delta_check': result.delta_flag,
-        'workflow_stage': _get_workflow_stage(result),
-    }
+    context = {
+                'result': result,
+                'is_quantitative': is_quantitative,
+                'action': 'Edit'
+            }
     
-    return render(request, 'laboratory/result/result_detail.html', context)
+    return render(request, 'laboratory/result/manual_result_form.html', context)
 
 
 def _get_workflow_stage(result):
@@ -1872,168 +1997,18 @@ def _get_workflow_stage(result):
         return 'pending'
 
 
-@login_required
-@require_http_methods(["GET", "POST"])
-def edit_result(request, result_id):
-    """
-    Edit result before verification.
-    Cannot edit verified or released results.
-    """
-    result = get_object_or_404(
-        TestResult.objects.select_related(
-            'assignment__lab_test',
-            'assignment__request__patient'
-        ),
-        id=result_id,
-        assignment__vendor=request.user.vendor
-    )
-
-    # --- PERMISSION CHECKS ---
-    if result.verified_at:
-        messages.error(request, "Cannot edit verified result. Contact supervisor for amendment.")
-        return redirect('laboratory:result_detail', result_id=result.id)
-
-    if result.released:
-        messages.error(request, "Cannot edit released result. Use the amendment process.")
-        return redirect('laboratory:result_detail', result_id=result.id)
-
-    test_type = result.assignment.lab_test.result_type
-    is_quantitative = test_type == 'QNT'
-
-    if request.method == "POST":
-        new_value = request.POST.get("result_value", "").strip()
-        units = request.POST.get("units", "").strip()
-        remarks = request.POST.get("remarks", "").strip()
-        interpretation = request.POST.get("interpretation", "").strip()
-        reason = request.POST.get("reason", "").strip()
-
-        # --- Validation ---
-        if not new_value:
-            messages.error(request, "Result value is required.")
-            return render(request, 'laboratory/results/edit_result.html', {
-                'result': result,
-                'is_quantitative': is_quantitative
-            })
-
-        if is_quantitative:
-            try:
-                Decimal(new_value)
-            except:
-                messages.error(request, "Invalid numeric value for quantitative test.")
-                return render(request, 'laboratory/results/edit_result.html', {
-                    'result': result,
-                    'is_quantitative': is_quantitative
-                })
-
-        # --- SAVE LOGIC ---
-        try:
-            with transaction.atomic():
-
-                # Handle amendment/versioning
-                if result.result_value != new_value:
-                    result.update_result(
-                        new_value=new_value,
-                        user=request.user,
-                        reason=reason
-                    )
-
-                result.units = units if is_quantitative else ''
-                result.remarks = remarks
-                result.interpretation = interpretation
-                result.save(update_fields=['units', 'remarks', 'interpretation'])
-
-                # Re-run auto flagging
-                result.auto_flag_result()
-
-                # Delta checking
-                result.check_delta()
-
-                # Audit log
-                AuditLog.objects.create(
-                    vendor=request.user.vendor,
-                    user=request.user,
-                    action=(
-                        f"Updated result for {result.assignment.request.request_id} - "
-                        f"{result.assignment.lab_test.code}: {new_value}"
-                    ),
-                    ip_address=request.META.get('REMOTE_ADDR')
-                )
-
-                messages.success(request, "Result updated successfully.")
-                return redirect('laboratory:result_detail', result_id=result.id)
-
-        except Exception as e:
-            logger.error(f"Error updating result: {e}", exc_info=True)
-            messages.error(request, f"Error: {str(e)}")
-
-    return render(request, 'laboratory/results/edit_result.html', {
-        'result': result,
-        'is_quantitative': is_quantitative,
-        'action': 'Edit'
-    })
-
-
-@login_required
-@require_POST
-def verify_result(request, assignment_id):
-    """Verify a completed test result"""
-    assignment = get_object_or_404(
-        TestAssignment.objects.select_related('vendor'),
-        id=assignment_id,
-        vendor=request.user.vendor
-    )
-    
-    if not hasattr(assignment, "result"):
-        messages.error(request, "No result found to verify.")
-        return redirect('labs:test_assignment_detail', assignment_id=assignment.id)
-    
-    result = assignment.result
-    
-    # Check if already verified
-    if result.verified_at:
-        messages.warning(request, "This result has already been verified.")
-        return redirect('labs:test_assignment_detail', assignment_id=assignment.id)
-    
-    # Prevent self-verification (optional policy)
-    if result.entered_by == request.user:
-        messages.error(request, "You cannot verify results you entered yourself.")
-        return redirect('labs:test_assignment_detail', assignment_id=assignment.id)
-    
-    try:
-        result.mark_verified(request.user)
-        messages.success(request, "Result verified successfully.")
-        
-    except ValidationError as e:
-        messages.error(request, str(e))
-    
-    return redirect('labs:test_assignment_detail', assignment_id=assignment.id)
-
-
-@login_required
-@require_POST
-def release_result(request, assignment_id):
-    """Release verified result to patient/doctor"""
-    assignment = get_object_or_404(
-        TestAssignment.objects.select_related('vendor'),
-        id=assignment_id,
-        vendor=request.user.vendor
-    )
-    
-    if not hasattr(assignment, "result"):
-        messages.error(request, "No result found to release.")
-        return redirect('test_assignment_detail', assignment_id=assignment.id)
-    
-    result = assignment.result
-    
-    try:
-        result.release_result(request.user)
-        messages.success(request, "Result released successfully.")
-        
-    except ValidationError as e:
-        messages.error(request, str(e))
-    
-    return redirect('test_assignment_detail', assignment_id=assignment.id)
-
+def _get_user_role_display(user):
+    """Get friendly display name for user's role"""
+    if user.is_vendor_admin:
+        return "Laboratory Administrator"
+    elif user.is_pathologist:
+        return "Pathologist"
+    elif user.is_lab_supervisor:
+        return "Laboratory Supervisor"
+    elif user.is_lab_technician:
+        return "Laboratory Technician"
+    else:
+        return "Laboratory Staff"
 
 
 @login_required
