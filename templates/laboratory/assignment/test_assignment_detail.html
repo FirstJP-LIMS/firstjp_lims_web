@@ -70,14 +70,14 @@
                 
                 <div class="col-md-4">
                     {% if result and not result.verified_at and result.entered_by != request.user %}
-                    <form method="post" action="{% url 'labs:verify_test_result' result.id %}" class="d-inline">
+                    <form method="post" action="{% url 'labs:verify_result' result.id %}" class="d-inline">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-warning w-100">
                             <i class="bi bi-shield-check me-2"></i>Verify Result
                         </button>
                     </form>
                     {% elif result and result.verified_at and not result.released %}
-                    <form method="post" action="{% url 'labs:release_test_result' result.id %}" class="d-inline">
+                    <form method="post" action="{% url 'labs:release_result' result.id %}" class="d-inline">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-info w-100">
                             <i class="bi bi-send-check me-2"></i>Release Result

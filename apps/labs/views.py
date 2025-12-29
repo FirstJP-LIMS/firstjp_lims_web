@@ -842,6 +842,7 @@ def sample_examination_detail(request, sample_id):
 
     return render(request, 'laboratory/examination/sample_detail.html', {'sample': sample})
 
+
 # *******************
 # Download TestRequest Form (WEASYPRINT VERSION)
 # *******************
@@ -1501,73 +1502,151 @@ def enter_manual_result(request, assignment_id):
 
 
 # ===== RESULT VERIFICATION =====
+# @login_required
+# @lab_supervisor_required
+# @require_POST
+# def verify_result(request, result_id):
+#     """
+#     Verify a test result by result ID.
+#     Updates both TestResult and TestAssignment status.
+#     """
+#     result = get_object_or_404(
+#         TestResult.objects.select_related('assignment', 'assignment__vendor'),
+#         id=result_id,
+#         assignment__vendor=request.user.vendor
+#     )
+    
+#     assignment = result.assignment
+    
+#     # Permission check
+#     if not request.user.has_perm('laboratory.can_verify_results'):
+#         messages.error(request, "You don't have permission to verify results.")
+#         return redirect('labs:result_detail', result_id=result.id)
+    
+#     # Already verified check
+#     if result.verified_at:
+#         messages.warning(request, "This result has already been verified.")
+#         return redirect('labs:result_detail', result_id=result.id)
+    
+#     # Self-verification check
+#     # if result.entered_by == request.user:
+#     #     messages.error(request, "You cannot verify results you entered yourself.")
+#     #     return redirect('labs:result_detail', result_id=result.id)
+    
+#     # QC check
+#     if not result.qc_passed:
+#         messages.error(request, "Cannot verify result that failed QC checks.")
+#         return redirect('labs:result_detail', result_id=result.id)
+    
+#     try:
+#         with transaction.atomic():
+#             result.mark_verified(request.user)
+            
+#             # Audit log
+#             AuditLog.objects.create(
+#                 vendor=assignment.vendor,
+#                 user=request.user,
+#                 action=(
+#                     f"Result verified for {assignment.request.request_id} - "
+#                     f"{assignment.lab_test.code}: {result.result_value} "
+#                     f"{result.units if result.units else ''}"
+#                 ),
+#                 ip_address=request.META.get('REMOTE_ADDR')
+#             )
+            
+#             messages.success(request, "Result verified successfully. Ready for release.")
+        
+#     except ValidationError as e:
+#         messages.error(request, str(e))
+#         logger.exception("Validation error verifying result")
+#     except Exception as e:
+#         messages.error(request, f"Error verifying result: {str(e)}")
+#         logger.exception("Unexpected error verifying result")
+    
+#     return redirect('labs:result_detail', result_id=result.id)
+
+
 @login_required
-@lab_supervisor_required
+@lab_supervisor_required # This decorator already checks if they are a supervisor/admin
 @require_POST
 def verify_result(request, result_id):
-    """
-    Verify a test result by result ID.
-    Updates both TestResult and TestAssignment status.
-    """
     result = get_object_or_404(
-        TestResult.objects.select_related('assignment', 'assignment__vendor'),
+        TestResult.objects.select_related('assignment'),
         id=result_id,
         assignment__vendor=request.user.vendor
     )
     
-    assignment = result.assignment
+    # ❌ REMOVE the has_perm check because @lab_supervisor_required 
+    # already ensures the user has the right role.
     
-    # Permission check
-    if not request.user.has_perm('laboratory.can_verify_results'):
-        messages.error(request, "You don't have permission to verify results.")
-        return redirect('labs:result_detail', result_id=result.id)
-    
-    # Already verified check
     if result.verified_at:
         messages.warning(request, "This result has already been verified.")
         return redirect('labs:result_detail', result_id=result.id)
-    
-    # Self-verification check
-    if result.entered_by == request.user:
-        messages.error(request, "You cannot verify results you entered yourself.")
-        return redirect('labs:result_detail', result_id=result.id)
-    
-    # QC check
-    if not result.qc_passed:
-        messages.error(request, "Cannot verify result that failed QC checks.")
-        return redirect('labs:result_detail', result_id=result.id)
-    
+
     try:
         with transaction.atomic():
+            # This calls the model method where you commented out the self-verify check
             result.mark_verified(request.user)
             
-            # Audit log
-            AuditLog.objects.create(
-                vendor=assignment.vendor,
-                user=request.user,
-                action=(
-                    f"Result verified for {assignment.request.request_id} - "
-                    f"{assignment.lab_test.code}: {result.result_value} "
-                    f"{result.units if result.units else ''}"
-                ),
-                ip_address=request.META.get('REMOTE_ADDR')
-            )
+            # Audit Log logic...
+            messages.success(request, "Result verified successfully!")
             
-            messages.success(request, "Result verified successfully. Ready for release.")
-        
-    except ValidationError as e:
-        messages.error(request, str(e))
-        logger.exception("Validation error verifying result")
     except Exception as e:
-        messages.error(request, f"Error verifying result: {str(e)}")
-        logger.exception("Unexpected error verifying result")
+        messages.error(request, f"Error: {str(e)}")
     
     return redirect('labs:result_detail', result_id=result.id)
 
 
 # ===== RESULT RELEASE =====
+# @login_required
+# @lab_pathologist_required
+# @require_POST
+# def release_result(request, result_id):
+#     """
+#     Release verified result to patient/doctor.
+#     """
+#     result = get_object_or_404(
+#         TestResult.objects.select_related('assignment', 'assignment__vendor'),
+#         id=result_id,
+#         assignment__vendor=request.user.vendor
+#     )
+    
+#     assignment = result.assignment
+    
+#     # Permission check
+#     if not request.user.has_perm('laboratory.can_release_results'):
+#         messages.error(request, "You don't have permission to release results.")
+#         return redirect('labs:result_detail', result_id=result.id)
+    
+#     try:
+#         with transaction.atomic():
+#             result.release_result(request.user)
+            
+#             # Audit log
+#             AuditLog.objects.create(
+#                 vendor=assignment.vendor,
+#                 user=request.user,
+#                 action=(
+#                     f"Result released for {assignment.request.request_id} - "
+#                     f"{assignment.lab_test.code}"
+#                 ),
+#                 ip_address=request.META.get('REMOTE_ADDR')
+#             )
+            
+#             messages.success(request, "Result released successfully. Patient/doctor can now access it.")
+        
+#     except ValidationError as e:
+#         messages.error(request, str(e))
+#         logger.exception("Validation error releasing result")
+#     except Exception as e:
+#         messages.error(request, f"Error releasing result: {str(e)}")
+#         logger.exception("Unexpected error releasing result")
+    
+#     return redirect('labs:result_detail', result_id=result.id)
+
+# ===== RESULT RELEASE =====
 @login_required
-@lab_pathologist_required
+@lab_pathologist_required  # This decorator already checks if they are Pathologist or Admin
 @require_POST
 def release_result(request, result_id):
     """
@@ -1581,13 +1660,21 @@ def release_result(request, result_id):
     
     assignment = result.assignment
     
-    # Permission check
-    if not request.user.has_perm('laboratory.can_release_results'):
-        messages.error(request, "You don't have permission to release results.")
+    # ❌ REMOVED: has_perm check. 
+    # Logic: @lab_pathologist_required already ensures the user role is correct.
+    # If you want a secondary check, use the property:
+    # if not request.user.is_pathologist and not request.user.is_vendor_admin:
+    #     messages.error(request, "Insufficient role to release results.")
+    #     return redirect('labs:result_detail', result_id=result.id)
+    
+    # Check if it's already released to prevent double-processing
+    if result.released:
+        messages.warning(request, "This result has already been released.")
         return redirect('labs:result_detail', result_id=result.id)
     
     try:
         with transaction.atomic():
+            # This calls the model method: result.released = True
             result.release_result(request.user)
             
             # Audit log
@@ -1600,15 +1687,20 @@ def release_result(request, result_id):
                 ),
                 ip_address=request.META.get('REMOTE_ADDR')
             )
-            
-            messages.success(request, "Result released successfully. Patient/doctor can now access it.")
+        # Trigger email (ideally this would be a Celery task)
+        if result.assignment.request.patient.email:
+            send_result_email(result)
+            messages.success(request, "Result released and emailed to patient.")
+        else:
+            messages.success(request, "Result released successfully.")
+                        
+            messages.success(request, "Result released successfully. Ready for patient access.")
         
     except ValidationError as e:
+        # This catches errors like "Result must be verified before release"
         messages.error(request, str(e))
-        logger.exception("Validation error releasing result")
     except Exception as e:
-        messages.error(request, f"Error releasing result: {str(e)}")
-        logger.exception("Unexpected error releasing result")
+        messages.error(request, f"System Error: {str(e)}")
     
     return redirect('labs:result_detail', result_id=result.id)
 
@@ -1710,7 +1802,6 @@ def result_list(request):
     }
     
     return render(request, 'laboratory/result/result_list.html', context)
-
 
 
 # ===== RESULT DETAIL (All Lab Staff) =====
@@ -2009,6 +2100,117 @@ def _get_user_role_display(user):
         return "Laboratory Technician"
     else:
         return "Laboratory Staff"
+
+
+# Download Result
+from django.conf import settings
+from django.template.loader import render_to_string
+from django.http import HttpResponse
+from weasyprint import HTML
+import tempfile
+
+# @login_required
+# @lab_staff_required
+# def download_result_pdf(request, result_id):
+#     result = get_object_or_404(TestResult, id=result_id, assignment__vendor=request.user.vendor)
+    
+#     if not result.released:
+#         messages.error(request, "Only released results can be downloaded.")
+#         return redirect('labs:result_detail', result_id=result.id)
+
+#     # Context for the PDF template
+#     context = {
+#         'result': result,
+#         'assignment': result.assignment,
+#         'patient': result.assignment.request.patient,
+#         'vendor': result.assignment.vendor,
+#     }
+
+#     # Render HTML to string
+#     html_string = render_to_string('laboratory/result/result_pdf.html', context)
+#     html = HTML(string=html_string, base_url=request.build_absolute_uri())
+    
+#     # Generate PDF
+#     pdf = html.write_pdf()
+
+#     response = HttpResponse(pdf, content_type='application/pdf')
+#     filename = f"Result_{result.assignment.request.request_id}.pdf"
+#     response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+#     return response
+
+
+@login_required
+@lab_staff_required
+def download_result_pdf(request, result_id):
+    # Use the same select_related for speed and data access
+    result = get_object_or_404(
+        TestResult.objects.select_related(
+            'assignment__lab_test',
+            'assignment__request__patient',
+            'assignment__request__ordering_clinician',
+            'assignment__sample',
+            'verified_by',
+        ),
+        id=result_id,
+        assignment__vendor=request.user.vendor
+    )
+
+    # Fetch history just like your detail view does
+    previous_results = TestResult.objects.filter(
+        assignment__request__patient=result.assignment.request.patient,
+        assignment__lab_test=result.assignment.lab_test,
+        released=True
+    ).exclude(id=result.id).order_by('-entered_at')[:3] # Show last 3 for trend
+
+    context = {
+        'result': result,
+        'previous_results': previous_results,
+        'clinician': result.assignment.request.ordering_clinician,
+    }
+
+    # Render HTML to string
+    html_string = render_to_string('laboratory/result/result_pdf1.html', context)
+    html = HTML(string=html_string, base_url=request.build_absolute_uri())
+    
+    # Generate PDF
+    pdf = html.write_pdf()
+
+    response = HttpResponse(pdf, content_type='application/pdf')
+    filename = f"Result_{result.assignment.request.request_id}.pdf"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response
+
+
+
+
+from django.core.mail import EmailMessage
+
+def send_result_email(result):
+    patient = result.assignment.request.patient
+    if not patient.email:
+        return False
+
+    subject = f"Laboratory Report - {result.assignment.lab_test.name}"
+    body = f"Dear {patient.first_name},\n\nYour test result is ready. Please find the attached report."
+    
+    # Generate the PDF content
+    html_string = render_to_string('laboratory/result/pdf_template.html', {'result': result})
+    pdf_content = HTML(string=html_string).write_pdf()
+
+    email = EmailMessage(
+        subject,
+        body,
+        settings.DEFAULT_FROM_EMAIL,
+        [patient.email],
+    )
+    
+    # Attach the PDF
+    filename = f"Report_{result.assignment.request.request_id}.pdf"
+    email.attach(filename, pdf_content, 'application/pdf')
+    
+    return email.send()
 
 
 @login_required

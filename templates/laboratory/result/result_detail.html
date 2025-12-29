@@ -34,6 +34,9 @@
             {% endif %}
             
             {% if can_verify %}
+            <a href="{% url 'labs:verify_result' result.id %}" class="btn btn-success">
+                <i class="bi bi-check-circle me-1"></i> Verify
+            </a>
             <form method="post" action="{% url 'labs:verify_result' result.id %}" class="d-inline" 
                   onsubmit="return confirmVerify()">
                 {% csrf_token %}
@@ -54,15 +57,15 @@
             {% endif %}
             
             {% if result.released %}
-            <a href="{% url 'labs:print_result' result.id %}" 
+            <a href="{% url 'labs:download_result_pdf' result.id %}" 
                target="_blank"
                class="btn btn-outline-navy">
-                <i class="bi bi-printer me-1"></i> Print
+                <i class="bi bi-printer me-1"></i> Download
             </a>
             {% endif %}
             
             {% if can_amend %}
-            <a href="{% url 'labs:amend_result' result.id %}" class="btn btn-danger">
+            <a href="{% url 'labs:edit_result' result.id %}" class="btn btn-danger">
                 <i class="bi bi-exclamation-triangle me-1"></i> Amend
             </a>
             {% endif %}

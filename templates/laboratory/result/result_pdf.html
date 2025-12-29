@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+            @bottom-right {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 9pt;
+            }
+        }
+        body {
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            color: #333;
+            line-height: 1.4;
+            font-size: 10pt;
+        }
+        /* Header Section */
+        .header {
+            border-bottom: 2px solid #2c3e50;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .vendor-name {
+            font-size: 18pt;
+            font-weight: bold;
+            color: #2c3e50;
+            text-transform: uppercase;
+        }
+        .vendor-info {
+            font-size: 9pt;
+            color: #7f8c8d;
+        }
+        /* Patient & Request Info Table */
+        .info-table {
+            width: 100%;
+            margin-bottom: 20px;
+            border-collapse: collapse;
+        }
+        .info-table td {
+            padding: 4px 0;
+            vertical-align: top;
+        }
+        .label { font-weight: bold; width: 120px; }
+        
+        /* Result Table */
+        .result-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .result-table th {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            padding: 10px;
+            text-align: left;
+        }
+        .result-table td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .flag-critical { color: red; font-weight: bold; }
+        
+        /* Signature Section */
+        .signature-section {
+            margin-top: 50px;
+            width: 100%;
+        }
+        .sig-box {
+            width: 45%;
+            display: inline-block;
+            text-align: center;
+            vertical-align: top;
+        }
+        .sig-line {
+            border-top: 1px solid #333;
+            margin-top: 40px;
+            padding-top: 5px;
+        }
+        .footer-note {
+            margin-top: 30px;
+            font-size: 8pt;
+            font-style: italic;
+            color: #95a5a6;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="vendor-name">{{ result.assignment.vendor.name }}</div>
+        <div class="vendor-info">
+            {{ result.assignment.vendor.address }}<br>
+            Phone: {{ result.assignment.vendor.phone_number }} | Email: {{ result.assignment.vendor.email }}
+        </div>
+    </div>
+
+    <table class="info-table">
+        <tr>
+            <td class="label">Patient Name:</td>
+            <td>{{ result.assignment.request.patient.full_name }}</td>
+            <td class="label">Request ID:</td>
+            <td>{{ result.assignment.request.request_id }}</td>
+        </tr>
+        <tr>
+            <td class="label">Patient ID:</td>
+            <td>{{ result.assignment.request.patient.patient_id }}</td>
+            <td class="label">Date Collected:</td>
+            <td>{{ result.assignment.sample.collected_at|date:"Y-m-d H:i" }}</td>
+        </tr>
+        <tr>
+            <td class="label">Gender/Age:</td>
+            <td>{{ result.assignment.request.patient.gender }} / {{ result.assignment.request.patient.age }}</td>
+            <td class="label">Report Date:</td>
+            <td>{{ result.released_at|date:"Y-m-d H:i" }}</td>
+        </tr>
+    </table>
+
+    <table class="result-table">
+        <thead>
+            <tr>
+                <th>Test Name</th>
+                <th>Result</th>
+                <th>Units</th>
+                <th>Flag</th>
+                <th>Reference Range</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>{{ result.assignment.lab_test.name }}</td>
+                <td><strong>{{ result.result_value }}</strong></td>
+                <td>{{ result.units }}</td>
+                <td class="{% if result.is_critical %}flag-critical{% endif %}">
+                    {{ result.get_flag_display }}
+                </td>
+                <td>{{ result.reference_range }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    {% if result.interpretation %}
+    <div style="margin-top: 20px;">
+        <div class="label">Clinical Interpretation:</div>
+        <p>{{ result.interpretation }}</p>
+    </div>
+    {% endif %}
+
+    <div class="signature-section">
+        <div class="sig-box" style="float: left;">
+            <div class="sig-line">
+                <strong>{{ result.verified_by.get_full_name|default:"Verified Electronically" }}</strong><br>
+                Pathologist / Supervisor
+            </div>
+        </div>
+        <div class="sig-box" style="float: right;">
+            <div class="sig-line">
+                <strong>Lab Administrator</strong><br>
+                Quality Assurance
+            </div>
+        </div>
+        <div style="clear: both;"></div>
+    </div>
+
+    <div class="footer-note">
+        This is a computer-generated report. It has been verified and released electronically under strict laboratory protocol.
+    </div>
+</body>
+</html>

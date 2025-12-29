@@ -130,7 +130,7 @@ def tenant_login(request):
             # 2️⃣ Platform Admin: global access
             if getattr(user, 'is_platform_admin', False):
                 login(request, user)
-                messages.success(request, f"Welcome back, {user.first_name}")
+                # messages.success(request, f"Welcome back, {user.first_name}")
                 return redirect(reverse('dashboard'))
 
             # 3️⃣ Tenant validation (vendor sites)

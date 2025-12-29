@@ -51,9 +51,7 @@ def lab_supervisor_required(view_func):
                 'Access denied. Only laboratory supervisors can verify results.'
             )
             return redirect('labs:result_list')
-        
         return view_func(request, *args, **kwargs)
-    
     return wrapper
 
 
@@ -78,9 +76,7 @@ def lab_pathologist_required(view_func):
                 'Access denied. Only pathologists can release results.'
             )
             return redirect('labs:result_list')
-        
         return view_func(request, *args, **kwargs)
-    
     return wrapper
 
 
@@ -114,7 +110,6 @@ def can_amend_results(view_func):
             return redirect('labs:result_list')
         
         return view_func(request, *args, **kwargs)
-    
     return wrapper
 
 
@@ -122,12 +117,6 @@ def lab_staff_required(view_func):
     """
     Decorator for general lab staff access (any lab role).
     Less restrictive - allows any laboratory personnel.
-    
-    Usage:
-        @login_required
-        @lab_staff_required
-        def view_results(request):
-            ...
     """
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):

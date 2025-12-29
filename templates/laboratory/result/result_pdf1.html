@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <style>
+        @page {
+            size: A4;
+            margin: 1.5cm;
+            @bottom-right {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 8pt;
+                color: #7f8c8d;
+            }
+            @bottom-left {
+                content: "Report ID: {{ result.assignment.request.request_id }}";
+                font-size: 8pt;
+                color: #7f8c8d;
+            }
+        }
+        
+        body {
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            color: #2c3e50;
+            line-height: 1.5;
+            font-size: 10pt;
+            margin: 0;
+        }
+
+        /* Top Vendor Section */
+        .header-container {
+            border-bottom: 3px solid #2c3e50;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .lab-name {
+            font-size: 20pt;
+            font-weight: bold;
+            color: #2c3e50;
+            margin: 0;
+        }
+        .lab-details {
+            font-size: 9pt;
+            color: #34495e;
+        }
+
+        /* Patient & Request Info */
+        .info-grid {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 25px;
+            background-color: #fdfdfd;
+        }
+        .info-grid td {
+            padding: 6px;
+            border-bottom: 1px solid #f1f1f1;
+            vertical-align: top;
+        }
+        .label {
+            font-weight: bold;
+            color: #7f8c8d;
+            font-size: 8pt;
+            text-transform: uppercase;
+            width: 20%;
+        }
+        .value {
+            width: 30%;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+
+        /* Main Result Table */
+        .section-title {
+            background-color: #2c3e50;
+            color: white;
+            padding: 5px 10px;
+            font-size: 10pt;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        .result-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0;
+        }
+        .result-table th {
+            text-align: left;
+            font-size: 9pt;
+            color: #7f8c8d;
+            border-bottom: 2px solid #ecf0f1;
+            padding: 10px;
+        }
+        .result-table td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        .critical { color: #c0392b; font-weight: bold; }
+        .abnormal { color: #d35400; font-weight: bold; }
+
+        /* History/Trend Section */
+        .trend-section { margin-top: 30px; }
+        .trend-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9pt;
+        }
+        .trend-table td, .trend-table th {
+            padding: 5px 10px;
+            border: 1px solid #ecf0f1;
+        }
+
+        /* Signature Section */
+        .footer-container {
+            margin-top: 60px;
+            width: 100%;
+        }
+        .sig-block {
+            width: 40%;
+            float: left;
+            text-align: center;
+        }
+        .stamp-block {
+            width: 30%;
+            float: right;
+            text-align: center;
+        }
+        .sig-line {
+            border-top: 1px solid #2c3e50;
+            margin-top: 40px;
+            padding-top: 5px;
+            font-size: 9pt;
+        }
+        .seal {
+            width: 90px;
+            height: 90px;
+            border: 2px double #2c3e50;
+            border-radius: 50%;
+            display: inline-block;
+            margin-bottom: 5px;
+            opacity: 0.7;
+        }
+        .seal-text {
+            font-size: 7pt;
+            margin-top: 30px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .clear { clear: both; }
+    </style>
+</head>
+<body>
+
+    <div class="header-container">
+        <div class="lab-name">{{ result.assignment.vendor.name }}</div>
+        <div class="lab-details">
+            {{ result.assignment.vendor.address }} | 
+            Phone: {{ result.assignment.vendor.phone_number }} | 
+            Email: {{ result.assignment.vendor.email }}
+        </div>
+    </div>
+
+    <table class="info-grid">
+        <tr>
+            <td class="label">Patient Name</td>
+            <td class="value">{{ result.assignment.request.patient.full_name }}</td>
+            <td class="label">Request ID</td>
+            <td class="value">{{ result.assignment.request.request_id }}</td>
+        </tr>
+        <tr>
+            <td class="label">Patient ID / Age</td>
+            <td class="value">{{ result.assignment.request.patient.patient_id }} / {{ result.assignment.request.patient.age }} yrs</td>
+            <td class="label">Sample Type</td>
+            <td class="value">{{ result.assignment.sample.sample_type.name }}</td>
+        </tr>
+        <tr>
+            <td class="label">Ordering Clinician</td>
+            <td class="value">Dr. {{ result.assignment.request.ordering_clinician.get_full_name|default:"Not Specified" }}</td>
+            <td class="label">Date Collected</td>
+            <td class="value">{{ result.assignment.sample.collected_at|date:"d M Y H:i" }}</td>
+        </tr>
+        <tr>
+            <td class="label">Gender</td>
+            <td class="value">{{ result.assignment.request.patient.get_gender_display }}</td>
+            <td class="label">Date Reported</td>
+            <td class="value">{{ result.released_at|date:"d M Y H:i" }}</td>
+        </tr>
+    </table>
+
+    <div class="section-title">LABORATORY INVESTIGATION REPORT</div>
+    <table class="result-table">
+        <thead>
+            <tr>
+                <th>TEST DESCRIPTION</th>
+                <th>RESULT</th>
+                <th>UNITS</th>
+                <th>FLAG</th>
+                <th>REFERENCE RANGE</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>{{ result.assignment.lab_test.name }}</strong></td>
+                <td><span style="font-size: 11pt; font-weight: bold;">{{ result.result_value }}</span></td>
+                <td>{{ result.units }}</td>
+                <td class="{% if result.flag == 'C' %}critical{% elif result.flag != 'N' %}abnormal{% endif %}">
+                    {{ result.get_flag_display }}
+                </td>
+                <td>{{ result.reference_range }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    {% if result.remarks %}
+    <div style="margin-top: 15px; font-size: 9pt;">
+        <strong>Lab Remarks:</strong> {{ result.remarks }}
+    </div>
+    {% endif %}
+
+    {% if previous_results %}
+    <div class="trend-section">
+        <div style="font-size: 9pt; font-weight: bold; color: #7f8c8d; margin-bottom: 5px;">HISTORICAL TREND (LAST 3 RESULTS)</div>
+        <table class="trend-table">
+            <thead>
+                <tr style="background-color: #f9f9f9;">
+                    <th>Date Released</th>
+                    <th>Result Value</th>
+                    <th>Flag</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for prev in previous_results %}
+                <tr>
+                    <td>{{ prev.released_at|date:"d M Y" }}</td>
+                    <td>{{ prev.result_value }} {{ prev.units }}</td>
+                    <td>{{ prev.get_flag_display }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <div class="footer-container">
+        <div class="sig-block">
+            <div style="height: 50px; font-style: italic; color: #bdc3c7;">
+                {% if result.verified_by %}
+                    Digitally Signed
+                {% endif %}
+            </div>
+            <div class="sig-line">
+                <strong>{{ result.verified_by.get_full_name|upper }}</strong><br>
+                Consultant Pathologist
+            </div>
+        </div>
+
+        <div class="stamp-block">
+            <div class="seal">
+                <div class="seal-text">
+                    OFFICIAL<br>LAB SEAL
+                </div>
+            </div>
+            <div style="font-size: 8pt; font-weight: bold; margin-top: 5px;">
+                Lab Administrator
+            </div>
+        </div>
+
+        <div class="clear"></div>
+    </div>
+
+    <div style="margin-top: 40px; text-align: center; font-size: 8pt; color: #95a5a6; border-top: 1px dashed #ccc; padding-top: 10px;">
+        *** End of Report ***<br>
+        This report is valid only with the official laboratory seal and authorized signatures.
+    </div>
+
+</body>
+</html>

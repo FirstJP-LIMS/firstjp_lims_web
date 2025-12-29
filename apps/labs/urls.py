@@ -41,15 +41,19 @@ urlpatterns = [
     path('assignment/<int:assignment_id>/', views.test_assignment_detail, name='test_assignment_detail'),
 
 
+    # ===== Manual Result Entry =====
+    path('assignment/<int:assignment_id>/enter-result/', views.enter_manual_result, name='enter_test_result'),
+    
   # Result Management URLs
     path('results/', views.result_list, name='result_list'),
     path('result/<int:result_id>/', views.result_detail, name='result_detail'),
     path('result/<int:result_id>/edit/', views.edit_result, name='edit_result'),
     path('result/<int:result_id>/verify/', views.verify_result, name='verify_result'),
     path('result/<int:result_id>/release/', views.release_result, name='release_result'),
-    
-    # ===== Manual Result Entry =====
-    path('assignment/<int:assignment_id>/enter-result/', views.enter_manual_result, name='enter_test_result'),
+
+    path('result/<int:result_id>/download/', views.download_result_pdf, name='download_result_pdf'),
+
+
     
     
     # ===== Quick Instrument Assignment =====
