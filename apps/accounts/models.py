@@ -56,11 +56,12 @@ class User(AbstractBaseUser, PermissionsMixin):
         ('platform_admin', 'Platform Admin'),
         # laboratory roles - hierarchical
         ('vendor_admin', 'Vendor Admin'),
+        ('lab_manager', 'Lab Manager'),
         ('pathologist', 'Pathologist'),
         ('lab_supervisor', 'Lab Supervisor'),
-        ('lab_technician', 'Lab Technician'),
-        ('lab_manager', 'Lab Manager'),
+        ('lab_technician', 'Lab Technician'), # or phlebotomist -- collects samples..
         ('lab_staff', 'Lab Staff'),
+
         # laboratory extended roles
         ('clinician', 'Clinician'),
         ('patient', 'Patient'),
