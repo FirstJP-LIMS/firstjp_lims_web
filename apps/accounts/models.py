@@ -120,7 +120,15 @@ class User(AbstractBaseUser, PermissionsMixin):
         Third highest level in lab hierarchy.
         """
         return self.role in ['pathologist', 'vendor_admin', 'platform_admin'] or self.is_superuser
+
+    @property
+    def is_lab_manager(self):
+        """
+        Lab Manager - Has administrative oversight, can manage staff and operations.
+        """
+        return self.role in ['lab_manager', 'vendor_admin', 'platform_admin'] or self.is_superuser
     
+
     @property
     def is_lab_supervisor(self):
         """
@@ -146,11 +154,11 @@ class User(AbstractBaseUser, PermissionsMixin):
             'lab_supervisor',
             'pathologist',
             'lab_manager',
-            'lab_staff',
             'vendor_admin',
             'platform_admin'
         ] or self.is_superuser
     
+
     @property
     def is_lab_staff(self):
         """
@@ -159,6 +167,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         """
         return self.role in [
             'lab_staff',
+            'receptionist',
             'lab_technician',
             'lab_supervisor',
             'pathologist',
@@ -166,14 +175,8 @@ class User(AbstractBaseUser, PermissionsMixin):
             'vendor_admin',
             'platform_admin'
         ] or self.is_superuser
-    
-    @property
-    def is_lab_manager(self):
-        """
-        Lab Manager - Has administrative oversight, can manage staff and operations.
-        """
-        return self.role in ['lab_manager', 'vendor_admin', 'platform_admin'] or self.is_superuser
-    
+
+
     # ============================================================
     # EXTENDED ROLES
     # ============================================================
@@ -287,73 +290,6 @@ class User(AbstractBaseUser, PermissionsMixin):
     
     def __str__(self):
         return f"{self.get_full_name()} - {self.get_role_display_name()}"
-
-# User setup   
-# class User(AbstractBaseUser, PermissionsMixin):
-#     ROLE_CHOICES = [
-#         ('platform_admin', 'Platform Admin'),
-#         # laboratory roles
-#         ('vendor_admin', 'Vendor Admin'),
-#         ('lab_manager', 'Lab Manager'),
-#         ('lab_staff', 'Lab Staff'),
-#         # laboratory extended roles
-#         ('clinician', 'Clinician'),
-#         ('patient', 'Patient'),
-        
-#         ('learner', 'Learner'), # Student
-#         ('facilitator', 'Facilitator'),
-#     ]
-
-#     email = models.EmailField()
-#     first_name = models.CharField(max_length=150, blank=True)
-#     last_name = models.CharField(max_length=150, blank=True)
-#     contact_number = PhoneNumberField(blank=True, null=True)
-#     vendor = models.ForeignKey(Vendor, null=True, blank=True, on_delete=models.SET_NULL)
-#     role = models.CharField(max_length=32, choices=ROLE_CHOICES, default='lab_staff')
-#     is_active = models.BooleanField(default=True)
-#     is_staff = models.BooleanField(default=False)
-#     date_joined = models.DateTimeField(default=timezone.now)
-
-#     objects = CustomUserManager()
-
-#     USERNAME_FIELD = 'email'
-#     REQUIRED_FIELDS = []
-
-#     class Meta:
-#         unique_together = [['email', 'vendor']] 
-
-#     # Suppress W004 warning about non-unique USERNAME_FIELD
-#     @classmethod
-#     def check(cls, **kwargs):
-#         errors = super().check(**kwargs)
-#         errors = [e for e in errors if e.id != 'auth.W004']
-#         return errors
-    
-#     # roles 
-#     @property
-#     def is_platform_admin(self):
-#         return self.is_superuser or self.role == 'platform_admin'
-
-#     @property
-#     def is_vendor_admin(self):
-#         return self.role == 'vendor_admin' or self.is_superuser
-    
-#     @property
-#     def is_lab_staff(self):
-#         return self.role == 'lab_staff'
-
-#     @property
-#     def can_modify_inventory(self):
-#         """Check if user can create/edit/delete inventory items"""
-#         return self.role in ['platform_admin', 'vendor_admin', 'lab_staff'] or self.is_superuser
-    
-#     def get_full_name(self):
-#         """ Full name"""
-#         full_name = f"{self.first_name} {self.last_name}".strip()
-#         return full_name if full_name else self.email
-    
-#     def __str__(self):
-#         return f"{self.first_name} - Role ({self.role})"
 
 
 class BaseProfile(models.Model):

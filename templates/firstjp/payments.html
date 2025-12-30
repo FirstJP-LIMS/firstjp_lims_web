@@ -1,8 +1,10 @@
+{% load static %}
 <!DOCTYPE html>
 <html>
 <head>
 <title>Payments</title>
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="{% static 'assets/firstjp/css/style.css' %}">
+
 </head>
 <body>
 <h2>Make Payment</h2>
@@ -10,3 +12,5 @@
 <a class="pay" href="https://buy.stripe.com/test_xxxxxx">Stripe</a>
 </body>
 </html>
+
+

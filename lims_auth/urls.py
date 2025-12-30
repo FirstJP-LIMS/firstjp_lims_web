@@ -25,8 +25,6 @@ urlpatterns = [
     path("customer/", include("apps.patient.urls", namespace="patient")),
     
     path("clinician/", include("apps.clinician.urls", namespace="clinician")),
-    
-    # path("lms/", include("apps.lms.urls", namespace="lms")),
 
     path("academy/", include("apps.learn.urls", namespace="learn")),
 ]

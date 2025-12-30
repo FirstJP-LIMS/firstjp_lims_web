@@ -29,7 +29,6 @@ def lab_technician_required(view_func):
         return view_func(request, *args, **kwargs)
     return wrapper
 
-
 def lab_supervisor_required(view_func):
     """
     Decorator for views that require lab supervisor access or higher.
@@ -141,3 +140,5 @@ def lab_staff_required(view_func):
         return view_func(request, *args, **kwargs)
     
     return wrapper
+
+    

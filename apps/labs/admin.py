@@ -17,6 +17,9 @@ firstjp
 wingos.localhost.test
 lastborn.ai1@gmail.com
 password#123
+
+lolo@gmail.com
+markpass12345
 """
 
 # Register simple models

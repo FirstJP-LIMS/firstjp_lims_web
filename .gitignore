@@ -29,7 +29,9 @@ Thumbs.db
 # the CI/CD to build it every time.
 # /static/dist/styles.css
 
-
+/apps/labs/old_views.py
+/apps/accounts/old_views.py
+/apps/patientviews_old.py
 /.env
 
 /.venv

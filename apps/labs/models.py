@@ -926,8 +926,8 @@ class TestResult(models.Model):
         if self.verified_at:
             raise ValidationError("Result already verified")
         
-        # if self.entered_by == user:
-        #     raise ValidationError("Cannot verify your own result")
+        if self.entered_by == user:
+            raise ValidationError("Self Verification is not allowed")
         
         self.verified_by = user
         self.verified_at = timezone.now()

@@ -1,163 +1,151 @@
 from django.urls import path
-from . import views
+
+from .views import (
+    # Core system views (Dashboard, Profiles, Staff)
+    base,
+    
+    # Configuration (Departments, Test definitions)
+    setup, 
+    
+    # Document generation (PDFs, specialized downloads)
+    downloads, 
+    
+    # External hardware & Automation
+    instruments,
+    
+    # Pre-Analytical (Client/Doctor orders)
+    test_requests, 
+    
+    # Pre-Analytical (Accessioning & Processing)
+    sample_exam, 
+    
+    # Analytical (Workflow management)
+    test_assignments,
+    
+    # Post-Analytical (Entry, Verification, Release)
+    test_results,
+    
+    # Clinical Governance (QC Lots, Charts, LJ-Graphs)
+    qty_control,
+    
+    # export_mail, # Currently disabled - handles automated dispatch
+)
 
 app_name = "labs"
 
 urlpatterns = [
-    # Dashboard
-    path('dashboard/', views.dashboard, name='vendor_dashboard'),
-    path('assistants/', views.lab_assistants, name='lab_assistants'),
-    path('profile/', views.profile, name='vendor_profile'),
+    # dashboard
+    path('dashboard/', base.dashboard, name='vendor_dashboard'),
+    path('assistants/', base.lab_assistants, name='lab_assistants'),
+    path('profile/', base.profile, name='vendor_profile'),
 
-    # VendorTest CRUD URLs
-    path("departments/", views.department_list, name="department_list"),
-    path("departments/create/", views.department_create, name="department_create"),
-    path("departments/<int:pk>/update/", views.department_update, name="department_update"),
-    path("departments/<int:pk>/delete/", views.department_delete, name="department_delete"),
-
-    # Tests
-    path("tests/", views.test_list, name="test_list"),
-    path("tests/create/", views.test_create, name="test_create"),
-    path("tests/<int:pk>/update/", views.test_update, name="test_update"),
-    path("tests/<int:pk>/delete/", views.test_delete, name="test_delete"),
+    # Lab Setup
+    # Department Crud
+    path("departments/", setup.department_list, name="department_list"),
+    path("departments/create/", setup.department_create, name="department_create"),
+    path("departments/<int:pk>/update/", setup.department_update, name="department_update"),
+    path("departments/<int:pk>/delete/", setup.department_delete, name="department_delete"),
+    # Test Crud
+    path("tests/", setup.test_list, name="test_list"),
+    path("tests/create/", setup.test_create, name="test_create"),
+    path("tests/<int:pk>/update/", setup.test_update, name="test_update"),
+    path("tests/<int:pk>/delete/", setup.test_delete, name="test_delete"),
 
     # Test request
-    path('test-requests/create/', views.test_request_create, name='create_test_request'),
-    path('test-requests/', views.test_request_list, name='test_request_list'),
-    path('requests/<int:pk>/update/', views.test_request_update, name='request_update'),
-    path('requests/<int:pk>/detail/', views.test_request_detail, name='request_detail'),
-    path('requests/<int:pk>/delete/', views.test_request_delete, name='delete_request'),
+    path('test-requests/create/', test_requests.test_request_create, name='create_test_request'),
+    path('test-requests/', test_requests.test_request_list, name='test_request_list'),
+    path('requests/<int:pk>/update/', test_requests.test_request_update, name='request_update'),
+    path('requests/<int:pk>/detail/', test_requests.test_request_detail, name='request_detail'),
+    path('requests/<int:pk>/delete/', test_requests.test_request_delete, name='delete_request'),
 
     # download Test Request 
-    path('test-request/<int:pk>/download/', views.download_test_request, name='download_test_request'),
-    path("requests/download/blank/", views.download_test_request, {"blank": True}, name="download_blank_test_request"),
+    path('test-request/<int:pk>/download/', downloads.download_test_request, name='download_test_request'),
+    path("requests/download/blank/", downloads.download_test_request, {"blank": True}, name="download_blank_test_request"),
 
     # examination
-    path('examination/samples/', views.sample_examination_list, name='sample-exam-list'),
-    path('examination/sample/<str:sample_id>/', views.sample_examination_detail, name='sample-exam-detail'),
+    path('examination/samples/', sample_exam.sample_examination_list, name='sample-exam-list'),
+    path('examination/sample/<str:sample_id>/', sample_exam.sample_examination_detail, name='sample-exam-detail'),
 
-    # ===== Test Assignment List & Management =====
-    path('assignments/', views.test_assignment_list, name='test_assignment_list'),
-    path('assignment/<int:assignment_id>/', views.test_assignment_detail, name='test_assignment_detail'),
+    # ===== Test Assignment =====
+    path('assignments/', test_assignments.test_assignment_list, name='test_assignment_list'),
+    path('assignment/<int:assignment_id>/', test_assignments.test_assignment_detail, name='test_assignment_detail'),
 
 
+    # Result Management URLs
     # ===== Manual Result Entry =====
-    path('assignment/<int:assignment_id>/enter-result/', views.enter_manual_result, name='enter_test_result'),
-    
-  # Result Management URLs
-    path('results/', views.result_list, name='result_list'),
-    path('result/<int:result_id>/', views.result_detail, name='result_detail'),
-    path('result/<int:result_id>/edit/', views.edit_result, name='edit_result'),
-    path('result/<int:result_id>/verify/', views.verify_result, name='verify_result'),
-    path('result/<int:result_id>/release/', views.release_result, name='release_result'),
+    path('assignment/<int:assignment_id>/enter-result/', test_results.enter_manual_result, name='enter_test_result'),
+    path('results/', test_results.result_list, name='result_list'),
+    path('result/<int:result_id>/', test_results.result_detail, name='result_detail'),
+    path('result/<int:result_id>/edit/', test_results.edit_result, name='edit_result'),
+    path('result/<int:result_id>/verify/', test_results.verify_result, name='verify_result'),
+    path('result/<int:result_id>/release/', test_results.release_result, name='release_result'),
 
-    path('result/<int:result_id>/download/', views.download_result_pdf, name='download_result_pdf'),
+    path('result/<int:result_id>/download/', test_results.download_result_pdf, name='download_result_pdf'),
 
-
-    
-    
     # ===== Quick Instrument Assignment =====
-    path('assignment/<int:assignment_id>/assign-instrument/', views.assign_instrument, name='assign_instrument'),
-
     # ===== Bulk Actions =====
-    path('assignments/bulk-assign-instrument/', views.bulk_assign_instrument, name='bulk_assign_instrument'),    
-    path('assignments/auto_assign_instruments/', views.auto_assign_instruments, name='auto_assign_instruments'),
-
-
+    path('assignment/<int:assignment_id>/assign-instrument/', instruments.assign_instrument, name='assign_instrument'),
+    path('assignments/bulk-assign-instrument/', instruments.bulk_assign_instrument, name='bulk_assign_instrument'),    
+    path('assignments/auto_assign_instruments/', instruments.auto_assign_instruments, name='auto_assign_instruments'),
     # Unclear
-    path('assignments/bulk-assign-technician/', views.bulk_assign_technician, name='bulk_assign_technician'),
-    
-    path('assignments/bulk-send/', views.bulk_send_to_instrument, name='bulk_send_to_instrument'),
+    path('assignments/bulk-assign-technician/', instruments.bulk_assign_technician, name='bulk_assign_technician'),
+    path('assignments/bulk-send/', instruments.bulk_send_to_instrument, name='bulk_send_to_instrument'),
     
 
-    # ===== Quick Actions (AJAX) =====
-    # path('assignment/<int:assignment_id>/quick-send/', views.quick_send_to_instrument, name='quick_send_to_instrument'),
-
-    path('assignments/stats/', views.assignment_quick_stats,name='assignment_quick_stats'),
-    
-    # ===== Export =====
-    path(
-        'assignments/export-csv/',
-        views.export_assignments_csv,
-        name='export_assignments_csv'
-    ),
-    
+    path('assignments/stats/', test_assignments.assignment_quick_stats,name='assignment_quick_stats'),
     # ===== Instrument Integration (from previous) =====
     path(
         'assignment/<int:assignment_id>/send-to-instrument/',
-        views.send_to_instrument,
+        instruments.send_to_instrument,
         name='send_to_instrument'
     ),
     
     path(
         'assignment/<int:assignment_id>/fetch-result/',
-        views.fetch_result_from_instrument,
+        instruments.fetch_result_from_instrument,
         name='fetch_result_from_instrument'
     ),
 
-
-    
     # ===== Instrument Status =====
     path(
         'instrument/<int:instrument_id>/status/',
-        views.instrument_status_check,
+        instruments.instrument_status_check,
         name='instrument_status_check'
     ),
     
-    # # ===== Dashboard =====
-    # path(
-    #     'pending-results/',
-    #     views.pending_results_dashboard,
-    #     name='pending_results_dashboard'
-    # ),
-
-
-#       # ===== RESULT MANAGEMENT =====
-    
-# #     # Result List & Detail
-#     path('results/', views.result_list, name='result_list'),
-    
-#     path('result/<int:result_id>/', views.result_detail, name='result_detail'),
-    
-#     # Result Edit (before verification)
-#     path('result/<int:result_id>/edit/', views.edit_result, name='edit_result'),
-    
-#     # Result Verification
-#     path('result/<int:result_id>/verify/', views.verify_result, name='verify_result'),
-    
-#     # Result Release
-#     path('result/<int:result_id>/release/', views.release_result, name='release_result'),
-    
-#     # Result Amendment (after release)
-#     path('result/<int:result_id>/amend/', views.amend_result, name='amend_result'),
-    
-#     # Bulk Actions
-#     path('results/bulk-verify/', views.bulk_verify_results, name='bulk_verify_results'),
-    
-#     # Print/Export
-#     path('result/<int:result_id>/print/', views.print_result, name='print_result'),
 
 
 
+    # ===== Quick Actions (AJAX) =====
+    # path('assignment/<int:assignment_id>/quick-send/', views.quick_send_to_instrument, name='quick_send_to_instrument'),
+
+    
+    
+    # ===== Export =====
+    path(
+        'assignments/export-csv/',
+        downloads.export_assignments_csv,
+        name='export_assignments_csv'
+    ),
+    
     # ==== Quality Control ====
-    path('qc/lots/', views.qc_lot_list, name='qclot_list'),
-    path('qc/lots/create/', views.qc_lot_create, name='qclot_create'),
-    path('qc/lots/<int:pk>/edit/', views.qc_lot_edit, name='qclot_edit'),
-    path('qc/lots/<int:pk>/toggle/', views.qclot_toggle_active, name='qclot_toggle_active'),
-    path('qc/lots/<int:pk>/delete/', views.qclot_delete, name='qclot_delete'),
+    path('qc/lots/', qty_control.qc_lot_list, name='qclot_list'),
+    path('qc/lots/create/', qty_control.qc_lot_create, name='qclot_create'),
+    path('qc/lots/<int:pk>/edit/', qty_control.qc_lot_edit, name='qclot_edit'),
+    path('qc/lots/<int:pk>/toggle/', qty_control.qclot_toggle_active, name='qclot_toggle_active'),
+    path('qc/lots/<int:pk>/delete/', qty_control.qclot_delete, name='qclot_delete'),
 
-    path("qc/entry/", views.qc_entry_view, name="qc_entry"),
-    path("qc/results/", views.qc_results_list, name="qc_results_list"),
-    path("qc/results/<int:pk>/", views.qc_result_detail, name="qc_result_detail"),
+    path("qc/entry/", qty_control.qc_entry_view, name="qc_entry"),
+    path("qc/results/", qty_control.qc_results_list, name="qc_results_list"),
+    path("qc/results/<int:pk>/", qty_control.qc_result_detail, name="qc_result_detail"),
 
     # Levey-Jennings Chart
-    path("qc/chart/<int:qc_lot_id>/", views.levey_jennings_chart, name="levey_jennings_chart"),
+    path("qc/chart/<int:qc_lot_id>/", qty_control.levey_jennings_chart, name="levey_jennings_chart"),
     
-    path("qc/chart/data/<int:qc_lot_id>/", views.levey_jennings_data, name="levey_jennings_data"),
+    path("qc/chart/data/<int:qc_lot_id>/", qty_control.levey_jennings_data, name="levey_jennings_data"),
 
-    path("qc/monthly/", views.qc_monthly_report, name="qc_monthly_report"),
-    path("qc/dashboard/", views.qc_dashboard, name="qc_dashboard")
+    path("qc/monthly/", qty_control.qc_monthly_report, name="qc_monthly_report"),
+    path("qc/dashboard/", qty_control.qc_dashboard, name="qc_dashboard")
 
 ]
-
 
