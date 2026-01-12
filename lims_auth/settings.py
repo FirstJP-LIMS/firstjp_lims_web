@@ -191,7 +191,8 @@ if ENVIRONMENT == "production":
     "medvuno.com",
     "www.medvuno.com",
     ".medvuno.com",
-    '16.171.161.101', 
+    # '16.171.161.101', 
+    '13.63.45.144',
     'localhost', '127.0.0.1'
    # "firstjp-lims-web-ytsi.onrender.com",
     ]
@@ -227,11 +228,10 @@ if ENVIRONMENT == "production":
         #    #    "sslmode": "require",
         #    # },
         # }
-        "default":{
-            # 'default': dj_database_url.parse(os.getenv("DATABASE_URL"), conn_max_age=600, conn_health_checks=True),
-            'default': dj_database_url.config(default=os.getenv('DATABASE_URL'))
+
+            'default': dj_database_url.parse(os.getenv("DATABASE_URL")),
+            # 'default': dj_database_url.config(default=os.getenv('DATABASE_URL'))
             },
-        }
     
     # FILES MGT - Images, pdf, videos    
     STORAGES = {
