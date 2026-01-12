@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Payment for {{ billing.request.request_id }}</h2>
+    
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5>Billing Summary</h5>
+            <p><strong>Patient:</strong> {{ billing.request.patient.first_name }} {{ billing.request.patient.last_name }}</p>
+            <p><strong>Total Amount:</strong> ₦{{ billing.total_amount|floatformat:2 }}</p>
+            <p><strong>Amount Due:</strong> <span class="text-danger">₦{{ balance_due|floatformat:2 }}</span></p>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-body">
+            <h5>Select Payment Method</h5>
+            
+            <form method="post">
+                {% csrf_token %}
+                
+                {% if paystack_enabled %}
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="radio" name="payment_method" id="online" value="online" checked>
+                    <label class="form-check-label" for="online">
+                        <strong>Pay Online</strong> (Card, Bank Transfer, USSD)
+                    </label>
+                </div>
+                {% endif %}
+                
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="radio" name="payment_method" id="manual" value="manual" {% if not paystack_enabled %}checked{% endif %}>
+                    <label class="form-check-label" for="manual">
+                        <strong>Manual Payment</strong> (Cash, POS at facility)
+                    </label>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Proceed to Payment</button>
+                <a href="{% url 'billing:billing_detail' billing.pk %}" class="btn btn-secondary">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

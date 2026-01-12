@@ -1,3 +1,4 @@
+# Staff Management Views with Enhanced Security and Functionality
 import logging
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
@@ -7,18 +8,28 @@ from django.db import transaction
 from django.contrib.auth import get_user_model
 from django.db.models import Q, Count
 from django.core.paginator import Paginator
-from apps.labs.models import AuditLog, TestResult  # Centralized imports
-from ..decorators import vendor_admin_required # Use your new decorator
+from apps.labs.models import AuditLog, TestResult
+from apps.labs.decorators import require_capability
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
 
 @login_required
-@vendor_admin_required
+@require_capability('can_manage_staff')
 def user_list(request):
     """Refactored User List with Admin Statistics"""
     vendor = request.user.vendor
-    users = User.objects.filter(vendor=vendor).exclude(id=request.user.id).order_by('-date_joined')
+
+    # exclude roles 
+    external_roles = ['patient', 'clinician', 'learner', 'facilitator', 'platform_admin']
+
+    # users = User.objects.filter(vendor=vendor).exclude(id=request.user.id).order_by('-date_joined')
+    users = User.objects.filter(
+        vendor=vendor
+    ).exclude(
+        Q(id=request.user.id) |         # Exclude self
+        Q(role__in=external_roles)    # Exclude patients/clinicians
+    ).select_related('vendor').order_by('-date_joined')
     
     # Search & Filtering
     search_query = request.GET.get('search', '')
@@ -33,38 +44,65 @@ def user_list(request):
     if role_filter:
         users = users.filter(role=role_filter)
 
-    # Statistics (Optimized)
+    # 4. Statistics (Adjusted for Staff only)
+    # We use a reusable queryset to keep stats consistent with the list
+    staff_base = User.objects.filter(vendor=vendor).exclude(role__in=external_roles)
+
+    # # Statistics (Optimized)
     stats = {
-        'total': User.objects.filter(vendor=vendor).count(),
-        'active': User.objects.filter(vendor=vendor, is_active=True).count(),
-        'by_role': User.objects.filter(vendor=vendor).values('role').annotate(count=Count('id'))
+        'total': staff_base.count(),
+        'active': staff_base.filter(is_active=True).count(),
+        'by_role': staff_base.values('role').annotate(count=Count('id')).order_by('-count')
     }
-    
+
     paginator = Paginator(users, 20)
     page_obj = paginator.get_page(request.GET.get('page', 1))
     
+    staff_roles = [
+        choice for choice in User.ROLE_CHOICES 
+        if choice[0] not in external_roles
+        ]
+
     context = {
         'page_obj': page_obj,
         'stats': stats,
         'search_query': search_query,
-        'available_roles': [c for c in User.ROLE_CHOICES if c[0] != 'platform_admin'],
+        'available_roles':staff_roles,
     }
-    return render(request, 'users/user_list.html', context)
+
+    return render(request, 'laboratory/staffs/staff_list.html', context)
+
 
 @login_required
-@vendor_admin_required
+@require_capability('can_manage_staff')
 @require_http_methods(["GET", "POST"])
 def user_create(request):
-    """Secure User Creation with Audit Log"""
+    """Secure Staff Creation with strict role exclusion"""
+    
+    # Define roles that should NEVER be created through the staff management portal
+    excluded_roles = ['patient', 'clinician', 'platform_admin', 'learner', 'facilitator']
+    
+    # Prepare the allowed roles list for both POST validation and GET context
+    staff_roles = [
+        choice for choice in User.ROLE_CHOICES 
+        if choice[0] not in excluded_roles
+    ]
+    staff_role_codes = [r[0] for r in staff_roles]
+
     if request.method == "POST":
         email = request.POST.get('email', '').strip().lower()
         role = request.POST.get('role')
         password = request.POST.get('password')
         
-        # Validation Logic
+        # 1. Security Check: Prevent "Role Injection" via POST manipulation
+        if role not in staff_role_codes:
+            messages.error(request, "Unauthorized role selection detected.")
+            return redirect('users:user_list')
+
+        # 2. Duplicate Check within the Vendor
         if User.objects.filter(email=email, vendor=request.user.vendor).exists():
-            messages.error(request, "User already exists in your laboratory.")
-            return redirect('users:user_create')
+            messages.error(request, "A user with this email already exists in your lab.")
+            return render(request, 'laboratory/staffs/staff_form.html', {'available_roles': staff_roles})
 
         try:
             with transaction.atomic():
@@ -78,22 +116,30 @@ def user_create(request):
                     is_active=request.POST.get('is_active') == 'on'
                 )
                 
+                # 3. High-Integrity Audit Log
                 AuditLog.objects.create(
                     vendor=request.user.vendor,
                     user=request.user,
-                    action=f"CREATED USER: {user.email} as {user.get_role_display_name()}",
+                    action=f"STAFF CREATED: {user.email} (Role: {user.get_role_display_name()})",
                     ip_address=request.META.get('REMOTE_ADDR')
                 )
-                messages.success(request, f"User {user.email} created.")
+                
+                messages.success(request, f"Staff member {user.get_full_name()} created successfully.")
                 return redirect('users:user_detail', user_id=user.id)
+                
         except Exception as e:
-            messages.error(request, f"Error: {str(e)}")
+            messages.error(request, f"System Error: {str(e)}")
 
-    return render(request, 'users/user_form.html', {'available_roles': [c for c in User.ROLE_CHOICES if c[0] != 'platform_admin']})
+    # GET request: Render form with only staff roles
+    context = {
+        'available_roles': staff_roles,
+        'action': 'Create Staff Member'
+    }
+    return render(request, 'laboratory/staffs/staff_form.html', context)
 
 
 @login_required
-@vendor_admin_required
+@require_capability('can_manage_staff')
 @require_POST
 def user_change_role(request, user_id):
     """Quick Action: Role Change with Hierarchical Guard"""
@@ -124,7 +170,7 @@ def user_change_role(request, user_id):
 
 
 @login_required
-@vendor_admin_required
+@require_capability('can_manage_staff')
 @require_POST
 def user_toggle_status(request, user_id):
     """Toggle Active/Inactive Status"""
@@ -150,7 +196,7 @@ def user_toggle_status(request, user_id):
 
 
 @login_required
-@vendor_admin_required
+@require_capability('can_manage_staff')
 @require_POST
 def user_suspend(request, user_id):
     """
@@ -188,7 +234,7 @@ def user_suspend(request, user_id):
 
 
 @login_required
-@vendor_admin_required
+@require_capability('can_manage_staff')
 @require_POST
 def user_deactivate(request, user_id):
     """
@@ -215,7 +261,6 @@ def user_deactivate(request, user_id):
 
 
 @login_required
-@vendor_admin_required
 def user_detail(request, user_id):
     """
     Comprehensive view of a staff member's profile, permissions, and productivity.
@@ -249,4 +294,56 @@ def user_detail(request, user_id):
         'permissions': permissions,
     }
     
-    return render(request, 'users/user_detail.html', context)
+    return render(request, 'laboratory/staffs/staff_detail.html', context)
+
+
+
+from django.utils import timezone
+from datetime import datetime
+
+@login_required
+@require_capability('can_manage_staff')
+def full_audit_log(request):
+    """
+    Forensic search for all laboratory actions.
+    """
+    vendor = request.user.vendor
+    logs = AuditLog.objects.filter(vendor=vendor).select_related('user').order_by('-timestamp')
+
+    # 1. Filter by Specific User
+    user_id = request.GET.get('user_id')
+    if user_id:
+        logs = logs.filter(user_id=user_id)
+
+    # 2. Filter by Action Type (Search in the string)
+    action_query = request.GET.get('action_type')
+    if action_query:
+        logs = logs.filter(action__icontains=action_query)
+
+    # 3. Date Range Filtering
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    
+    if start_date and end_date:
+        try:
+            # Parse dates and make them timezone aware
+            start = timezone.make_aware(datetime.strptime(start_date, '%Y-%m-%d'))
+            end = timezone.make_aware(datetime.strptime(end_date, '%Y-%m-%d').replace(hour=23, minute=59))
+            logs = logs.filter(timestamp__range=(start, end))
+        except ValueError:
+            messages.error(request, "Invalid date format. Use YYYY-MM-DD.")
+
+    # Pagination
+    paginator = Paginator(logs, 50) # Higher limit for logs
+    page_obj = paginator.get_page(request.GET.get('page', 1))
+
+    # For the filter dropdown
+    staff_list = User.objects.filter(vendor=vendor).only('id', 'first_name', 'last_name', 'email')
+
+    context = {
+        'page_obj': page_obj,
+        'staff_list': staff_list,
+        'filters': request.GET
+    }
+    return render(request, 'laboratory/staffs/audit/audit_list.html', context)
+

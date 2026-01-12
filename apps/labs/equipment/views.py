@@ -8,6 +8,7 @@ from django.db import transaction
 from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
 from labs.models import Equipment, Department, AuditLog
+from ..forms import EquipmentForm
 
 
 @login_required
@@ -24,17 +25,6 @@ def equipment_list(request):
     }
     
     return render(request, 'laboratory/equipment/equipment_list.html', context)
-
-
-# app_name/views.py
-
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.views.decorators.http import require_http_methods
-from django.contrib import messages
-from django.db import transaction
-# from .models import Equipment, Department, AuditLog
-from .forms import EquipmentForm
 
 
 @login_required
@@ -269,3 +259,4 @@ def equipment_test_connection(request, equipment_id):
             'message': f'Connection failed: {str(e)}'
         })
     
+

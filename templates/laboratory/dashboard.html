@@ -5,9 +5,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MEDVUNO LIMS - Dashboard</title>
-    <!-- Tailwind CSS -->
-    
+    {% comment %} {% block title %}
+        {{ vendor.name }} Dashboard
+    {% endblock title %} {% endcomment %}
+
+    <!-- Tailwind CSS -->    
     <link rel="stylesheet" href="{% static 'dist/styles.css' %}">
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Daisy UI -->
@@ -99,21 +101,6 @@
             transition: transform 0.2s;
         }
     </style>
-
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'navy': '#001f40',
-                        'medvuno-red': '#cc0033',
-                        'medvuno-gold': '#d4af37',
-                    }
-                }
-            }
-        }
-    </script>
-
 </head>
 <body class="bg-gray-50">
     <div class="drawer lg:drawer-open">
@@ -137,7 +124,7 @@
                     <div class="flex-none flex items-center gap-3">
                         <!-- Operations Dropdown -->
                         <div class="dropdown dropdown-end">
-                            <div tabindex="0" role="button" class="btn btn-outline border-medvuno-red text-medvuno-red hover:bg-medvuno-red hover:border-medvuno-red hover:text-white">
+                            <div tabindex="0" role="button" class="btn btn-outline border-[#cc0033] text-[#cc0033] hover:bg-[#cc0033] hover:border-[#cc0033] hover:text-white">
                                 <i class="bi bi-gear me-2"></i>Operations
                             </div>
                             <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-64">
@@ -181,7 +168,7 @@
                             </ul>
                         </div>
                         
-                        <a href="{% url 'labs:create_test_request' %}" class="btn bg-medvuno-red border-medvuno-red text-white hover:bg-red-700">
+                        <a href="{% url 'labs:create_test_request' %}" class="btn bg-[#cc0033] border-medvuno-red text-white hover:bg-red-700">
                             <i class="bi bi-plus-circle me-2"></i>
                             Request Test
                         </a>
@@ -625,7 +612,7 @@
         <!-- Sidebar -->
         <div class="drawer-side">
             <label for="sidebar-drawer" aria-label="close sidebar" class="drawer-overlay"></label>
-            <aside class="bg-navy text-white w-60 min-h-screen flex flex-col">
+            <aside class="bg-[#001f40] text-white w-60 min-h-screen flex flex-col">
                 <div class="p-6 border-b border-white/10">
                     <div class="flex items-center space-x-3">
                         {% if vendor_profile.logo %}
@@ -653,9 +640,16 @@
                         </li>
                         
                         <li>
-                            <a class="flex items-center space-x-3 p-2 rounded-lg hover:bg-white/10 transition-colors" data-page="patients">
+                            <a href="{% url 'labs:patient_list' %}" class="flex items-center space-x-3 p-2 rounded-lg hover:bg-white/10 transition-colors" data-page="patients">
                                 <i class="bi bi-people text-lg leading-none"></i>
                                 <span>Patients</span>
+                            </a>
+                        </li>
+
+                        <li>
+                            <a href="{% url 'appointment:staff_appointment_list' %}" class="flex items-center space-x-3 p-2 rounded-lg hover:bg-white/10 transition-colors" data-page="appointments">
+                                <i class="bi bi-calendar-check text-lg leading-none"></i>
+                                <span>Appointments</span>
                             </a>
                         </li>
 
@@ -718,9 +712,9 @@
                         </li>
 
                         <li class="mt-auto pt-4 border-t border-white/10">
-                            <a href="#" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-white/10 transition-colors">
+                            <a href="{% url 'account:user_staff_list' %}" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-white/10 transition-colors">
                                 <i class="bi bi-gear text-lg leading-none"></i>
-                                <span>Settings</span>
+                                <span>Staff Management</span>
                             </a>
                         </li>
                         <li>

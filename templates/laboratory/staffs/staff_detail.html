@@ -1,0 +1,360 @@
+{% extends "laboratory/assets/base_user.html" %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+    <!-- Header with Back Button -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <a href="{% url 'account:user_staff_list' %}" 
+                   class="p-2 text-gray-600 hover:text-navy hover:bg-gray-100 rounded-lg transition">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+                <div>
+                    <h1 class="text-2xl font-bold text-lab-black">Staff Profile</h1>
+                    <p class="text-gray-600">View detailed information and activity</p>
+                </div>
+            </div>
+            <div class="flex space-x-3">
+                <a href="{% url 'account:user_change_role' profile_user.id %}" 
+                   class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition flex items-center">
+                    <i class="fas fa-user-tag mr-2"></i>
+                    Change Role
+                </a>
+                <form method="post" 
+                      action="{% url 'account:user_toggle_status' profile_user.id %}"
+                      class="inline"
+                      onsubmit="return confirm('Are you sure you want to change this user\\'s status?');">
+                    {% csrf_token %}
+                    <button type="submit" 
+                            class="px-4 py-2 {% if profile_user.is_active %}bg-red-50 text-lab-red hover:bg-red-100{% else %}bg-green-50 text-green-700 hover:bg-green-100{% endif %} border rounded-lg transition flex items-center">
+                        <i class="fas {% if profile_user.is_active %}fa-user-slash{% else %}fa-user-check{% endif %} mr-2"></i>
+                        {% if profile_user.is_active %}Deactivate{% else %}Activate{% endif %}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left Column: Profile Information -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Profile Card -->
+            <div class="bg-white rounded-xl shadow-sm border">
+                <div class="p-6">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-center space-x-4">
+                            <div class="h-20 w-20 bg-navy text-white rounded-full flex items-center justify-center text-2xl font-semibold">
+                                {{ profile_user.first_name|first|upper }}{{ profile_user.last_name|first|upper }}
+                            </div>
+                            <div>
+                                <h2 class="text-xl font-bold text-lab-black">{{ profile_user.get_full_name }}</h2>
+                                <div class="flex items-center space-x-3 mt-2">
+                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium {% if profile_user.role == 'vendor_admin' %}bg-red-100 text-lab-red{% elif profile_user.role == 'lab_manager' %}bg-blue-100 text-blue-800{% elif profile_user.role == 'scientist' %}bg-purple-100 text-purple-800{% elif profile_user.role == 'technologist' %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                                        <i class="fas fa-user-tag mr-1"></i>
+                                        {{ profile_user.get_role_display_name }}
+                                    </span>
+                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium {% if profile_user.is_active %}bg-green-100 text-green-800{% else %}bg-red-100 text-lab-red{% endif %}">
+                                        <i class="fas fa-circle mr-1.5" style="font-size: 8px;"></i>
+                                        {% if profile_user.is_active %}Active{% else %}Inactive{% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm text-gray-500">Member Since</div>
+                            <div class="font-medium text-lab-black">{{ profile_user.date_joined|date:"F d, Y" }}</div>
+                            <div class="text-xs text-gray-400">{{ profile_user.date_joined|timesince }} ago</div>
+                        </div>
+                    </div>
+
+                    <!-- Contact Information -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+                        <div class="space-y-3">
+                            <div class="flex items-center text-gray-700">
+                                <i class="fas fa-envelope w-5 mr-3 text-gray-400"></i>
+                                <div>
+                                    <div class="text-sm text-gray-500">Email</div>
+                                    <div class="font-medium">{{ profile_user.email }}</div>
+                                </div>
+                            </div>
+                            {% if profile_user.contact_number %}
+                            <div class="flex items-center text-gray-700">
+                                <i class="fas fa-phone w-5 mr-3 text-gray-400"></i>
+                                <div>
+                                    <div class="text-sm text-gray-500">Contact Number</div>
+                                    <div class="font-medium">{{ profile_user.contact_number }}</div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="space-y-3">
+                            <div class="flex items-center text-gray-700">
+                                <i class="fas fa-building w-5 mr-3 text-gray-400"></i>
+                                <div>
+                                    <div class="text-sm text-gray-500">Laboratory</div>
+                                    <div class="font-medium">{{ profile_user.vendor.name }}</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center text-gray-700">
+                                <i class="fas fa-id-badge w-5 mr-3 text-gray-400"></i>
+                                <div>
+                                    <div class="text-sm text-gray-500">User ID</div>
+                                    <div class="font-mono text-sm">{{ profile_user.id }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Metrics -->
+            <div class="bg-white rounded-xl shadow-sm border">
+                <div class="p-6">
+                    <div class="flex items-center mb-6">
+                        <div class="h-10 w-10 bg-lab-red text-white rounded-full flex items-center justify-center mr-3">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-lab-black">Performance Metrics</h3>
+                            <p class="text-sm text-gray-500">Productivity statistics</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="text-center p-6 bg-blue-50 rounded-xl border border-blue-100">
+                            <div class="text-3xl font-bold text-blue-800">{{ metrics.entered }}</div>
+                            <div class="text-sm font-medium text-blue-700 mt-2">Results Entered</div>
+                            <div class="text-xs text-blue-600 mt-1">By this user</div>
+                        </div>
+                        <div class="text-center p-6 bg-green-50 rounded-xl border border-green-100">
+                            <div class="text-3xl font-bold text-green-800">{{ metrics.verified }}</div>
+                            <div class="text-sm font-medium text-green-700 mt-2">Results Verified</div>
+                            <div class="text-xs text-green-600 mt-1">Quality control</div>
+                        </div>
+                        <div class="text-center p-6 bg-purple-50 rounded-xl border border-purple-100">
+                            <div class="text-3xl font-bold text-purple-800">{{ metrics.released }}</div>
+                            <div class="text-sm font-medium text-purple-700 mt-2">Results Released</div>
+                            <div class="text-xs text-purple-600 mt-1">Final approval</div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 pt-6 border-t border-gray-200">
+                        <div class="flex items-center justify-between text-sm text-gray-500">
+                            <span>Data reflects all-time activity</span>
+                            <span class="text-xs bg-gray-100 px-2 py-1 rounded">Updated in real-time</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="bg-white rounded-xl shadow-sm border">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center">
+                            <div class="h-10 w-10 bg-navy text-white rounded-full flex items-center justify-center mr-3">
+                                <i class="fas fa-history"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-semibold text-lab-black">Recent Activity</h3>
+                                <p class="text-sm text-gray-500">Last 15 audit log entries</p>
+                            </div>
+                        </div>
+                        <a href="{% url 'audit_log_list' %}?user={{ profile_user.id }}" 
+                           class="text-sm text-navy hover:underline flex items-center">
+                            <i class="fas fa-external-link-alt mr-1"></i>
+                            View all logs
+                        </a>
+                    </div>
+
+                    <div class="space-y-4">
+                        {% for activity in recent_activity %}
+                        <div class="flex items-start space-x-3 p-4 hover:bg-gray-50 rounded-lg transition">
+                            <div class="flex-shrink-0 mt-1">
+                                <div class="h-8 w-8 rounded-full flex items-center justify-center 
+                                    {% if 'CREATED' in activity.action %}bg-green-100 text-green-800
+                                    {% elif 'UPDATED' in activity.action %}bg-blue-100 text-blue-800
+                                    {% elif 'DELETED' in activity.action or 'SUSPEND' in activity.action %}bg-red-100 text-lab-red
+                                    {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                    <i class="fas 
+                                        {% if 'CREATED' in activity.action %}fa-plus
+                                        {% elif 'UPDATED' in activity.action %}fa-edit
+                                        {% elif 'DELETED' in activity.action or 'SUSPEND' in activity.action %}fa-trash
+                                        {% else %}fa-info-circle{% endif %} text-sm">
+                                    </i>
+                                </div>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-gray-900">
+                                    {{ activity.action }}
+                                </p>
+                                <div class="flex items-center space-x-3 mt-1 text-xs text-gray-500">
+                                    <span><i class="far fa-clock mr-1"></i>{{ activity.timestamp|timesince }} ago</span>
+                                    {% if activity.ip_address %}
+                                    <span><i class="fas fa-network-wired mr-1"></i>{{ activity.ip_address }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="text-center py-8 text-gray-500">
+                            <i class="fas fa-history text-3xl mb-3 text-gray-300"></i>
+                            <p>No recent activity found</p>
+                            <p class="text-sm mt-1">Actions will appear here as they occur</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Permissions & Actions -->
+        <div class="space-y-6">
+            <!-- Permissions Summary -->
+            <div class="bg-white rounded-xl shadow-sm border">
+                <div class="p-6">
+                    <div class="flex items-center mb-6">
+                        <div class="h-10 w-10 bg-green-600 text-white rounded-full flex items-center justify-center mr-3">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-lab-black">Permissions</h3>
+                            <p class="text-sm text-gray-500">Role-based capabilities</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        {% if permissions %}
+                            {% for permission in permissions %}
+                            <div class="flex items-center p-3 bg-gray-50 rounded-lg border">
+                                <i class="fas fa-check-circle text-green-600 mr-3"></i>
+                                <span class="font-medium text-gray-900">{{ permission }}</span>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                        <div class="text-center py-6 text-gray-500">
+                            <i class="fas fa-lock text-2xl mb-2 text-gray-300"></i>
+                            <p>No special permissions</p>
+                            <p class="text-sm mt-1">Basic access only</p>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mt-6 pt-6 border-t border-gray-200">
+                        <div class="text-sm text-gray-500">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            Permissions are derived from the {{ profile_user.get_role_display_name }} role
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Role Hierarchy -->
+            <div class="bg-white rounded-xl shadow-sm border">
+                <div class="p-6">
+                    <h3 class="text-lg font-semibold text-lab-black mb-4">Role Hierarchy</h3>
+                    <div class="space-y-3">
+                        {% with hierarchy=profile_user.LAB_HIERARCHY %}
+                            {% for role in hierarchy %}
+                            <div class="flex items-center p-3 {% if role == profile_user.role %}bg-navy text-white{% else %}bg-gray-50{% endif %} rounded-lg border {% if role == profile_user.role %}border-navy{% endif %}">
+                                <div class="w-6 h-6 rounded-full flex items-center justify-center mr-3 
+                                    {% if role == profile_user.role %}bg-white text-navy{% else %}bg-gray-200 text-gray-700{% endif %}">
+                                    {{ forloop.counter }}
+                                </div>
+                                <span class="font-medium">{{ role|title }}</span>
+                                {% if role == profile_user.role %}
+                                <span class="ml-auto text-sm">
+                                    <i class="fas fa-user mr-1"></i>Current
+                                </span>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        {% endwith %}
+                    </div>
+                    <div class="mt-4 text-sm text-gray-500">
+                        <i class="fas fa-arrow-up mr-1"></i>
+                        Higher roles inherit permissions from lower roles
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="bg-white rounded-xl shadow-sm border">
+                <div class="p-6">
+                    <h3 class="text-lg font-semibold text-lab-black mb-4">Quick Actions</h3>
+                    <div class="space-y-3">
+                        <a href="{% url 'user_change_role' profile_user.id %}" 
+                           class="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+                            <div class="flex items-center">
+                                <div class="h-10 w-10 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center mr-3">
+                                    <i class="fas fa-user-tag"></i>
+                                </div>
+                                <div>
+                                    <div class="font-medium text-gray-900">Change Role</div>
+                                    <div class="text-sm text-gray-500">Update user permissions</div>
+                                </div>
+                            </div>
+                            <i class="fas fa-chevron-right text-gray-400"></i>
+                        </a>
+
+                        <form method="post" 
+                              action="{% url 'user_suspend' profile_user.id %}"
+                              onsubmit="return confirm('Are you sure you want to suspend this user? This will prevent them from logging in.');"
+                              class="block">
+                            {% csrf_token %}
+                            <button type="submit" 
+                                    class="w-full flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-red-50 hover:border-red-200 transition text-left">
+                                <div class="flex items-center">
+                                    <div class="h-10 w-10 bg-red-100 text-lab-red rounded-full flex items-center justify-center mr-3">
+                                        <i class="fas fa-ban"></i>
+                                    </div>
+                                    <div>
+                                        <div class="font-medium text-gray-900">Suspend Account</div>
+                                        <div class="text-sm text-gray-500">Temporary login restriction</div>
+                                    </div>
+                                </div>
+                                <i class="fas fa-chevron-right text-gray-400"></i>
+                            </button>
+                        </form>
+
+                        <form method="post" 
+                              action="{% url 'user_deactivate' profile_user.id %}"
+                              onsubmit="return confirm('Are you sure you want to deactivate this user? This action can be reversed.');"
+                              class="block">
+                            {% csrf_token %}
+                            <button type="submit" 
+                                    class="w-full flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-yellow-50 hover:border-yellow-200 transition text-left">
+                                <div class="flex items-center">
+                                    <div class="h-10 w-10 bg-yellow-100 text-yellow-800 rounded-full flex items-center justify-center mr-3">
+                                        <i class="fas fa-user-slash"></i>
+                                    </div>
+                                    <div>
+                                        <div class="font-medium text-gray-900">Deactivate Account</div>
+                                        <div class="text-sm text-gray-500">Permanent access removal</div>
+                                    </div>
+                                </div>
+                                <i class="fas fa-chevron-right text-gray-400"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Audit Note -->
+            <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <div class="flex items-start">
+                    <i class="fas fa-clipboard-check text-blue-600 mt-0.5 mr-3"></i>
+                    <div>
+                        <h4 class="font-medium text-blue-900">Audit Trail Active</h4>
+                        <p class="text-sm text-blue-700 mt-1">
+                            All actions on this account are logged with timestamp and IP address.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

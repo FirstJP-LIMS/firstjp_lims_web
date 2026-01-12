@@ -29,6 +29,9 @@ from .views import (
     qty_control,
     
     # export_mail, # Currently disabled - handles automated dispatch
+
+    # Pateint
+    patient,
 )
 
 app_name = "labs"
@@ -38,6 +41,10 @@ urlpatterns = [
     path('dashboard/', base.dashboard, name='vendor_dashboard'),
     path('assistants/', base.lab_assistants, name='lab_assistants'),
     path('profile/', base.profile, name='vendor_profile'),
+
+    # Patient Seen in the Lab
+    path('patient/', patient.PatientListView.as_view(), name="patient_list"),
+    path('patient-detail/<int:pk>/', patient.PatientDetailView.as_view(), name="patient_detail"),
 
     # Lab Setup
     # Department Crud
@@ -65,6 +72,13 @@ urlpatterns = [
     # examination
     path('examination/samples/', sample_exam.sample_examination_list, name='sample-exam-list'),
     path('examination/sample/<str:sample_id>/', sample_exam.sample_examination_detail, name='sample-exam-detail'),
+    
+    # Bulk verification
+    path('samples/bulk/verify/', sample_exam.sample_bulk_verify, name='sample-bulk-verify'),
+    
+    # Admin override
+    path('samples/<str:sample_id>/verify-override/', sample_exam.sample_verify_override_payment,  name='sample-verify-override'),
+
 
     # ===== Test Assignment =====
     path('assignments/', test_assignments.test_assignment_list, name='test_assignment_list'),

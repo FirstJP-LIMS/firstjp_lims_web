@@ -1,0 +1,108 @@
+
+<nav class="bg-blue-900 text-white shadow-lg">
+    <div class="container mx-auto px-4 py-3">
+        <div class="flex justify-between items-center">
+
+            <!-- LAB IDENTITY -->
+            <div class="flex items-center space-x-4">
+                <a href="{% url 'labs:vendor_dashboard' %}" class="flex items-center space-x-2 font-bold">
+                    <i class="fas fa-flask text-lab-red-light"></i>
+                    {% if vendor_profile.logo %}
+                        <img src="{{ vendor_profile.logo.url }}" alt="{{ vendor.name }}" class="h-8">
+                    {% else %}
+                        <span>{{ vendor.name }}</span>
+                    {% endif %}
+                </a>
+            </div>
+
+            <!-- DESKTOP NAV -->
+            <div class="hidden md:flex items-center space-x-10">
+
+                <!-- OPERATIONS -->
+                <div class="flex space-x-4">
+                    <a href="{% url 'appointment:staff_appointment_list' %}"
+                       class="{% if request.resolver_match.url_name == 'staff_appointment_list' %}text-lab-red-light border-b-2 border-lab-red-light{% else %}hover:text-lab-red-light{% endif %} pb-1">
+                        <i class="fas fa-calendar-check mr-1"></i> Appointments
+                    </a>
+
+                    <a href="{% url 'appointment:slot_calendar_view' %}"
+                       class="{% if 'slot_calendar_view' in request.path %}text-lab-red-light border-b-2 border-lab-red-light{% else %}hover:text-lab-red-light{% endif %} pb-1">
+                        <i class="fas fa-calendar-day mr-1"></i> Calendar
+                    </a>
+                </div>
+
+                <!-- CONFIGURATION -->
+                <div class="flex space-x-4 border-l border-white/20 pl-6">
+                    <a href="{% url 'appointment:slot_template_list' %}" class="hover:text-lab-red-light">
+                        <i class="fas fa-cogs mr-1"></i> Slot Templates
+                    </a>
+                    <a href="{% url 'appointment:slot_template_generate' %}" class="hover:text-lab-red-light">
+                        <i class="fas fa-sync mr-1"></i> Generate Slots
+                    </a>
+                    <a href="{% url 'appointment:slot_instance_list' %}" class="hover:text-lab-red-light">
+                        <i class="fa-solid fa-group-arrows-rotate mr-1"></i> All Slots
+                    </a>
+                </div>
+
+            </div>
+
+            <!-- USER / ACTIONS -->
+            <div class="flex items-center space-x-3">
+
+                <!-- QUICK ACTION -->
+                <a href=""
+                   class="hidden sm:inline-flex items-center px-4 py-2 bg-lab-red-light hover:bg-lab-red-dark rounded-lg text-sm">
+                    <i class="fas fa-plus mr-2"></i> Book for Patient
+                </a>
+
+                <!-- USER -->
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <span class="hidden md:inline text-sm">
+                        {{ request.user.get_short_name }}
+                    </span>
+                </div>
+
+                <!-- MOBILE TOGGLE -->
+                <button id="mobileMenuBtn" class="md:hidden focus:outline-none">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- MOBILE MENU -->
+        <div id="mobileMenu" class="hidden md:hidden mt-4 space-y-4 border-t border-white/20 pt-4">
+
+            <!-- OPERATIONS -->
+            <div class="space-y-2">
+                <a href="{% url 'appointment:staff_appointment_list' %}" class="block hover:text-lab-red-light">
+                    <i class="fas fa-calendar-check mr-2"></i> Appointments
+                </a>
+                <a href="{% url 'appointment:slot_calendar_view' %}" class="block hover:text-lab-red-light">
+                    <i class="fas fa-calendar-day mr-2"></i> Calendar
+                </a>
+            </div>
+
+            <!-- CONFIGURATION -->
+            <div class="space-y-2 border-t border-white/20 pt-3">
+                <a href="{% url 'appointment:slot_template_list' %}" class="block hover:text-lab-red-light">
+                    <i class="fas fa-cogs mr-2"></i> Slot Templates
+                </a>
+                <a href="{% url 'appointment:slot_template_generate' %}" class="block hover:text-lab-red-light">
+                    <i class="fas fa-sync mr-2"></i> Generate Slots
+                </a>
+                <a href="{% url 'appointment:slot_instance_list' %}" class="block hover:text-lab-red-light">
+                    <i class="fa-solid fa-group-arrows-rotate mr-2"></i> All Slots
+                </a>
+            </div>
+
+            <!-- MOBILE ACTION -->
+            <a href=""
+               class="block text-center bg-lab-red-light hover:bg-lab-red-dark py-2 rounded-lg text-sm">
+                <i class="fas fa-plus mr-2"></i> Book for Patient
+            </a>
+        </div>
+    </div>
+</nav>

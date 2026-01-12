@@ -19,7 +19,6 @@ from django.template.loader import render_to_string
 from django.http import HttpResponse
 from weasyprint import HTML
 import tempfile
-from ..decorators import lab_staff_required
 from django.core.mail import EmailMessage
 
 
@@ -166,7 +165,6 @@ def export_assignments_csv(request):
 
 
 @login_required
-@lab_staff_required
 def download_result_pdf(request, result_id):
     # Use the same select_related for speed and data access
     result = get_object_or_404(

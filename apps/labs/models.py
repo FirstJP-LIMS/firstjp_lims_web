@@ -9,6 +9,7 @@ from .utils import get_next_sequence
 from decimal import Decimal
 
 # pdf 
+# Generate barcode libraries           
 import os
 from io import BytesIO
 from barcode import Code128
@@ -118,20 +119,16 @@ class VendorTest(models.Model):
     max_reference_value = models.DecimalField(max_digits=12, decimal_places=6, null=True, blank=True)
 
     # Panic / critical values
-    panic_low_value = models.DecimalField(max_digits=12, decimal_places=6, null=True, blank=True,
-                                          help_text="Critical low (panic) threshold")
-    panic_high_value = models.DecimalField(max_digits=12, decimal_places=6, null=True, blank=True,
-                                           help_text="Critical high (panic) threshold")
+    panic_low_value = models.DecimalField(max_digits=12, decimal_places=6, null=True, blank=True, help_text="Critical low (panic) threshold")
+    panic_high_value = models.DecimalField(max_digits=12, decimal_places=6, null=True, blank=True, help_text="Critical high (panic) threshold")
     
     # 🆕 PATIENT PREPARATION & INFORMATION
     preparation_required = models.BooleanField(
-        default=False,
-        help_text="Does this test require special preparation? (fasting, medication hold, etc.)"
+        default=False, help_text="Does this test require special preparation? (fasting, medication hold, etc.)"
     )
     
     preparation_instructions = models.TextField(
-        blank=True,
-        help_text="Patient-facing instructions (e.g., 'Fast for 8-12 hours', 'Avoid alcohol 48hrs before')"
+        blank=True, help_text="Patient-facing instructions (e.g., 'Fast for 8-12 hours', 'Avoid alcohol 48hrs before')"
     )
     
     collection_instructions = models.TextField(
@@ -307,6 +304,9 @@ class Patient(models.Model):
     patient_id = models.CharField(max_length=20, help_text="Auto-generated 6-digit patient ID.")
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
+    
+    # for Walk-in Patient.
+    is_shadow = models.BooleanField(default=False,  help_text="True if created via a walk-in appointment without a full account.")
     date_of_birth = models.DateField(null=True, blank=True)
     gender = models.CharField(max_length=1, choices=GENDER_CHOICE)
     contact_email = models.EmailField(blank=True)
@@ -495,8 +495,7 @@ class TestRequest(models.Model):
     )
     
     # 🆕 Approval workflow for patient orders
-    approved_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
@@ -517,14 +516,7 @@ class TestRequest(models.Model):
     clinical_indication = models.TextField(blank=True)
     urgency_reason = models.TextField(blank=True)
     
-    priority = models.CharField(
-        choices=[
-            ("urgent", "URGENT"),
-            ("routine", "ROUTINE"),
-        ],
-        max_length=45,
-        default="routine"
-    )
+    priority = models.CharField(choices=PRIORITY_STATUS, max_length=45, default="routine",)
     
     status = models.CharField(choices=ORDER_STATUS, max_length=1, default="P")
 
@@ -571,11 +563,6 @@ class TestRequest(models.Model):
     
     def generate_barcode(self):
         """Generate a barcode image for this test request."""
-        from io import BytesIO
-        from barcode import Code128
-        from barcode.writer import ImageWriter
-        from django.core.files.base import ContentFile
-        
         barcode_data = f"{self.vendor.tenant_id}-{self.patient.patient_id}-{self.request_id}"
 
         buffer = BytesIO()
@@ -619,6 +606,7 @@ class TestRequest(models.Model):
         self.save(update_fields=['status', 'approved_by', 'approved_at'])
         
         # TODO: Notify patient
+
     
     def reject_order(self, user, reason):
         """Reject a patient order."""
@@ -644,36 +632,6 @@ class TestRequest(models.Model):
         self.status = 'C'
         self.completed_at = timezone.now()
         self.save(update_fields=['status', 'completed_at'])
-
-    # def verify_results(self, user):
-    #     """Final verification and release."""
-    #     self.status = 'V'
-    #     self.verified_at = timezone.now()
-    #     self.save(update_fields=['status', 'verified_at'])
-        
-    #     from apps.labs.models import AuditLog
-    #     AuditLog.objects.create(
-    #         vendor=self.vendor, 
-    #         user=user,
-    #         action=f"Request {self.request_id} verified"
-    #     )
-        
-    #     # Notify ordering clinician if present
-    #     if self.ordering_clinician:
-    #         self.notify_ordering_clinician()
-    
-    # def notify_ordering_clinician(self):
-    #     """Mark that clinician has been notified of results."""
-    #     self.clinician_notified_at = timezone.now()
-    #     self.save(update_fields=['clinician_notified_at'])
-    #     # TODO: Send actual notification
-    
-    # def clinician_acknowledge_results(self, user):
-    #     """Record that clinician has reviewed results."""
-    #     if user.role == 'clinician':
-    #         self.clinician_acknowledged_at = timezone.now()
-    #         self.save(update_fields=['clinician_acknowledged_at'])
-    
     
     @property
     def has_critical_results(self):
@@ -690,7 +648,7 @@ class TestRequest(models.Model):
 
     @property
     def requires_clinician_attention(self):
-        return self.has_critical_results and not self.clinician_acknowledged_at
+        return self.has_critical_results and not self.clinician_acknowledged_at()
     
     
     @property
@@ -702,6 +660,19 @@ class TestRequest(models.Model):
     def is_patient_order(self):
         """Check if this was a patient self-order."""
         return self.ordering_clinician is None and self.requested_by and self.requested_by.role == 'patient'
+
+    # Check Payment 
+    @property
+    def is_paid(self):
+        """Check if billing is fully paid."""
+        if hasattr(self, 'billing_info'):
+            return self.billing_info.is_fully_paid()
+        return False
+
+    @property
+    def can_verify_sample(self):
+        """Sample can only be verified if payment is complete."""
+        return self.is_paid and self.status in ['P', 'A']
 
     def __str__(self):
         return f"{self.request_id} ({self.patient})"
@@ -722,8 +693,7 @@ class TestAssignment(models.Model):
     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="assignments")  # ✅ Direct reference
     request = models.ForeignKey('TestRequest', on_delete=models.CASCADE, related_name="assignments")
     lab_test = models.ForeignKey('VendorTest', on_delete=models.PROTECT, related_name="assignments") 
-    sample = models.ForeignKey('Sample', on_delete=models.PROTECT, related_name="assignments", 
-                               help_text="The sample specimen required to run this test.")
+    sample = models.ForeignKey('Sample', on_delete=models.PROTECT, related_name="assignments", help_text="The sample specimen required to run this test.")
     department = models.ForeignKey('Department', on_delete=models.PROTECT, related_name="assigned_work")
     
     status = models.CharField(choices=ASSIGNMENT_STATUS, max_length=1, default='P')
@@ -790,16 +760,355 @@ class TestAssignment(models.Model):
         return f"{self.request.request_id} - {self.lab_test.code}"
 
 
+# class TestResult(models.Model):
+#     """
+#     Stores the final result for a TestAssignment.
+#     Fully supports:
+#     - Quantitative (QNT)
+#     - Qualitative (QLT via QualitativeOption)
+#     - Critical values, AMR, clinical reportable range
+#     - Audit trail (entered, verified, released)
+#     - Amendments
+#     """
+
+#     assignment = models.OneToOneField(
+#         'TestAssignment',
+#         on_delete=models.CASCADE,
+#         related_name="result"
+#     )
+
+#     # ===================
+#     # RESULT FIELDS
+#     # ===================
+#     result_value = models.TextField(help_text="The measured value or observation")
+#     units = models.CharField(max_length=50, blank=True)
+#     reference_range = models.CharField(max_length=80, blank=True)
+
+#     FLAG_CHOICES = [
+#         ('N', 'Normal'),
+#         ('H', 'High'),
+#         ('L', 'Low'),
+#         ('A', 'Abnormal'),
+#         ('C', 'Critical'),
+#         ('M', 'Unmeasurable (Outside AMR)'),
+#         ('R', 'Out of Reportable Range'),
+#         ('*', 'Corrected'),
+#     ]
+
+#     flag = models.CharField(max_length=1, choices=FLAG_CHOICES, default='N')
+
+#     # CONTEXTUAL FIELDS
+#     remarks = models.TextField(blank=True)
+#     interpretation = models.TextField(blank=True)
+
+#     DATA_SOURCE = [
+#         ('manual', 'Manual Entry'),
+#         ('instrument', 'Instrument Auto-Generated'),
+#         ('imported', 'Imported from External System'),
+#         ('calculated', 'Calculated Result'),
+#     ]
+#     data_source = models.CharField(max_length=20, choices=DATA_SOURCE, default='manual')
+
+#     instrument_name = models.CharField(max_length=150, blank=True)
+#     instrument_run_id = models.CharField(max_length=100, blank=True)
+
+#     # ===================
+#     # USER + AUDIT FIELDS
+#     # ===================
+#     entered_by = models.ForeignKey(settings.AUTH_USER_MODEL,null=True, on_delete=models.SET_NULL, related_name="entered_results")
+
+#     verified_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="verified_results")
+
+#     released_by = models.ForeignKey(
+#         settings.AUTH_USER_MODEL,
+#         null=True, blank=True,
+#         on_delete=models.SET_NULL,
+#         related_name="released_results"
+#     )
+
+#     entered_at = models.DateTimeField(auto_now_add=True)
+#     verified_at = models.DateTimeField(null=True, blank=True)
+#     released_at = models.DateTimeField(null=True, blank=True)
+
+#     released = models.BooleanField(default=False)
+#     is_amended = models.BooleanField(default=False)
+
+#     version = models.IntegerField(default=1)
+#     previous_value = models.TextField(blank=True)
+#     amendment_reason = models.TextField(blank=True)
+
+#     # ===================
+#     # QUALITY CONTROL
+#     # ===================
+#     qc_passed = models.BooleanField(default=True)
+#     qc_comment = models.TextField(blank=True)
+
+#     delta_flag = models.BooleanField(default=False)
+#     delta_percent = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+
+#     class Meta:
+#         ordering = ['-entered_at']
+#         verbose_name = "Test Result"
+#         verbose_name_plural = "Test Results"
+        
+#         # ✅ CUSTOM PERMISSIONS DEFINED HERE
+#         permissions = [
+#             ("can_verify_results", "Can verify test results"),
+#             ("can_release_results", "Can release test results"),
+#             ("can_amend_results", "Can amend released results"),
+#         ]
+        
+#         indexes = [
+#             models.Index(fields=['assignment', 'entered_at']),
+#             models.Index(fields=['entered_at']),
+#             models.Index(fields=['verified_at']),
+#             models.Index(fields=['released', 'verified_at']),
+#             models.Index(fields=['flag']),
+#             models.Index(fields=['flag', 'data_source']),
+#             models.Index(fields=['data_source']),
+#         ]
+
+#     def __str__(self):
+#         return f"Result for {self.assignment.lab_test.name} - {self.result_value}"
+
+#     # ======================================================
+#     #  M E T H O D S
+#     # ======================================================
+    
+#     def update_result(self, new_value, user, reason=""):
+#         """Update result value with audit trail"""
+#         if self.verified_at:
+#             raise ValidationError("Cannot modify verified result. Use amendment process.")
+        
+#         if str(self.result_value).strip() != str(new_value).strip():
+#             self.previous_value = self.result_value
+#             self.result_value = new_value
+#             self.amendment_reason = reason
+#             self.version += 1
+#             self.is_amended = True
+#             self.save()
+            
+#             # Re-run auto flagging after update
+#             self.auto_flag_result()
+
+#     def mark_verified(self, user):
+#         """Mark result as verified"""
+#         if self.verified_at:
+#             raise ValidationError("Result already verified")
+        
+#         # if self.entered_by == user:
+#         #     raise ValidationError("Self Verification is not allowed")
+        
+#         self.verified_by = user
+#         self.verified_at = timezone.now()
+#         self.save(update_fields=['verified_by', 'verified_at'])
+        
+#         # Update assignment status
+#         self.assignment.mark_verified()
+
+#     def release_result(self, user):
+#         """Release verified result to patient/doctor"""
+#         if not self.verified_at:
+#             raise ValidationError("Result must be verified before release")
+#         if self.released:
+#             raise ValidationError("Result already released")
+        
+#         self.released = True
+#         self.released_by = user
+#         self.released_at = timezone.now()
+#         self.save(update_fields=['released', 'released_by', 'released_at'])
+
+#     def check_delta(self):
+#         """Check delta against previous result"""
+#         if not self.is_quantitative:
+#             return
+        
+#         # Get previous result for same patient/test
+#         previous = TestResult.objects.filter(
+#             assignment__request__patient=self.assignment.request.patient,
+#             assignment__lab_test=self.assignment.lab_test,
+#             released=True
+#         ).exclude(id=self.id).order_by('-entered_at').first()
+        
+#         if not previous:
+#             return
+        
+#         try:
+#             current_val = Decimal(str(self.result_value).strip())
+#             previous_val = Decimal(str(previous.result_value).strip())
+            
+#             if previous_val != 0:
+#                 delta = abs((current_val - previous_val) / previous_val * 100)
+#                 self.delta_percent = delta
+                
+#                 # Flag if delta > 50% (configurable threshold)
+#                 if delta > 50:
+#                     self.delta_flag = True
+                    
+#                 self.save(update_fields=['delta_percent', 'delta_flag'])
+#         except (InvalidOperation, ValueError, ZeroDivisionError):
+#             # Silently skip delta check if calculation fails
+#             pass
+
+#     # ======================================================
+#     #  P R O P E R T I E S
+#     # ======================================================
+    
+#     @property
+#     def can_be_verified(self):
+#         """Check if result can be verified"""
+#         return (
+#             # not self.verified_at and 
+#             # not self.released and
+#             self.entered_at is not None and
+#             self.verified_at is None and
+#             self.released is False and
+#             self.qc_passed
+#         )
+
+    
+#     @property
+#     def can_be_released(self):
+#         """Check if result can be released"""
+#         return (
+#             self.verified_at and 
+#             not self.released and
+#             self.qc_passed
+#         )
+# # @property
+# #     def can_be_released(self):
+# #         return (
+# #             self.verified_at is not None and
+# #             self.released is False
+# #         )
+    
+#     @property
+#     def test(self):
+#         return self.assignment.lab_test
+
+#     @property
+#     def is_quantitative(self):
+#         return self.test.result_type == 'QNT'
+
+#     @property
+#     def is_qualitative(self):
+#         return self.test.result_type == 'QLT'
+
+#     @property
+#     def is_critical(self):
+#         return self.flag == 'C'
+
+#     @property
+#     def formatted_result(self):
+#         if self.is_quantitative and self.units:
+#             return f"{self.result_value} {self.units}"
+#         return self.result_value
+
+#     # ======================================================
+#     #  V A L I D A T I O N
+#     # ======================================================
+    
+#     def clean(self):
+#         """Validate result data before save"""
+#         # Only validate quantitative results as numeric
+#         if self.is_quantitative:
+#             try:
+#                 Decimal(str(self.result_value).strip())
+#             except (InvalidOperation, ValueError):
+#                 raise ValidationError({"result_value": "Quantitative result must be numeric."})
+
+#         # # Prevent self-verification
+#         # if self.verified_by and self.verified_by == self.entered_by:
+#         #     raise ValidationError("Cannot verify your own result.")
+
+#     # ======================================================
+#     #  A U T O  F L A G G I N G  (OPTIMIZED VERSION)
+#     # ======================================================
+    
+#     def auto_flag_result(self):
+#         """
+#         FINAL and ONLY auto-flag engine.
+#         Handles:
+#         • Qualitative (via QualitativeOption)
+#         • AMR (Analytical Measuring Range)
+#         • CRR (Clinical Reportable Range)
+#         • Panic/Critical Limits
+#         • Reference Range
+        
+#         Optimized to save only once at the end.
+#         """
+#         test = self.test
+#         flag_to_set = 'N'  # Default: Normal
+
+#         # ---------------------
+#         # QUALITATIVE LOGIC
+#         # ---------------------
+#         if self.is_qualitative:
+#             value_norm = self.result_value.strip().lower()
+#             match = test.qlt_options.filter(normalized=value_norm).first()
+            
+#             if match:
+#                 flag_to_set = 'N' if match.is_normal else 'A'
+#             else:
+#                 flag_to_set = 'A'  # Unknown/unmatched value = Abnormal
+        
+#         # ---------------------
+#         # QUANTITATIVE LOGIC
+#         # ---------------------
+#         else:
+#             try:
+#                 value = Decimal(str(self.result_value).strip())
+#             except (InvalidOperation, ValueError):
+#                 flag_to_set = 'A'  # Invalid numeric = Abnormal
+#             else:
+#                 # Check in PRIORITY order (most severe first)
+                
+#                 # 1. AMR checks (instrument measurement limits)
+#                 if test.amr_low is not None and value < test.amr_low:
+#                     flag_to_set = 'M'  # Unmeasurable
+#                 elif test.amr_high is not None and value > test.amr_high:
+#                     flag_to_set = 'M'  # Unmeasurable
+                
+#                 # 2. Reportable range (clinical reporting limits)
+#                 elif test.reportable_low is not None and value < test.reportable_low:
+#                     flag_to_set = 'R'  # Out of reportable range
+#                 elif test.reportable_high is not None and value > test.reportable_high:
+#                     flag_to_set = 'R'  # Out of reportable range
+                
+#                 # 3. Panic/Critical limits (immediate clinical action)
+#                 elif test.panic_low_value is not None and value <= test.panic_low_value:
+#                     flag_to_set = 'C'  # Critical
+#                 elif test.panic_high_value is not None and value >= test.panic_high_value:
+#                     flag_to_set = 'C'  # Critical
+                
+#                 # 4. Reference range (normal clinical interpretation)
+#                 elif test.min_reference_value is not None and value < test.min_reference_value:
+#                     flag_to_set = 'L'  # Low
+#                 elif test.max_reference_value is not None and value > test.max_reference_value:
+#                     flag_to_set = 'H'  # High
+#                 # else: remains 'N' (Normal)
+
+#         # ✅ Single save at end (only if flag changed)
+#         if self.flag != flag_to_set:
+#             self.flag = flag_to_set
+#             self.save(update_fields=['flag'])
+
+
 class TestResult(models.Model):
     """
-    Stores the final result for a TestAssignment.
-    Fully supports:
-    - Quantitative (QNT)
-    - Qualitative (QLT via QualitativeOption)
-    - Critical values, AMR, clinical reportable range
-    - Audit trail (entered, verified, released)
-    - Amendments
+    FINAL, GOVERNED Test Result model.
+
+    Implements:
+    - Explicit result state machine
+    - Role-based lifecycle enforcement
+    - Full audit trail
+    - Quantitative & Qualitative support
+    - QC, Delta checks, AMR, CRR, Panic values
     """
+
+    # ======================================================
+    # RELATIONSHIP
+    # ======================================================
 
     assignment = models.OneToOneField(
         'TestAssignment',
@@ -807,10 +1116,28 @@ class TestResult(models.Model):
         related_name="result"
     )
 
-    # ===================
-    # RESULT FIELDS
-    # ===================
-    result_value = models.TextField(help_text="The measured value or observation")
+    # ======================================================
+    # RESULT STATE MACHINE
+    # ======================================================
+
+    RESULT_STATUS = [
+        ('draft', 'Draft'),
+        ('verified', 'Verified'),
+        ('released', 'Released'),
+        ('amended', 'Amended'),
+    ]
+
+    status = models.CharField(
+        max_length=12,
+        choices=RESULT_STATUS,
+        default='draft'
+    )
+
+    # ======================================================
+    # RESULT DATA
+    # ======================================================
+
+    result_value = models.TextField()
     units = models.CharField(max_length=50, blank=True)
     reference_range = models.CharField(max_length=80, blank=True)
 
@@ -827,191 +1154,157 @@ class TestResult(models.Model):
 
     flag = models.CharField(max_length=1, choices=FLAG_CHOICES, default='N')
 
-    # CONTEXTUAL FIELDS
     remarks = models.TextField(blank=True)
     interpretation = models.TextField(blank=True)
 
     DATA_SOURCE = [
         ('manual', 'Manual Entry'),
-        ('instrument', 'Instrument Auto-Generated'),
-        ('imported', 'Imported from External System'),
-        ('calculated', 'Calculated Result'),
+        ('instrument', 'Instrument Generated'),
+        ('imported', 'Imported'),
+        ('calculated', 'Calculated'),
     ]
-    data_source = models.CharField(max_length=20, choices=DATA_SOURCE, default='manual')
 
+    data_source = models.CharField(max_length=20, choices=DATA_SOURCE, default='manual')
     instrument_name = models.CharField(max_length=150, blank=True)
     instrument_run_id = models.CharField(max_length=100, blank=True)
 
-    # ===================
-    # USER + AUDIT FIELDS
-    # ===================
-    entered_by = models.ForeignKey(settings.AUTH_USER_MODEL,null=True, on_delete=models.SET_NULL, related_name="entered_results")
+    # ======================================================
+    # AUDIT FIELDS
+    # ======================================================
 
-    verified_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="verified_results")
+    entered_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        on_delete=models.SET_NULL,
+        related_name='entered_results'
+    )
+    entered_at = models.DateTimeField(auto_now_add=True)
+
+    verified_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='verified_results'
+    )
+    verified_at = models.DateTimeField(null=True, blank=True)
 
     released_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        null=True, blank=True,
+        null=True,
+        blank=True,
         on_delete=models.SET_NULL,
-        related_name="released_results"
+        related_name='released_results'
     )
-
-    entered_at = models.DateTimeField(auto_now_add=True)
-    verified_at = models.DateTimeField(null=True, blank=True)
     released_at = models.DateTimeField(null=True, blank=True)
 
-    released = models.BooleanField(default=False)
-    is_amended = models.BooleanField(default=False)
+    # ======================================================
+    # AMENDMENT CONTROL
+    # ======================================================
 
-    version = models.IntegerField(default=1)
+    is_amended = models.BooleanField(default=False)
+    version = models.PositiveIntegerField(default=1)
     previous_value = models.TextField(blank=True)
     amendment_reason = models.TextField(blank=True)
 
-    # ===================
+    # ======================================================
     # QUALITY CONTROL
-    # ===================
+    # ======================================================
+
     qc_passed = models.BooleanField(default=True)
     qc_comment = models.TextField(blank=True)
 
     delta_flag = models.BooleanField(default=False)
     delta_percent = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
 
+    # ======================================================
+    # META
+    # ======================================================
+
     class Meta:
         ordering = ['-entered_at']
         verbose_name = "Test Result"
         verbose_name_plural = "Test Results"
-        
-        # ✅ CUSTOM PERMISSIONS DEFINED HERE
+
         permissions = [
             ("can_verify_results", "Can verify test results"),
             ("can_release_results", "Can release test results"),
             ("can_amend_results", "Can amend released results"),
         ]
-        
+
         indexes = [
-            models.Index(fields=['assignment', 'entered_at']),
+            models.Index(fields=['status']),
             models.Index(fields=['entered_at']),
             models.Index(fields=['verified_at']),
-            models.Index(fields=['released', 'verified_at']),
+            models.Index(fields=['released_at']),
             models.Index(fields=['flag']),
             models.Index(fields=['flag', 'data_source']),
-            models.Index(fields=['data_source']),
         ]
 
-    def __str__(self):
-        return f"Result for {self.assignment.lab_test.name} - {self.result_value}"
-
     # ======================================================
-    #  M E T H O D S
+    # STATE TRANSITIONS (STRICT)
     # ======================================================
-    
-    def update_result(self, new_value, user, reason=""):
-        """Update result value with audit trail"""
-        if self.verified_at:
-            raise ValidationError("Cannot modify verified result. Use amendment process.")
-        
-        if str(self.result_value).strip() != str(new_value).strip():
-            self.previous_value = self.result_value
-            self.result_value = new_value
-            self.amendment_reason = reason
-            self.version += 1
-            self.is_amended = True
-            self.save()
-            
-            # Re-run auto flagging after update
-            self.auto_flag_result()
 
-    def mark_verified(self, user):
-        """Mark result as verified"""
-        if self.verified_at:
-            raise ValidationError("Result already verified")
-        
-        if self.entered_by == user:
-            raise ValidationError("Self Verification is not allowed")
-        
+    def verify(self, user):
+        """
+        Transition: DRAFT → VERIFIED
+        """
+        if self.status != 'draft':
+            raise ValidationError("Only draft results can be verified.")
+
+        if not user.can_verify_results:
+            raise ValidationError("User is not authorized to verify results.")
+
+        if not self.qc_passed:
+            raise ValidationError("QC must pass before verification.")
+
+        self.status = 'verified'
         self.verified_by = user
         self.verified_at = timezone.now()
-        self.save(update_fields=['verified_by', 'verified_at'])
-        
-        # Update assignment status
+        self.save(update_fields=['status', 'verified_by', 'verified_at'])
+
         self.assignment.mark_verified()
 
-    def release_result(self, user):
-        """Release verified result to patient/doctor"""
-        if not self.verified_at:
-            raise ValidationError("Result must be verified before release")
-        if self.released:
-            raise ValidationError("Result already released")
-        
-        self.released = True
+    def release(self, user):
+        """
+        Transition: VERIFIED → RELEASED
+        """
+        if self.status != 'verified':
+            raise ValidationError("Only verified results can be released.")
+
+        if not user.can_release_results:
+            raise ValidationError("User is not authorized to release results.")
+
+        self.status = 'released'
         self.released_by = user
         self.released_at = timezone.now()
-        self.save(update_fields=['released', 'released_by', 'released_at'])
+        self.save(update_fields=['status', 'released_by', 'released_at'])
 
-    def check_delta(self):
-        """Check delta against previous result"""
-        if not self.is_quantitative:
-            return
-        
-        # Get previous result for same patient/test
-        previous = TestResult.objects.filter(
-            assignment__request__patient=self.assignment.request.patient,
-            assignment__lab_test=self.assignment.lab_test,
-            released=True
-        ).exclude(id=self.id).order_by('-entered_at').first()
-        
-        if not previous:
-            return
-        
-        try:
-            current_val = Decimal(str(self.result_value).strip())
-            previous_val = Decimal(str(previous.result_value).strip())
-            
-            if previous_val != 0:
-                delta = abs((current_val - previous_val) / previous_val * 100)
-                self.delta_percent = delta
-                
-                # Flag if delta > 50% (configurable threshold)
-                if delta > 50:
-                    self.delta_flag = True
-                    
-                self.save(update_fields=['delta_percent', 'delta_flag'])
-        except (InvalidOperation, ValueError, ZeroDivisionError):
-            # Silently skip delta check if calculation fails
-            pass
+    def amend(self, new_value, user, reason):
+        """
+        Transition: RELEASED → AMENDED
+        """
+        if self.status != 'released':
+            raise ValidationError("Only released results can be amended.")
+
+        if not user.can_amend_results:
+            raise ValidationError("User is not authorized to amend results.")
+
+        self.previous_value = self.result_value
+        self.result_value = new_value
+        self.amendment_reason = reason
+        self.is_amended = True
+        self.version += 1
+        self.status = 'amended'
+
+        self.auto_flag_result()
+
+        self.save()
 
     # ======================================================
-    #  P R O P E R T I E S
+    # SCIENTIFIC UTILITIES
     # ======================================================
-    
-    @property
-    def can_be_verified(self):
-        """Check if result can be verified"""
-        return (
-            # not self.verified_at and 
-            # not self.released and
-            self.entered_at is not None and
-            self.verified_at is None and
-            self.released is False and
-            self.qc_passed
-        )
 
-    
-    @property
-    def can_be_released(self):
-        """Check if result can be released"""
-        return (
-            self.verified_at and 
-            not self.released and
-            self.qc_passed
-        )
-# @property
-#     def can_be_released(self):
-#         return (
-#             self.verified_at is not None and
-#             self.released is False
-#         )
-    
     @property
     def test(self):
         return self.assignment.lab_test
@@ -1035,93 +1328,61 @@ class TestResult(models.Model):
         return self.result_value
 
     # ======================================================
-    #  V A L I D A T I O N
+    # VALIDATION
     # ======================================================
-    
+
     def clean(self):
-        """Validate result data before save"""
-        # Only validate quantitative results as numeric
         if self.is_quantitative:
             try:
                 Decimal(str(self.result_value).strip())
             except (InvalidOperation, ValueError):
                 raise ValidationError({"result_value": "Quantitative result must be numeric."})
 
-        # # Prevent self-verification
-        # if self.verified_by and self.verified_by == self.entered_by:
-        #     raise ValidationError("Cannot verify your own result.")
+    # ======================================================
+    # AUTO FLAGGING (UNCHANGED LOGIC, GOVERNED SAVE)
+    # ======================================================
 
-    # ======================================================
-    #  A U T O  F L A G G I N G  (OPTIMIZED VERSION)
-    # ======================================================
-    
     def auto_flag_result(self):
         """
-        FINAL and ONLY auto-flag engine.
-        Handles:
-        • Qualitative (via QualitativeOption)
-        • AMR (Analytical Measuring Range)
-        • CRR (Clinical Reportable Range)
-        • Panic/Critical Limits
-        • Reference Range
-        
-        Optimized to save only once at the end.
+        Single authoritative auto-flag engine.
         """
         test = self.test
-        flag_to_set = 'N'  # Default: Normal
+        flag_to_set = 'N'
 
-        # ---------------------
-        # QUALITATIVE LOGIC
-        # ---------------------
         if self.is_qualitative:
             value_norm = self.result_value.strip().lower()
             match = test.qlt_options.filter(normalized=value_norm).first()
-            
-            if match:
-                flag_to_set = 'N' if match.is_normal else 'A'
-            else:
-                flag_to_set = 'A'  # Unknown/unmatched value = Abnormal
-        
-        # ---------------------
-        # QUANTITATIVE LOGIC
-        # ---------------------
+            flag_to_set = 'N' if match and match.is_normal else 'A'
+
         else:
             try:
                 value = Decimal(str(self.result_value).strip())
             except (InvalidOperation, ValueError):
-                flag_to_set = 'A'  # Invalid numeric = Abnormal
+                flag_to_set = 'A'
             else:
-                # Check in PRIORITY order (most severe first)
-                
-                # 1. AMR checks (instrument measurement limits)
                 if test.amr_low is not None and value < test.amr_low:
-                    flag_to_set = 'M'  # Unmeasurable
+                    flag_to_set = 'M'
                 elif test.amr_high is not None and value > test.amr_high:
-                    flag_to_set = 'M'  # Unmeasurable
-                
-                # 2. Reportable range (clinical reporting limits)
+                    flag_to_set = 'M'
                 elif test.reportable_low is not None and value < test.reportable_low:
-                    flag_to_set = 'R'  # Out of reportable range
+                    flag_to_set = 'R'
                 elif test.reportable_high is not None and value > test.reportable_high:
-                    flag_to_set = 'R'  # Out of reportable range
-                
-                # 3. Panic/Critical limits (immediate clinical action)
+                    flag_to_set = 'R'
                 elif test.panic_low_value is not None and value <= test.panic_low_value:
-                    flag_to_set = 'C'  # Critical
+                    flag_to_set = 'C'
                 elif test.panic_high_value is not None and value >= test.panic_high_value:
-                    flag_to_set = 'C'  # Critical
-                
-                # 4. Reference range (normal clinical interpretation)
+                    flag_to_set = 'C'
                 elif test.min_reference_value is not None and value < test.min_reference_value:
-                    flag_to_set = 'L'  # Low
+                    flag_to_set = 'L'
                 elif test.max_reference_value is not None and value > test.max_reference_value:
-                    flag_to_set = 'H'  # High
-                # else: remains 'N' (Normal)
+                    flag_to_set = 'H'
 
-        # ✅ Single save at end (only if flag changed)
         if self.flag != flag_to_set:
             self.flag = flag_to_set
             self.save(update_fields=['flag'])
+
+    def __str__(self):
+        return f"{self.assignment.lab_test.name} — {self.formatted_result}"
 
 
 class Equipment(models.Model):

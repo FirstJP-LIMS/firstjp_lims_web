@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                    <h5 class="mb-0 text-brand-blue"><i class="bi bi-bell me-2"></i>Notification Inbox</h5>
+                    <button id="markAllReadBtn" class="btn btn-sm btn-outline-secondary">Mark all as read</button>
+                </div>
+                
+                <div class="card-body p-0">
+                    <ul class="nav nav-tabs px-3 pt-2 bg-light">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#" data-filter="all">All</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-filter="unread">Unread</a>
+                        </li>
+                    </ul>
+
+                    <div id="fullNotificationList" class="list-group list-group-flush">
+                        <div class="text-center py-5" id="inboxLoader">
+                            <div class="spinner-border text-primary" role="status"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .inbox-item { transition: background 0.2s; border-left: 4px solid transparent; }
+    .inbox-item.unread-status { background-color: #f8f9fa; border-left-color: var(--brand-red); }
+    .inbox-item:hover { background-color: #f1f3f5; }
+    .nav-tabs .nav-link { font-size: 14px; color: #6c757d; border: none; }
+    .nav-tabs .nav-link.active { color: var(--brand-blue); font-weight: 600; border-bottom: 2px solid var(--brand-blue); background: none; }
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const listContainer = document.getElementById("fullNotificationList");
+    
+    async function loadInbox() {
+        const response = await fetch("{% url 'notification:api_list' %}");
+        const data = await response.json();
+        renderItems(data);
+    }
+
+    function renderItems(notifications) {
+        listContainer.innerHTML = "";
+        if (notifications.length === 0) {
+            listContainer.innerHTML = `<div class="p-5 text-center text-muted">No notifications found.</div>`;
+            return;
+        }
+
+        notifications.forEach(n => {
+            const time = new Date(n.created_at).toLocaleDateString([], {hour: '2-digit', minute:'2-digit'});
+            const item = document.createElement("div");
+            item.className = `list-group-item inbox-item p-4 ${n.read ? '' : 'unread-status'}`;
+            item.innerHTML = `
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <span class="badge ${n.read ? 'bg-secondary' : 'bg-danger'} mb-2">
+                            ${n.event_type.replace(/_/g, ' ')}
+                        </span>
+                        <h6 class="mb-1">${n.payload.summary || 'LIMS Update'}</h6>
+                        <p class="text-muted small mb-0">${JSON.stringify(n.payload)}</p>
+                    </div>
+                    <div class="text-end">
+                        <small class="d-block text-muted mb-2">${time}</small>
+                        ${!n.read ? `<button class="btn btn-sm btn-link text-decoration-none py-0" onclick="markAsRead(${n.id}, this)">Mark as read</button>` : ''}
+                    </div>
+                </div>
+            `;
+            listContainer.appendChild(item);
+        });
+    }
+
+    window.markAsRead = async (id, btn) => {
+        const response = await fetch(`/notifications/api/${id}/read/`, {
+            method: "POST",
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        });
+        if (response.ok) {
+            btn.closest('.inbox-item').classList.remove('unread-status');
+            btn.remove();
+        }
+    };
+
+    loadInbox();
+});
+</script>
+{% endblock %}

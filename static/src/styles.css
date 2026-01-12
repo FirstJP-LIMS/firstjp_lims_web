@@ -1,2 +1,25 @@
 @import "tailwindcss";
 @plugin "daisyui";
+
+
+@theme {
+  /* Your custom LIMS Branding */
+  --color-navy: #001f3f;
+  --color-navy-light: #2a4a6e;
+  --color-navy-dark: #00152c;
+  
+  --color-lab-red: #dc2626;
+  --color-lab-red-light: #ef4444;
+  --color-primary: #001f3f;
+  --color-secondary: #001f3f;
+
+  --color-lab-black: #111827;
+}
+
+/* Custom Component for Lab Buttons */
+@layer components {
+  .btn-lab {
+    @apply bg-navy text-white hover:bg-navy-light px-4 py-2 rounded-lg transition-all shadow-sm;
+  }
+}
+

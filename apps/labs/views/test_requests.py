@@ -3,49 +3,65 @@ import logging
 # Django Core
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.core.exceptions import ValidationError
-from django.core.paginator import Paginator
-from django.db import IntegrityError, transaction
-from django.db.models import (
-    Avg, Count, DurationField, ExpressionWrapper, F, Q, Sum, Prefetch
-)
-from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
+# from django.core.exceptions import ValidationError
+# from django.core.paginator import Paginator
+from django.db import transaction
+from django.db.models import Sum
+
+# from django.db.models import (
+#     Avg, Count, DurationField, ExpressionWrapper, F, Q, Sum, Prefetch
+# )
+# from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
+
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse, reverse_lazy
-from django.utils import timezone
-from django.views.decorators.http import require_http_methods, require_POST
+# from django.urls import reverse, reverse_lazy
+# from django.utils import timezone
+# from django.views.decorators.http import require_http_methods, require_POST
 
 # App-Specific Imports
 from apps.accounts.models import VendorProfile
 from apps.tenants.models import Vendor
 
 from ..forms import (
-    DepartmentForm,
+    # DepartmentForm,
     SampleForm,
     TestRequestForm,
-    VendorLabTestForm
+    # VendorLabTestForm
 )
 from ..models import (
-    AuditLog,
-    Department,
-    Equipment,
+    # AuditLog,
+    # Department,
+    # Equipment,
     Patient,
-    QualitativeOption,
+    # QualitativeOption,
     Sample,
     TestAssignment,
     TestRequest,
-    TestResult,
-    VendorTest
+    # TestResult,
+    # VendorTest
 )
-from ..services import (
-    InstrumentAPIError,
-    InstrumentService,
-    fetch_assignment_result,
-    send_assignment_to_instrument
-)
-from ..utils import check_tenant_access
+from apps.billing.models import PriceList, BillingInformation
 
-from ..decorators import lab_supervisor_required, lab_technician_required
+# from ..services import (
+#     InstrumentAPIError,
+#     InstrumentService,
+#     fetch_assignment_result,
+#     send_assignment_to_instrument
+# )
+# from ..utils import check_tenant_access
+
+
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.shortcuts import render, redirect, get_object_or_404
+from django.db import transaction
+
+from apps.labs.models import TestRequest, TestAssignment, Sample, Patient
+from apps.labs.forms import TestRequestForm, SampleForm
+from apps.billing.models import BillingInformation, PriceList
+
+
+from ..decorators import require_capability
 
 
 # Logger Setup
@@ -63,7 +79,7 @@ logger.setLevel(logging.INFO)
 from django.contrib.auth.decorators import user_passes_test
 
 def is_lab_staff_or_admin(user):
-    return user.role in ["vendor_admin", "lab_staff"]
+    return user.role in ["vendor_admin", "lab_supervisor", "lab_technician"]
 
 @login_required
 def test_request_list(request):
@@ -95,11 +111,148 @@ def test_request_list(request):
     return render(request, "laboratory/requests/list.html", context)
 
 
+# @login_required
+# def test_request_create(request):
+#     """
+#     Handles creation of a new Test Request along with linked Sample(s),
+#     Patient record, and TestAssignments.
+#     """
+#     vendor = getattr(request.user, 'vendor', None) or getattr(request, 'tenant', None)
+#     if not vendor:
+#         messages.error(request, "Vendor not found for this user.")
+#         return redirect('dashboard')
+
+#     if request.method == 'POST':
+#         request_form = TestRequestForm(request.POST, vendor=vendor)
+#         sample_form = SampleForm(request.POST)
+
+#         if request_form.is_valid() and sample_form.is_valid():
+#             try:
+#                 with transaction.atomic():
+#                     # --- Handle patient (existing or new) ---
+#                     patient_data = request_form.cleaned_data.get('patient')
+#                     patient = None
+
+#                     if isinstance(patient_data, Patient):
+#                         patient = patient_data
+#                     elif patient_data is None:
+#                         first_name = request_form.cleaned_data.get('first_name')
+#                         last_name = request_form.cleaned_data.get('last_name')
+#                         if not first_name or not last_name:
+#                             raise ValueError("Missing patient information: first name and last name are required.")
+
+#                         patient = Patient.objects.create(
+#                             vendor=vendor,
+#                             first_name=first_name,
+#                             last_name=last_name,
+#                             date_of_birth=request_form.cleaned_data.get('date_of_birth'),
+#                             gender=request_form.cleaned_data.get('gender'),
+#                             contact_email=request_form.cleaned_data.get('contact_email'),
+#                             contact_phone=request_form.cleaned_data.get('contact_phone'),
+#                         )
+#                     else:
+#                         raise ValueError("Invalid patient data provided.")
+
+#                     # --- Create Test Request ---
+#                     tests_to_order = request_form.cleaned_data['tests_to_order']
+#                     request_instance = request_form.save(commit=False)
+#                     request_instance.vendor = vendor
+#                     request_instance.requested_by = request.user
+#                     request_instance.patient = patient
+#                     request_instance.request_id = f"REQ-{vendor.requests.count() + 1:04d}"
+#                     request_instance.save()
+#                     request_instance.requested_tests.set(tests_to_order)
+
+#                     # --- Create Sample from form ---
+#                     sample = sample_form.save(commit=False)
+#                     sample.vendor = vendor
+#                     sample.patient = patient
+#                     sample.test_request = request_instance
+#                     sample.sample_id = f"SMP-{vendor.samples.count() + 1:06d}"
+#                     sample.save()
+
+#                     # --- Create Test Assignments ---
+#                     assignments = [
+#                         TestAssignment(
+#                             vendor=vendor,
+#                             request=request_instance,
+#                             lab_test=vendor_test,
+#                             sample=sample,
+#                             department=vendor_test.assigned_department,
+#                         )
+#                         for vendor_test in tests_to_order
+#                     ]
+#                     TestAssignment.objects.bulk_create(assignments)
+
+#                     # ==================================
+#                     # 🆕 AUTO-CREATE BILLING INFORMATION
+#                     # ==================================
+#                     billing_type = request_form.cleaned_data.get('billing_type', 'CASH')
+#                     price_list = None
+#                     insurance_provider = None
+#                     corporate_client = None
+                    
+#                     # Determine price list based on billing type
+#                     if billing_type == 'HMO':
+#                         insurance_provider = request_form.cleaned_data.get('insurance_provider')
+#                         if insurance_provider and insurance_provider.price_list:
+#                             price_list = insurance_provider.price_list
+#                     elif billing_type == 'CORPORATE':
+#                         corporate_client = request_form.cleaned_data.get('corporate_client')
+#                         if corporate_client and corporate_client.price_list:
+#                             price_list = corporate_client.price_list
+#                     else:
+#                         # Get default RETAIL price list
+#                         price_list = PriceList.objects.filter(
+#                             vendor=vendor,
+#                             price_type='RETAIL',
+#                             is_active=True
+#                         ).first()
+                    
+
+#                     # Create billing record
+#                     billing = BillingInformation.objects.create(
+#                         vendor=vendor,
+#                         request=request_instance,
+#                         billing_type=billing_type,
+#                         price_list=price_list,
+#                         insurance_provider=insurance_provider,
+#                         corporate_client=corporate_client,
+#                         payment_status='UNPAID'
+#                     )
+#                     # Billing totals auto-calculate on save(
+#                         # Get default RETAIL price list
+#                     messages.success(
+#                         request,
+#                         f"Request {request_instance.request_id} created successfully for "
+#                         f"{patient.first_name} {patient.last_name}."
+#                         f"Total Amount: ₦{billing.total_amount:,.2f}. "
+#                         f"Please proceed to payment."
+#                     )
+#                     return redirect('billing:billing_detail')
+
+#             except Exception as e:
+#                 import logging
+#                 logger = logging.getLogger(__name__)
+#                 logger.error(f"Error creating test request: {e}", exc_info=True)
+#                 messages.error(request, f"An unexpected error occurred: {e}")
+#         else:
+#             messages.error(request, "Please correct the errors in the forms below.")
+#     else:
+#         request_form = TestRequestForm(vendor=vendor)
+#         sample_form = SampleForm()
+
+#     return render(request, 'laboratory/requests/request_form.html', {
+#         'form': request_form,
+#         'sample_form': sample_form,
+#     })
+
+
 @login_required
 def test_request_create(request):
     """
     Handles creation of a new Test Request along with linked Sample(s),
-    Patient record, and TestAssignments.
+    Patient record, TestAssignments, and Billing Information.
     """
     vendor = getattr(request.user, 'vendor', None) or getattr(request, 'tenant', None)
     if not vendor:
@@ -107,55 +260,53 @@ def test_request_create(request):
         return redirect('dashboard')
 
     if request.method == 'POST':
-        request_form = TestRequestForm(request.POST, vendor=vendor)
+        # Pass vendor AND user to form
+        request_form = TestRequestForm(request.POST, vendor=vendor, user=request.user)
         sample_form = SampleForm(request.POST)
 
         if request_form.is_valid() and sample_form.is_valid():
             try:
                 with transaction.atomic():
-                    # --- Handle patient (existing or new) ---
-                    patient_data = request_form.cleaned_data.get('patient')
-                    patient = None
+                    # ========================================
+                    # STEP 1: Get or Create Patient
+                    # ========================================
+                    # Use form's built-in method instead of manual logic
+                    patient = request_form.get_or_create_patient()
 
-                    if isinstance(patient_data, Patient):
-                        patient = patient_data
-                    elif patient_data is None:
-                        first_name = request_form.cleaned_data.get('first_name')
-                        last_name = request_form.cleaned_data.get('last_name')
-                        if not first_name or not last_name:
-                            raise ValueError("Missing patient information: first name and last name are required.")
-
-                        patient = Patient.objects.create(
-                            vendor=vendor,
-                            first_name=first_name,
-                            last_name=last_name,
-                            date_of_birth=request_form.cleaned_data.get('date_of_birth'),
-                            gender=request_form.cleaned_data.get('gender'),
-                            contact_email=request_form.cleaned_data.get('contact_email'),
-                            contact_phone=request_form.cleaned_data.get('contact_phone'),
-                        )
-                    else:
-                        raise ValueError("Invalid patient data provided.")
-
-                    # --- Create Test Request ---
-                    tests_to_order = request_form.cleaned_data['tests_to_order']
+                    # ========================================
+                    # STEP 2: Create Test Request
+                    # ========================================
+                    # Form already handles patient assignment, vendor, user attribution
                     request_instance = request_form.save(commit=False)
                     request_instance.vendor = vendor
-                    request_instance.requested_by = request.user
                     request_instance.patient = patient
-                    request_instance.request_id = f"REQ-{vendor.requests.count() + 1:04d}"
+                    request_instance.requested_by = request.user
+                    
+                    # Set ordering_clinician if user is clinician
+                    if request.user.role == 'clinician':
+                        request_instance.ordering_clinician = request.user
+                    
                     request_instance.save()
+                    
+                    # Set M2M relationships
+                    tests_to_order = request_form.cleaned_data['tests_to_order']
                     request_instance.requested_tests.set(tests_to_order)
 
-                    # --- Create Sample from form ---
+                    # ========================================
+                    # STEP 3: Create Sample
+                    # ========================================
                     sample = sample_form.save(commit=False)
                     sample.vendor = vendor
                     sample.patient = patient
                     sample.test_request = request_instance
-                    sample.sample_id = f"SMP-{vendor.samples.count() + 1:06d}"
+                    # Auto-generate sample_id if not set
+                    if not sample.sample_id:
+                        sample.sample_id = f"SMP-{vendor.samples.count() + 1:06d}"
                     sample.save()
 
-                    # --- Create Test Assignments ---
+                    # ========================================
+                    # STEP 4: Create Test Assignments
+                    # ========================================
                     assignments = [
                         TestAssignment(
                             vendor=vendor,
@@ -168,29 +319,92 @@ def test_request_create(request):
                     ]
                     TestAssignment.objects.bulk_create(assignments)
 
+                    # ========================================
+                    # STEP 5: AUTO-CREATE BILLING INFORMATION
+                    # ========================================
+                    billing_type = request_form.cleaned_data.get('billing_type', 'CASH')
+                    price_list = None
+                    insurance_provider = None
+                    corporate_client = None
+                    
+                    # Determine price list and provider based on billing type
+                    if billing_type == 'HMO':
+                        insurance_provider = request_form.cleaned_data.get('insurance_provider')
+                        if insurance_provider and insurance_provider.price_list:
+                            price_list = insurance_provider.price_list
+                    elif billing_type == 'CORPORATE':
+                        corporate_client = request_form.cleaned_data.get('corporate_client')
+                        if corporate_client and corporate_client.price_list:
+                            price_list = corporate_client.price_list
+                    
+                    # If no price list set yet, get default RETAIL price list
+                    if not price_list:
+                        price_list = PriceList.objects.filter(
+                            vendor=vendor,
+                            price_type='RETAIL',
+                            is_active=True
+                        ).first()
+                    
+                    # Create billing record (totals auto-calculate on save)
+                    billing = BillingInformation.objects.create(
+                        vendor=vendor,
+                        request=request_instance,
+                        billing_type=billing_type,
+                        price_list=price_list,
+                        insurance_provider=insurance_provider,
+                        corporate_client=corporate_client,
+                        payment_status='UNPAID'
+                    )
+                    
+                    # ========================================
+                    # SUCCESS: Redirect to Payment
+                    # ========================================
                     messages.success(
                         request,
-                        f"Request {request_instance.request_id} created successfully for "
-                        f"{patient.first_name} {patient.last_name}."
+                        f"✅ Request {request_instance.request_id} created successfully for "
+                        f"{patient.first_name} {patient.last_name}. "
+                        f"Total Amount: ₦{billing.total_amount:,.2f}. "
+                        f"Please proceed to payment."
                     )
-                    return redirect('labs:test_request_list')
+                    
+                    # Redirect to billing detail page (which has payment button)
+                    return redirect('billing:billing_detail', pk=billing.pk)
 
             except Exception as e:
                 import logging
                 logger = logging.getLogger(__name__)
                 logger.error(f"Error creating test request: {e}", exc_info=True)
-                messages.error(request, f"An unexpected error occurred: {e}")
-
+                messages.error(
+                    request, 
+                    f"❌ An error occurred while creating the test request: {str(e)}"
+                )
+                
         else:
-            messages.error(request, "Please correct the errors in the forms below.")
+            # Form validation errors
+            messages.error(request, "❌ Please correct the errors in the forms below.")
+            
+            # Debug: Show specific errors
+            if not request_form.is_valid():
+                for field, errors in request_form.errors.items():
+                    for error in errors:
+                        messages.error(request, f"{field}: {error}")
+            
+            if not sample_form.is_valid():
+                for field, errors in sample_form.errors.items():
+                    for error in errors:
+                        messages.error(request, f"Sample {field}: {error}")
+    
     else:
-        request_form = TestRequestForm(vendor=vendor)
+        # GET request - show empty forms
+        request_form = TestRequestForm(vendor=vendor, user=request.user)
         sample_form = SampleForm()
 
-    return render(request, 'laboratory/requests/form.html', {
+    context = {
         'form': request_form,
         'sample_form': sample_form,
-    })
+    }
+    
+    return render(request, 'laboratory/requests/request_form.html', context)
 
 
 @login_required
@@ -236,8 +450,9 @@ def test_request_update(request, pk):
         "update_mode": True,
     })
 
+
 @login_required
-@user_passes_test(is_lab_staff_or_admin)
+@require_capability("can_delete_request")
 def test_request_delete(request, pk):
     vendor = getattr(request.user, "vendor", None)
     request_instance = get_object_or_404(TestRequest, pk=pk, vendor=vendor)
@@ -250,6 +465,7 @@ def test_request_delete(request, pk):
     return render(request, "labs/requests/test_request_confirm_delete.html", {
         "request_instance": request_instance
     })
+
 
 @login_required
 def test_request_detail(request, pk):
@@ -289,5 +505,4 @@ def test_request_detail(request, pk):
         "status_display": status_display,
     }
     return render(request, "laboratory/requests/test_detail.html", context)
-
 

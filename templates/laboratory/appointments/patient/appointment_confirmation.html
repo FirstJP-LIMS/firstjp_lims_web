@@ -1,0 +1,322 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>
+        {% block title %}
+            Appointment Confirmed | {{ appointment.vendor.name }}
+        {% endblock %}
+    </title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    
+    <!-- tailwind setup -->
+    <link rel="stylesheet" href="{% static 'dist\styles.css' %}">
+    <link rel="stylesheet" href="{% static 'assets\css\tailwind.css' %}">
+    
+    <!-- google fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Mulish:ital,wght@0,200..1000;1,200..1000&display=swap" rel="stylesheet"> -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+
+    <!-- font-awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" referrerpolicy="no-referrer"/>
+
+
+    <style>
+        @keyframes checkmark {
+            0% {
+                stroke-dashoffset: 100;
+            }
+            100% {
+                stroke-dashoffset: 0;
+            }
+        }
+        .checkmark {
+            stroke-dasharray: 100;
+            stroke-dashoffset: 100;
+            animation: checkmark 0.6s ease-out forwards;
+            animation-delay: 0.2s;
+        }
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .fade-in-up {
+            animation: fadeInUp 0.6s ease-out;
+        }
+        .print-hidden {
+            display: block;
+        }
+        @media print {
+            .print-hidden {
+                display: none;
+            }
+            body {
+                background: white;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <nav class="bg-white border-b border-gray-200 shadow-sm print-hidden">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <i class="fas fa-flask text-navy text-2xl mr-3"></i>
+                    <span class="text-xl font-bold text-navy">{{ appointment.vendor.name }}</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-4xl mx-auto px-4 py-8">
+        <!-- Success Animation -->
+        <div class="text-center mb-8 fade-in-up">
+            <div class="inline-flex items-center justify-center w-24 h-24 bg-green-100 rounded-full mb-4">
+                <svg class="w-16 h-16" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="45" fill="none" stroke="#10b981" stroke-width="6"/>
+                    <path class="checkmark" fill="none" stroke="#10b981" stroke-width="6" stroke-linecap="round" 
+                          d="M30 50 L45 65 L70 35"/>
+                </svg>
+            </div>
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Appointment Confirmed!</h1>
+            <p class="text-gray-600">Your appointment has been successfully booked</p>
+        </div>
+
+        <!-- Appointment Details Card -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-6">
+            <!-- Header -->
+            <div class="bg-navy text-white px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-300">Appointment ID</p>
+                        <p class="text-2xl font-bold">{{ appointment.appointment_id }}</p>
+                    </div>
+                    <div class="text-right">
+                        {% if appointment.status == 'confirmed' %}
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-500 text-white">
+                            <i class="fas fa-check-circle mr-2"></i>Confirmed
+                        </span>
+                        {% elif appointment.status == 'pending' %}
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-500 text-white">
+                            <i class="fas fa-clock mr-2"></i>Pending
+                        </span>
+                        {% elif appointment.status == 'cancelled' %}
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-500 text-white">
+                            <i class="fas fa-times-circle mr-2"></i>Cancelled
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Details -->
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Date & Time -->
+                    <div class="flex items-start space-x-3">
+                        <div class="flex-shrink-0">
+                            <div class="w-10 h-10 bg-navy bg-opacity-10 rounded-full flex items-center justify-center">
+                                <i class="fas fa-calendar text-navy"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Date & Time</p>
+                            <p class="text-lg font-semibold text-gray-900">{{ appointment.slot.date|date:"l, F d, Y" }}</p>
+                            <p class="text-md text-gray-700">{{ appointment.slot.start_time|time:"g:i A" }} - {{ appointment.slot.end_time|time:"g:i A" }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Patient -->
+                    <div class="flex items-start space-x-3">
+                        <div class="flex-shrink-0">
+                            <div class="w-10 h-10 bg-navy bg-opacity-10 rounded-full flex items-center justify-center">
+                                <i class="fas fa-user text-navy"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Patient Name</p>
+                            <p class="text-lg font-semibold text-gray-900">{{ appointment.get_patient_name }}</p>
+                            {% if appointment.patient %}
+                            <p class="text-sm text-gray-500">ID: {{ appointment.patient.patient_id }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Type -->
+                    <div class="flex items-start space-x-3">
+                        <div class="flex-shrink-0">
+                            <div class="w-10 h-10 bg-navy bg-opacity-10 rounded-full flex items-center justify-center">
+                                <i class="fas fa-clipboard-list text-navy"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Appointment Type</p>
+                            <p class="text-lg font-semibold text-gray-900">{{ appointment.get_appointment_type_display }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Contact -->
+                    <div class="flex items-start space-x-3">
+                        <div class="flex-shrink-0">
+                            <div class="w-10 h-10 bg-navy bg-opacity-10 rounded-full flex items-center justify-center">
+                                <i class="fas fa-envelope text-navy"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Contact</p>
+                            {% if appointment.get_contact_email %}
+                            <p class="text-sm font-medium text-gray-900">{{ appointment.get_contact_email }}</p>
+                            {% endif %}
+                            {% if appointment.get_contact_phone %}
+                            <p class="text-sm font-medium text-gray-900">{{ appointment.get_contact_phone }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                {% if appointment.reason_for_visit %}
+                <div class="mt-6 pt-6 border-t border-gray-200">
+                    <p class="text-sm text-gray-600 mb-2">Reason for Visit</p>
+                    <p class="text-gray-900">{{ appointment.reason_for_visit }}</p>
+                </div>
+                {% endif %}
+
+                {% if appointment.special_requirements %}
+                <div class="mt-4">
+                    <p class="text-sm text-gray-600 mb-2">Special Requirements</p>
+                    <p class="text-gray-900">{{ appointment.special_requirements }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Important Information -->
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+            <h3 class="text-lg font-semibold text-blue-900 mb-3 flex items-center">
+                <i class="fas fa-info-circle mr-2"></i>
+                Important Information
+            </h3>
+            <ul class="space-y-2 text-sm text-blue-800">
+                <li class="flex items-start">
+                    <i class="fas fa-check text-blue-600 mr-2 mt-0.5"></i>
+                    <span>Please arrive <strong>10 minutes before</strong> your scheduled time</span>
+                </li>
+                <li class="flex items-start">
+                    <i class="fas fa-check text-blue-600 mr-2 mt-0.5"></i>
+                    <span>Bring a valid <strong>ID card</strong> and any previous test results</span>
+                </li>
+                <li class="flex items-start">
+                    <i class="fas fa-check text-blue-600 mr-2 mt-0.5"></i>
+                    <span>A confirmation email/SMS has been sent to your contact information</span>
+                </li>
+                <li class="flex items-start">
+                    <i class="fas fa-check text-blue-600 mr-2 mt-0.5"></i>
+                    <span>You will receive a reminder <strong>24 hours</strong> before your appointment</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Actions -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 print-hidden">
+            <button onclick="window.print()" 
+                    class="px-6 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200 flex items-center justify-center space-x-2">
+                <i class="fas fa-print"></i>
+                <span>Print Confirmation</span>
+            </button>
+
+            {% if can_cancel %}
+            <button onclick="showCancelModal()" 
+                    class="px-6 py-3 bg-white border border-lab-red text-lab-red rounded-lg hover:bg-red-50 transition-colors duration-200 flex items-center justify-center space-x-2">
+                <i class="fas fa-times-circle"></i>
+                <span>Cancel Appointment</span>
+            </button>
+            {% endif %}
+
+            <a href="{% url 'appointment:public_appointment_book' %}" 
+               class="px-6 py-3 bg-navy text-white rounded-lg hover:bg-navy-dark transition-colors duration-200 flex items-center justify-center space-x-2">
+                <i class="fas fa-calendar-plus"></i>
+                <span>Book Another</span>
+            </a>
+        </div>
+
+        <!-- Contact Information -->
+        <div class="mt-8 text-center text-sm text-gray-600 print-hidden">
+            <p>Need to make changes or have questions?</p>
+            <p class="mt-1">
+                Contact us at 
+                <a href="tel:{{ appointment.vendor.contact_phone }}" class="text-navy hover:underline">
+                    {{ appointment.vendor.contact_phone }}
+                </a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Cancel Confirmation Modal -->
+    {% if can_cancel %}
+    <div id="cancelModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center print-hidden">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="p-6">
+                <div class="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full mb-4">
+                    <i class="fas fa-exclamation-triangle text-lab-red text-xl"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900 text-center mb-2">Cancel Appointment?</h3>
+                <p class="text-sm text-gray-600 text-center mb-6">
+                    Are you sure you want to cancel this appointment? This action cannot be undone.
+                </p>
+
+                <form method="post" action="{% url 'appointment:public_appointment_cancel' appointment.appointment_id %}">
+                    {% csrf_token %}
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Reason for Cancellation (Optional)
+                        </label>
+                        <textarea name="cancellation_reason" rows="3" 
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy focus:border-transparent"
+                                  placeholder="Please let us know why you're cancelling..."></textarea>
+                    </div>
+
+                    <div class="flex space-x-3">
+                        <button type="button" onclick="hideCancelModal()" 
+                                class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors duration-200">
+                            Keep Appointment
+                        </button>
+                        <button type="submit" 
+                                class="flex-1 px-4 py-2 bg-lab-red text-white rounded-lg hover:bg-red-700 transition-colors duration-200">
+                            Yes, Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <script>
+        function showCancelModal() {
+            document.getElementById('cancelModal').classList.remove('hidden');
+        }
+
+        function hideCancelModal() {
+            document.getElementById('cancelModal').classList.add('hidden');
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('cancelModal')?.addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideCancelModal();
+            }
+        });
+    </script>
+</body>
+</html>

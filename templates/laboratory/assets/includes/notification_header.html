@@ -1,0 +1,321 @@
+<!-- templates/laboratory/assets/includes/notification_header.html -->
+
+<style>
+/* Notification Styles */
+.notification-bell {
+    position: relative;
+    padding: 8px 12px;
+    cursor: pointer;
+    color: #6c757d;
+    transition: color 0.3s;
+}
+
+.notification-bell:hover {
+    color: #007bff;
+}
+
+.notification-bell i {
+    font-size: 20px;
+}
+
+#notification-badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: #dc3545;
+    color: white;
+    border-radius: 10px;
+    padding: 2px 6px;
+    font-size: 11px;
+    font-weight: bold;
+    min-width: 18px;
+    text-align: center;
+    display: none;
+}
+
+.notification-dropdown {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    width: 380px;
+    max-height: 500px;
+    overflow-y: auto;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 1000;
+    display: none;
+}
+
+.notification-dropdown.show {
+    display: block;
+}
+
+.notification-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid #dee2e6;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8f9fa;
+    border-radius: 8px 8px 0 0;
+}
+
+.notification-header h6 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+#mark-all-read {
+    font-size: 12px;
+    color: #007bff;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+#mark-all-read:hover {
+    text-decoration: underline;
+}
+
+.notification-item {
+    display: block;
+    padding: 12px 16px;
+    border-bottom: 1px solid #f1f3f5;
+    text-decoration: none;
+    color: #212529;
+    transition: background-color 0.2s;
+}
+
+.notification-item:hover {
+    background-color: #f8f9fa;
+}
+
+.notification-item.unread {
+    background-color: #e7f3ff;
+}
+
+.notification-content {
+    display: flex;
+    gap: 12px;
+}
+
+.notification-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.notification-icon.info {
+    background: #cfe2ff;
+    color: #0d6efd;
+}
+
+.notification-icon.success {
+    background: #d1e7dd;
+    color: #198754;
+}
+
+.notification-icon.warning {
+    background: #fff3cd;
+    color: #ffc107;
+}
+
+.notification-icon.error {
+    background: #f8d7da;
+    color: #dc3545;
+}
+
+.notification-text {
+    flex: 1;
+}
+
+.notification-message {
+    margin: 0 0 4px 0;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.empty-notifications {
+    padding: 40px 20px;
+    text-align: center;
+    color: #6c757d;
+}
+
+.view-all-link {
+    display: block;
+    padding: 12px;
+    text-align: center;
+    border-top: 1px solid #dee2e6;
+    color: #007bff;
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.view-all-link:hover {
+    background-color: #f8f9fa;
+}
+
+/* Toast Notification */
+.toast-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 350px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    padding: 16px;
+    display: flex;
+    gap: 12px;
+    align-items: start;
+    z-index: 9999;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.toast-notification.fade-out {
+    animation: slideOut 0.3s ease-out forwards;
+}
+
+@keyframes slideOut {
+    to {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+}
+
+.toast-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0d6efd;
+    color: white;
+}
+
+.toast-content {
+    flex: 1;
+}
+
+.toast-content strong {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 14px;
+}
+
+.toast-content p {
+    margin: 0;
+    font-size: 13px;
+    color: #6c757d;
+}
+
+.toast-close {
+    background: none;
+    border: none;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+}
+
+.ws-status {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 8px 16px;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    font-size: 12px;
+    display: none;
+}
+
+.ws-status.error,
+.ws-status.disconnected,
+.ws-status.failed {
+    display: block;
+}
+</style>
+
+<!-- Notification Bell in Header -->
+<div class="notification-container" style="position: relative;">
+    <div class="notification-bell" id="notification-bell">
+        <i class="fas fa-bell"></i>
+        <span id="notification-badge">{{ unread_count }}</span>
+    </div>
+
+    <div class="notification-dropdown" id="notification-dropdown">
+        <div class="notification-header">
+            <h6>Notifications</h6>
+            <a href="#" id="mark-all-read">Mark all as read</a>
+        </div>
+
+        {% if unread_notifications %}
+            {% for notification in unread_notifications %}
+            <a href="{{ notification.action_url|default:'#' }}" 
+               class="notification-item {% if notification.is_unread %}unread{% endif %}"
+               data-notification-id="{{ notification.id }}">
+                <div class="notification-content">
+                    <div class="notification-icon {{ notification.level|default:'info' }}">
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <div class="notification-text">
+                        <p class="notification-message">{{ notification.message }}</p>
+                        <small class="text-muted">{{ notification.created_at|timesince }} ago</small>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        {% else %}
+            <div class="empty-notifications">
+                <i class="fas fa-bell-slash fa-2x mb-2"></i>
+                <p>No new notifications</p>
+            </div>
+        {% endif %}
+
+        <a href="{% url 'notification:notification_list' %}" class="view-all-link">
+            View All Notifications
+        </a>
+    </div>
+</div>
+
+<!-- WebSocket Status Indicator -->
+<div id="ws-status" class="ws-status"></div>
+
+<script>
+// Toggle notification dropdown
+document.getElementById('notification-bell').addEventListener('click', function(e) {
+    e.stopPropagation();
+    const dropdown = document.getElementById('notification-dropdown');
+    dropdown.classList.toggle('show');
+});
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+    const dropdown = document.getElementById('notification-dropdown');
+    const bell = document.getElementById('notification-bell');
+    
+    if (!bell.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.classList.remove('show');
+    }
+});
+</script>

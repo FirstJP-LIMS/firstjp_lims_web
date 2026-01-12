@@ -26,3 +26,15 @@ def status_class(status):
     return classes.get(status, 'bg-gray-100 text-gray-800')
 
     
+
+# register = template.Library()
+
+@register.filter
+def subtract(value, arg):
+    """Subtract the arg from the value."""
+    try:
+        return int(value) - int(arg)
+    except (ValueError, TypeError):
+        return value
+
+# In your template, load it with: {% load custom_filters %}

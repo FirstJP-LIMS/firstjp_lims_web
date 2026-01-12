@@ -3,23 +3,37 @@ from django.shortcuts import redirect
 from django.contrib import messages
 
 
-def vendor_admin_required(view_func):
-    """Decorator to ensure only vendor admins can access user management"""
-    @wraps(view_func)
-    def wrapper(request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            messages.error(request, 'Please log in to access this page.')
-            return redirect('account:login')
-        
-        if not hasattr(request.user, 'vendor') or not request.user.vendor:
-            messages.error(request, 'You must be associated with a laboratory.')
-            return redirect('dashboard')
-        
-        if not request.user.is_vendor_admin:
-            messages.error(request, 'Access denied. Only laboratory administrators can manage users.')
-            return redirect('dashboard')
-        
-        return view_func(request, *args, **kwargs)
-    
-    return wrapper
+def require_capability(capability):
+    """
+    Global decorator:
+    Enforces user capability as defined on the User model.
+    """
+
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+
+            if not request.user.is_authenticated:
+                return redirect("account:login")
+
+            if not getattr(request.user, "vendor", None):
+                messages.error(request, "You are not associated with a laboratory.")
+                return redirect("account:login")  # to route to Medvuno landing page
+
+            if not hasattr(request.user, capability):
+                messages.error(request, "System misconfiguration: capability not found.")
+                return redirect("labs:vendor_dashboard")
+
+            if not getattr(request.user, capability):
+                messages.error(
+                    request,
+                    "Access denied. You are not authorized to perform this action."
+                )
+                return redirect("labs:result_list")
+
+            return view_func(request, *args, **kwargs)
+
+        return wrapper
+    return decorator
+
 

@@ -1,0 +1,84 @@
+Roles in the laboratory by Hierarchical...
+Each role serves different responsibility and task in the lab... 
+1. The Super admin or vendor admin or super admin or lab director: They can create users and assign roles. They can perform all operations in the laboratory, including manually result entry, self-verification, and release of result
+
+2. The lab Manager or lab supervisor: can only review or verify result for a release. Flags: They cannot input results, or pass comment on results.
+
+3. Scientist (MLS or MLT or Biomedical Scientist): Sample Management, analysis of test, can enter result manually, and pass comment
+
+4. Technnologist (Phlebotomist/Sample collectors) - Smaple collection, accessioning & track quality indicator. They can a;so manage sample and result input---
+4. Logistics officers / sample collectors - Input patient data and also make a test request
+
+5. Receptionist or Front Desk officer: Input patient data, billing information, can download results or resport (download & send emails)
+
+Critical Values:
+Both lab manager & Scientirst should e notified via sms & email...
+
+
+
+Laboratory Roles & Responsibilities (Hierarchical Overview)
+
+Laboratories may use different titles for staff, but their responsibilities generally align with the following hierarchy. This guide explains each role and its core tasks within the Laboratory Information Management System (LIMS).
+
+---
+
+## 1. Super Admin / Vendor Admin / Lab Director
+- **Aliases:** Super Admin, Vendor Admin, Lab Director  
+- **Responsibilities:**
+  - Create and manage user accounts  
+  - Assign roles and permissions  
+  - Perform all laboratory operations  
+  - Enter results manually, verify, and release results  
+  - Configure and oversee the entire LIMS environment  
+
+---
+
+## 2. Lab Manager / Lab Supervisor
+- **Aliases:** Laboratory Manager, Supervisor  
+- **Responsibilities:**
+  - Review and verify results before release  
+  - Ensure compliance with laboratory standards  
+  - Oversee staff performance and workflow  
+  - **Limitations:** Cannot input results or add comments  
+
+---
+
+## 3. Scientist (MLS / MLT / Biomedical Scientist / Pathologist)
+- **Aliases:** Medical Laboratory Scientist (MLS), Medical Laboratory Technician (MLT), Biomedical Scientist, Pathologist  
+- **Responsibilities:**
+  - Manage samples and perform test analyses  
+  - Enter results manually into the LIMS  
+  - Add comments or interpretations to results  
+  - Ensure accuracy and integrity of laboratory data  
+
+---
+
+## 4. Technologist (Phlebotomist / Sample Collector)
+- **Aliases:** Technologist, Phlebotomist, Sample Collector  
+- **Responsibilities:**
+  - Collect patient samples  
+  - Perform **accessioning** (registering and labeling samples in the LIMS)  
+  - Track **quality indicators** for sample integrity  
+  - Manage sample workflow and custody  
+  - Enter results manually when required  
+  - Support scientists by ensuring samples are processed correctly  
+
+---
+
+## 5. Logistics Officer / Sample Collector
+- **Aliases:** Technician, Phlebotomist, Sample Collector, Logistics Officer  
+- **Responsibilities:**
+  - Collect patient samples  
+  - Input patient demographic data  
+  - Initiate test requests in the system  
+  - Maintain proper sample handling and chain of custody  
+
+---
+
+## 6. Receptionist / Front Desk Officer
+- **Aliases:** Receptionist, Front Desk Officer, Administrative Clerk  
+- **Responsibilities:**
+  - Register patients and input demographic data  
+  - Manage billing information  
+  - Download and distribute results/reports  
+  - Send results via email or provide printed copies  

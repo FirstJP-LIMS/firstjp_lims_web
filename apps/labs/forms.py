@@ -7,6 +7,9 @@ from crispy_forms.bootstrap import PrependedText, AppendedText
 from .models import VendorTest, Department, Patient, TestRequest, Sample, PRIORITY_STATUS
 from ..clinician.models import ClinicianPatientRelationship
 
+from apps.billing.models import BillingInformation, InsuranceProvider, CorporateClient
+
+
 
 class DepartmentForm(forms.ModelForm):
     """Form for creating and updating Vendor-scoped lab departments."""
@@ -251,111 +254,6 @@ class VendorLabTestForm(forms.ModelForm):
         return cleaned_data
 
 
-# class VendorLabTestForm(forms.ModelForm):
-#     """Form for defining a Lab Test within a specific Vendor's catalog."""
-    
-#     class Meta:
-#         model = VendorTest
-#         fields = [
-#             # Basic Info
-#             'code', 'name', 'assigned_department',
-            
-#             # Pricing & Availability
-#             'price', 'enabled',
-#             'available_for_online_booking',
-#             'requires_physician_approval',
-            
-#             # Technical Details
-#             'specimen_type', 'method', 'platform',
-#             'default_units', 'result_type',
-#             'turnaround_override',
-            
-#             # Patient Information
-#             'preparation_required',
-#             'preparation_instructions',
-#             'collection_instructions',
-#             'patient_friendly_description',
-#             'typical_reasons',
-            
-#             # Reference Ranges
-#             'min_reference_value', 'max_reference_value',
-#             'amr_low', 'amr_high',
-#             'reportable_low', 'reportable_high',
-#             'panic_low_value', 'panic_high_value',
-            
-#             # Advanced
-#             'general_comment_template',
-#             'enabled_for_autoverify',
-#         ]
-        
-#         widgets = {
-#             'code': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., HGB'}),
-#             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Hemoglobin'}),
-#             'price': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'step': '0.01'}),
-            
-#             'specimen_type': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Whole Blood, Serum'}),
-#             'method': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Spectrophotometry'}),
-#             'platform': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Cobas 6000'}),
-#             'default_units': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., g/dL'}),
-            
-#             'turnaround_override': forms.TextInput(attrs={
-#                 'class': 'form-control',
-#                 'placeholder': 'HH:MM:SS (e.g., 02:00:00 for 2 hours)'
-#             }),
-            
-#             # Patient Information
-#             'preparation_instructions': forms.Textarea(attrs={
-#                 'class': 'form-control',
-#                 'rows': 3,
-#                 'placeholder': 'e.g., Fast for 8-12 hours before test'
-#             }),
-#             'collection_instructions': forms.Textarea(attrs={
-#                 'class': 'form-control',
-#                 'rows': 2,
-#                 'placeholder': 'e.g., First morning urine sample preferred'
-#             }),
-#             'patient_friendly_description': forms.Textarea(attrs={
-#                 'class': 'form-control',
-#                 'rows': 3,
-#                 'placeholder': 'Explain what this test measures in simple terms'
-#             }),
-#             'typical_reasons': forms.Textarea(attrs={
-#                 'class': 'form-control',
-#                 'rows': 2,
-#                 'placeholder': 'e.g., Monitoring diabetes, assessing anemia'
-#             }),
-            
-#             # Numeric ranges
-#             'min_reference_value': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.000001'}),
-#             'max_reference_value': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.000001'}),
-#             'amr_low': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.000001'}),
-#             'amr_high': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.000001'}),
-#             'reportable_low': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.000001'}),
-#             'reportable_high': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.000001'}),
-#             'panic_low_value': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.000001'}),
-#             'panic_high_value': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.000001'}),
-            
-#             'general_comment_template': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
-#         }
-
-#     def __init__(self, *args, vendor=None, **kwargs):
-#         super().__init__(*args, **kwargs)
-        
-#         # Filter departments by vendor
-#         if vendor:
-#             self.fields['assigned_department'].queryset = Department.objects.filter(vendor=vendor)
-        
-#         # Update widget classes
-#         self.fields['assigned_department'].widget.attrs.update({'class': 'form-select'})
-#         self.fields['result_type'].widget.attrs.update({'class': 'form-select'})
-        
-#         # Add help text
-#         self.fields['available_for_online_booking'].help_text = "Allow patients to request this test online"
-#         self.fields['requires_physician_approval'].help_text = "Patient orders require physician review"
-
-
-
-
 class PatientForm(forms.ModelForm):
     class Meta:
         model = Patient
@@ -393,67 +291,184 @@ class PatientForm(forms.ModelForm):
         )
         
 
+
 # class TestRequestForm(forms.ModelForm):
 #     """
-#     A flexible form for creating Test Requests.
-#     Handles both new and existing patients.
-#     Update to take patients and Clinicians 
+#     Flexible form for creating Test Requests.
+#     Used by:
+#     - Lab Staff: Can create patients on-the-fly, full catalog access
+#     - Clinicians: Patient selection, clinical context required
 #     """
 
-#     # # Patient selection (for clinicians only)
-#     # patient_id = forms.CharField(
-#     #     required=False,
-#     #     max_length=20,
-#     #     widget=forms.TextInput(attrs={
-#     #         'class': 'form-control',
-#     #         'placeholder': 'Enter Patient ID'
-#     #     }),
-#     #     label="Patient ID"
-#     # )
-#     # ... (Existing Patient Section Fields) ...
-#     existing_patient = forms.ModelChoiceField(queryset=Patient.objects.none(), required=False, label="Select Existing Patient", help_text="Choose an existing patient or enter new patient details below.")
+#     # Patient Selection Options
+#     existing_patient = forms.ModelChoiceField(queryset=Patient.objects.none(), required=False, label="Select Existing Patient", help_text="Choose an existing patient or enter new patient details below.", widget=forms.Select(attrs={'class': 'form-select'}))
 
-#     first_name = forms.CharField(required=False, max_length=100, label="First Name")
-#     last_name = forms.CharField(required=False, max_length=100, label="Last Name")
-#     date_of_birth = forms.DateField(required=False, widget=forms.DateInput(attrs={'type': 'date'}), label="Date of Birth",
-#     input_formats=['%Y-%m-%d'],  # optional
+#     # New Patient Fields
+#     first_name = forms.CharField(required=False, max_length=100, label="First Name", widget=forms.TextInput(attrs={'class': 'form-control'}))
+    
+#     last_name = forms.CharField(required=False, max_length=100, label="Last Name", widget=forms.TextInput(attrs={'class': 'form-control'}))
+    
+#     date_of_birth = forms.DateField(
+#         required=False,
+#         widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+#         label="Date of Birth",
+#         input_formats=['%Y-%m-%d'],
 #     )
-
 
 #     gender = forms.ChoiceField(
 #         required=False,
 #         choices=Patient.GENDER_CHOICE,
-#         label="Gender"
+#         label="Gender",
+#         widget=forms.Select(attrs={'class': 'form-select'})
 #     )
-#     contact_email = forms.EmailField(required=False, label="Contact Email")
-#     contact_phone = forms.CharField(required=False, max_length=15, label="Contact Phone")
+    
+#     contact_email = forms.EmailField(
+#         required=False,
+#         label="Contact Email",
+#         widget=forms.EmailInput(attrs={'class': 'form-control'})
+#     )
+    
+#     contact_phone = forms.CharField(
+#         required=False,
+#         max_length=15,
+#         label="Contact Phone",
+#         widget=forms.TextInput(attrs={'class': 'form-control'})
+#     )
 
-#     # --- Test Section ---
+#     # Test Selection
 #     tests_to_order = forms.ModelMultipleChoiceField(
 #         queryset=VendorTest.objects.none(),
 #         widget=forms.CheckboxSelectMultiple,
 #         label="Select Tests"
 #     )
+    
+#     # Clinical Context (more important for clinicians)
+#     clinical_indication = forms.CharField(
+#         required=False,
+#         widget=forms.Textarea(attrs={
+#             'class': 'form-control',
+#             'rows': 3,
+#             'placeholder': 'Clinical reason for ordering (diagnosis, symptoms, ICD codes)...'
+#         }),
+#         label="Clinical Indication",
+#         help_text="Why are these tests being ordered?"
+#     )
+    
 #     priority = forms.ChoiceField(
 #         choices=PRIORITY_STATUS,
 #         label="Priority",
 #         initial="routine",
+#         widget=forms.Select(attrs={'class': 'form-select'})
 #     )
-
+    
+#     urgency_reason = forms.CharField(
+#         required=False,
+#         widget=forms.Textarea(attrs={
+#             'class': 'form-control',
+#             'rows': 2,
+#             'placeholder': 'Required for urgent/STAT orders'
+#         }),
+#         label="Urgency Justification"
+#     )
+#      # billing fields
+#     billing_type = forms.ChoiceField(
+#         choices=BillingInformation.BILLING_TYPES,
+#         initial='CASH',
+#         widget=forms.Select(attrs={'class': 'form-control'})
+#     )
+    
+#     insurance_provider = forms.ModelChoiceField(
+#         queryset=InsuranceProvider.objects.none(),
+#         required=False,
+#         widget=forms.Select(attrs={'class': 'form-control'})
+#     )
+    
+#     corporate_client = forms.ModelChoiceField(
+#         queryset=CorporateClient.objects.none(),
+#         required=False,
+#         widget=forms.Select(attrs={'class': 'form-control'})
+#     )
 #     class Meta:
 #         model = TestRequest
-#         fields = ["existing_patient", "first_name", "last_name", "date_of_birth", "gender", "contact_email", "contact_phone", "tests_to_order",
-#                   "clinical_history", "priority", "has_informed_consent", "external_referral"]
+#         fields = [
+#             "existing_patient", "first_name", "last_name", "date_of_birth",
+#             "gender", "contact_email", "contact_phone",
+#             "tests_to_order", "clinical_indication", "clinical_history",
+#             "priority", "urgency_reason",'billing_type','insurance_provider','corporate_client', "has_informed_consent", "external_referral"
+#         ]
+        
+#         widgets = {
+#             'clinical_history': forms.Textarea(attrs={
+#                 'class': 'form-control',
+#                 'rows': 3,
+#                 'placeholder': 'Medical history, current medications, allergies...'
+#             }),
+#             'external_referral': forms.TextInput(attrs={
+#                 'class': 'form-control',
+#                 'placeholder': 'Referring physician/institution'
+#             }),
+#             'has_informed_consent': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+#         }
                   
-#     def __init__(self, *args, **kwargs):
-#         vendor = kwargs.pop('vendor', None)
+#     def __init__(self, *args, user=None, vendor=None, patient=None, **kwargs):
+#         """
+#         Initialize form with context.
+        
+#         Args:
+#             user: Current user (lab_staff or clinician)
+#             vendor: Current vendor
+#             patient: Pre-selected patient (optional)
+#         """
 #         super().__init__(*args, **kwargs)
+        
+#         self.user = user
+#         self.vendor = vendor
+#         self.patient = patient
+#         self.is_clinician = user and user.role == 'clinician'
+#         self.is_lab_staff = user and user.role in ['lab_staff', 'vendor_admin']
 
 #         if vendor:
-#             self.fields["existing_patient"].queryset = Patient.objects.filter(vendor=vendor).order_by('first_name')
-#             self.fields["tests_to_order"].queryset = VendorTest.objects.filter(vendor=vendor).order_by('name')
+#             # Filter querysets by vendor
+#             self.fields['insurance_provider'].queryset = InsuranceProvider.objects.filter(
+#                 vendor=vendor,
+#                 is_active=True
+#             )
+#             self.fields['corporate_client'].queryset = CorporateClient.objects.filter(
+#                 vendor=vendor,
+#                 is_active=True
+#             )
 
-#         # Make date_of_birth field accept empty values properly
+#             self.fields["existing_patient"].queryset = Patient.objects.filter(
+#                 vendor=vendor
+#             ).order_by('first_name', 'last_name')
+            
+#             # Test catalog based on user role
+#             if self.is_clinician:
+#                 # Clinicians see all enabled tests
+#                 self.fields["tests_to_order"].queryset = VendorTest.objects.filter(
+#                     vendor=vendor,
+#                     enabled=True
+#                 ).select_related('assigned_department').order_by('name')
+#             else:
+#                 # Lab staff see all tests (including disabled for special cases)
+#                 self.fields["tests_to_order"].queryset = VendorTest.objects.filter(
+#                     vendor=vendor
+#                 ).select_related('assigned_department').order_by('name')
+        
+#         # If patient pre-selected, hide patient creation fields
+#         if patient:
+#             self.fields['existing_patient'].initial = patient
+#             self.fields['existing_patient'].widget = forms.HiddenInput()
+#             # Hide new patient fields
+#             for field in ['first_name', 'last_name', 'date_of_birth', 'gender', 'contact_email', 'contact_phone']:
+#                 self.fields[field].widget = forms.HiddenInput()
+        
+#         # Clinician-specific requirements
+#         if self.is_clinician:
+#             self.fields['clinical_indication'].required = True
+#             self.fields['clinical_indication'].help_text = "Required for clinician orders"
+        
+#         # Make date_of_birth accept empty values
 #         self.fields['date_of_birth'].empty_value = None
 
 #     def clean_date_of_birth(self):
@@ -468,7 +483,6 @@ class PatientForm(forms.ModelForm):
 #         existing_patient = cleaned_data.get("existing_patient")
 #         first_name = cleaned_data.get("first_name")
 #         last_name = cleaned_data.get("last_name")
-#         date_of_birth = cleaned_data.get("date_of_birth")  
 
 #         # Require at least one patient option
 #         if not existing_patient and not (first_name and last_name):
@@ -480,29 +494,129 @@ class PatientForm(forms.ModelForm):
 #         tests_to_order = cleaned_data.get("tests_to_order")
 #         if not tests_to_order or tests_to_order.count() == 0:
 #             raise forms.ValidationError("Please select at least one test to order.")
+        
+#         # Clinician-specific validations
+#         if self.is_clinician:
+#             # Verify clinician can order for this patient
+#             if existing_patient:
+#                 try:
+#                     relationship = ClinicianPatientRelationship.objects.get(
+#                         clinician=self.user,
+#                         patient=existing_patient,
+#                         is_active=True
+#                     )
+#                     if not relationship.can_order_tests:
+#                         raise forms.ValidationError(
+#                             "You don't have permission to order tests for this patient."
+#                         )
+#                 except ClinicianPatientRelationship.DoesNotExist:
+#                     # Auto-create relationship for clinicians
+#                     ClinicianPatientRelationship.objects.create(
+#                         clinician=self.user,
+#                         patient=existing_patient,
+#                         relationship_type='consulting',
+#                         established_via='Test order',
+#                         is_active=True,
+#                     )
+            
+#             # Validate urgency reason for urgent orders
+#             priority = cleaned_data.get('priority')
+#             urgency_reason = cleaned_data.get('urgency_reason')
+            
+#             if priority == 'urgent' and not urgency_reason:
+#                 raise forms.ValidationError({
+#                     'urgency_reason': 'Justification required for urgent/STAT orders.'
+#                 })
+            
+#             # Clinical indication required
+#             if not cleaned_data.get('clinical_indication'):
+#                 raise forms.ValidationError({
+#                     'clinical_indication': 'Clinical indication is required for clinician orders.'
+#                 })
 
 #         return cleaned_data
     
 #     @property
 #     def total_order_price(self):
-#         """Calculates the total price of the currently selected tests."""
-#         tests = self.cleaned_data.get('tests_to_order', [])
-#         total = sum(test.price for test in tests)
-#         return total
+#         """Calculate total price of selected tests."""
+#         if hasattr(self, 'cleaned_data'):
+#             tests = self.cleaned_data.get('tests_to_order', [])
+#             total = sum(test.price for test in tests)
+#             return total
+#         return 0
 
-#     @property
-#     def patient(self):
+#     def get_or_create_patient(self):
+#         """
+#         Get existing patient or create new one.
+#         Returns: Patient instance
+#         """
 #         existing_patient = self.cleaned_data.get("existing_patient")
+        
 #         if existing_patient:
 #             return existing_patient
-#         return {
-#             "first_name": self.cleaned_data.get("first_name"),
-#             "last_name": self.cleaned_data.get("last_name"),
-#             "date_of_birth": self.cleaned_data.get("date_of_birth"),
-#             "gender": self.cleaned_data.get("gender"),
-#             "contact_email": self.cleaned_data.get("contact_email"),
-#             "contact_phone": self.cleaned_data.get("contact_phone"),
-#         }
+        
+#         # Create new patient
+#         patient = Patient.objects.create(
+#             vendor=self.vendor,
+#             first_name=self.cleaned_data.get("first_name"),
+#             last_name=self.cleaned_data.get("last_name"),
+#             date_of_birth=self.cleaned_data.get("date_of_birth"),
+#             gender=self.cleaned_data.get("gender"),
+#             contact_email=self.cleaned_data.get("contact_email"),
+#             contact_phone=self.cleaned_data.get("contact_phone"),
+#         )
+        
+#         return patient
+    
+#     def save(self, commit=True):
+#         """
+#         Save test request with proper attribution.
+#         """
+#         instance = super().save(commit=False)
+        
+#         # Set vendor
+#         instance.vendor = self.vendor
+        
+#         # Get or create patient
+#         patient = self.get_or_create_patient()
+#         instance.patient = patient
+        
+#         # Set user attribution
+#         instance.requested_by = self.user
+        
+#         # Set clinician if user is clinician
+#         if self.is_clinician:
+#             instance.ordering_clinician = self.user
+#             # 🆕 Auto-create relationship for newly created patients
+#             if patient and not ClinicianPatientRelationship.objects.filter(
+#                 clinician=self.user,
+#                 patient=patient
+#             ).exists():
+#                 ClinicianPatientRelationship.objects.create(
+#                     clinician=self.user,
+#                     patient=patient,
+#                     relationship_type='primary',
+#                     established_via='New patient registration during test order',
+#                     is_active=True,
+#                 )
+#         else:
+#             instance.ordering_clinician = None
+        
+#         if commit:
+#             with transaction.atomic():
+#                 instance.save()
+                
+#                 # Add selected tests (M2M)
+#                 instance.requested_tests.set(self.cleaned_data['tests_to_order'])
+                
+#                 # Check if approval needed (mainly for patient self-orders)
+#                 instance.check_approval_requirement()
+                
+#                 # Update clinician statistics
+#                 if self.is_clinician and hasattr(self.user, 'clinician_profile'):
+#                     self.user.clinician_profile.increment_order_count()
+        
+#         return instance
 
 
 
@@ -515,12 +629,28 @@ class TestRequestForm(forms.ModelForm):
     """
 
     # Patient Selection Options
-    existing_patient = forms.ModelChoiceField(queryset=Patient.objects.none(), required=False, label="Select Existing Patient", help_text="Choose an existing patient or enter new patient details below.", widget=forms.Select(attrs={'class': 'form-select'}))
+    existing_patient = forms.ModelChoiceField(
+        queryset=Patient.objects.none(),
+        required=False,
+        label="Select Existing Patient",
+        help_text="Choose an existing patient or enter new patient details below.",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
 
     # New Patient Fields
-    first_name = forms.CharField(required=False, max_length=100, label="First Name", widget=forms.TextInput(attrs={'class': 'form-control'}))
+    first_name = forms.CharField(
+        required=False,
+        max_length=100,
+        label="First Name",
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
     
-    last_name = forms.CharField(required=False, max_length=100, label="Last Name", widget=forms.TextInput(attrs={'class': 'form-control'}))
+    last_name = forms.CharField(
+        required=False,
+        max_length=100,
+        label="Last Name",
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
     
     date_of_birth = forms.DateField(
         required=False,
@@ -556,7 +686,7 @@ class TestRequestForm(forms.ModelForm):
         label="Select Tests"
     )
     
-    # Clinical Context (more important for clinicians)
+    # Clinical Context
     clinical_indication = forms.CharField(
         required=False,
         widget=forms.Textarea(attrs={
@@ -584,14 +714,44 @@ class TestRequestForm(forms.ModelForm):
         }),
         label="Urgency Justification"
     )
-
+    
+    # 🆕 Billing fields
+    billing_type = forms.ChoiceField(
+        choices=BillingInformation.BILLING_TYPES,
+        initial='CASH',
+        label="Billing Type",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    
+    insurance_provider = forms.ModelChoiceField(
+        queryset=InsuranceProvider.objects.none(),
+        required=False,
+        label="Insurance Provider (HMO)",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    
+    corporate_client = forms.ModelChoiceField(
+        queryset=CorporateClient.objects.none(),
+        required=False,
+        label="Corporate Client",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    
     class Meta:
         model = TestRequest
         fields = [
+            # Patient fields (handled manually)
             "existing_patient", "first_name", "last_name", "date_of_birth",
             "gender", "contact_email", "contact_phone",
-            "tests_to_order", "clinical_indication", "clinical_history",
-            "priority", "urgency_reason", "has_informed_consent", "external_referral"
+            # Test fields
+            "tests_to_order",
+            # Clinical fields
+            "clinical_indication", "clinical_history",
+            "priority", "urgency_reason",
+            # Billing fields
+            'billing_type', 'insurance_provider', 'corporate_client',
+            # Other fields
+            "has_informed_consent", "external_referral"
         ]
         
         widgets = {
@@ -622,10 +782,19 @@ class TestRequestForm(forms.ModelForm):
         self.vendor = vendor
         self.patient = patient
         self.is_clinician = user and user.role == 'clinician'
-        self.is_lab_staff = user and user.role in ['lab_staff', 'vendor_admin']
+        self.is_lab_staff = user and user.role in ['lab_staff', 'vendor_admin', 'lab_supervisor', 'lab_technician']
 
         if vendor:
             # Filter querysets by vendor
+            self.fields['insurance_provider'].queryset = InsuranceProvider.objects.filter(
+                vendor=vendor,
+                is_active=True
+            )
+            self.fields['corporate_client'].queryset = CorporateClient.objects.filter(
+                vendor=vendor,
+                is_active=True
+            )
+
             self.fields["existing_patient"].queryset = Patient.objects.filter(
                 vendor=vendor
             ).order_by('first_name', 'last_name')
@@ -655,9 +824,6 @@ class TestRequestForm(forms.ModelForm):
         if self.is_clinician:
             self.fields['clinical_indication'].required = True
             self.fields['clinical_indication'].help_text = "Required for clinician orders"
-        
-        # Make date_of_birth accept empty values
-        self.fields['date_of_birth'].empty_value = None
 
     def clean_date_of_birth(self):
         """Handle empty date values properly."""
@@ -672,41 +838,40 @@ class TestRequestForm(forms.ModelForm):
         first_name = cleaned_data.get("first_name")
         last_name = cleaned_data.get("last_name")
 
-        # Require at least one patient option
+        # ========================================
+        # VALIDATION 1: Patient Required
+        # ========================================
         if not existing_patient and not (first_name and last_name):
             raise forms.ValidationError(
-                "Please select an existing patient or provide new patient details."
+                "Please select an existing patient or provide new patient details (First Name and Last Name required)."
             )
 
-        # Require at least one test
+        # ========================================
+        # VALIDATION 2: At Least One Test
+        # ========================================
         tests_to_order = cleaned_data.get("tests_to_order")
         if not tests_to_order or tests_to_order.count() == 0:
             raise forms.ValidationError("Please select at least one test to order.")
         
-        # Clinician-specific validations
+        # ========================================
+        # VALIDATION 3: Billing Type Dependencies
+        # ========================================
+        billing_type = cleaned_data.get('billing_type')
+        
+        if billing_type == 'HMO' and not cleaned_data.get('insurance_provider'):
+            raise forms.ValidationError({
+                'insurance_provider': 'Please select an insurance provider for HMO billing.'
+            })
+        
+        if billing_type == 'CORPORATE' and not cleaned_data.get('corporate_client'):
+            raise forms.ValidationError({
+                'corporate_client': 'Please select a corporate client for corporate billing.'
+            })
+        
+        # ========================================
+        # VALIDATION 4: Clinician-Specific
+        # ========================================
         if self.is_clinician:
-            # Verify clinician can order for this patient
-            if existing_patient:
-                try:
-                    relationship = ClinicianPatientRelationship.objects.get(
-                        clinician=self.user,
-                        patient=existing_patient,
-                        is_active=True
-                    )
-                    if not relationship.can_order_tests:
-                        raise forms.ValidationError(
-                            "You don't have permission to order tests for this patient."
-                        )
-                except ClinicianPatientRelationship.DoesNotExist:
-                    # Auto-create relationship for clinicians
-                    ClinicianPatientRelationship.objects.create(
-                        clinician=self.user,
-                        patient=existing_patient,
-                        relationship_type='consulting',
-                        established_via='Test order',
-                        is_active=True,
-                    )
-            
             # Validate urgency reason for urgent orders
             priority = cleaned_data.get('priority')
             urgency_reason = cleaned_data.get('urgency_reason')
@@ -759,53 +924,27 @@ class TestRequestForm(forms.ModelForm):
     def save(self, commit=True):
         """
         Save test request with proper attribution.
+        Note: Patient assignment is handled by the view.
         """
         instance = super().save(commit=False)
         
-        # Set vendor
-        instance.vendor = self.vendor
-        
-        # Get or create patient
-        patient = self.get_or_create_patient()
-        instance.patient = patient
-        
-        # Set user attribution
+        # Basic fields (patient and vendor set by view)
         instance.requested_by = self.user
         
         # Set clinician if user is clinician
         if self.is_clinician:
             instance.ordering_clinician = self.user
-            # 🆕 Auto-create relationship for newly created patients
-            if patient and not ClinicianPatientRelationship.objects.filter(
-                clinician=self.user,
-                patient=patient
-            ).exists():
-                ClinicianPatientRelationship.objects.create(
-                    clinician=self.user,
-                    patient=patient,
-                    relationship_type='primary',
-                    established_via='New patient registration during test order',
-                    is_active=True,
-                )
         else:
             instance.ordering_clinician = None
         
         if commit:
-            with transaction.atomic():
-                instance.save()
-                
-                # Add selected tests (M2M)
-                instance.requested_tests.set(self.cleaned_data['tests_to_order'])
-                
-                # Check if approval needed (mainly for patient self-orders)
-                instance.check_approval_requirement()
-                
-                # Update clinician statistics
-                if self.is_clinician and hasattr(self.user, 'clinician_profile'):
-                    self.user.clinician_profile.increment_order_count()
+            instance.save()
+            
+            # Add selected tests (M2M) - must be done after save
+            instance.requested_tests.set(self.cleaned_data['tests_to_order'])
         
         return instance
-
+    
 
 class SampleForm(forms.ModelForm):
     """Handles specimen/phlebotomy info for a given test request."""
@@ -941,4 +1080,234 @@ class QCActionForm(forms.ModelForm):
         # Make resolution_notes required if resolved is checked
         if self.data.get('resolved'):
             self.fields['resolution_notes'].required = True
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# class VendorLabTestForm(forms.ModelForm):
+#     """Form for defining a Lab Test within a specific Vendor's catalog."""
+    
+#     class Meta:
+#         model = VendorTest
+#         fields = [
+#             # Basic Info
+#             'code', 'name', 'assigned_department',
+            
+#             # Pricing & Availability
+#             'price', 'enabled',
+#             'available_for_online_booking',
+#             'requires_physician_approval',
+            
+#             # Technical Details
+#             'specimen_type', 'method', 'platform',
+#             'default_units', 'result_type',
+#             'turnaround_override',
+            
+#             # Patient Information
+#             'preparation_required',
+#             'preparation_instructions',
+#             'collection_instructions',
+#             'patient_friendly_description',
+#             'typical_reasons',
+            
+#             # Reference Ranges
+#             'min_reference_value', 'max_reference_value',
+#             'amr_low', 'amr_high',
+#             'reportable_low', 'reportable_high',
+#             'panic_low_value', 'panic_high_value',
+            
+#             # Advanced
+#             'general_comment_template',
+#             'enabled_for_autoverify',
+#         ]
+        
+#         widgets = {
+#             'code': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., HGB'}),
+#             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Hemoglobin'}),
+#             'price': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'step': '0.01'}),
+            
+#             'specimen_type': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Whole Blood, Serum'}),
+#             'method': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Spectrophotometry'}),
+#             'platform': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Cobas 6000'}),
+#             'default_units': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., g/dL'}),
+            
+#             'turnaround_override': forms.TextInput(attrs={
+#                 'class': 'form-control',
+#                 'placeholder': 'HH:MM:SS (e.g., 02:00:00 for 2 hours)'
+#             }),
+            
+#             # Patient Information
+#             'preparation_instructions': forms.Textarea(attrs={
+#                 'class': 'form-control',
+#                 'rows': 3,
+#                 'placeholder': 'e.g., Fast for 8-12 hours before test'
+#             }),
+#             'collection_instructions': forms.Textarea(attrs={
+#                 'class': 'form-control',
+#                 'rows': 2,
+#                 'placeholder': 'e.g., First morning urine sample preferred'
+#             }),
+#             'patient_friendly_description': forms.Textarea(attrs={
+#                 'class': 'form-control',
+#                 'rows': 3,
+#                 'placeholder': 'Explain what this test measures in simple terms'
+#             }),
+#             'typical_reasons': forms.Textarea(attrs={
+#                 'class': 'form-control',
+#                 'rows': 2,
+#                 'placeholder': 'e.g., Monitoring diabetes, assessing anemia'
+#             }),
+            
+#             # Numeric ranges
+#             'min_reference_value': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.000001'}),
+#             'max_reference_value': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.000001'}),
+#             'amr_low': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.000001'}),
+#             'amr_high': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.000001'}),
+#             'reportable_low': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.000001'}),
+#             'reportable_high': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.000001'}),
+#             'panic_low_value': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.000001'}),
+#             'panic_high_value': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.000001'}),
+            
+#             'general_comment_template': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+#         }
+
+#     def __init__(self, *args, vendor=None, **kwargs):
+#         super().__init__(*args, **kwargs)
+        
+#         # Filter departments by vendor
+#         if vendor:
+#             self.fields['assigned_department'].queryset = Department.objects.filter(vendor=vendor)
+        
+#         # Update widget classes
+#         self.fields['assigned_department'].widget.attrs.update({'class': 'form-select'})
+#         self.fields['result_type'].widget.attrs.update({'class': 'form-select'})
+        
+#         # Add help text
+#         self.fields['available_for_online_booking'].help_text = "Allow patients to request this test online"
+#         self.fields['requires_physician_approval'].help_text = "Patient orders require physician review"
+
+
+
+
+
+# class TestRequestForm(forms.ModelForm):
+#     """
+#     A flexible form for creating Test Requests.
+#     Handles both new and existing patients.
+#     Update to take patients and Clinicians 
+#     """
+
+#     # # Patient selection (for clinicians only)
+#     # patient_id = forms.CharField(
+#     #     required=False,
+#     #     max_length=20,
+#     #     widget=forms.TextInput(attrs={
+#     #         'class': 'form-control',
+#     #         'placeholder': 'Enter Patient ID'
+#     #     }),
+#     #     label="Patient ID"
+#     # )
+#     # ... (Existing Patient Section Fields) ...
+#     existing_patient = forms.ModelChoiceField(queryset=Patient.objects.none(), required=False, label="Select Existing Patient", help_text="Choose an existing patient or enter new patient details below.")
+
+#     first_name = forms.CharField(required=False, max_length=100, label="First Name")
+#     last_name = forms.CharField(required=False, max_length=100, label="Last Name")
+#     date_of_birth = forms.DateField(required=False, widget=forms.DateInput(attrs={'type': 'date'}), label="Date of Birth",
+#     input_formats=['%Y-%m-%d'],  # optional
+#     )
+
+
+#     gender = forms.ChoiceField(
+#         required=False,
+#         choices=Patient.GENDER_CHOICE,
+#         label="Gender"
+#     )
+#     contact_email = forms.EmailField(required=False, label="Contact Email")
+#     contact_phone = forms.CharField(required=False, max_length=15, label="Contact Phone")
+
+#     # --- Test Section ---
+#     tests_to_order = forms.ModelMultipleChoiceField(
+#         queryset=VendorTest.objects.none(),
+#         widget=forms.CheckboxSelectMultiple,
+#         label="Select Tests"
+#     )
+#     priority = forms.ChoiceField(
+#         choices=PRIORITY_STATUS,
+#         label="Priority",
+#         initial="routine",
+#     )
+
+#     class Meta:
+#         model = TestRequest
+#         fields = ["existing_patient", "first_name", "last_name", "date_of_birth", "gender", "contact_email", "contact_phone", "tests_to_order",
+#                   "clinical_history", "priority", "has_informed_consent", "external_referral"]
+                  
+#     def __init__(self, *args, **kwargs):
+#         vendor = kwargs.pop('vendor', None)
+#         super().__init__(*args, **kwargs)
+
+#         if vendor:
+#             self.fields["existing_patient"].queryset = Patient.objects.filter(vendor=vendor).order_by('first_name')
+#             self.fields["tests_to_order"].queryset = VendorTest.objects.filter(vendor=vendor).order_by('name')
+
+#         # Make date_of_birth field accept empty values properly
+#         self.fields['date_of_birth'].empty_value = None
+
+#     def clean_date_of_birth(self):
+#         """Handle empty date values properly."""
+#         dob = self.cleaned_data.get('date_of_birth')
+#         if not dob:
+#             return None
+#         return dob
+
+#     def clean(self):
+#         cleaned_data = super().clean()
+#         existing_patient = cleaned_data.get("existing_patient")
+#         first_name = cleaned_data.get("first_name")
+#         last_name = cleaned_data.get("last_name")
+#         date_of_birth = cleaned_data.get("date_of_birth")  
+
+#         # Require at least one patient option
+#         if not existing_patient and not (first_name and last_name):
+#             raise forms.ValidationError(
+#                 "Please select an existing patient or provide new patient details."
+#             )
+
+#         # Require at least one test
+#         tests_to_order = cleaned_data.get("tests_to_order")
+#         if not tests_to_order or tests_to_order.count() == 0:
+#             raise forms.ValidationError("Please select at least one test to order.")
+
+#         return cleaned_data
+    
+#     @property
+#     def total_order_price(self):
+#         """Calculates the total price of the currently selected tests."""
+#         tests = self.cleaned_data.get('tests_to_order', [])
+#         total = sum(test.price for test in tests)
+#         return total
+
+#     @property
+#     def patient(self):
+#         existing_patient = self.cleaned_data.get("existing_patient")
+#         if existing_patient:
+#             return existing_patient
+#         return {
+#             "first_name": self.cleaned_data.get("first_name"),
+#             "last_name": self.cleaned_data.get("last_name"),
+#             "date_of_birth": self.cleaned_data.get("date_of_birth"),
+#             "gender": self.cleaned_data.get("gender"),
+#             "contact_email": self.cleaned_data.get("contact_email"),
+#             "contact_phone": self.cleaned_data.get("contact_phone"),
+#         }
 

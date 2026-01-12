@@ -1,0 +1,335 @@
+{% extends "laboratory/assets/base_staff.html" %}
+
+{% block title %}User Management - {{ vendor.name }}{% endblock %}
+
+{% block content %}
+    <!-- Main Content -->
+    <div class="p-6">
+        <!-- Statistics Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-xl shadow-sm border p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">Total Users</p>
+                        <h3 class="text-3xl font-bold text-lab-black mt-2">{{ stats.total }}</h3>
+                    </div>
+                    <div class="bg-navy/10 p-3 rounded-full">
+                        <i class="fas fa-users text-navy text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">Active Users</p>
+                        <h3 class="text-3xl font-bold text-lab-black mt-2">{{ stats.active }}</h3>
+                    </div>
+                    <div class="bg-green-100 p-3 rounded-full">
+                        <i class="fas fa-user-check text-green-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">By Role</p>
+                        <h3 class="text-3xl font-bold text-lab-black mt-2">{{ stats.by_role|length }}</h3>
+                    </div>
+                    <div class="bg-lab-red/10 p-3 rounded-full">
+                        <i class="fas fa-tags text-lab-red text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">Showing</p>
+                        <h3 class="text-3xl font-bold text-lab-black mt-2">{{ page_obj.paginator.count }}</h3>
+                    </div>
+                    <div class="bg-blue-100 p-3 rounded-full">
+                        <i class="fas fa-list text-blue-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters and Search -->
+        <div class="bg-white rounded-xl shadow-sm border mb-6">
+            <div class="p-6">
+                <form method="get" class="flex flex-col md:flex-row gap-4">
+                    <div class="flex-1">
+                        <div class="relative">
+                            <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                            <input type="text" 
+                                   name="search" 
+                                   value="{{ search_query }}"
+                                   placeholder="Search by name or email..." 
+                                   class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy focus:border-transparent">
+                        </div>
+                    </div>
+                    
+                    <div class="w-full md:w-64">
+                        <select name="role" 
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy focus:border-transparent">
+                            <option value="">All Roles</option>
+                            {% for role_id, role_name in available_roles %}
+                                <option value="{{ role_id }}" {% if role_filter == role_id %}selected{% endif %}>
+                                    {{ role_name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <button type="submit" 
+                            class="px-6 py-3 bg-navy text-white rounded-lg hover:bg-navy-light transition flex items-center justify-center">
+                        <i class="fas fa-filter mr-2"></i>
+                        Apply Filters
+                    </button>
+                    
+                    {% if search_query or role_filter %}
+                        <a href="{% url 'user_list' %}" 
+                           class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition flex items-center justify-center">
+                            <i class="fas fa-times mr-2"></i>
+                            Clear
+                        </a>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+
+        <!-- Users Table -->
+        <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                User
+                            </th>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                Role & Permissions
+                            </th>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                Status
+                            </th>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                Joined
+                            </th>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                Actions
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for user in page_obj %}
+                        <tr class="hover:bg-gray-50 transition">
+                            <!-- User Info -->
+                            <td class="px-6 py-4">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 h-10 w-10 bg-navy text-white rounded-full flex items-center justify-center font-semibold">
+                                        {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+                                    </div>
+                                    <div class="ml-4">
+                                        <div class="font-medium text-lab-black">
+                                            {{ user.get_full_name }}
+                                        </div>
+                                        <div class="text-sm text-gray-500">{{ user.email }}</div>
+                                        {% if user.contact_number %}
+                                        <div class="text-sm text-gray-500 mt-1">
+                                            <i class="fas fa-phone mr-1"></i>{{ user.contact_number }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+
+                            <!-- Role & Permissions -->
+                            <td class="px-6 py-4">
+                                <div class="space-y-2">
+                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium {% if user.role == 'vendor_admin' %}bg-red-100 text-lab-red{% elif user.role == 'lab_manager' %}bg-blue-100 text-blue-800{% elif user.role == 'scientist' %}bg-purple-100 text-purple-800{% elif user.role == 'technologist' %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                                        {{ user.get_role_display_name }}
+                                    </span>
+                                    
+                                    <div class="flex flex-wrap gap-1 mt-2">
+                                        {% if user.can_enter_results %}
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-blue-50 text-blue-700">
+                                            <i class="fas fa-flask mr-1"></i> Enter Results
+                                        </span>
+                                        {% endif %}
+                                        
+                                        {% if user.can_verify_results %}
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-green-50 text-green-700">
+                                            <i class="fas fa-check-circle mr-1"></i> Verify
+                                        </span>
+                                        {% endif %}
+                                        
+                                        {% if user.can_manage_staff %}
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-red-50 text-lab-red">
+                                            <i class="fas fa-users-cog mr-1"></i> Manage Staff
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+
+                            <!-- Status -->
+                            <td class="px-6 py-4">
+                                {% if user.is_active %}
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                                    <i class="fas fa-circle text-green-500 mr-1.5" style="font-size: 8px;"></i>
+                                    Active
+                                </span>
+                                {% else %}
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-lab-red">
+                                    <i class="fas fa-circle text-lab-red mr-1.5" style="font-size: 8px;"></i>
+                                    Inactive
+                                </span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Joined Date -->
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ user.date_joined|date:"M d, Y" }}
+                                <div class="text-xs text-gray-400">
+                                    {{ user.date_joined|timesince }} ago
+                                </div>
+                            </td>
+
+                            <!-- Actions -->
+                            <td class="px-6 py-4">
+                                <div class="flex items-center space-x-2">
+                                    <!-- View Details -->
+                                    <a href="{% url 'account:user_detail' user.id %}" 
+                                       class="p-2 text-gray-600 hover:text-navy hover:bg-gray-100 rounded-lg transition"
+                                       title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    
+                                    <!-- Change Role -->
+                                    <a href="{% url 'account:user_change_role' user.id %}" 
+                                       class="p-2 text-gray-600 hover:text-navy hover:bg-gray-100 rounded-lg transition"
+                                       title="Change Role">
+                                        <i class="fas fa-user-tag"></i>
+                                    </a>
+                                    
+                                    <!-- Toggle Status -->
+                                    <form method="post" 
+                                          action="{% url 'account:user_toggle_status' user.id %}"
+                                          class="inline"
+                                          onsubmit="return confirm('Are you sure you want to change this user\'s status?');">
+                                        {% csrf_token %}
+                                        <button type="submit" 
+                                                class="p-2 text-gray-600 hover:text-navy hover:bg-gray-100 rounded-lg transition"
+                                                title="{% if user.is_active %}Deactivate{% else %}Activate{% endif %}">
+                                            {% if user.is_active %}
+                                            <i class="fas fa-user-slash"></i>
+                                            {% else %}
+                                            <i class="fas fa-user-check"></i>
+                                            {% endif %}
+                                        </button>
+                                    </form>
+                                    
+                                    <!-- Suspend -->
+                                    <form method="post" 
+                                          action="{% url 'account:user_suspend' user.id %}"
+                                          class="inline"
+                                          onsubmit="return confirm('Are you sure you want to suspend this user?');">
+                                        {% csrf_token %}
+                                        <button type="submit" 
+                                                class="p-2 text-gray-600 hover:text-lab-red hover:bg-red-50 rounded-lg transition"
+                                                title="Suspend User">
+                                            <i class="fas fa-ban"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+                                <i class="fas fa-users-slash text-4xl mb-4 text-gray-300"></i>
+                                <p class="text-lg">No users found</p>
+                                <p class="text-sm mt-2">Try adjusting your search or filters</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+            <div class="px-6 py-4 border-t border-gray-200">
+                <div class="flex items-center justify-between">
+                    <div class="text-sm text-gray-700">
+                        Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} users
+                    </div>
+                    <div class="flex space-x-2">
+                        {% if page_obj.has_previous %}
+                        <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if role_filter %}&role={{ role_filter }}{% endif %}" 
+                           class="px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
+                            <i class="fas fa-chevron-left mr-1"></i> Previous
+                        </a>
+                        {% endif %}
+
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                            <span class="px-3 py-2 bg-navy text-white rounded-lg">{{ num }}</span>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <a href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if role_filter %}&role={{ role_filter }}{% endif %}" 
+                               class="px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
+                                {{ num }}
+                            </a>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if role_filter %}&role={{ role_filter }}{% endif %}" 
+                           class="px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
+                            Next <i class="fas fa-chevron-right ml-1"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Role Statistics -->
+        <div class="mt-8">
+            <h3 class="text-lg font-semibold text-lab-black mb-4">Role Distribution</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {% for role_stat in stats.by_role %}
+                <div class="bg-white rounded-lg shadow-sm border p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            {% for role_id, role_name in available_roles %}
+                                {% if role_id == role_stat.role %}
+                                    <p class="font-medium text-gray-900">{{ role_name }}</p>
+                                {% endif %}
+                            {% endfor %}
+                            <p class="text-2xl font-bold text-navy mt-1">{{ role_stat.count }}</p>
+                        </div>
+                        <div class="text-gray-400">
+                            <i class="fas fa-user-tag text-2xl"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div class="h-full bg-navy rounded-full" 
+                                 style="width: {% widthratio role_stat.count stats.total 100 %}%"></div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">
+                            {% widthratio role_stat.count stats.total 100 %}% of total
+                        </p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    {% endblock content %}

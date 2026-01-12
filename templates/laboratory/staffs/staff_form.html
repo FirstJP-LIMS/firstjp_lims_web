@@ -1,0 +1,380 @@
+{% extends "laboratory/assets/base_user.html" %}
+
+{% block title %}User Management - {{ vendor.name }}{% endblock %}
+
+{% block content %}
+
+<body class="bg-gray-50 min-h-screen">
+    <div class="max-w-4xl mx-auto p-6">
+        <!-- Header -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-lab-black">Create New User</h1>
+                    <p class="text-gray-600">Add staff member to your laboratory</p>
+                </div>
+                <a href="{% url 'account:user_staff_list' %}" 
+                   class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition flex items-center">
+                    <i class="fas fa-arrow-left mr-2"></i>
+                    Back to Users
+                </a>
+            </div>
+        </div>
+
+        <!-- Messages -->
+        {% if messages %}
+        <div class="mb-6 space-y-3">
+            {% for message in messages %}
+            <div class="p-4 rounded-lg {% if message.tags == 'error' %}bg-red-50 border border-red-200 text-lab-red{% else %}bg-green-50 border border-green-200 text-green-800{% endif %}">
+                <div class="flex items-center">
+                    <i class="fas {% if message.tags == 'error' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %} mr-3"></i>
+                    <span>{{ message }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Main Form Card -->
+        <div class="bg-white rounded-xl shadow-sm border">
+            <form method="post" class="divide-y divide-gray-200">
+                {% csrf_token %}
+                
+                <!-- Personal Information Section -->
+                <div class="p-8">
+                    <div class="flex items-center mb-6">
+                        <div class="h-10 w-10 bg-navy text-white rounded-full flex items-center justify-center mr-3">
+                            <i class="fas fa-user-plus"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-lab-black">Personal Information</h3>
+                            <p class="text-sm text-gray-500">Basic details of the staff member</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- First Name -->
+                        <div>
+                            <label for="first_name" class="block text-sm font-medium text-gray-700 mb-2">
+                                First Name <span class="text-lab-red">*</span>
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fas fa-user text-gray-400"></i>
+                                </div>
+                                <input type="text" 
+                                       id="first_name" 
+                                       name="first_name" 
+                                       required
+                                       class="pl-10 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy focus:border-transparent"
+                                       placeholder="Enter first name">
+                            </div>
+                        </div>
+
+                        <!-- Last Name -->
+                        <div>
+                            <label for="last_name" class="block text-sm font-medium text-gray-700 mb-2">
+                                Last Name <span class="text-lab-red">*</span>
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fas fa-user text-gray-400"></i>
+                                </div>
+                                <input type="text" 
+                                       id="last_name" 
+                                       name="last_name" 
+                                       required
+                                       class="pl-10 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy focus:border-transparent"
+                                       placeholder="Enter last name">
+                            </div>
+                        </div>
+
+                        <!-- Email -->
+                        <div class="md:col-span-2">
+                            <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
+                                Email Address <span class="text-lab-red">*</span>
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fas fa-envelope text-gray-400"></i>
+                                </div>
+                                <input type="email" 
+                                       id="email" 
+                                       name="email" 
+                                       required
+                                       class="pl-10 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy focus:border-transparent"
+                                       placeholder="user@laboratory.com">
+                            </div>
+                            <p class="mt-2 text-sm text-gray-500">Must be unique within your laboratory</p>
+                        </div>
+
+                        <!-- Contact Number -->
+                        <div class="md:col-span-2">
+                            <label for="contact_number" class="block text-sm font-medium text-gray-700 mb-2">
+                                Contact Number
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fas fa-phone text-gray-400"></i>
+                                </div>
+                                <input type="tel" 
+                                       id="contact_number" 
+                                       name="contact_number"
+                                       class="pl-10 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy focus:border-transparent"
+                                       placeholder="+1 (555) 123-4567">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Security & Role Section -->
+                <div class="p-8">
+                    <div class="flex items-center mb-6">
+                        <div class="h-10 w-10 bg-lab-red text-white rounded-full flex items-center justify-center mr-3">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-lab-black">Security & Role</h3>
+                            <p class="text-sm text-gray-500">Define access permissions and security settings</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Role Selection -->
+                        <div>
+                            <label for="role" class="block text-sm font-medium text-gray-700 mb-2">
+                                Role <span class="text-lab-red">*</span>
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
+                                    <i class="fas fa-user-tag text-gray-400"></i>
+                                </div>
+                                <select id="role" 
+                                        name="role" 
+                                        required
+                                        class="pl-10 appearance-none w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy focus:border-transparent bg-white">
+                                    <option value="">Select a role</option>
+                                    {% for role_id, role_name in available_roles %}
+                                    <option value="{{ role_id }}">{{ role_name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                    <i class="fas fa-chevron-down text-gray-400"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Password -->
+                        <div>
+                            <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
+                                Initial Password <span class="text-lab-red">*</span>
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fas fa-lock text-gray-400"></i>
+                                </div>
+                                <input type="password" 
+                                       id="password" 
+                                       name="password" 
+                                       required
+                                       minlength="8"
+                                       class="pl-10 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy focus:border-transparent"
+                                       placeholder="Enter secure password">
+                            </div>
+                            <p class="mt-2 text-sm text-gray-500">Minimum 8 characters</p>
+                        </div>
+
+                        <!-- Status Toggle -->
+                        <div class="md:col-span-2">
+                            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
+                                <div>
+                                    <h4 class="font-medium text-gray-900">Account Status</h4>
+                                    <p class="text-sm text-gray-500">User can login immediately if active</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" 
+                                           name="is_active" 
+                                           id="is_active" 
+                                           class="sr-only peer" 
+                                           checked>
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-lab-red"></div>
+                                    <span class="ml-3 font-medium text-gray-700">Active</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Role Permissions Preview -->
+                <div class="p-8 bg-gray-50">
+                    <h3 class="text-lg font-semibold text-lab-black mb-4">Role Permissions Preview</h3>
+                    <div id="permissions-preview" class="space-y-4">
+                        <div class="text-gray-500 text-sm italic">
+                            Select a role to see permissions...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="p-8">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0">
+                        <div class="text-sm text-gray-500">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            All actions are logged in the audit trail
+                        </div>
+                        <div class="flex space-x-4">
+                            <a href="{% url 'account:user_staff_list' %}" 
+                               class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition flex items-center justify-center">
+                                <i class="fas fa-times mr-2"></i>
+                                Cancel
+                            </a>
+                            <button type="submit" 
+                                    class="px-6 py-3 bg-navy text-white rounded-lg hover:bg-navy-light transition flex items-center justify-center">
+                                <i class="fas fa-user-plus mr-2"></i>
+                                {{action}}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Role Hierarchy Info -->
+        <div class="mt-8 bg-white rounded-xl shadow-sm border p-6">
+            <h3 class="text-lg font-semibold text-lab-black mb-4">Role Hierarchy</h3>
+            <div class="space-y-4">
+                <div class="flex items-center justify-between text-sm">
+                    <div class="flex items-center">
+                        <div class="w-3 h-3 rounded-full bg-lab-red mr-3"></div>
+                        <span class="font-medium">Lab Director / Super Admin</span>
+                    </div>
+                    <span class="text-gray-500">Full laboratory access</span>
+                </div>
+                
+                <div class="ml-6 border-l border-gray-200 pl-6 space-y-4">
+                    <div class="flex items-center justify-between text-sm">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 rounded-full bg-blue-500 mr-3"></div>
+                            <span class="font-medium">Lab Manager / Supervisor</span>
+                        </div>
+                        <span class="text-gray-500">Can verify results & manage staff</span>
+                    </div>
+                    
+                    <div class="ml-6 border-l border-gray-200 pl-6 space-y-4">
+                        <div class="flex items-center justify-between text-sm">
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 rounded-full bg-purple-500 mr-3"></div>
+                                <span class="font-medium">Scientist / Pathologist</span>
+                            </div>
+                            <span class="text-gray-500">Can release & enter results</span>
+                        </div>
+                        
+                        <div class="ml-6 border-l border-gray-200 pl-6 space-y-4">
+                            <div class="flex items-center justify-between text-sm">
+                                <div class="flex items-center">
+                                    <div class="w-3 h-3 rounded-full bg-green-500 mr-3"></div>
+                                    <span class="font-medium">Technologist / Phlebotomist</span>
+                                </div>
+                                <span class="text-gray-500">Can collect & accession samples</span>
+                            </div>
+                            
+                            <div class="flex items-center justify-between text-sm">
+                                <div class="flex items-center">
+                                    <div class="w-3 h-3 rounded-full bg-yellow-500 mr-3"></div>
+                                    <span class="font-medium">Logistics Officer</span>
+                                </div>
+                                <span class="text-gray-500">Sample collection & patient registration</span>
+                            </div>
+                            
+                            <div class="flex items-center justify-between text-sm">
+                                <div class="flex items-center">
+                                    <div class="w-3 h-3 rounded-full bg-gray-500 mr-3"></div>
+                                    <span class="font-medium">Receptionist / Front Desk</span>
+                                </div>
+                                <span class="text-gray-500">Patient registration & billing</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript for Role Permissions Preview -->
+    <script>
+        // Role permissions mapping based on your User model
+        const rolePermissions = {
+            'vendor_admin': [
+                {icon: 'fa-crown', text: 'Full laboratory access', color: 'bg-red-100 text-lab-red'},
+                {icon: 'fa-users-cog', text: 'Manage all staff accounts', color: 'bg-red-100 text-lab-red'},
+                {icon: 'fa-flask', text: 'Enter, verify & release results', color: 'bg-red-100 text-lab-red'},
+                {icon: 'fa-boxes', text: 'Manage inventory', color: 'bg-red-100 text-lab-red'},
+                {icon: 'fa-chart-line', text: 'View all reports & analytics', color: 'bg-red-100 text-lab-red'}
+            ],
+            'lab_manager': [
+                {icon: 'fa-user-tie', text: 'Manage staff accounts', color: 'bg-blue-100 text-blue-800'},
+                {icon: 'fa-check-circle', text: 'Verify results before release', color: 'bg-blue-100 text-blue-800'},
+                {icon: 'fa-boxes', text: 'Manage inventory & supplies', color: 'bg-blue-100 text-blue-800'},
+                {icon: 'fa-clipboard-check', text: 'Quality control oversight', color: 'bg-blue-100 text-blue-800'}
+            ],
+            'scientist': [
+                {icon: 'fa-microscope', text: 'Enter test results', color: 'bg-purple-100 text-purple-800'},
+                {icon: 'fa-check-double', text: 'Release final results', color: 'bg-purple-100 text-purple-800'},
+                {icon: 'fa-file-medical', text: 'Review & interpret results', color: 'bg-purple-100 text-purple-800'},
+                {icon: 'fa-vial', text: 'Perform complex testing', color: 'bg-purple-100 text-purple-800'}
+            ],
+            'technologist': [
+                {icon: 'fa-flask', text: 'Enter routine results', color: 'bg-green-100 text-green-800'},
+                {icon: 'fa-syringe', text: 'Collect samples', color: 'bg-green-100 text-green-800'},
+                {icon: 'fa-vial', text: 'Accession samples', color: 'bg-green-100 text-green-800'},
+                {icon: 'fa-clipboard-check', text: 'Track sample quality', color: 'bg-green-100 text-green-800'}
+            ],
+            'logistics': [
+                {icon: 'fa-truck', text: 'Collect & transport samples', color: 'bg-yellow-100 text-yellow-800'},
+                {icon: 'fa-user-plus', text: 'Register patients', color: 'bg-yellow-100 text-yellow-800'},
+                {icon: 'fa-map-marker-alt', text: 'Field sample collection', color: 'bg-yellow-100 text-yellow-800'},
+                {icon: 'fa-clipboard-list', text: 'Document collection details', color: 'bg-yellow-100 text-yellow-800'}
+            ],
+            'receptionist': [
+                {icon: 'fa-user-plus', text: 'Register patients', color: 'bg-gray-100 text-gray-800'},
+                {icon: 'fa-receipt', text: 'Manage billing & payments', color: 'bg-gray-100 text-gray-800'},
+                {icon: 'fa-file-download', text: 'Download & share results', color: 'bg-gray-100 text-gray-800'},
+                {icon: 'fa-calendar-alt', text: 'Schedule appointments', color: 'bg-gray-100 text-gray-800'}
+            ],
+            'clinician': [
+                {icon: 'fa-stethoscope', text: 'Request laboratory tests', color: 'bg-indigo-100 text-indigo-800'},
+                {icon: 'fa-file-download', text: 'Download patient results', color: 'bg-indigo-100 text-indigo-800'},
+                {icon: 'fa-comment-medical', text: 'Provide clinical input', color: 'bg-indigo-100 text-indigo-800'}
+            ]
+        };
+
+        const roleSelect = document.getElementById('role');
+        const permissionsPreview = document.getElementById('permissions-preview');
+
+        roleSelect.addEventListener('change', function() {
+            const selectedRole = this.value;
+            
+            if (selectedRole && rolePermissions[selectedRole]) {
+                permissionsPreview.innerHTML = rolePermissions[selectedRole]
+                    .map(permission => `
+                        <div class="flex items-center p-3 ${permission.color} rounded-lg">
+                            <i class="fas ${permission.icon} mr-3"></i>
+                            <span>${permission.text}</span>
+                        </div>
+                    `).join('');
+            } else {
+                permissionsPreview.innerHTML = `
+                    <div class="text-gray-500 text-sm italic">
+                        Select a role to see permissions...
+                    </div>
+                `;
+            }
+        });
+
+        // Trigger change on page load if a role is pre-selected
+        if (roleSelect.value) {
+            roleSelect.dispatchEvent(new Event('change'));
+        }
+    </script>
+
+{% endblock content %}

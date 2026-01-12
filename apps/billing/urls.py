@@ -1,5 +1,6 @@
 from django.urls import path
-from . import views
+# from . import views
+from .views import billing_task, payment_gateway, invoice_receipt, pricelist, insurance_provider, corporate_client
 
 app_name = 'billing'
 
@@ -12,116 +13,103 @@ settings, how it works...
 
 urlpatterns = [
     # Dashboard
-    path('dashboard/', views.BillingDashboardView.as_view(), name='dashboard'),
+    path('dashboard/', billing_task.BillingDashboardView.as_view(), name='dashboard'),
     
     # Price Lists
-    path('pricelists/', views.pricelist_list_view, name='pricelist_list'),
-    path('pricelists/create/', views.pricelist_create_view, name='pricelist_create'),
-    path('pricelists/<int:pk>/', views.pricelist_detail_view, name='pricelist_detail'),
-    path('pricelists/<int:pk>/edit/', views.pricelist_update_view, name='pricelist_update'),
-    path('pricelists/<int:pk>/delete/', views.pricelist_delete_view, name='pricelist_delete'),
-    path('pricelists/<int:pk>/toggle-active/', views.pricelist_toggle_active_view, name='pricelist_toggle_active'), # To be used in details to set active and inactive...
+    path('pricelists/', pricelist.pricelist_list_view, name='pricelist_list'),
+    path('pricelists/create/', pricelist.pricelist_create_view, name='pricelist_create'),
+    path('pricelists/<int:pk>/', pricelist.pricelist_detail_view, name='pricelist_detail'),
+    path('pricelists/<int:pk>/edit/', pricelist.pricelist_update_view, name='pricelist_update'),
+    path('pricelists/<int:pk>/delete/', pricelist.pricelist_delete_view, name='pricelist_delete'),
+    path('pricelists/<int:pk>/toggle-active/', pricelist.pricelist_toggle_active_view, name='pricelist_toggle_active'), # To be used in details to set active and inactive...
         
     # Insurance Providers
-    path('insurance/', views.insurance_list_view, name='insurance_list'),
-    path('insurance/create/', views.insurance_create_view, name='insurance_create'),
-    path('insurance/<int:pk>/', views.insurance_detail_view, name='insurance_detail'),
-    path('insurance/<int:pk>/edit/', views.insurance_update_view, name='insurance_update'),
-    path('insurance/<int:pk>/delete/', views.insurance_delete_view, name='insurance_delete'),
-    path('insurance/<int:pk>/toggle-active/', views.insurance_toggle_active_view, name='insurance_toggle_active'),
-    path('insurance/<int:pk>/financial-report/', views.insurance_financial_report_view, name='insurance_financial_report'),
+    path('insurance/', insurance_provider.insurance_list_view, name='insurance_list'),
+    path('insurance/create/', insurance_provider.insurance_create_view, name='insurance_create'),
+    path('insurance/<int:pk>/', insurance_provider.insurance_detail_view, name='insurance_detail'),
+    path('insurance/<int:pk>/edit/', insurance_provider.insurance_update_view, name='insurance_update'),
+    path('insurance/<int:pk>/delete/', insurance_provider.insurance_delete_view, name='insurance_delete'),
+    path('insurance/<int:pk>/toggle-active/', insurance_provider.insurance_toggle_active_view, name='insurance_toggle_active'),
+    path('insurance/<int:pk>/financial-report/', insurance_provider.insurance_financial_report_view, name='insurance_financial_report'),
     
     # Bulk actions
-    path('insurance/bulk-deactivate/', views.insurance_bulk_deactivate_view, name='insurance_bulk_deactivate'),
+    path('insurance/bulk-deactivate/', insurance_provider.insurance_bulk_deactivate_view, name='insurance_bulk_deactivate'),
 
 
 
     # Corporate Clients
-    path('corporate/', views.corporate_list_view, name='corporate_list'),
-    path('corporate/create/', views.corporate_create_view, name='corporate_create'),
-    path('corporate/<int:pk>/', views.corporate_detail_view, name='corporate_detail'),
-    path('corporate/<int:pk>/edit/', views.corporate_update_view, name='corporate_update'),
-    path('corporate/<int:pk>/delete/', views.corporate_delete_view, name='corporate_delete'),
-    path('corporate/<int:pk>/toggle-active/', views.corporate_toggle_active_view, name='corporate_toggle_active'),
-    path('corporate/<int:pk>/employee-report/', views.corporate_employee_report_view, name='corporate_employee_report'),
-    path('corporate/<int:pk>/financial-report/', views.corporate_financial_report_view, name='corporate_financial_report'),
+    path('corporate/', corporate_client.corporate_list_view, name='corporate_list'),
+    path('corporate/create/', corporate_client.corporate_create_view, name='corporate_create'),
+    path('corporate/<int:pk>/', corporate_client.corporate_detail_view, name='corporate_detail'),
+    path('corporate/<int:pk>/edit/', corporate_client.corporate_update_view, name='corporate_update'),
+    path('corporate/<int:pk>/delete/', corporate_client.corporate_delete_view, name='corporate_delete'),
+    path('corporate/<int:pk>/toggle-active/', corporate_client.corporate_toggle_active_view, name='corporate_toggle_active'),
+    path('corporate/<int:pk>/employee-report/', corporate_client.corporate_employee_report_view, name='corporate_employee_report'),
+    path('corporate/<int:pk>/financial-report/', corporate_client.corporate_financial_report_view, name='corporate_financial_report'),
         
     # Billing Information
-    path('billings/', views.billing_list_view, name='billing_list'),
-    path('billings/create/', views.billing_create_view, name='billing_create'),
-    path('billings/<int:pk>/', views.billing_detail_view, name='billing_detail'),
-    path('billings/<int:pk>/edit/', views.billing_update_view, name='billing_update'),
-    path('billings/<int:pk>/recalculate/', views.billing_recalculate_view, name='billing_recalculate'),
-    path('billings/<int:pk>/print/', views.billing_print_view, name='billing_print'),
-    path('billings/summary/', views.billing_summary_view, name='billing_summary'),
-    path('billings/bulk-action/', views.billing_bulk_action_view, name='billing_bulk_action'),
+    path('billings/', billing_task.billing_list_view, name='billing_list'),
+    path('billings/create/', billing_task.billing_create_view, name='billing_create'),
+    path('billings/<int:pk>/', billing_task.billing_detail_view, name='billing_detail'),
+    path('billings/<int:pk>/edit/', billing_task.billing_update_view, name='billing_update'),
+    path('billings/<int:pk>/recalculate/', billing_task.billing_recalculate_view, name='billing_recalculate'),
+    path('billings/<int:pk>/print/', billing_task.billing_print_view, name='billing_print'),
+    path('billings/summary/', billing_task.billing_summary_view, name='billing_summary'),
+    path('billings/bulk-action/', billing_task.billing_bulk_action_view, name='billing_bulk_action'),
 
  
     # Payments
-    path('billings/<int:billing_pk>/payment/', views.PaymentCreateView.as_view(), name='payment_create'),
-    path('payments/<int:payment_pk>/receipt/', views.GenerateReceiptPDFView.as_view(), name='generate_receipt'),
+    path('billings/<int:billing_pk>/payment/', billing_task.PaymentCreateView.as_view(), name='payment_create'),
     
     # # Invoices
-    # path('invoices/', views.InvoiceListView.as_view(), name='invoice_list'),
-    # path('invoices/create/', views.InvoiceCreateView.as_view(), name='invoice_create'),
-    # path('invoices/<int:pk>/', views.InvoiceDetailView.as_view(), name='invoice_detail'),
-
-    # path('invoices/<int:invoice_pk>/payment/', views.InvoicePaymentCreateView.as_view(), name='invoice_payment_create'),
-
-    path('invoices/', views.invoice_list, name='invoice_list'),
-    path('invoices/create/', views.invoice_create, name='invoice_create'),
-    path('invoices/<int:pk>/', views.invoice_detail, name='invoice_detail'),
+    path('invoices/', invoice_receipt.invoice_list, name='invoice_list'),
+    path('invoices/create/', invoice_receipt.invoice_create, name='invoice_create'),
+    path('invoices/<int:pk>/', invoice_receipt.invoice_detail, name='invoice_detail'),
     path('invoices/<int:invoice_pk>/payments/create/', 
-         views.invoice_payment_create, 
+         invoice_receipt.invoice_payment_create, 
          name='invoice_payment_create'),
 
-
-        # Invoice URLs
-    # path('invoices/', views.invoice_list, name='invoice_list'),
-    # path('invoices/create/', views.invoice_create, name='invoice_create'),
-    # path('invoices/<int:pk>/', views.invoice_detail, name='invoice_detail'),
-    
     # Invoice Payment
     path('invoices/<int:invoice_pk>/payments/create/', 
-         views.invoice_payment_create, 
+         invoice_receipt.invoice_payment_create, 
          name='invoice_payment_create'),
     
     # PDF Generation - Download
     path('invoices/<int:invoice_pk>/pdf/', 
-         views.generate_invoice_pdf_view, 
+         invoice_receipt.generate_invoice_pdf_view, 
          name='invoice_pdf_download'),
     
     path('invoices/<int:invoice_pk>/pdf/preview/', 
-         views.preview_invoice_pdf_view, 
+         invoice_receipt.preview_invoice_pdf_view, 
          name='invoice_pdf_preview'),
     
     path('payments/<int:payment_pk>/receipt/pdf/', 
-         views.generate_receipt_pdf_view, 
+         invoice_receipt.generate_receipt_pdf_view, 
          name='receipt_pdf_download'),
     
     path('payments/<int:payment_pk>/receipt/pdf/preview/', 
-         views.preview_receipt_pdf_view, 
+         invoice_receipt.preview_receipt_pdf_view, 
          name='receipt_pdf_preview'),
     
     # Email Invoice & Receipt
     path('invoices/<int:invoice_pk>/email/', 
-         views.email_invoice_view, 
+         invoice_receipt.email_invoice_view, 
          name='email_invoice'),
     
     path('payments/<int:payment_pk>/receipt/email/', 
-         views.email_receipt_view, 
+         invoice_receipt.email_receipt_view, 
          name='email_receipt'),
     
     # Print View
     path('invoices/<int:invoice_pk>/print/', 
-         views.print_invoice_view, 
+         invoice_receipt.print_invoice_view, 
          name='invoice_print'),
 
 
 
-    # path('invoices/<int:invoice_pk>/pdf/', views.GenerateInvoicePDFView.as_view(), name='generate_invoice_pdf'),
+    # path('invoices/<int:invoice_pk>/pdf/', billing_task.GenerateInvoicePDFView.as_view(), name='generate_invoice_pdf'),
     # Reports
-    path('reports/', views.BillingReportView.as_view(), name='reports'),
+    path('reports/', billing_task.BillingReportView.as_view(), name='reports'),
 ]
 
  

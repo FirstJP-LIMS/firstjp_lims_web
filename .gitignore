@@ -60,6 +60,8 @@ __pycache__/
 /templates_/form_.html
 /templates_/keep.html
 
+/templates/laboratory/examination/sample_detail1.html
+
 /apps/labs/m.py
 
 /node_modules/
@@ -91,3 +93,9 @@ ERROR-LOGS.md
 test_cache.py
 
 media/
+
+gr.html
+sd.html
+sdd.html
+
+/templates/dump/

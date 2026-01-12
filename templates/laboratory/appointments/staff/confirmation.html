@@ -1,0 +1,922 @@
+{% extends 'laboratory/assets/base_apt.html' %}
+{% load static %}
+{% block content %}
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Custom styles */
+        .confirmation-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 20px 60px rgba(0, 31, 63, 0.1);
+        }
+        
+        .success-icon {
+            animation: scaleIn 0.5s ease-out;
+        }
+        
+        @keyframes scaleIn {
+            from {
+                transform: scale(0);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        
+        .info-card {
+            border-left: 4px solid;
+            transition: all 0.3s ease;
+        }
+        
+        .info-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+        }
+        
+        .info-card-slot {
+            border-left-color: #3b82f6;
+        }
+        
+        .info-card-patient {
+            border-left-color: #10b981;
+        }
+        
+        .info-card-contact {
+            border-left-color: #8b5cf6;
+        }
+        
+        .info-card-notes {
+            border-left-color: #f59e0b;
+        }
+        
+        .appointment-id {
+            font-family: 'Courier New', monospace;
+            letter-spacing: 1px;
+        }
+        
+        .status-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+        }
+        
+        .status-pending {
+            background-color: rgba(245, 158, 11, 0.1);
+            color: #b45309;
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+        
+        .status-confirmed {
+            background-color: rgba(34, 197, 94, 0.1);
+            color: #15803d;
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+        
+        .status-cancelled {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: #b91c1c;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+        
+        .status-completed {
+            background-color: rgba(59, 130, 246, 0.1);
+            color: #1d4ed8;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+        
+        .badge-sample-collection {
+            background-color: rgba(37, 99, 235, 0.1);
+            color: rgb(29, 78, 216);
+            border: 1px solid rgba(37, 99, 235, 0.2);
+        }
+        
+        .badge-consultation {
+            background-color: rgba(168, 85, 247, 0.1);
+            color: rgb(126, 34, 206);
+            border: 1px solid rgba(168, 85, 247, 0.2);
+        }
+        
+        .badge-result-discussion {
+            background-color: rgba(14, 165, 233, 0.1);
+            color: rgb(2, 132, 199);
+            border: 1px solid rgba(14, 165, 233, 0.2);
+        }
+        
+        .badge-general {
+            background-color: rgba(6, 182, 212, 0.1);
+            color: rgb(14, 116, 144);
+            border: 1px solid rgba(6, 182, 212, 0.2);
+        }
+        
+        .qr-code {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            border: 1px solid #e5e7eb;
+            display: inline-block;
+        }
+        
+        .action-btn {
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .action-btn:after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 5px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.5);
+            opacity: 0;
+            border-radius: 100%;
+            transform: scale(1, 1) translate(-50%);
+            transform-origin: 50% 50%;
+        }
+        
+        .action-btn:focus:not(:active)::after {
+            animation: ripple 1s ease-out;
+        }
+        
+        @keyframes ripple {
+            0% {
+                transform: scale(0, 0);
+                opacity: 0.5;
+            }
+            100% {
+                transform: scale(20, 20);
+                opacity: 0;
+            }
+        }
+        
+        .calendar-icon {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .print-area {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            .print-area {
+                box-shadow: none !important;
+                border: 1px solid #e5e7eb !important;
+            }
+            .confirmation-card {
+                box-shadow: none !important;
+                border: 1px solid #e5e7eb !important;
+            }
+        }
+        
+        .countdown-timer {
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+        }
+        
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.7;
+            }
+            100% {
+                opacity: 1;
+            }
+        }
+    </style>
+<body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-navy text-white shadow-lg">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <a href="/" class="flex items-center space-x-2">
+                        <i class="fas fa-flask text-xl text-lab-red-light"></i>
+                        <span class="text-xl font-bold">{{ appointment.vendor.name }}</span>
+                    </a>
+                    <span class="text-gray-300 hidden md:inline">|</span>
+                    <span class="text-sm text-gray-300 hidden md:inline">Appointment Confirmation</span>
+                </div>
+                
+                <div class="flex items-center space-x-4 no-print">
+                    <a href="{% url 'appointment_booking' %}" 
+                       class="px-4 py-2 bg-lab-red-light hover:bg-lab-red text-white rounded-lg transition-colors text-sm font-medium">
+                        <i class="fas fa-calendar-plus mr-2"></i> Book Another
+                    </a>
+                    <a href="/" class="text-sm hover:text-lab-red-light transition-colors">
+                        <i class="fas fa-home mr-1"></i> Home
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <div class="max-w-4xl mx-auto">
+            <!-- Success Header -->
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-24 h-24 bg-green-100 rounded-full mb-6 success-icon">
+                    <i class="fas fa-check-circle text-green-500 text-4xl"></i>
+                </div>
+                <h1 class="text-3xl font-bold text-lab-black mb-2">Appointment Confirmed!</h1>
+                <p class="text-gray-600">Your appointment has been successfully booked</p>
+                <div class="mt-4 inline-flex items-center px-4 py-2 bg-green-50 text-green-700 rounded-lg">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    Confirmation sent to {{ appointment.get_contact_email|default:appointment.get_contact_phone|default:"your contact" }}
+                </div>
+            </div>
+
+            <!-- Confirmation Card -->
+            <div class="confirmation-card rounded-2xl p-8 mb-8 print-area">
+                <!-- Appointment ID & Status -->
+                <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 pb-6 border-b border-gray-200">
+                    <div>
+                        <h2 class="text-lg font-medium text-gray-700 mb-1">Appointment ID</h2>
+                        <div class="appointment-id text-2xl font-bold text-navy">{{ appointment.appointment_id }}</div>
+                    </div>
+                    
+                    <div class="mt-4 md:mt-0">
+                        <span class="status-badge status-{{ appointment.status }}">
+                            {% if appointment.status == 'pending' %}
+                            <i class="fas fa-clock mr-2"></i> Pending Confirmation
+                            {% elif appointment.status == 'confirmed' %}
+                            <i class="fas fa-check-circle mr-2"></i> Confirmed
+                            {% elif appointment.status == 'cancelled' %}
+                            <i class="fas fa-times-circle mr-2"></i> Cancelled
+                            {% elif appointment.status == 'completed' %}
+                            <i class="fas fa-check-double mr-2"></i> Completed
+                            {% elif appointment.status == 'no_show' %}
+                            <i class="fas fa-user-slash mr-2"></i> No Show
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+                
+                <!-- Appointment Details Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <!-- Slot Information -->
+                    <div class="info-card info-card-slot bg-white p-6 rounded-xl">
+                        <div class="flex items-start mb-4">
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
+                                <i class="fas fa-calendar-day text-blue-500 text-xl"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="text-lg font-bold text-lab-black mb-1">Date & Time</h3>
+                                <div class="text-2xl font-bold text-lab-black mb-1">
+                                    {{ appointment.slot.date|date:"F d, Y" }}
+                                </div>
+                                <div class="text-xl text-gray-700 mb-2">
+                                    {{ appointment.slot.start_time|time:"g:i A" }} - {{ appointment.slot.end_time|time:"g:i A" }}
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <span class="px-3 py-1 rounded-full text-sm font-medium badge-{{ appointment.slot.slot_type }}">
+                                        {{ appointment.slot.get_slot_type_display }}
+                                    </span>
+                                    <span class="text-sm text-gray-600">
+                                        <i class="fas fa-user-clock mr-1"></i>{{ appointment.slot.duration }} mins
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Add to Calendar -->
+                        <div class="mt-4 pt-4 border-t border-gray-100">
+                            <button onclick="addToCalendar()" 
+                                    class="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg transition-colors font-medium flex items-center justify-center action-btn">
+                                <i class="fas fa-calendar-plus mr-3"></i> Add to Calendar
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Patient Information -->
+                    <div class="info-card info-card-patient bg-white p-6 rounded-xl">
+                        <div class="flex items-start mb-4">
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4">
+                                <i class="fas fa-user-md text-green-500 text-xl"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="text-lg font-bold text-lab-black mb-1">Patient Information</h3>
+                                <div class="text-xl font-semibold text-lab-black mb-2">
+                                    {{ appointment.get_patient_name }}
+                                </div>
+                                <div class="space-y-1 text-gray-700">
+                                    {% if appointment.patient %}
+                                    <div class="flex items-center">
+                                        <i class="fas fa-id-card mr-2 text-sm text-gray-500 w-4"></i>
+                                        <span>Patient ID: {{ appointment.patient.patient_id }}</span>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    {% if appointment.visitor_date_of_birth %}
+                                    <div class="flex items-center">
+                                        <i class="fas fa-birthday-cake mr-2 text-sm text-gray-500 w-4"></i>
+                                        <span>DOB: {{ appointment.visitor_date_of_birth|date:"M d, Y" }}</span>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    {% if appointment.visitor_gender %}
+                                    <div class="flex items-center">
+                                        <i class="fas fa-venus-mars mr-2 text-sm text-gray-500 w-4"></i>
+                                        <span>Gender: {{ appointment.get_visitor_gender_display }}</span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Appointment Type -->
+                        <div class="mt-4">
+                            <span class="text-sm font-medium text-gray-700">Appointment Type:</span>
+                            <div class="mt-1 px-3 py-2 bg-navy-light bg-opacity-10 text-navy rounded-lg inline-flex items-center">
+                                <i class="fas 
+                                    {% if appointment.appointment_type == 'sample_collection' %}fa-vial
+                                    {% elif appointment.appointment_type == 'consultation' %}fa-stethoscope
+                                    {% elif appointment.appointment_type == 'result_discussion' %}fa-chart-line
+                                    {% else %}fa-user-md{% endif %}
+                                    mr-2"></i>
+                                {{ appointment.get_appointment_type_display }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Contact Information -->
+                    <div class="info-card info-card-contact bg-white p-6 rounded-xl">
+                        <div class="flex items-start mb-4">
+                            <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mr-4">
+                                <i class="fas fa-address-book text-purple-500 text-xl"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="text-lg font-bold text-lab-black mb-3">Contact Information</h3>
+                                <div class="space-y-3">
+                                    {% if appointment.get_contact_email %}
+                                    <div class="flex items-center">
+                                        <div class="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center mr-3">
+                                            <i class="fas fa-envelope text-blue-500"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-sm text-gray-600">Email</div>
+                                            <div class="font-medium text-lab-black">{{ appointment.get_contact_email }}</div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    {% if appointment.get_contact_phone %}
+                                    <div class="flex items-center">
+                                        <div class="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center mr-3">
+                                            <i class="fas fa-phone-alt text-green-500"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-sm text-gray-600">Phone</div>
+                                            <div class="font-medium text-lab-black">{{ appointment.get_contact_phone }}</div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Share Appointment -->
+                        <div class="mt-4 pt-4 border-t border-gray-100">
+                            <button onclick="shareAppointment()" 
+                                    class="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg transition-colors font-medium flex items-center justify-center action-btn">
+                                <i class="fas fa-share-alt mr-3"></i> Share Appointment
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Notes & Requirements -->
+                    <div class="info-card info-card-notes bg-white p-6 rounded-xl">
+                        <div class="flex items-start mb-4">
+                            <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center mr-4">
+                                <i class="fas fa-clipboard-list text-yellow-500 text-xl"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="text-lg font-bold text-lab-black mb-3">Notes & Requirements</h3>
+                                
+                                {% if appointment.reason_for_visit %}
+                                <div class="mb-4">
+                                    <div class="text-sm font-medium text-gray-700 mb-1">Reason for Visit</div>
+                                    <div class="p-3 bg-gray-50 rounded-lg text-gray-700">
+                                        {{ appointment.reason_for_visit }}
+                                    </div>
+                                </div>
+                                {% endif %}
+                                
+                                {% if appointment.special_requirements %}
+                                <div>
+                                    <div class="text-sm font-medium text-gray-700 mb-1">Special Requirements</div>
+                                    <div class="p-3 bg-yellow-50 border border-yellow-100 rounded-lg text-yellow-700">
+                                        <i class="fas fa-exclamation-circle mr-2"></i>
+                                        {{ appointment.special_requirements }}
+                                    </div>
+                                </div>
+                                {% endif %}
+                                
+                                {% if not appointment.reason_for_visit and not appointment.special_requirements %}
+                                <div class="text-gray-500 italic">No additional notes or requirements provided.</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Print Button -->
+                        <div class="mt-4 pt-4 border-t border-gray-100">
+                            <button onclick="window.print()" 
+                                    class="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg transition-colors font-medium flex items-center justify-center action-btn no-print">
+                                <i class="fas fa-print mr-3"></i> Print Confirmation
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- QR Code & Important Information -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    <!-- QR Code -->
+                    <div class="lg:col-span-1">
+                        <div class="bg-white p-6 rounded-xl border border-gray-200 text-center">
+                            <h3 class="text-lg font-bold text-lab-black mb-3">Quick Check-in Code</h3>
+                            <div class="qr-code mx-auto">
+                                <!-- Placeholder for QR Code -->
+                                <div class="w-32 h-32 bg-gray-200 rounded flex items-center justify-center mb-3 mx-auto">
+                                    <i class="fas fa-qrcode text-gray-400 text-4xl"></i>
+                                </div>
+                                <div class="text-xs text-gray-500">Scan at reception for quick check-in</div>
+                            </div>
+                            <div class="mt-4 text-sm text-gray-600">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Show this code or your appointment ID at arrival
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Important Information -->
+                    <div class="lg:col-span-2">
+                        <div class="bg-white p-6 rounded-xl border border-gray-200">
+                            <h3 class="text-lg font-bold text-lab-black mb-3">Important Information</h3>
+                            <div class="space-y-4">
+                                <div class="flex items-start">
+                                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                                        <i class="fas fa-map-marker-alt text-blue-500 text-sm"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-medium text-gray-900 mb-1">Location</h4>
+                                        <p class="text-gray-600">{{ appointment.vendor.address }}, {{ appointment.vendor.city }}, {{ appointment.vendor.state }} {{ appointment.vendor.zip_code }}</p>
+                                        {% if appointment.vendor.location_notes %}
+                                        <p class="text-sm text-gray-500 mt-1">{{ appointment.vendor.location_notes }}</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-start">
+                                    <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                                        <i class="fas fa-clock text-green-500 text-sm"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-medium text-gray-900 mb-1">Arrival Time</h4>
+                                        <p class="text-gray-600">Please arrive <span class="font-semibold">15 minutes early</span> to complete any necessary paperwork.</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-start">
+                                    <div class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                                        <i class="fas fa-exclamation-triangle text-red-500 text-sm"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-medium text-gray-900 mb-1">What to Bring</h4>
+                                        <ul class="list-disc list-inside text-gray-600 space-y-1">
+                                            <li>Photo ID (Driver's License, Passport)</li>
+                                            <li>Insurance card (if applicable)</li>
+                                            <li>List of current medications</li>
+                                            <li>Any referral forms</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                
+                                {% if appointment.test_request %}
+                                <div class="flex items-start">
+                                    <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                                        <i class="fas fa-vial text-purple-500 text-sm"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-medium text-gray-900 mb-1">Test Preparation</h4>
+                                        <p class="text-gray-600">For sample collection appointments, please follow any fasting or preparation instructions provided by your doctor.</p>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-200 no-print">
+                    {% if can_cancel %}
+                    <!-- Cancel Appointment -->
+                    <button onclick="confirmCancel()" 
+                            class="px-6 py-3 border-2 border-red-200 text-lab-red hover:bg-red-50 rounded-lg transition-colors font-medium flex items-center justify-center action-btn flex-1">
+                        <i class="fas fa-times-circle mr-3"></i> Cancel Appointment
+                    </button>
+                    {% endif %}
+                    
+                    <!-- Reschedule Appointment -->
+                    <a href="{% url 'appointment_booking' %}" 
+                       class="px-6 py-3 border-2 border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors font-medium flex items-center justify-center action-btn flex-1">
+                        <i class="fas fa-calendar-alt mr-3"></i> Reschedule Appointment
+                    </a>
+                    
+                    <!-- Contact Support -->
+                    <button onclick="contactSupport()" 
+                            class="px-6 py-3 border-2 border-navy-light text-navy hover:bg-navy-light hover:bg-opacity-10 rounded-lg transition-colors font-medium flex items-center justify-center action-btn flex-1">
+                        <i class="fas fa-headset mr-3"></i> Contact Support
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Countdown Timer (for upcoming appointments) -->
+            {% if appointment.status == 'confirmed' and not appointment.slot.is_past %}
+            <div class="bg-gradient-to-r from-navy to-navy-dark text-white rounded-2xl p-6 mb-8">
+                <div class="flex flex-col md:flex-row md:items-center justify-between">
+                    <div class="mb-4 md:mb-0">
+                        <h3 class="text-xl font-bold mb-2">Your appointment is coming up!</h3>
+                        <p class="text-navy-light opacity-90">You'll receive a reminder 24 hours before your appointment</p>
+                    </div>
+                    
+                    <div class="text-center">
+                        <div class="text-sm text-navy-light mb-2">Appointment in</div>
+                        <div id="countdownTimer" class="countdown-timer text-3xl pulse-animation">
+                            <!-- Filled by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Next Steps -->
+            <div class="bg-white rounded-2xl shadow-md p-6 mb-8">
+                <h3 class="text-xl font-bold text-lab-black mb-4">Next Steps</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-bell text-blue-500 text-2xl"></i>
+                        </div>
+                        <h4 class="font-bold text-lab-black mb-2">Wait for Confirmation</h4>
+                        <p class="text-gray-600 text-sm">Our staff will confirm your appointment within 24 hours</p>
+                    </div>
+                    
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-calendar-check text-green-500 text-2xl"></i>
+                        </div>
+                        <h4 class="font-bold text-lab-black mb-2">Prepare for Visit</h4>
+                        <p class="text-gray-600 text-sm">Gather required documents and arrive 15 minutes early</p>
+                    </div>
+                    
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-file-medical-alt text-purple-500 text-2xl"></i>
+                        </div>
+                        <h4 class="font-bold text-lab-black mb-2">After Your Visit</h4>
+                        <p class="text-gray-600 text-sm">Results and follow-up instructions will be provided</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Cancel Appointment Modal -->
+            <div id="cancelModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50 overflow-y-auto h-full w-full flex items-center justify-center">
+                <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
+                    <div class="p-6">
+                        <div class="flex items-center mb-4">
+                            <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mr-4">
+                                <i class="fas fa-exclamation-triangle text-red-500 text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-lab-black">Cancel Appointment</h3>
+                                <p class="text-gray-600 text-sm">This action cannot be undone</p>
+                            </div>
+                        </div>
+                        
+                        <p class="text-gray-700 mb-4">
+                            Are you sure you want to cancel your appointment on 
+                            <span class="font-semibold">{{ appointment.slot.date|date:"F d, Y" }}</span> at 
+                            <span class="font-semibold">{{ appointment.slot.start_time|time:"g:i A" }}</span>?
+                        </p>
+                        
+                        <div class="mb-4">
+                            <label for="cancelReason" class="block text-sm font-medium text-gray-700 mb-2">
+                                Reason for cancellation (optional):
+                            </label>
+                            <textarea id="cancelReason" 
+                                      rows="3" 
+                                      class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy focus:border-navy transition-colors"
+                                      placeholder="Please let us know why you're cancelling..."></textarea>
+                        </div>
+                        
+                        <div class="p-3 bg-yellow-50 border border-yellow-100 rounded-lg mb-4">
+                            <p class="text-sm text-yellow-700">
+                                <i class="fas fa-info-circle mr-2"></i>
+                                Cancellations within 24 hours of the appointment may be subject to a fee.
+                            </p>
+                        </div>
+                        
+                        <div class="flex justify-end space-x-3">
+                            <button type="button" 
+                                    onclick="closeCancelModal()" 
+                                    class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                                Keep Appointment
+                            </button>
+                            <button type="button" 
+                                    onclick="submitCancellation()" 
+                                    class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors">
+                                <i class="fas fa-times-circle mr-2"></i> Cancel Appointment
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-navy-dark text-white py-8">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div>
+                    <div class="flex items-center space-x-2 mb-4">
+                        <i class="fas fa-flask text-lab-red-light"></i>
+                        <span class="text-lg font-bold">{{ appointment.vendor.name }}</span>
+                    </div>
+                    <p class="text-gray-400 text-sm">{{ appointment.vendor.address }}</p>
+                    <p class="text-gray-400 text-sm mt-1">{{ appointment.vendor.city }}, {{ appointment.vendor.state }} {{ appointment.vendor.zip_code }}</p>
+                </div>
+                
+                <div>
+                    <h4 class="font-medium mb-3">Contact Information</h4>
+                    <p class="text-gray-400 text-sm mb-1">
+                        <i class="fas fa-phone mr-2 text-sm"></i> {{ appointment.vendor.phone_number|default:"(123) 456-7890" }}
+                    </p>
+                    <p class="text-gray-400 text-sm mb-1">
+                        <i class="fas fa-envelope mr-2 text-sm"></i> {{ appointment.vendor.email|default:"info@lab.com" }}
+                    </p>
+                    <p class="text-gray-400 text-sm">
+                        <i class="fas fa-globe mr-2 text-sm"></i> {{ appointment.vendor.website|default:"www.lab.com" }}
+                    </p>
+                </div>
+                
+                <div>
+                    <h4 class="font-medium mb-3">Business Hours</h4>
+                    <p class="text-gray-400 text-sm">Monday - Friday: 8:00 AM - 6:00 PM</p>
+                    <p class="text-gray-400 text-sm">Saturday: 9:00 AM - 2:00 PM</p>
+                    <p class="text-gray-400 text-sm">Sunday: Closed</p>
+                </div>
+            </div>
+            
+            <div class="mt-8 pt-8 border-t border-gray-700 text-center text-gray-400 text-sm">
+                <p>&copy; {% now "Y" %} {{ appointment.vendor.name }}. All rights reserved.</p>
+                <p class="mt-2">
+                    <a href="#" class="hover:text-lab-red-light transition-colors mr-4">Privacy Policy</a>
+                    <a href="#" class="hover:text-lab-red-light transition-colors mr-4">Terms of Service</a>
+                    <a href="#" class="hover:text-lab-red-light transition-colors">Cancellation Policy</a>
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Countdown timer for upcoming appointments
+        {% if appointment.status == 'confirmed' and not appointment.slot.is_past %}
+        function updateCountdown() {
+            const appointmentDate = new Date('{{ appointment.slot.date|date:"Y-m-d" }}T{{ appointment.slot.start_time|time:"H:i:s" }}');
+            const now = new Date();
+            const diff = appointmentDate - now;
+            
+            if (diff <= 0) {
+                document.getElementById('countdownTimer').textContent = 'Appointment time!';
+                return;
+            }
+            
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+            
+            let countdownText = '';
+            if (days > 0) {
+                countdownText = `${days}d ${hours}h ${minutes}m`;
+            } else if (hours > 0) {
+                countdownText = `${hours}h ${minutes}m ${seconds}s`;
+            } else {
+                countdownText = `${minutes}m ${seconds}s`;
+            }
+            
+            document.getElementById('countdownTimer').textContent = countdownText;
+        }
+        
+        // Update countdown every second
+        updateCountdown();
+        setInterval(updateCountdown, 1000);
+        {% endif %}
+        
+        // Cancel appointment modal
+        function confirmCancel() {
+            document.getElementById('cancelModal').classList.remove('hidden');
+        }
+        
+        function closeCancelModal() {
+            document.getElementById('cancelModal').classList.add('hidden');
+        }
+        
+        function submitCancellation() {
+            const reason = document.getElementById('cancelReason').value;
+            
+            // In a real implementation, you would make an AJAX request here
+            // For now, we'll redirect to a cancellation endpoint
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{% url "cancel_appointment" appointment.appointment_id %}';
+            
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = 'csrfmiddlewaretoken';
+            csrfToken.value = '{{ csrf_token }}';
+            form.appendChild(csrfToken);
+            
+            if (reason) {
+                const reasonInput = document.createElement('input');
+                reasonInput.type = 'hidden';
+                reasonInput.name = 'reason';
+                reasonInput.value = reason;
+                form.appendChild(reasonInput);
+            }
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
+        
+        // Add to calendar functionality
+        function addToCalendar() {
+            const appointmentDate = '{{ appointment.slot.date|date:"Ymd" }}T{{ appointment.slot.start_time|time:"His" }}';
+            const endDate = '{{ appointment.slot.date|date:"Ymd" }}T{{ appointment.slot.end_time|time:"His" }}';
+            const title = 'Appointment at {{ appointment.vendor.name }}';
+            const description = `Appointment ID: {{ appointment.appointment_id }}`;
+            const location = '{{ appointment.vendor.address }}';
+            
+            // Create ICS file
+            const icsContent = [
+                'BEGIN:VCALENDAR',
+                'VERSION:2.0',
+                'BEGIN:VEVENT',
+                `DTSTART:${appointmentDate}`,
+                `DTEND:${endDate}`,
+                `SUMMARY:${title}`,
+                `DESCRIPTION:${description}`,
+                `LOCATION:${location}`,
+                'END:VEVENT',
+                'END:VCALENDAR'
+            ].join('\n');
+            
+            // Download ICS file
+            const blob = new Blob([icsContent], { type: 'text/calendar' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'appointment-{{ appointment.appointment_id }}.ics';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            // Show success message
+            showNotification('Calendar event downloaded. Import it to your calendar app.');
+        }
+        
+        // Share appointment
+        function shareAppointment() {
+            if (navigator.share) {
+                navigator.share({
+                    title: 'My Appointment at {{ appointment.vendor.name }}',
+                    text: `Appointment on {{ appointment.slot.date|date:"F d, Y" }} at {{ appointment.slot.start_time|time:"g:i A" }}`,
+                    url: window.location.href,
+                })
+                .then(() => console.log('Shared successfully'))
+                .catch((error) => console.log('Error sharing:', error));
+            } else {
+                // Fallback: copy to clipboard
+                const url = window.location.href;
+                navigator.clipboard.writeText(url)
+                    .then(() => {
+                        showNotification('Appointment link copied to clipboard!');
+                    })
+                    .catch(err => {
+                        console.error('Failed to copy: ', err);
+                        showNotification('Failed to copy link. Please copy the URL manually.');
+                    });
+            }
+        }
+        
+        // Contact support
+        function contactSupport() {
+            const phone = '{{ appointment.vendor.phone_number|default:"(123) 456-7890" }}';
+            const email = '{{ appointment.vendor.email|default:"support@lab.com" }}';
+            
+            // Show contact options
+            const message = `Contact us:\n\nPhone: ${phone}\nEmail: ${email}\n\nHow can we help you?`;
+            if (confirm(message)) {
+                window.location.href = `tel:${phone}`;
+            }
+        }
+        
+        // Show notification
+        function showNotification(message) {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-slide-in';
+            notification.textContent = message;
+            notification.style.animation = 'slideIn 0.3s ease-out';
+            
+            document.body.appendChild(notification);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }
+        
+        // Add CSS for animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            @keyframes slideOut {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // Print handling
+        window.addEventListener('beforeprint', () => {
+            // Add print-specific styles
+            document.body.classList.add('printing');
+        });
+        
+        window.addEventListener('afterprint', () => {
+            // Remove print-specific styles
+            document.body.classList.remove('printing');
+        });
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('cancelModal');
+            if (event.target === modal) {
+                closeCancelModal();
+            }
+        }
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeCancelModal();
+            }
+            if (e.key === 'p' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                window.print();
+            }
+        });
+    </script>
+{% endblock content %}
+
+

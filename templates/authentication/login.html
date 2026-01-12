@@ -30,20 +30,22 @@
 
                 <!-- Messages -->
                 {% if messages %}
-                {% for message in messages %}
-                <div class="p-3 rounded-md {% if message.tags == 'success' %}bg-green-50 text-green-800
-                    {% elif message.tags == 'error' %}bg-red-50 text-red-800
-                    {% else %}bg-blue-50 text-blue-800{% endif %}">
-                    <div class="flex">
-                        <div class="flex-1">{{ message }}</div>
-                        <button type="button" class="ml-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-                {% endfor %}
+                    {% for message in messages %}
+                        <div class="p-3 rounded-md
+                            {% if message.tags == 'success' %}bg-green-50 text-green-800
+                            {% elif message.tags == 'error' %}bg-red-50 text-red-800
+                            {% else %}bg-blue-50 text-blue-800{% endif %}">
+                            <div class="flex">
+                                <div class="flex-1">{{ message }}</div>
+                                <button type="button" class="ml-2"
+                                        onclick="this.closest('.alert').remove()">
+                                    ✕
+                                </button>
+                            </div>
+                        </div>
+                    {% empty %}
+                        {# no messages – render nothing #}
+                    {% endfor %}
                 {% endif %}
 
                 <!-- Login Form -->

@@ -18,6 +18,10 @@ urlpatterns = [
     path("laboratory/", include("apps.labs.urls", namespace="labs")),
     path("billing/", include("apps.billing.urls", namespace="billing")),
     
+    path("notification/", include("apps.notification.urls", namespace="notification")),
+
+    path("appointment/", include("apps.appointment.urls", namespace="appointment")),
+
     path("document-control/", include("apps.doc_control.urls", namespace="documents")),
     
     path("inventory/", include("apps.inventory.urls", namespace="inventory")),

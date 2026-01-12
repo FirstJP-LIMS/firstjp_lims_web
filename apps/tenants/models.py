@@ -5,6 +5,7 @@ Tenants management: Models to be used for lab owners who wants to share our plat
 Unique domain name attached to individual tenants.
 """
 import uuid
+import pytz
 from django.db import models, transaction
 from django.conf import settings
 from .utils import send_vendor_activation_email
@@ -30,12 +31,13 @@ class Vendor(models.Model):
     tenant_id = models.CharField(max_length=64, unique=True)
     name = models.CharField(max_length=255)
     contact_email = models.EmailField(unique=True)
-    subdomain_prefix = models.SlugField(max_length=64, 
-                                        unique=True, 
-                                        blank=True, null=True, 
-                                        validators=[subdomain_validator],
-                                        help_text="Subdomain prefix for this vendor (letters, numbers, hyphens only)"
-                                        )
+    subdomain_prefix = models.SlugField(
+        max_length=64, 
+        unique=True, 
+        blank=True, null=True, 
+        validators=[subdomain_validator],
+        help_text="Subdomain prefix for this vendor (letters, numbers, hyphens only)"
+        )
 
     is_active = models.BooleanField(default=False)
     activation_email_sent = models.BooleanField(default=False)
@@ -45,6 +47,13 @@ class Vendor(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    # time = models.DateTimeField()
+    timezone = models.CharField(
+        max_length=50, 
+        default='UTC', 
+        choices=[(tz, tz) for tz in pytz.common_timezones],
+        help_text="The local timezone of the laboratory facility"
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

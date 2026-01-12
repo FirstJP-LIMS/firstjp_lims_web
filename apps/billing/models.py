@@ -166,11 +166,9 @@ class CorporateClient(models.Model):
     payment_terms_days = models.IntegerField(default=60, help_text="Days until payment due")
     credit_limit = models.DecimalField(max_digits=14, decimal_places=2, default=0)
 
-    special_discount_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0,
-                                                      help_text="Extra discount for corporate clients")
+    special_discount_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="Extra discount for corporate clients")
 
-    max_discount_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True,
-                                              help_text="Corporate discount cap")
+    max_discount_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, help_text="Corporate discount cap")
 
     price_list = models.ForeignKey(PriceList, on_delete=models.SET_NULL, null=True, blank=True)
 
@@ -208,11 +206,9 @@ class BillingInformation(models.Model):
     ]
     billing_type = models.CharField(max_length=20, choices=BILLING_TYPES, default='CASH')
 
-    price_list = models.ForeignKey('billing.PriceList', on_delete=models.SET_NULL, null=True, blank=True,
-                                   help_text="Which price list was applied")
+    price_list = models.ForeignKey('billing.PriceList', on_delete=models.SET_NULL, null=True, blank=True, help_text="Which price list was applied")
 
-    insurance_provider = models.ForeignKey('billing.InsuranceProvider', on_delete=models.SET_NULL,
-                                           null=True, blank=True)
+    insurance_provider = models.ForeignKey('billing.InsuranceProvider', on_delete=models.SET_NULL, null=True, blank=True)
     policy_number = models.CharField(max_length=100, blank=True)
     pre_authorization_code = models.CharField(max_length=100, blank=True)
 

@@ -1,0 +1,211 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appointment Slots | Laboratory Management</title>
+
+    <!-- tailwind setup -->
+    <link rel="stylesheet" href="{% static 'dist\styles.css' %}">
+    <link rel="stylesheet" href="{% static 'assets\css\tailwind.css' %}">
+    <link rel="stylesheet" href="{% static 'assets\css\t_appointment.css' %}">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navigation Bar -->
+    {% include "laboratory/assets/header_apt.html" %}
+
+    {% block content %}
+    {% endblock content %}
+
+
+    <!-- Footer -->
+    <footer class="bg-navy-dark text-white mt-12 py-6">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-4 md:mb-0">
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-flask text-lab-red-light"></i>
+                    {% if vendor_profile.logo %}
+                        <img src="{{ vendor_profile.logo.url }}" alt="{{ vendor.name }}" class="h-8">
+                    {% else %}
+                        <span>{{ vendor.name }}</span>
+                    {% endif %}
+                    </div>
+                </div>
+                <div class="text-gray-400 text-sm">
+                    &copy; {% now "Y" %} Medvuno Laboratory Management System. All rights reserved.
+                </div>
+            </div>
+        </div>
+    </footer>
+    <script src="{% static 'assets/js/notifications.js' %}"></script>
+    <script>
+        // responsive modal        
+        document.getElementById('mobileMenuBtn')?.addEventListener('click', function () {
+            document.getElementById('mobileMenu')?.classList.toggle('hidden');
+        });
+        
+        // Bulk selection management
+        let selectedSlots = new Set();
+        
+        function toggleSelectAll(checkbox) {
+            const slotCheckboxes = document.querySelectorAll('.slot-checkbox:not(:disabled)');
+            const selectAll = checkbox.checked;
+            
+            slotCheckboxes.forEach(cb => {
+                if (!cb.disabled) {
+                    cb.checked = selectAll;
+                    if (selectAll) {
+                        selectedSlots.add(parseInt(cb.value));
+                    } else {
+                        selectedSlots.delete(parseInt(cb.value));
+                    }
+                }
+            });
+            
+            updateBulkActions();
+        }
+        
+        function updateSelection() {
+            selectedSlots.clear();
+            const slotCheckboxes = document.querySelectorAll('.slot-checkbox:checked');
+            
+            slotCheckboxes.forEach(cb => {
+                selectedSlots.add(parseInt(cb.value));
+            });
+            
+            // Update "Select All" checkbox
+            const totalCheckboxes = document.querySelectorAll('.slot-checkbox:not(:disabled)').length;
+            const selectAllCheckbox = document.getElementById('selectAll');
+            selectAllCheckbox.checked = selectedSlots.size === totalCheckboxes;
+            
+            updateBulkActions();
+        }
+        
+        function updateBulkActions() {
+            const selectedCount = selectedSlots.size;
+            const bulkActionsCard = document.getElementById('bulkActionsCard');
+            const selectedCountSpan = document.getElementById('selectedCount');
+            const bulkSlotIdsInput = document.getElementById('bulkSlotIds');
+            const applyButton = document.getElementById('applyBulkAction');
+            const actionSelect = document.getElementById('id_action');
+            
+            selectedCountSpan.textContent = selectedCount;
+            bulkSlotIdsInput.value = Array.from(selectedSlots).join(',');
+            
+            if (selectedCount > 0) {
+                bulkActionsCard.classList.remove('hidden');
+                applyButton.disabled = !actionSelect.value;
+            } else {
+                bulkActionsCard.classList.add('hidden');
+            }
+        }
+        
+        function clearSelection() {
+            selectedSlots.clear();
+            const slotCheckboxes = document.querySelectorAll('.slot-checkbox');
+            slotCheckboxes.forEach(cb => cb.checked = false);
+            
+            document.getElementById('selectAll').checked = false;
+            document.getElementById('id_action').value = '';
+            updateBulkActions();
+        }
+        
+        // Update bulk action button based on selection
+        document.getElementById('id_action').addEventListener('change', function() {
+            document.getElementById('applyBulkAction').disabled = !this.value || selectedSlots.size === 0;
+        });
+        
+        // // Delete slot confirmation
+        let deleteSlotId = null;
+        function confirmDeleteSlot(slotId) {
+            deleteSlotId = slotId;
+
+            const form = document.getElementById('deleteForm');
+            form.action = "{% url 'appointment:slot_instance_delete' 0 %}".replace('0', slotId);
+
+            document.getElementById('deleteModal').classList.remove('hidden');
+        }
+        function closeDeleteModal() {
+            deleteSlotId = null;
+            document.getElementById('deleteModal').classList.add('hidden');
+        }
+
+
+        // Calculate stats
+        function calculateStats() {
+            let availableToday = 0;
+            let fullSlots = 0;
+            let totalBookings = 0;
+            const today = new Date().toISOString().split('T')[0];
+            
+            document.querySelectorAll('tbody tr').forEach(row => {
+                const statusBadge = row.querySelector('.status-badge');
+                const capacityText = row.querySelector('.font-medium.text-lab-black') || row.querySelector('.font-medium.text-lab-red');
+                
+                if (capacityText) {
+                    const match = capacityText.textContent.match(/(\d+)\s*\/\s*(\d+)/);
+                    if (match) {
+                        const current = parseInt(match[1]);
+                        const max = parseInt(match[2]);
+                        totalBookings += current;
+                        
+                        if (row.classList.contains('slot-full')) {
+                            fullSlots++;
+                        }
+                        
+                        // Check if slot is available today
+                        const dateCell = row.querySelector('.text-sm.font-medium.text-lab-black');
+                        if (dateCell && dateCell.textContent.includes(today.replace(/-/g, ' '))) {
+                            if (row.classList.contains('slot-available')) {
+                                availableToday++;
+                            }
+                        }
+                    }
+                }
+            });
+            
+            document.getElementById('availableToday').textContent = availableToday;
+            document.getElementById('fullSlots').textContent = fullSlots;
+            document.getElementById('totalBookings').textContent = totalBookings;
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            calculateStats();
+            updateBulkActions();
+            
+            // Form submission for bulk actions
+            document.getElementById('bulkActionForm').addEventListener('submit', function(e) {
+                if (!selectedSlots.size) {
+                    e.preventDefault();
+                    alert('Please select at least one slot.');
+                    return false;
+                }
+                
+                if (!document.getElementById('id_action').value) {
+                    e.preventDefault();
+                    alert('Please select an action.');
+                    return false;
+                }
+                
+                return confirm(`Are you sure you want to perform this action on ${selectedSlots.size} slot(s)?`);
+            });
+            
+            // Close modal when clicking outside
+            window.onclick = function(event) {
+                    const modal = document.getElementById('deleteModal');
+                    if (event.target === modal) {
+                        closeDeleteModal();
+                    }
+                }
+            }
+        );
+
+    </script>
+</body>
+</html>

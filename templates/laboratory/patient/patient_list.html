@@ -1,0 +1,79 @@
+{% extends "laboratory/assets/base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Patient Registry</h2>
+        <a href="{% url 'appointment:public_appointment_book_vendor' subdomain_prefix=vendor.subdomain_prefix %}" class="btn btn-primary">
+            + Book for Patient
+        </a>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-2">
+                <div class="col-md-10">
+                    <input type="text" name="q" class="form-control" placeholder="Search by ID, Name, or Phone..." value="{{ request.GET.q }}">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-secondary w-100">Search</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Patient ID</th>
+                    <th>Full Name</th>
+                    <th>Gender/Age</th>
+                    <th>Contact</th>
+                    <th>Type</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for patient in patients %}
+                <tr>
+                    <td><strong>{{ patient.patient_id }}</strong></td>
+                    <td>{{ patient.first_name }} {{ patient.last_name }}</td>
+                    <td>{{ patient.gender }} / {{ patient.date_of_birth|timesince }}</td>
+                    <td>
+                        <small>
+                            <i class="bi bi-envelope"></i> {{ patient.contact_email }}<br>
+                            <i class="bi bi-telephone"></i> {{ patient.contact_phone }}
+                        </small>
+                    </td>
+                    <td>
+                        {% if patient.is_shadow %}
+                            <span class="badge bg-warning text-dark">Shadow (Walk-in)</span>
+                        {% else %}
+                            <span class="badge bg-success">Registered</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ patient.created_at|date:"M d, Y" }}</td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <a href="{% url 'labs:patient_detail' patient.id %}" class="btn btn-outline-primary">View</a>
+                            <a href="{% url 'appointment:public_appointment_book_vendor' subdomain_prefix=vendor.subdomain_prefix %}" class="btn btn-outline-secondary">Book</a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center py-4 text-muted">No patients found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if is_paginated %}
+        {% include "laboratory/patient/pagination.html" %}
+    {% endif %}
+</div>
+{% endblock %}
+

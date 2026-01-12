@@ -23,6 +23,8 @@ from ..models import (
     TestResult,
 )
 
+from ..decorators import require_capability
+
 # Logger Setup
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -30,17 +32,8 @@ logger.setLevel(logging.INFO)
 
 # ===== RESULT MANUAL CREATE =====
 
-from ..decorators import (
-    lab_technician_required,
-    lab_supervisor_required,
-    lab_pathologist_required,
-    can_amend_results,
-    lab_staff_required
-)
-
-
 @login_required
-@lab_technician_required
+@require_capability("can_enter_results")
 @require_http_methods(["GET", "POST"])
 def enter_manual_result(request, assignment_id):
     """
@@ -247,7 +240,7 @@ def enter_manual_result(request, assignment_id):
 
 
 @login_required
-@lab_supervisor_required # This decorator already checks if they are a supervisor/admin
+@require_capability("can_verify_results")
 @require_POST
 def verify_result(request, result_id):
     result = get_object_or_404(
@@ -281,7 +274,7 @@ def verify_result(request, result_id):
 
 # ===== RESULT RELEASE =====
 @login_required
-@lab_pathologist_required  # This decorator already checks if they are Pathologist or Admin
+@require_capability("can_release_results")
 @require_POST
 def release_result(request, result_id):
     """
@@ -335,7 +328,6 @@ def release_result(request, result_id):
 
 # ===== RESULT VIEW =====
 @login_required
-@lab_staff_required
 def result_list(request):
     """
     List all test results with filtering and search.
@@ -434,7 +426,6 @@ def result_list(request):
 
 # ===== RESULT DETAIL (All Lab Staff) =====
 @login_required
-@lab_staff_required
 def result_detail(request, result_id):
     """
     Display detailed view of a single test result.
@@ -532,7 +523,6 @@ def result_detail(request, result_id):
 
 # ===== RESULT EDIT =====
 @login_required
-@lab_technician_required
 @require_http_methods(["GET", "POST"])
 def edit_result(request, result_id):
     """Edit result before verification."""
@@ -624,7 +614,7 @@ def edit_result(request, result_id):
 
 
 @login_required
-@can_amend_results # Only Admins/Directors
+@require_capability("can_amend_results")
 @require_POST
 def amend_result(request, result_id):
     result = get_object_or_404(TestResult, id=result_id, assignment__vendor=request.user.vendor)
@@ -700,7 +690,6 @@ from django.core.mail import EmailMessage
 
 
 @login_required
-@lab_staff_required
 def download_result_pdf(request, result_id):
     # Use the same select_related for speed and data access
     result = get_object_or_404(
@@ -770,209 +759,3 @@ def send_result_email(result):
     return email.send()
 
 
-
-
-
-
-
-
-
-
-
-
-
-# ===== RESULT DETAIL (All Lab Staff) =====
-# @login_required
-# @lab_staff_required
-# def result_detail(request, result_id):
-#     """
-#     Display detailed view of a single result.
-#     Accessible by: All lab staff
-#     """
-#     result = get_object_or_404(
-#         TestResult.objects.select_related(
-#             'assignment__lab_test',
-#             'assignment__request__patient',
-#             'assignment__request__ordering_clinician',
-#             'assignment__request__requested_by',
-#             'assignment__instrument',
-#             'assignment__department',
-#             'assignment__sample',
-#             'entered_by',
-#             'verified_by',
-#             'released_by'
-#         ),
-#         id=result_id,
-#         assignment__vendor=request.user.vendor
-#     )
-    
-#     previous_results = TestResult.objects.filter(
-#         assignment__request__patient=result.assignment.request.patient,
-#         assignment__lab_test=result.assignment.lab_test,
-#         released=True
-#     ).exclude(id=result.id).order_by('-entered_at')[:5]
-    
-#     # Determine what actions current user can perform
-#     user = request.user
-    
-#     # Can edit if not verified and user is technician+
-#     can_edit = (
-#         not result.verified_at and 
-#         not result.released and
-#         (user.is_lab_technician or user.is_lab_supervisor or user.is_vendor_admin)
-#     )
-    
-#     # Can verify if pending, user is supervisor+, and didn't enter it
-#     can_verify = (
-#         not result.verified_at and
-#         result.entered_by != user and
-#         result.qc_passed and
-#         (user.is_lab_supervisor or user.is_vendor_admin)
-#     )
-    
-    
-#     # Can release if verified, user is pathologist+
-#     can_release = (
-#         result.verified_at and
-#         not result.released and
-#         (user.is_pathologist or user.is_vendor_admin)
-#     )
-    
-#     # Can amend if released and user is admin
-#     can_amend = (
-#         result.released and
-#         (user.is_vendor_admin or user.has_perm('laboratory.can_amend_results'))
-#     )
-    
-#     context = {
-#         'result': result,
-#         'previous_results': previous_results,
-#         'can_verify': can_verify,
-#         'can_release': can_release,
-#         'can_amend': can_amend,
-#         'can_edit': can_edit,
-#         'is_critical': result.is_critical,
-#         'has_delta_check': result.delta_flag,
-#         'workflow_stage': _get_workflow_stage(result),
-        
-#         # User role info for template
-#         'user_role': _get_user_role_display(user),
-#     }
-    
-#     return render(request, 'laboratory/result/result_detail.html', context)
-
-
-
-# ===== RESULT VERIFICATION =====
-# @login_required
-# @lab_supervisor_required
-# @require_POST
-# def verify_result(request, result_id):
-#     """
-#     Verify a test result by result ID.
-#     Updates both TestResult and TestAssignment status.
-#     """
-#     result = get_object_or_404(
-#         TestResult.objects.select_related('assignment', 'assignment__vendor'),
-#         id=result_id,
-#         assignment__vendor=request.user.vendor
-#     )
-    
-#     assignment = result.assignment
-    
-#     # Permission check
-#     if not request.user.has_perm('laboratory.can_verify_results'):
-#         messages.error(request, "You don't have permission to verify results.")
-#         return redirect('labs:result_detail', result_id=result.id)
-    
-#     # Already verified check
-#     if result.verified_at:
-#         messages.warning(request, "This result has already been verified.")
-#         return redirect('labs:result_detail', result_id=result.id)
-    
-#     # Self-verification check
-#     # if result.entered_by == request.user:
-#     #     messages.error(request, "You cannot verify results you entered yourself.")
-#     #     return redirect('labs:result_detail', result_id=result.id)
-    
-#     # QC check
-#     if not result.qc_passed:
-#         messages.error(request, "Cannot verify result that failed QC checks.")
-#         return redirect('labs:result_detail', result_id=result.id)
-    
-#     try:
-#         with transaction.atomic():
-#             result.mark_verified(request.user)
-            
-#             # Audit log
-#             AuditLog.objects.create(
-#                 vendor=assignment.vendor,
-#                 user=request.user,
-#                 action=(
-#                     f"Result verified for {assignment.request.request_id} - "
-#                     f"{assignment.lab_test.code}: {result.result_value} "
-#                     f"{result.units if result.units else ''}"
-#                 ),
-#                 ip_address=request.META.get('REMOTE_ADDR')
-#             )
-            
-#             messages.success(request, "Result verified successfully. Ready for release.")
-        
-#     except ValidationError as e:
-#         messages.error(request, str(e))
-#         logger.exception("Validation error verifying result")
-#     except Exception as e:
-#         messages.error(request, f"Error verifying result: {str(e)}")
-#         logger.exception("Unexpected error verifying result")
-    
-#     return redirect('labs:result_detail', result_id=result.id)
-
-
-
-
-# ===== RESULT RELEASE =====
-# @login_required
-# @lab_pathologist_required
-# @require_POST
-# def release_result(request, result_id):
-#     """
-#     Release verified result to patient/doctor.
-#     """
-#     result = get_object_or_404(
-#         TestResult.objects.select_related('assignment', 'assignment__vendor'),
-#         id=result_id,
-#         assignment__vendor=request.user.vendor
-#     )
-    
-#     assignment = result.assignment
-    
-#     # Permission check
-#     if not request.user.has_perm('laboratory.can_release_results'):
-#         messages.error(request, "You don't have permission to release results.")
-#         return redirect('labs:result_detail', result_id=result.id)
-    
-#     try:
-#         with transaction.atomic():
-#             result.release_result(request.user)
-            
-#             # Audit log
-#             AuditLog.objects.create(
-#                 vendor=assignment.vendor,
-#                 user=request.user,
-#                 action=(
-#                     f"Result released for {assignment.request.request_id} - "
-#                     f"{assignment.lab_test.code}"
-#                 ),
-#                 ip_address=request.META.get('REMOTE_ADDR')
-#             )
-            
-#             messages.success(request, "Result released successfully. Patient/doctor can now access it.")
-        
-#     except ValidationError as e:
-#         messages.error(request, str(e))
-#         logger.exception("Validation error releasing result")
-#     except Exception as e:
-#         messages.error(request, f"Error releasing result: {str(e)}")
-#         logger.exception("Unexpected error releasing result")
-    
-#     return redirect('labs:result_detail', result_id=result.id)

@@ -1,0 +1,159 @@
+{% extends "laboratory/assets/base_public_apt.html" %}
+{% load static %}
+
+{% block title %}Book Appointment | {{ vendor.name }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-4xl mx-auto px-4">
+
+        <!-- Header -->
+        <div class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-navy">
+                Book an Appointment
+            </h1>
+            <p class="text-gray-600 mt-2">
+                {{ vendor.name }}
+            </p>
+        </div>
+
+        <form method="post" class="space-y-8">
+            {% csrf_token %}
+
+            <!-- Slot Selection -->
+            <section class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">
+                    Select a Time Slot
+                </h2>
+
+                {% if slots_by_date %}
+                    <div class="space-y-6">
+                        {% for date, slots in slots_by_date.items %}
+                            <div>
+                                <h3 class="text-sm font-medium text-gray-700 mb-3">
+                                    {{ date|date:"l, F j, Y" }}
+                                </h3>
+
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {% for slot in slots %}
+                                        <label class="border rounded-lg p-4 cursor-pointer
+                                            hover:border-navy
+                                            {% if form.slot.value|stringformat:'s' == slot.id|stringformat:'s' %}
+                                                border-navy bg-navy/5
+                                            {% else %}
+                                                border-gray-200
+                                            {% endif %}">
+                                            
+                                            <input type="radio"
+                                                   name="{{ form.slot.name }}"
+                                                   value="{{ slot.id }}"
+                                                   class="hidden"
+                                                   {% if form.slot.value == slot.id %}checked{% endif %}>
+
+                                            <div class="flex justify-between items-center">
+                                                <div>
+                                                    <div class="font-medium text-gray-900">
+                                                        {{ slot.start_time|time:"g:i A" }} – {{ slot.end_time|time:"g:i A" }}
+                                                    </div>
+                                                    <div class="text-xs text-gray-500">
+                                                        {{ slot.get_slot_type_display }}
+                                                    </div>
+                                                </div>
+
+                                                <div class="text-xs text-gray-500">
+                                                    {{ slot.current_bookings }}/{{ slot.max_appointments }}
+                                                </div>
+                                            </div>
+                                        </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-sm text-gray-500">
+                        No available slots in the next 30 days.
+                    </p>
+                {% endif %}
+
+                {% if form.slot.errors %}
+                    <p class="text-sm text-red-600 mt-2">
+                        {{ form.slot.errors.0 }}
+                    </p>
+                {% endif %}
+            </section>
+
+            <!-- Patient / Visitor Info -->
+            <section class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">
+                    Patient Information
+                </h2>
+
+                {% if is_authenticated and form.existing_patient.field.queryset %}
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Existing Patient
+                        </label>
+                        {{ form.existing_patient }}
+                    </div>
+                {% endif %}
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {{ form.visitor_first_name }}
+                    {{ form.visitor_last_name }}
+                    {{ form.visitor_email }}
+                    {{ form.visitor_phone }}
+                    {{ form.visitor_date_of_birth }}
+                    {{ form.visitor_gender }}
+                </div>
+
+                {% if form.non_field_errors %}
+                    <p class="text-sm text-red-600 mt-3">
+                        {{ form.non_field_errors.0 }}
+                    </p>
+                {% endif %}
+            </section>
+
+            <!-- Appointment Details -->
+            <section class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">
+                    Appointment Details
+                </h2>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Appointment Type
+                        </label>
+                        {{ form.appointment_type }}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Reason for Visit
+                        </label>
+                        {{ form.reason_for_visit }}
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Special Requirements
+                        </label>
+                        {{ form.special_requirements }}
+                    </div>
+                </div>
+            </section>
+
+            <!-- Submit -->
+            <div class="flex justify-end">
+                <button type="submit"
+                        class="px-6 py-3 bg-navy text-white rounded-lg
+                               hover:bg-navy-dark transition">
+                    Confirm Appointment
+                </button>
+            </div>
+
+        </form>
+    </div>
+</div>
+{% endblock %}

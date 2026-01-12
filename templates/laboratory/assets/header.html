@@ -13,7 +13,7 @@
                 </div>
                 {% endif %}
                 <div class="brand-text">
-                    <strong class="text-brand-blue">{{ vendor.name|default:"MEDVUNO" }}</strong>
+                    <strong class="text-brand-blue uppercase">{{ vendor.name|default:"MEDVUNO" }}</strong>
                     <small class="d-block text-muted" style="font-size: 0.75rem; line-height: 1;">Laboratory Management System</small>
                 </div>
             </a>
@@ -33,29 +33,46 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if 'patient' in request.resolver_match.url_name %}active{% endif %}" 
-                            href="#">
+                        <a 
+                        class="nav-link {% if request.resolver_match.url_name == 'labs:patient_list' %}active{% endif %}" 
+                            href="{% url 'labs:patient_list' %}">
                             <i class="bi bi-people me-1"></i>Patients
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if 'test_request' in request.resolver_match.url_name %}active{% endif %}" 
-                            href="{% url 'labs:test_request_list' %}">
-                            <i class="bi bi-clipboard-check me-1"></i>Test Requests
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-gear me-1"></i>Test Operations
                         </a>
+                        <ul class="dropdown-menu" style="font-size: 14px;">
+                            <li>
+                                <a class="dropdown-item {% if 'test_assignment' in request.resolver_match.url_name %}active{% endif %}" 
+                                    href="{% url 'labs:test_assignment_list' %}">
+                                    <i class="bi bi-list-task me-1"></i>Test Assignment
+                                </a>
+                            </li>
+                         
+                           <li class="">
+                                <a class="dropdown-item {% if 'test_request' in request.resolver_match.url_name %}active{% endif %}" 
+                                    href="{% url 'labs:test_request_list' %}">
+                                    <i class="bi bi-clipboard-check me-1"></i>Test Requests
+                                </a>
+                            </li>
+                            <li class="">
+                                <a class="dropdown-item {% if 'sample' in request.resolver_match.url_name %}active{% endif %}" 
+                                    href="{% url 'labs:sample-exam-list' %}">
+                                    <i class="bi bi-droplet me-1"></i>Samples
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li class="">
+                                <a class="dropdown-item {% if 'result' in request.resolver_match.url_name %}active{% endif %}" 
+                                    href="{% url 'labs:result_list' %}">
+                                    <i class="bi bi-bar-chart me-1"></i>Results
+                                </a>
+                            </li>
+                        </ul>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if 'sample' in request.resolver_match.url_name %}active{% endif %}" 
-                            href="{% url 'labs:sample-exam-list' %}">
-                            <i class="bi bi-droplet me-1"></i>Samples
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if 'test_assignment' in request.resolver_match.url_name %}active{% endif %}" 
-                            href="{% url 'labs:test_assignment_list' %}">
-                            <i class="bi bi-list-task me-1"></i>Test Assignment
-                        </a>
-                    </li>
+
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                             <i class="bi bi-gear me-1"></i>Management
@@ -79,11 +96,31 @@
                             </a></li>
                         </ul>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if 'result' in request.resolver_match.url_name %}active{% endif %}" 
-                            href="{% url 'labs:result_list' %}">
-                            <i class="bi bi-bar-chart me-1"></i>Results
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-calendar-check me-1"></i>Appointment
                         </a>
+                        <ul class="dropdown-menu" style="font-size: 14px;">
+                            <li>
+                                <a class="dropdown-item {% if 'staff_appointment_list' in request.resolver_match.url_name %}active{% endif %}"  href="{% url 'appointment:staff_appointment_list' %}"><i class="fas fa-calendar-check me-2"></i>
+                                    All Bookings
+                                </a>
+                            </li>
+                            <li><a class="dropdown-item {% if 'slot_calendar_view' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'appointment:slot_calendar_view' %}">
+                                <i class="bi bi-calendar-check me-2"></i>Calendar
+                            </a>
+                        </li>
+                            <li><a class="dropdown-item {% if 'slot_template_list' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'appointment:slot_template_list' %}">
+                                <i class="fas fa-cogs me-2"></i>Slot Templates
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                           <li><a class="dropdown-item {% if 'slot_template_generate' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'appointment:slot_template_generate' %}">
+                                <i class="fas fa-sync me-2"></i>Generate Slots
+                            </a></li>
+                           <li><a class="dropdown-item {% if 'slot_instance_list' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'appointment:slot_instance_list' %}">
+                                <i class="fa-solid fa-group-arrows-rotate me-2"></i>All Slots
+                            </a></li>
+                        </ul>
                     </li>
                 </ul>
 
@@ -96,33 +133,21 @@
                         </a>
                     </div>
 
-                    <!-- Notifications -->
-                    <div class="nav-item dropdown me-2">
-                        <a class="nav-link position-relative" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-bell text-muted"></i>
-                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-brand-red" style="font-size: 0.6rem;">
-                                3
-                            </span>
-                        </a>
-                        <li><h6 class="dropdown-header">Notifications</h6></li>
-                        <!-- <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="#">
-                                <div class="d-flex w-100 justify-content-between">
-                                    <small>New test request</small>
-                                    <small class="text-muted">5m ago</small>
-                                </div>
-                                <small class="text-muted">Patient: John Smith</small>
-                            </a></li>
-                            <li><a class="dropdown-item" href="#">
-                                <div class="d-flex w-100 justify-content-between">
-                                    <small>Sample ready</small>
-                                    <small class="text-muted">1h ago</small>
-                                </div>
-                                <small class="text-muted">Sample #SMP-0012</small>
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-brand-blue text-center" href="#">View all</a></li>
-                        </ul> -->
+                    <div>
+                        <!-- notifications dropdown in topbar -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="notificationsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Notifications <span id="notificationCount" class="badge bg-danger">0</span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationsDropdown" style="width: 350px;">
+                                <li class="dropdown-header">Recent Notifications</li>
+                                <div id="notificationsContainer" class="list-group list-group-flush" style="max-height: 400px; overflow-y: auto;"></div>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li><a href="/notifications/" class="dropdown-item text-center">View All</a></li>
+                            </ul>
+                        </li>
                     </div>
 
                     <!-- User Menu -->
@@ -137,9 +162,7 @@
                             <li><h6 class="dropdown-header">Signed in as</h6></li>
                             <li>
                                 <span class="dropdown-item-text">
-                                <!-- <strong>{{ request.user.get_full_name|default:"User" }}</strong> -->
-                                <!-- <br> -->
-                                <small class="text-muted">{{ request.user.title|default:"Lab Staff" }}
+                                <small class="text-muted">{{ request.user.role|default:"Lab Staff" }}
 
                                 </small>
                             </span></li>
@@ -164,184 +187,159 @@
         </div>
     </nav>
 </header>
+<div id="toastContainer" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1055;">
+</div>
 
 <style>
-    /* 1. Brand Color Definitions - Aligned with Dashboard */
+
     :root {
-        --brand-blue: #001f40;        /* Primary blue from dashboard */
-        --brand-red: #cc0033;         /* Primary red from dashboard */
-        --brand-white: #ffffff;
-        --brand-light: #f8f9fa;
-        --brand-black: #212529;
-        --color-nav-active-bg: rgba(0, 31, 64, 0.08); /* Light blue for active states */
-        --color-nav-hover-bg: rgba(0, 31, 64, 0.05);  /* Lighter blue for hover */
+    --brand-blue: #1a237e; /* Example brand colors */
+    --brand-red: #d32f2f;
     }
-
-    /* Color Utility Classes */
-    .text-brand-red { color: var(--brand-red) !important; }
-    .text-brand-blue { color: var(--brand-blue) !important; }
-    .bg-brand-red { background-color: var(--brand-red) !important; }
-    .bg-brand-blue { background-color: var(--brand-blue) !important; }
+    .text-brand-blue { color: var(--brand-blue); }
+    .text-brand-red { color: var(--brand-red); }
+    .btn-brand-red { background-color: var(--brand-red); color: white; border: none; }
+    .btn-brand-red:hover { background-color: #b71c1c; color: white; }
     
-    /* Primary Button - Using Dashboard Red */
-    .btn-brand-red {
-        background: var(--brand-red);
-        border: 1px solid var(--brand-red);
-        color: white;
-        font-weight: 500;
-        padding: 0.5rem 1.25rem;
-        transition: all 0.3s ease;
-        border-radius: 6px;
-    }
-
-    .btn-brand-red:hover {
-        background: #b3002d;
-        border-color: #b3002d;
-        color: white;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(204, 0, 51, 0.3);
-    }
-
-    .btn-brand-red.btn-sm {
-        padding: 0.375rem 1rem;
-        font-size: 0.875rem;
-    }
-
-    /* 2. Layout & Standard Components */
-    .laboratory-header {
-        position: sticky;
-        top: 0;
-        z-index: 1020;
-        background: white;
-    }
-
-    .header-logo {
-        height: 40px;
-        width: auto;
-        border-radius: 4px;
-    }
-
-    .brand-icon {
-        width: 40px;
-        height: 40px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #f8f9fa;
-        border-radius: 8px;
-        font-size: 1.25rem;
-    }
-
-    .brand-text {
-        line-height: 1.2;
-    }
-
     .user-avatar {
         width: 32px;
         height: 32px;
-        border-radius: 50%;
-        background: var(--brand-blue); /* Using dashboard blue for consistency */
+        background: var(--brand-blue);
         color: white;
+        border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-weight: 600;
-        font-size: 0.875rem;
+        font-weight: bold;
+        font-size: 0.8rem;
     }
 
-    /* 3. Navigation Styling - Aligned with Dashboard */
-    .navbar-nav .nav-link {
-        font-weight: 500;
-        padding: 0.5rem 1rem;
-        border-radius: 6px;
-        margin: 0 0.125rem;
-        transition: all 0.3s ease;
-        color: var(--brand-black);
-        position: relative;
-    }
-
-    .navbar-nav .nav-link:hover {
-        background-color: var(--color-nav-hover-bg);
-        color: var(--brand-blue);
-    }
-
-    .navbar-nav .nav-link.active {
-        background-color: var(--color-nav-active-bg);
-        color: var(--brand-blue) !important;
-        font-weight: 600;
-    }
-
-    .navbar-nav .nav-link.active::after {
-        content: '';
-        position: absolute;
-        bottom: -1px;
-        left: 1rem;
-        right: 1rem;
-        height: 2px;
-        background: var(--brand-red);
-        border-radius: 2px;
-    }
-
-    /* 4. Dropdown enhancements - Matching Dashboard Style */
-    .dropdown-menu {
-        border: none;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-        border-radius: 8px;
-        padding: 0.5rem;
-        border: 1px solid #f1f3f4;
-    }
-
-    .dropdown-item {
-        border-radius: 6px;
-        padding: 0.5rem 1rem;
-        margin: 0.125rem 0;
-        transition: all 0.2s ease;
-    }
-
-    .dropdown-item:hover {
-        background-color: rgba(204, 0, 51, 0.05);
-        color: var(--brand-red);
-    }
-
-    .dropdown-header {
-        color: var(--brand-blue);
-        font-weight: 600;
-        font-size: 0.875rem;
-    }
-
-    /* 5. Badge styling */
-    .badge.bg-brand-red {
-        font-size: 0.6rem;
-        font-weight: 500;
-    }
-
-    /* 6. Mobile optimizations */
-    @media (max-width: 991.98px) {
-        .navbar-collapse {
-            margin-top: 1rem;
-            background: white;
-            padding: 1rem;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-        
-        .navbar-nav .nav-item {
-            margin: 0.25rem 0;
-        }
-        
-        .user-avatar {
-            width: 28px;
-            height: 28px;
-            font-size: 0.75rem;
-        }
-
-        .navbar-nav .nav-link.active::after {
-            left: 0.5rem;
-            right: 0.5rem;
-        }
-    }
-
-    /* 7. Additional utility classes for consistency */
-    .border-brand-red { border-color: var(--brand-red) !important; }
-    .border-brand-blue { border-color: var(--brand-blue) !important; }
+    .unread { border-left: 4px solid var(--brand-red) !important; }
+    #notificationCount { font-size: 0.65rem; padding: 0.35em 0.65em; }
+    
+    /* Animation for Toasts */
+    .toast { border-radius: 8px; overflow: hidden; border: none; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
 </style>
+
+
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+    const notificationsContainer = document.getElementById("notificationsContainer");
+    const notificationCount = document.getElementById("notificationCount");
+    let unreadCount = 0;
+
+    // --- 1. Helper Functions ---
+    function updateBadge() {
+        notificationCount.innerText = unreadCount;
+        notificationCount.style.display = unreadCount > 0 ? "inline-block" : "none";
+    }
+
+    function showToast(notification) {
+        const toastContainer = document.getElementById("toastContainer");
+        const toastId = `toast-${Date.now()}`;
+        const toastHtml = `
+            <div id="${toastId}" class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="toast-header bg-primary text-white">
+                    <strong class="me-auto text-capitalize">${notification.event_type.replace(/_/g, ' ')}</strong>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                </div>
+                <div class="toast-body">
+                    ${notification.payload.summary || "New update in the LIMS system."}
+                </div>
+            </div>
+        `;
+        toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+        const toastElement = document.getElementById(toastId);
+        setTimeout(() => { if (toastElement) toastElement.remove(); }, 5000);
+    }
+
+    function addNotification(notification, prepend = true) {
+        const item = document.createElement("a");
+        item.href = "#"; 
+        item.classList.add("list-group-item", "list-group-item-action");
+        item.setAttribute("data-id", notification.id);
+
+        if (!notification.read) {
+            item.classList.add("unread", "bg-light");
+            unreadCount++;
+            updateBadge();
+        }
+
+        const message = notification.payload.summary || notification.payload.message || "New LIMS Update";
+        item.innerHTML = `
+            <div class="d-flex w-100 justify-content-between">
+                <h6 class="mb-1 text-capitalize" style="font-size: 13px;">${notification.event_type.replace(/_/g, ' ')}</h6>
+                <small class="text-muted">Now</small>
+            </div>
+            <p class="mb-1 small text-muted">${message}</p>
+        `;
+        if (prepend) notificationsContainer.prepend(item);
+        else notificationsContainer.appendChild(item);
+    }
+
+    // --- 2. WebSocket Connection (Define this first!) ---
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    const ws = new WebSocket(`${protocol}://${window.location.host}/ws/notifications/`);
+
+    ws.onmessage = function (event) {
+        const data = JSON.parse(event.data);
+        const notification = {
+            id: data.id,
+            event_type: data.type,
+            payload: data.payload,
+            read: false
+        };
+        addNotification(notification);
+        showToast(notification);
+    };
+
+    // --- 3. Initial Data Fetch ---
+    async function fetchNotifications() {
+        try {
+            const response = await fetch("/api/notifications/");
+            const data = await response.json();
+            unreadCount = 0;
+            notificationsContainer.innerHTML = "";
+            data.forEach(n => addNotification(n, false));
+            updateBadge();
+        } catch (err) { console.error("History fetch failed", err); }
+    }
+    fetchNotifications();
+
+    // --- 4. Mark as Read ---
+    const dropdownToggle = document.getElementById("notificationsDropdown");
+    dropdownToggle.addEventListener("click", async () => {
+        const unreadItems = notificationsContainer.querySelectorAll(".unread");
+        if (unreadItems.length === 0) return;
+
+        unreadCount = 0;
+        updateBadge();
+
+        unreadItems.forEach(item => {
+            const id = item.dataset.id;
+            item.classList.remove("unread", "bg-light");
+            fetch(`/api/notifications/${id}/read/`, { 
+                method: "POST",
+                headers: { 'X-CSRFToken': getCookie('csrftoken') }
+            });
+        });
+    });
+});
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>

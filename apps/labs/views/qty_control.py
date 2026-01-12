@@ -53,8 +53,6 @@ from ..services import (
 )
 from ..utils import check_tenant_access
 
-from ..decorators import lab_supervisor_required, lab_technician_required
-
 
 
 from django.shortcuts import render, redirect, get_object_or_404

@@ -50,33 +50,54 @@ class CustomUserManager(BaseUserManager):
         raise NotImplementedError(
             "Use VendorEmailBackend for authentication, not get_by_natural_key"
         )
-    
-class User(AbstractBaseUser, PermissionsMixin):
-    ROLE_CHOICES = [
-        ('platform_admin', 'Platform Admin'),
-        # laboratory roles - hierarchical
-        ('vendor_admin', 'Vendor Admin'),
-        ('lab_manager', 'Lab Manager'),
-        ('pathologist', 'Pathologist'),
-        ('lab_supervisor', 'Lab Supervisor'),
-        ('lab_technician', 'Lab Technician'), # or phlebotomist -- collects samples..
-        ('lab_staff', 'Lab Staff'),
 
-        # laboratory extended roles
+
+class User(AbstractBaseUser, PermissionsMixin):
+    """
+    Core User model for Platform + Laboratory Information Management System (LIMS).
+
+    RULES:
+    - A user has exactly ONE canonical role.
+    - Aliases are UI-only and never used for authorization.
+    - Hierarchy is enforced through permission helpers.
+    """
+
+    # ============================================================
+    # ROLE DEFINITIONS (CANONICAL)
+    # ============================================================
+
+    ROLE_CHOICES = [
+        # ---------------- PLATFORM ----------------
+        ('platform_admin', 'Platform Administrator'),
+
+        # ---------------- LABORATORY CORE ----------------
+        ('vendor_admin', 'Lab Director / Super Admin'),
+        ('lab_manager', 'Lab Manager / Supervisor'),
+        ('scientist', 'Scientist / Pathologist / MLS'),
+        ('technologist', 'Technologist / Phlebotomist'),
+        ('logistics', 'Logistics Officer / Sample Collector'),
+        ('receptionist', 'Receptionist / Front Desk'),
+
+        # ---------------- EXTENDED ----------------
         ('clinician', 'Clinician'),
         ('patient', 'Patient'),
-        ('receptionist', 'Receptionist'),
-        
-        ('learner', 'Learner'), # Student
+        ('learner', 'Learner'),
         ('facilitator', 'Facilitator'),
     ]
+
+    # ============================================================
+    # CORE IDENTITY FIELDS
+    # ============================================================
 
     email = models.EmailField()
     first_name = models.CharField(max_length=150, blank=True)
     last_name = models.CharField(max_length=150, blank=True)
     contact_number = PhoneNumberField(blank=True, null=True)
-    vendor = models.ForeignKey(Vendor, null=True, blank=True, on_delete=models.SET_NULL)
-    role = models.CharField(max_length=32, choices=ROLE_CHOICES, default='lab_staff')
+
+    vendor = models.ForeignKey(Vendor, null=True, blank=True, on_delete=models.SET_NULL, related_name='users')
+
+    role = models.CharField(max_length=32, choices=ROLE_CHOICES)
+
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
@@ -87,191 +108,209 @@ class User(AbstractBaseUser, PermissionsMixin):
     REQUIRED_FIELDS = []
 
     class Meta:
-        unique_together = [['email', 'vendor']] 
+        unique_together = [['email', 'vendor']]
+        verbose_name = 'User'
+        verbose_name_plural = 'Users'
 
-    # Suppress W004 warning about non-unique USERNAME_FIELD
+    # Suppress Django warning for non-unique USERNAME_FIELD
     @classmethod
     def check(cls, **kwargs):
         errors = super().check(**kwargs)
-        errors = [e for e in errors if e.id != 'auth.W004']
-        return errors
-    
+        return [e for e in errors if e.id != 'auth.W004']
+
+    # ========================================
+    # LABORATORY ROLE HIERARCHY (AUTHORITATIVE)
+    # ========================================
+
+    LAB_HIERARCHY = [
+        'receptionist',
+        'logistics',
+        'technologist',
+        'scientist',
+        'lab_manager',
+        'vendor_admin',
+    ]
+
+    def role_at_least(self, role_name: str) -> bool:
+        """
+        Check whether user role is >= another role in the lab hierarchy.
+        """
+        if self.is_superuser or self.role == 'platform_admin':
+            return True
+
+        if self.role not in self.LAB_HIERARCHY:
+            return False
+
+        if role_name not in self.LAB_HIERARCHY:
+            return False
+
+        return self.LAB_HIERARCHY.index(self.role) >= self.LAB_HIERARCHY.index(role_name)
+
     # ============================================================
-    # PLATFORM & VENDOR ROLES
+    # ROLE IDENTITY HELPERS
     # ============================================================
-    
+
     @property
     def is_platform_admin(self):
-        """Platform-wide administrator (highest level)"""
         return self.is_superuser or self.role == 'platform_admin'
 
     @property
     def is_vendor_admin(self):
-        """Vendor/Laboratory administrator"""
-        return self.role == 'vendor_admin' or self.is_superuser
-    
-    # ============================================================
-    # LABORATORY HIERARCHICAL ROLES
-    # ============================================================
-    
-    @property
-    def is_pathologist(self):
-        """
-        Pathologist - Can release verified results to patients/doctors.
-        Third highest level in lab hierarchy.
-        """
-        return self.role in ['pathologist', 'vendor_admin', 'platform_admin'] or self.is_superuser
+        return self.role == 'vendor_admin' or self.is_platform_admin
 
     @property
     def is_lab_manager(self):
-        """
-        Lab Manager - Has administrative oversight, can manage staff and operations.
-        """
-        return self.role in ['lab_manager', 'vendor_admin', 'platform_admin'] or self.is_superuser
-    
+        return self.role == 'lab_manager' or self.is_vendor_admin
 
     @property
-    def is_lab_supervisor(self):
-        """
-        Lab Supervisor - Can verify results entered by technicians.
-        Includes pathologist and higher roles.
-        """
-        return self.role in [
-            'lab_supervisor', 
-            'pathologist', 
-            'lab_manager',
-            'vendor_admin', 
-            'platform_admin'
-        ] or self.is_superuser
-    
-    @property
-    def is_lab_technician(self):
-        """
-        Lab Technician - Can enter and edit test results (before verification).
-        Includes all higher laboratory roles.
-        """
-        return self.role in [
-            'lab_technician',
-            'lab_supervisor',
-            'pathologist',
-            'lab_manager',
-            'vendor_admin',
-            'platform_admin'
-        ] or self.is_superuser
-    
+    def is_scientist(self):
+        return self.role == 'scientist' or self.role_at_least('scientist')
 
     @property
-    def is_lab_staff(self):
-        """
-        General lab staff - Can view results and perform basic operations.
-        Includes all laboratory personnel.
-        """
-        return self.role in [
-            'lab_staff',
-            'receptionist',
-            'lab_technician',
-            'lab_supervisor',
-            'pathologist',
-            'lab_manager',
-            'vendor_admin',
-            'platform_admin'
-        ] or self.is_superuser
+    def is_technologist(self):
+        return self.role == 'technologist' or self.role_at_least('technologist')
 
+    @property
+    def is_logistics(self):
+        return self.role == 'logistics'
 
-    # ============================================================
-    # EXTENDED ROLES
-    # ============================================================
-    
-    @property
-    def is_clinician(self):
-        """Clinician - Can order tests and view results"""
-        return self.role == 'clinician'
-    
-    @property
-    def is_patient(self):
-        """Patient - Can view own results"""
-        return self.role == 'patient'
-    
     @property
     def is_receptionist(self):
-        """Receptionist - Can register patients and create test requests"""
         return self.role == 'receptionist'
-    
-    # ============================================================
-    # PERMISSION HELPERS
-    # ============================================================
-    
+
     @property
-    def can_modify_inventory(self):
-        """Check if user can create/edit/delete inventory items"""
-        return self.role in [
-            'platform_admin', 
-            'vendor_admin', 
-            'lab_manager',
-            'lab_staff'
-        ] or self.is_superuser
-    
+    def is_clinician(self):
+        return self.role == 'clinician'
+
+    @property
+    def is_patient(self):
+        return self.role == 'patient'
+
+    # =======================================
+    # RESULT LIFECYCLE PERMISSIONS (CRITICAL)
+    # ========================================
+
     @property
     def can_enter_results(self):
-        """Check if user can enter test results"""
-        return self.is_lab_technician
-    
+        """
+        Scientists & Technologists may enter results.
+        Lab Managers are explicitly excluded.
+        """
+        return self.role in ['scientist', 'technologist'] or self.is_vendor_admin
+
     @property
     def can_verify_results(self):
-        """Check if user can verify test results"""
-        return self.is_lab_supervisor
-    
+        """
+        Lab Manager / Supervisor core responsibility.
+        Verification before release.
+        """
+        return self.role == 'lab_manager' or self.is_vendor_admin
+
     @property
     def can_release_results(self):
-        """Check if user can release results to patients/doctors"""
-        return self.is_pathologist
-    
+        """
+        Scientist/Pathologist/MLS core responsibility.
+        Final legal release of results.
+        """
+        return self.role == 'scientist' or self.is_vendor_admin
+
     @property
     def can_amend_results(self):
-        """Check if user can amend released results (restricted action)"""
-        return self.is_vendor_admin or self.has_perm('laboratory.can_amend_results')
-    
+        """
+        Post-release amendment (restricted & auditable).
+        """
+        return self.is_vendor_admin or self.has_perm('labs.can_amend_results')
+
+    # =========================================
+    # SAMPLE & ACCESSIONING
+    # ========================================
+
+    @property
+    def can_collect_samples(self):
+        return self.role in ['technologist', 'logistics']
+
+    @property
+    def can_accession_samples(self):
+        return self.role in ['technologist', 'logistics'] or self.role_at_least('technologist')
+
+    @property
+    def can_track_sample_quality(self):
+        return self.role == 'technologist' or self.role_at_least('technologist')
+
+    # =========================================
+    # TEST REQUEST
+    # ========================================
+    @property
+    def can_delete_request(self):
+        return self.role in ['technologist', 'scientist', 'lab_manager'] or self.is_vendor_admin
+
+    # ========================================
+    # PATIENT, BILLING, REPORTING
+    # =========================================
+
+    @property
+    def can_register_patients(self):
+        return self.role in ['receptionist', 'logistics'] or self.is_vendor_admin
+
+    @property
+    def can_manage_billing(self):
+        return self.role == 'receptionist' or self.is_vendor_admin
+
+    @property
+    def can_download_results(self):
+        return self.role in ['receptionist', 'clinician'] or self.is_vendor_admin
+
+    # ===================================
+    # ADMINISTRATIVE
+    # ====================================
+
+    @property
+    def can_manage_inventory(self):
+        return self.role_at_least('lab_manager')
+
     @property
     def can_manage_staff(self):
-        """Check if user can manage laboratory staff"""
-        return self.is_lab_manager or self.is_vendor_admin
-    
+        return self.role in ['lab_manager', 'vendor_admin']
+
+    # ===============================
+    # APPOINTMENT
+    # ==============================
     @property
-    def can_order_tests(self):
-        """Check if user can order laboratory tests"""
-        return self.is_clinician or self.is_receptionist or self.is_vendor_admin
-    
-    # ============================================================
-    # DISPLAY METHODS
-    # ============================================================
-    
+    def can_manage_appointment(self):
+        """
+        Full control: create templates, generate slots, edit/delete slots.
+        """
+        return self.role in ['lab_manager', 'vendor_admin']
+
+    @property
+    def can_view_appointment(self):
+        """
+        Read-only visibility of appointments and slots.
+        """
+        return self.can_manage_appointment or self.role == 'receptionist'
+
+    # ==============================
+    # DISPLAY & DEBUGGING
+    # ================================
+
     def get_full_name(self):
-        """Full name"""
         full_name = f"{self.first_name} {self.last_name}".strip()
         return full_name if full_name else self.email
     
+    def get_short_name(self):
+        short_name = f"{self.last_name}".strip()
+        return short_name if short_name else self.get_full_name()
+
+
     def get_role_display_name(self):
-        """Get friendly display name for user's role"""
-        role_display_map = {
-            'platform_admin': 'Platform Administrator',
-            'vendor_admin': 'Laboratory Administrator',
-            'pathologist': 'Pathologist',
-            'lab_supervisor': 'Laboratory Supervisor',
-            'lab_technician': 'Laboratory Technician',
-            'lab_manager': 'Laboratory Manager',
-            'lab_staff': 'Laboratory Staff',
-            'clinician': 'Clinician',
-            'patient': 'Patient',
-            'receptionist': 'Receptionist',
-            'learner': 'Learner',
-            'facilitator': 'Facilitator',
-        }
-        return role_display_map.get(self.role, 'User')
-    
+        return dict(self.ROLE_CHOICES).get(self.role, 'User')
+
     def get_permissions_summary(self):
-        """Get a summary of what this user can do (useful for debugging)"""
+        """
+        Human-readable permission snapshot (useful for debugging & audits).
+        """
         permissions = []
-        
+
         if self.can_enter_results:
             permissions.append('Enter Results')
         if self.can_verify_results:
@@ -282,15 +321,17 @@ class User(AbstractBaseUser, PermissionsMixin):
             permissions.append('Amend Results')
         if self.can_manage_staff:
             permissions.append('Manage Staff')
-        if self.can_order_tests:
-            permissions.append('Order Tests')
-        if self.can_modify_inventory:
+        if self.can_manage_inventory:
             permissions.append('Manage Inventory')
-        
+        if self.can_accession_samples:
+            permissions.append('Accession Samples')
+        if self.can_register_patients:
+            permissions.append('Register Patients')
+
         return permissions
-    
+
     def __str__(self):
-        return f"{self.get_full_name()} - {self.get_role_display_name()}"
+        return f"{self.get_full_name()} — {self.get_role_display_name()}"
 
 
 class BaseProfile(models.Model):
@@ -322,6 +363,25 @@ class VendorProfile(BaseProfile):
     vendor = models.OneToOneField(Vendor, on_delete=models.CASCADE, related_name='profile')
     registration_number = models.CharField(max_length=100, blank=True, null=True)
     contact_number = PhoneNumberField(blank=True, null=True)
+
+    # Bank Payment details
+    bank_account = models.CharField(max_length=11, blank=True, null=True, default="bank")
+    bank_name = models.CharField(max_length=200, blank=True, null=True, default="bank")      
+    bank_account_name = models.CharField(max_length=200, blank=True, null=True, default="bank")      
+    
+    # Payment Gateway Settings and Credentials
+    paystack_enabled = models.BooleanField(default=False)
+    paystack_public_key = models.CharField(max_length=100, blank=True, null=True)
+    paystack_secret_key = models.CharField(max_length=100, blank=True, null=True)
+    
+    # Alternative: Flutterwave
+    flutterwave_enabled = models.BooleanField(default=False)
+    flutterwave_public_key = models.CharField(max_length=100, blank=True, null=True)
+    flutterwave_secret_key = models.CharField(max_length=100, blank=True, null=True)
+    
+    # General payment settings
+    require_payment_before_sample_verification = models.BooleanField(default=True)
+    allow_partial_payments = models.BooleanField(default=False)
 
     def __str__(self):
         return f"Profile of {self.vendor.name}"
