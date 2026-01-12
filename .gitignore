@@ -100,4 +100,5 @@ sdd.html
 
 /templates/dump/
 
-/.github/
+/github/
+/.gitignore/
