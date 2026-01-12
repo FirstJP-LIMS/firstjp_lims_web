@@ -215,25 +215,26 @@ if ENVIRONMENT == "production":
     ]
 
     
-    DATABASES = {
-        # "default": {
-        #     "ENGINE": "django.db.backends.postgresql",
-        #     "NAME": os.getenv("DB_NAME"),
-        #     "USER": os.getenv("DB_USER"),
-        #     "PASSWORD": os.getenv("DB_PASSWORD"),
-        #     "HOST": os.getenv("DB_HOST"),
-        #     "PORT": os.getenv("DB_PORT", "5432"),
-        #     "CONN_MAX_AGE": 60,
-        #    # "OPTIONS": {
-        #    #    "sslmode": "require",
-        #    # },
-        # }
+    # DATABASES = {
+    #     "default": {
+    #         "ENGINE": "django.db.backends.postgresql",
+    #         "NAME": os.getenv("DB_NAME"),
+    #         "USER": os.getenv("DB_USER"),
+    #         "PASSWORD": os.getenv("DB_PASSWORD"),
+    #         "HOST": os.getenv("DB_HOST"),
+    #         "PORT": os.getenv("DB_PORT", "5432"),
+    #         "CONN_MAX_AGE": 60,
+    #        # "OPTIONS": {
+    #        #    "sslmode": "require",
+    #        # },
+    #     }
 
-            'default': {dj_database_url.parse(os.getenv("DATABASE_URL")),
-            # 'default': dj_database_url.config(default=os.getenv('DATABASE_URL'))
-            },
-        }
+    #     }
     
+    DATABASES = {
+        'default': dj_database_url.parse(os.getenv("DATABASE_URL")),
+    }
+
     # FILES MGT - Images, pdf, videos    
     STORAGES = {
         "default": {
