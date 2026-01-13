@@ -236,8 +236,8 @@ if ENVIRONMENT == "production":
     }
 
     # S3
-    AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
-    AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+    # AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+    # AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
 
     # FILES MGT - Images, pdf, videos    
     STORAGES = {
@@ -255,7 +255,8 @@ if ENVIRONMENT == "production":
             "OPTIONS": {
                 "bucket_name": os.getenv("S3_BUCKET_NAME"),
                 "region_name": os.getenv("S3_REGION_NAME"),
-                "default_acl": "public-read",
+                # "default_acl": "public-read",
+                "default_acl": None,
                 "querystring_auth": False,
             },
         },
