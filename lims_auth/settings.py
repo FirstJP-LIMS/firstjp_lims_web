@@ -10,7 +10,7 @@ import dj_database_url
 
 load_dotenv()
 
-ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+# ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 ENVIRONMENT = "production"
 
 # BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -160,11 +160,8 @@ SITE_NAME = "mednovu.com"
 
 PLATFORM_ADMIN_EMAIL = "firstjpinternationalconsult@gmail.com"
 
-# Static files
-STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 
 # SMS
 PHONENUMBER_DEFAULT_REGION = "NG"
@@ -240,30 +237,42 @@ if ENVIRONMENT == "production":
     # AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
 
     # FILES MGT - Images, pdf, videos    
-    STORAGES = {
-        "default": {
-            "BACKEND": "storages.backends.s3.S3Storage",
-            "OPTIONS": {
-                "bucket_name": os.getenv("S3_BUCKET_NAME"),
-                "region_name": os.getenv("S3_REGION_NAME"),
-                "default_acl": "private",
-                "querystring_auth": True, # Required for 'private' files
-            },
-        },
-        "staticfiles": {
-            "BACKEND": "storages.backends.s3.S3Storage",
-            "OPTIONS": {
-                "bucket_name": os.getenv("S3_BUCKET_NAME"),
-                "region_name": os.getenv("S3_REGION_NAME"),
-                # "default_acl": "public-read",
-                "default_acl": None,
-                "querystring_auth": False,
-            },
-        },
-    }
+    # STORAGES = {
+    #     "default": {
+    #         "BACKEND": "storages.backends.s3.S3Storage",
+    #         "OPTIONS": {
+    #             # "bucket_name": os.getenv("S3_BUCKET_NAME"),
+    #             "bucket_name": "medvuno-s3-bucket",
+    #             "region_name": "eu-north-1",
+    #             "default_acl": "private",
+    #             "querystring_auth": True, # Required for 'private' files
+    #         },
+    #     },
+    #     "staticfiles": {
+    #         "BACKEND": "storages.backends.s3.S3Storage",
+    #         "OPTIONS": {
+    #             "bucket_name": "medvuno-s3-bucket",
+    #             "region_name": "eu-north-1",
+    #             # "default_acl": "public-read",
+    #             "default_acl": None,
+    #             "querystring_auth": False,
+    #         },
+    #     },
+    # }
+    
+    # AWS Credentials
+    AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
+    AWS_DEFAULT_ACL = 'public-read'
+    AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
+    AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
+    # s3 static settings
+    AWS_LOCATION = 'static'
+    STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/{AWS_LOCATION}/'
+    STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
-    AWS_S3_SIGNATURE_VERSION = os.getenv("AWS_S3_SIGNATURE_VERSION")
-
+    
     # Redis server - RENDER
     CHANNEL_LAYERS = {
         'default': {
@@ -341,7 +350,11 @@ else:
     ]
     
     # INTERNAL_IPS = ["127.0.0.1"]
-	
+    # Static files
+    STATIC_URL = '/static/'
+    STATICFILES_DIRS = [BASE_DIR / "static"]
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
     # Media files
     MEDIA_URL = '/media/'
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
@@ -364,4 +377,5 @@ else:
             },
         },
     }
+
 
