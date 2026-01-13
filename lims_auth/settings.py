@@ -172,8 +172,8 @@ PHONENUMBER_DEFAULT_REGION = "NG"
 
 if ENVIRONMENT == "production":
     # Production settings
-    # DEBUG = False
-    DEBUG = True
+    DEBUG = False
+    # DEBUG = True
 
     INSTALLED_APPS += [
         "storages",
