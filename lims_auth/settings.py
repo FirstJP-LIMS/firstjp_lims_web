@@ -202,6 +202,7 @@ if ENVIRONMENT == "production":
         # "https://firstjp-lims-web-ytsi.onrender.com",
         "https://medvuno.com",
         "https://www.medvuno.com",
+        '13.63.45.144',
 	# "16.171.161.101",
     ]
 
@@ -210,60 +211,14 @@ if ENVIRONMENT == "production":
         f"www.{PLATFORM_BASE_DOMAIN}",
         f"{LEARN_BASE_URL}",
     ]
-
-    
-    # DATABASES = {
-    #     "default": {
-    #         "ENGINE": "django.db.backends.postgresql",
-    #         "NAME": os.getenv("DB_NAME"),
-    #         "USER": os.getenv("DB_USER"),
-    #         "PASSWORD": os.getenv("DB_PASSWORD"),
-    #         "HOST": os.getenv("DB_HOST"),
-    #         "PORT": os.getenv("DB_PORT", "5432"),
-    #         "CONN_MAX_AGE": 60,
-    #        # "OPTIONS": {
-    #        #    "sslmode": "require",
-    #        # },
-    #     }
-
-    #     }
     
     DATABASES = {
         'default': dj_database_url.parse(os.getenv("DATABASE_URL")),
     }
-
-    # S3
-    # AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
-    # AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
-
-    # FILES MGT - Images, pdf, videos    
-    # STORAGES = {
-    #     "default": {
-    #         "BACKEND": "storages.backends.s3.S3Storage",
-    #         "OPTIONS": {
-    #             # "bucket_name": os.getenv("S3_BUCKET_NAME"),
-    #             "bucket_name": "medvuno-s3-bucket",
-    #             "region_name": "eu-north-1",
-    #             "default_acl": "private",
-    #             "querystring_auth": True, # Required for 'private' files
-    #         },
-    #     },
-    #     "staticfiles": {
-    #         "BACKEND": "storages.backends.s3.S3Storage",
-    #         "OPTIONS": {
-    #             "bucket_name": "medvuno-s3-bucket",
-    #             "region_name": "eu-north-1",
-    #             # "default_acl": "public-read",
-    #             "default_acl": None,
-    #             "querystring_auth": False,
-    #         },
-    #     },
-    # }
     
     # AWS Credentials
     AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
     AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
-    # AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
     AWS_STORAGE_BUCKET_NAME = 'medvuno-bucket'
     
     AWS_DEFAULT_ACL = 'public-read'
