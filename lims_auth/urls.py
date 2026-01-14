@@ -37,20 +37,20 @@ urlpatterns = [
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
-# Debug Toolbar & Browser Reload (development only)
-if settings.DEBUG:
-    try:
-        import debug_toolbar
-        urlpatterns += [
-            path("__debug__/", include(debug_toolbar.urls)),
-        ]
-    except ImportError:
-        pass
+# # Debug Toolbar & Browser Reload (development only)
+# if settings.DEBUG:
+#     try:
+#         import debug_toolbar
+#         urlpatterns += [
+#             path("__debug__/", include(debug_toolbar.urls)),
+#         ]
+#     except ImportError:
+#         pass
     
-    try:
-        urlpatterns += [
-            path("__reload__/", include("django_browser_reload.urls")),
-        ]
-    except:
-        pass
+#     try:
+#         urlpatterns += [
+#             path("__reload__/", include("django_browser_reload.urls")),
+#         ]
+#     except:
+#         pass
     
