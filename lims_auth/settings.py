@@ -172,8 +172,8 @@ PHONENUMBER_DEFAULT_REGION = "NG"
 
 if ENVIRONMENT == "production":
     # Production settings
-    # DEBUG = False
-    DEBUG = True
+    DEBUG = False
+    # DEBUG = True
 
     INSTALLED_APPS += [
         "storages",
@@ -184,13 +184,13 @@ if ENVIRONMENT == "production":
     WHITENOISE_MANIFEST_STRICT = False
 
     ALLOWED_HOSTS = [
-    "medvuno.com",
-    "www.medvuno.com",
-    ".medvuno.com",
-    # '16.171.161.101', 
-    '13.63.45.144',
-    'localhost', '127.0.0.1'
-   # "firstjp-lims-web-ytsi.onrender.com",
+        "medvuno.com",
+        "www.medvuno.com",
+        ".medvuno.com",
+        # '16.171.161.101', 
+        '13.63.45.144',
+        'localhost', '127.0.0.1'
+    # "firstjp-lims-web-ytsi.onrender.com",
     ]
 
     PLATFORM_BASE_DOMAIN = "medvuno.com"
@@ -201,8 +201,6 @@ if ENVIRONMENT == "production":
         # "https://firstjp-lims-web-ytsi.onrender.com",
         "https://medvuno.com",
         "https://www.medvuno.com",
-        '13.63.45.144',
-	# "16.171.161.101",
     ]
 
     GLOBAL_HOSTS = [
@@ -220,6 +218,14 @@ if ENVIRONMENT == "production":
     STATICFILES_DIRS = [BASE_DIR / "static"]
     STATIC_ROOT = BASE_DIR / "staticfiles"
 
+    # STORAGES = {
+    #     "default": {
+    #         "BACKEND": "storages.backends.s3.S3Storage",
+    #         "OPTIONS": {
+    #         # ...your_options_here
+    #         },
+    #     },
+    # }
 
     # Redis server - RENDER
     CHANNEL_LAYERS = {
