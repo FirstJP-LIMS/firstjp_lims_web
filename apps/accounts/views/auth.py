@@ -10,6 +10,11 @@ from django.contrib.auth.decorators import user_passes_test, login_required
 from django.shortcuts import render, redirect
 from django_ratelimit.decorators import ratelimit
 from django.contrib.auth import get_user_model
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 
 User = get_user_model()
 
@@ -104,7 +109,7 @@ def learn_register(request, role_name):
     })
 
 
-@ratelimit(key='ip', rate='5/m', method='POST')
+# @ratelimit(key='ip', rate='5/m', method='POST')
 def tenant_login(request):
     tenant = getattr(request, 'tenant', None)
     is_learning = getattr(request, 'is_learning_portal', False)
