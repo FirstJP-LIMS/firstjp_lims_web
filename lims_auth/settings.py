@@ -183,7 +183,6 @@ if ENVIRONMENT == "production":
     # This helps Django find the manifest file
     WHITENOISE_MANIFEST_STRICT = False
 
-
     ALLOWED_HOSTS = [
     "medvuno.com",
     "www.medvuno.com",
@@ -216,28 +215,12 @@ if ENVIRONMENT == "production":
         'default': dj_database_url.parse(os.getenv("DATABASE_URL")),
     }
     
-    # AWS Credentials
-    # AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
-    # AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
-    # AWS_STORAGE_BUCKET_NAME = 'medvuno-bucket'
-    
-    # AWS_DEFAULT_ACL = 'public-read'
-    # AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
-    # AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
-    # # s3 static settings
-    # AWS_LOCATION = 'static'
-    # STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/{AWS_LOCATION}/'
-    # STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-
 
     STATIC_URL = "/static/"
+    STATICFILES_DIRS = [BASE_DIR / "static"]
     STATIC_ROOT = BASE_DIR / "staticfiles"
 
-    STATICFILES_DIRS = [
-        BASE_DIR / "static",
-    ]
 
-    
     # Redis server - RENDER
     CHANNEL_LAYERS = {
         'default': {
@@ -316,9 +299,14 @@ else:
     
     # INTERNAL_IPS = ["127.0.0.1"]
     # Static files
-    STATIC_URL = '/static/'
+    # STATIC_URL = '/static/'
+    # STATICFILES_DIRS = [BASE_DIR / "static"]
+    # STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+    STATIC_URL = "/static/"
     STATICFILES_DIRS = [BASE_DIR / "static"]
-    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+    STATIC_ROOT = BASE_DIR / "staticfiles"
+
 
     # Media files
     MEDIA_URL = '/media/'
