@@ -6,20 +6,16 @@ from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from django.db.models import Sum
-from django.conf import settings
 import weasyprint
-
-from ..models import TestRequest, TestAssignment, TestResult
-from ..utils import generate_barcode_base64
 
 
 # Download Result
-from django.conf import settings
 from django.template.loader import render_to_string
 from django.http import HttpResponse
-from weasyprint import HTML
-import tempfile
-from django.core.mail import EmailMessage
+# from django.core.mail import EmailMessage
+
+from ..models import TestRequest, TestAssignment, TestResult
+from ..utils import generate_barcode_base64
 
 
 # NOTE: The render_to_pdf utility function has been removed. 
@@ -194,7 +190,7 @@ def download_result_pdf(request, result_id):
 
     # Render HTML to string
     html_string = render_to_string('laboratory/result/result_pdf1.html', context)
-    html = HTML(string=html_string, base_url=request.build_absolute_uri())
+    html = weasyprint.HTML(string=html_string, base_url=request.build_absolute_uri())
     
     # Generate PDF
     pdf = html.write_pdf()

@@ -3,6 +3,7 @@
     It manages walk-in patient, unathenticated appointment booking 
 """
 import logging
+from django.http import Http404
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.utils import timezone
@@ -13,17 +14,20 @@ from django.core.exceptions import ValidationError
 from ..models import Appointment, AppointmentSlot
 from ..forms import AppointmentBookingForm
 from ..services import book_appointment
-from apps.labs.models import Patient, Vendor
+from apps.labs.models import Patient
+from apps.tenants.models import Vendor
 # from apps.notification.appointment_notifications import AppointmentNotifications
 
 
 logger = logging.getLogger(__name__)
 
+from django.http import Http404
 
+def appointment_booking(request):
+    vendor = getattr(request, 'tenant', None)
 
-# def appointment_booking(request, vendor_slug=None):
-def appointment_booking(request, subdomain_prefix=None):
-    vendor = get_object_or_404(Vendor, slug=subdomain_prefix, is_active=True)
+    if not vendor:
+        raise Http404("Vendor context not resolved")
 
     form = AppointmentBookingForm(
         request.POST or None,
@@ -53,8 +57,12 @@ def appointment_booking(request, subdomain_prefix=None):
             form.fields['slot'].queryset
         )
     }
-    return render(request, 'laboratory/appointments/patient/booking_form.html', context)
 
+    return render(
+        request,
+        'laboratory/appointments/patient/booking_form.html',
+        context
+    )
 
 
 def appointment_confirmation(request, appointment_id):

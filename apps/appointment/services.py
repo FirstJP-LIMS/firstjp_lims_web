@@ -44,3 +44,4 @@ def book_appointment(*, form, vendor, user=None):
         )
 
         return appointment
+

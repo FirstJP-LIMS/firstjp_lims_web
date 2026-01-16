@@ -6,7 +6,6 @@ from crispy_forms.layout import Layout, Row, Column, Field, HTML, Div, Submit
 from crispy_forms.bootstrap import PrependedText, AppendedText
 from .models import VendorTest, Department, Patient, TestRequest, Sample, PRIORITY_STATUS
 from ..clinician.models import ClinicianPatientRelationship
-
 from apps.billing.models import BillingInformation, InsuranceProvider, CorporateClient
 
 

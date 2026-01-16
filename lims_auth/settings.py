@@ -111,6 +111,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "apps.accounts.context_processors.vendor_context",  # vendor attributes
+                "apps.tenants.context_processors.vendor_context",  # vendor attributes
                 "apps.core.context_processors.platform_urls",  # platform URLs
                 # 'apps.notification.context_processors.notifications', 
             ],

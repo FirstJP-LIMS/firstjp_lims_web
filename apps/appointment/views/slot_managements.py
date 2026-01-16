@@ -600,40 +600,6 @@ def staff_appointment_list(request):
     return render(request, 'laboratory/appointments/staff/appointment_list.html', context)
 
 
-# @login_required
-# @require_capability('can_view_appointment')
-# @require_http_methods(["POST"])
-# def staff_appointment_confirm(request, appointment_id):
-#     """
-#     Staff confirms an appointment.
-#     """
-#     appointment = get_object_or_404(Appointment, appointment_id=appointment_id)
-    
-#     if appointment.status != 'pending':
-#         messages.warning(request, "Appointment is already processed.")
-#         return redirect('appointment:staff_appointment_list')
-    
-#     try:
-#         with transaction.atomic():
-#             appointment.confirm(confirmed_by_user=request.user)
-            
-#             # ============================================
-#             # SEND CONFIRMATION NOTIFICATIONS
-#             # ============================================
-#             try:
-#                 # TODO
-#                 pass
-#             except Exception as e:
-#                 logger.error(f"Failed to send confirmation notification: {e}", exc_info=True)
-#                 # Don't fail the confirmation if notification fails
-#         messages.success(request, f"Appointment {appointment_id} confirmed.")
-#     except Exception as e:
-#         logger.error(f"Error confirming appointment: {e}", exc_info=True)
-#         messages.error(request, "An error occurred.")
-    
-#     return redirect('appointment:staff_appointment_list')
-
-
 @login_required
 @require_capability('can_view_appointment')
 @require_http_methods(["POST"])
