@@ -10,8 +10,8 @@ import dj_database_url
 
 load_dotenv()
 
-# ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
-ENVIRONMENT = "production"
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+# ENVIRONMENT = "production" 
 
 # BASE_DIR = Path(__file__).resolve().parent.parent.parent
 BASE_DIR = Path(__file__).resolve().parent.parent

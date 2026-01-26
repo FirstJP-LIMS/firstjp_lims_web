@@ -1,3 +1,4 @@
+
 {% extends 'laboratory/assets/base.html' %}
 {% load static %}
 
@@ -133,7 +134,7 @@
                                         <small class="text-muted">{{ detail.test.test_code }}</small>
                                     </td>
                                     <td class="text-muted">
-                                        {{ detail.test.assigned_department.name|default:"General" }}
+                                        {{ detail.test.assigned_department.name }}
                                     </td>
                                     <td class="text-end fw-semibold">
                                         ₦{{ detail.price|floatformat:2 }}
@@ -161,13 +162,13 @@
                     <div class="row">
                         <div class="col-md-6 offset-md-6">
                             <div class="list-group list-group-flush">
-                                <div class="list-group-item d-flex justify-content-between px-0 py-2 border-0">
+                                <div class="list-group-item d-flex justify-content-between px-0 py-2">
                                     <span class="text-muted">Subtotal</span>
                                     <span class="fw-semibold">₦{{ billing.subtotal|floatformat:2 }}</span>
                                 </div>
                                 
                                 {% if billing.discount > 0 %}
-                                <div class="list-group-item d-flex justify-content-between px-0 py-2 border-0">
+                                <div class="list-group-item d-flex justify-content-between px-0 py-2">
                                     <span class="text-muted">
                                         Discount
                                         {% if billing.price_list %}
@@ -179,14 +180,14 @@
                                 {% endif %}
                                 
                                 {% if billing.waiver_amount > 0 %}
-                                <div class="list-group-item d-flex justify-content-between px-0 py-2 border-0">
+                                <div class="list-group-item d-flex justify-content-between px-0 py-2">
                                     <span class="text-muted">Waiver Amount</span>
                                     <span class="fw-semibold text-purple">-₦{{ billing.waiver_amount|floatformat:2 }}</span>
                                 </div>
                                 {% endif %}
                                 
                                 {% if billing.tax > 0 %}
-                                <div class="list-group-item d-flex justify-content-between px-0 py-2 border-0">
+                                <div class="list-group-item d-flex justify-content-between px-0 py-2">
                                     <span class="text-muted">Tax</span>
                                     <span class="fw-semibold">₦{{ billing.tax|floatformat:2 }}</span>
                                 </div>
@@ -198,7 +199,7 @@
                                 </div>
                                 
                                 {% if total_paid > 0 %}
-                                <div class="list-group-item d-flex justify-content-between px-0 py-2 border-0">
+                                <div class="list-group-item d-flex justify-content-between px-0 py-2">
                                     <span class="text-muted">Amount Paid</span>
                                     <span class="fw-semibold text-success">₦{{ total_paid|floatformat:2 }}</span>
                                 </div>
@@ -281,63 +282,43 @@
 
         <!-- Right Sidebar -->
         <div class="col-lg-4">
-            
-            <!-- Payment Status Card -->
-            {% if payment_cleared %}
-            <div class="card mb-4 border-success">
-                <div class="card-header bg-success text-white">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-check-circle me-2"></i>Payment Cleared
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <p class="mb-3">
-                        {% if is_fully_paid %}
-                        Payment has been received in full.
-                        {% elif is_authorized %}
-                        Authorization granted. Debt of <strong>₦{{ billing.total_amount|floatformat:2 }}</strong> tracked.
-                        {% elif is_waived %}
-                        Payment has been waived.
-                        {% endif %}
-                    </p>
-                    <a href="{% url 'labs:collect_sample' billing_pk=billing.pk %}" 
-                       class="btn btn-success w-100">
-                        <i class="fas fa-syringe me-2"></i>Proceed to Sample Collection
-                    </a>
-                </div>
-            </div>
-            {% endif %}
-            
             <!-- Payment Actions Card -->
-            {% if not payment_cleared %}
-            <div class="card mb-4 border-danger">
-                <div class="card-header bg-danger text-white">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-exclamation-triangle me-2"></i>Payment Required
-                    </h5>
+            {% if not is_fully_paid and not is_waived and not sample %}
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">Payment Actions</h5>
                 </div>
                 <div class="card-body">
-                    <p class="mb-3 text-muted">Please clear payment before sample collection can proceed.</p>
                     <div class="d-grid gap-2">
                         
-                        <!-- Confirm Payment Button -->
-                        {% if user.can_receive_payment %}
-                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#paymentModal">
-                            <i class="fas fa-money-bill-wave me-2"></i>Confirm Payment
+                        <!-- Record Payment Button -->
+                        {% if balance_due > 0 and user.can_receive_payment and not is_authorized %}
+                        <button type="button" onclick="showPaymentModal()" 
+                                class="btn btn-success btn-lg d-flex align-items-center justify-content-center">
+                            <i class="fas fa-money-bill-wave me-2"></i>
+                            Record Payment
+                            {% if balance_due != billing.total_amount %}
+                            <span class="badge bg-light text-dark ms-2">₦{{ balance_due|floatformat:2 }}</span>
+                            {% endif %}
                         </button>
                         {% endif %}
 
                         <!-- Authorize Button -->
-                        {% if user.can_authorize_billing %}
-                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#authorizeModal">
-                            <i class="fas fa-unlock me-2"></i>Authorize to Proceed
+                        {% if not is_authorized and user.can_authorize_billing and not is_waived %}
+                        <button type="button" onclick="showAuthorizeModal()" 
+                                class="btn btn-primary btn-lg d-flex align-items-center justify-content-center">
+                            <i class="fas fa-unlock me-2"></i>
+                            Authorize to Proceed
                         </button>
                         {% endif %}
 
                         <!-- Waive Button -->
-                        {% if user.can_waive_billing %}
-                        <button type="button" class="btn btn-purple" data-bs-toggle="modal" data-bs-target="#waiveModal">
-                            <i class="fas fa-gift me-2"></i>Waive Payment
+                        {% if not is_waived and user.can_waive_billing %}
+                        <button type="button" onclick="showWaiveModal()" 
+                                class="btn btn-purple btn-lg d-flex align-items-center justify-content-center" 
+                                style="background-color: #6f42c1; border-color: #6f42c1; color: white;">
+                            <i class="fas fa-gift me-2"></i>
+                            Waive Payment
                         </button>
                         {% endif %}
 
@@ -353,43 +334,99 @@
                 </div>
                 <div class="card-body">
                     <dl class="row mb-0">
-                        <dt class="col-sm-5 text-muted small">Billing Type</dt>
+                        <dt class="col-sm-5 text-muted">Billing Type</dt>
                         <dd class="col-sm-7 fw-semibold">{{ billing.get_billing_type_display }}</dd>
                         
                         {% if billing.insurance_provider %}
-                        <dt class="col-sm-5 text-muted small">Insurance</dt>
+                        <dt class="col-sm-5 text-muted">Insurance Provider</dt>
                         <dd class="col-sm-7 fw-semibold">{{ billing.insurance_provider.name }}</dd>
                         {% endif %}
                         
                         {% if billing.corporate_client %}
-                        <dt class="col-sm-5 text-muted small">Corporate</dt>
+                        <dt class="col-sm-5 text-muted">Corporate Client</dt>
                         <dd class="col-sm-7 fw-semibold">{{ billing.corporate_client.name }}</dd>
                         {% endif %}
                         
                         {% if billing.price_list %}
-                        <dt class="col-sm-5 text-muted small">Price List</dt>
+                        <dt class="col-sm-5 text-muted">Price List</dt>
                         <dd class="col-sm-7 fw-semibold">{{ billing.price_list.name }}</dd>
                         {% endif %}
                         
-                        <dt class="col-sm-5 text-muted small">Created</dt>
-                        <dd class="col-sm-7">{{ billing.created_at|date:"M d, Y" }}</dd>
+                        <dt class="col-sm-5 text-muted">Created</dt>
+                        <dd class="col-sm-7">{{ billing.created_at|date:"M d, Y g:i A" }}</dd>
                     </dl>
                 </div>
             </div>
 
+
+            <div class="flex flex-wrap gap-2 justify-end">
+                
+                {# PRINT INVOICE - ALWAYS #}
+                <a href="{% url 'billing:invoice_pdf_preview' billing.id %}"
+                class="btn btn-outline">
+                    <i class="fas fa-file-invoice mr-1"></i> Invoice
+                </a>
+
+                {# RECEIVE PAYMENT #}
+                {% if not is_fully_paid and user.can_receive_payment %}
+                    <button
+                        hx-get="{% url 'billing:confirm_payment' billing.id %}"
+                        hx-target="#modal-body"
+                        hx-trigger="click"
+                        class="btn btn-success">
+                        <i class="fas fa-money-bill-wave mr-1"></i> Receive Payment
+                    </button>
+                {% endif %}
+
+                {# AUTHORIZE BILLING #}
+                {% if is_blocked and not is_fully_paid and user.can_authorize_billing %}
+                    <button
+                        hx-get="{% url 'billing:authorize_billing' billing.id %}"
+                        hx-target="#modal-body"
+                        class="btn btn-warning">
+                        <i class="fas fa-check-circle mr-1"></i> Authorize
+                    </button>
+                {% endif %}
+
+                {# WAIVE PAYMENT #}
+                {% if not is_fully_paid and user.can_waive_billing %}
+                    <button
+                        hx-get="{% url 'billing:waive_billing' billing.id %}"
+                        hx-target="#modal-body"
+                        class="btn btn-danger">
+                        <i class="fas fa-ban mr-1"></i> Waive
+                    </button>
+                {% endif %}
+
+            </div>
+
+
+
             <!-- Export/Print Card -->
             <div class="card">
                 <div class="card-header bg-light">
-                    <h5 class="card-title mb-0">Actions</h5>
+                    <h5 class="card-title mb-0">Export/Print</h5>
                 </div>
                 <div class="card-body">
-                    <div class="d-grid gap-2">
-                        <a href="{% url 'billing:invoice_pdf_preview' billing.id %}" class="btn btn-outline-primary">
-                            <i class="fas fa-file-invoice me-2"></i>View Invoice
+                    <div class="list-group list-group-flush">
+                        <a href="#" class="list-group-item list-group-item-action border-0">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-print text-muted me-3"></i>
+                                <span>Print Receipt</span>
+                            </div>
                         </a>
-                        <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
-                            <i class="fas fa-print me-2"></i>Print Receipt
-                        </button>
+                        <a href="#" class="list-group-item list-group-item-action border-0">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-file-pdf text-muted me-3"></i>
+                                <span>Download PDF</span>
+                            </div>
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action border-0">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-file-invoice text-muted me-3"></i>
+                                <span>View Invoice</span>
+                            </div>
+                        </a>
                     </div>
                 </div>
             </div>
@@ -460,27 +497,28 @@
                 <h5 class="modal-title" id="authorizeModalLabel">Authorize to Proceed</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="POST" action="{% url 'billing:authorize_billing' pk=billing.pk %}">
-                {% csrf_token %}
-                <div class="modal-body">
-                    <div class="alert alert-info mb-3">
-                        <i class="fas fa-info-circle me-2"></i>
-                        This will allow sample collection to proceed. The debt of 
-                        <strong>₦{{ billing.total_amount|floatformat:2 }}</strong> will remain tracked for later payment.
-                    </div>
-                    
-                    <div class="mb-0">
+            <div class="modal-body">
+                <div class="alert alert-info mb-3">
+                    <i class="fas fa-info-circle me-2"></i>
+                    This will allow sample collection to proceed. The debt of 
+                    <strong>₦{{ billing.total_amount|floatformat:2 }}</strong> will remain tracked for later payment.
+                </div>
+                
+                <form method="POST" action="{% url 'billing:authorize_billing' pk=billing.pk %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
                         <label for="authorizationReason" class="form-label">Authorization Reason *</label>
                         <textarea name="reason" id="authorizationReason" rows="3" required
                                   placeholder="e.g., Emergency case, VIP monthly billing, Insurance pre-authorization..."
                                   class="form-control"></textarea>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Authorize</button>
-                </div>
-            </form>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Authorize</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </div>
@@ -493,14 +531,14 @@
                 <h5 class="modal-title" id="waiveModalLabel">Waive Payment</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="POST" action="{% url 'billing:waive_billing' pk=billing.pk %}">
-                {% csrf_token %}
-                <div class="modal-body">
-                    <div class="alert alert-warning mb-3">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        This will forgive the debt. No payment will be expected.
-                    </div>
-                    
+            <div class="modal-body">
+                <div class="alert alert-purple mb-3" style="background-color: #e9d8fd; color: #6f42c1; border-color: #d6bcf9;">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    This will forgive the debt. No payment will be expected.
+                </div>
+                
+                <form method="POST" action="{% url 'billing:waive_billing' pk=billing.pk %}">
+                    {% csrf_token %}
                     <div class="mb-3">
                         <label for="waiverType" class="form-label">Waiver Type *</label>
                         <select name="waiver_type" id="waiverType" class="form-select" onchange="togglePartialAmount()">
@@ -520,18 +558,19 @@
                         <div class="form-text">Maximum: ₦{{ billing.total_amount|floatformat:2 }}</div>
                     </div>
                     
-                    <div class="mb-0">
+                    <div class="mb-3">
                         <label for="waiverReason" class="form-label">Waiver Reason *</label>
                         <textarea name="waiver_reason" id="waiverReason" rows="3" required
-                                  placeholder="e.g., Charity case, Staff medical benefit, Goodwill gesture..."
+                                  placeholder="e.g., Charitable case, staff benefit, promotional waiver..."
                                   class="form-control"></textarea>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-purple">Confirm Waiver</button>
-                </div>
-            </form>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-purple" style="background-color: #6f42c1; border-color: #6f42c1; color: white;">Confirm Waiver</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </div>
@@ -594,11 +633,33 @@
         border-color: #5a32a3;
         color: white;
     }
+    
+    .alert-purple {
+        background-color: #e9d8fd;
+        border-color: #d6bcf9;
+        color: #6f42c1;
+    }
 </style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+    // Show modals
+    function showPaymentModal() {
+        var paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
+        paymentModal.show();
+    }
+    
+    function showAuthorizeModal() {
+        var authorizeModal = new bootstrap.Modal(document.getElementById('authorizeModal'));
+        authorizeModal.show();
+    }
+    
+    function showWaiveModal() {
+        var waiveModal = new bootstrap.Modal(document.getElementById('waiveModal'));
+        waiveModal.show();
+    }
+    
     // Toggle partial waiver amount field
     function togglePartialAmount() {
         const waiverType = document.getElementById('waiverType').value;
@@ -614,5 +675,17 @@
             partialWaiverAmount.value = '';
         }
     }
+    
+    // Set payment amount to balance due
+    document.addEventListener('DOMContentLoaded', function() {
+        // Auto-select cash as default payment method
+        document.getElementById('paymentMethod').value = 'cash';
+        
+        // Set max amount for payment
+        const paymentAmount = document.getElementById('paymentAmount');
+        if (paymentAmount) {
+            paymentAmount.max = {{ balance_due }};
+        }
+    });
 </script>
 {% endblock %}

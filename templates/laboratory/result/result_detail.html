@@ -28,15 +28,12 @@
             </a>
 
             {% if can_edit %}
-            <a href="{% url 'labs:edit_result' result.id %}" class="btn btn-warning">
-                <i class="bi bi-pencil me-1"></i> Edit Result
+            <a href="{% url 'labs:update_manual_test_result' result.id %}" class="btn btn-warning">
+                <i class="bi bi-pencil me-1"></i> Update Result
             </a>
             {% endif %}
             
             {% if can_verify %}
-            <a href="{% url 'labs:verify_result' result.id %}" class="btn btn-success">
-                <i class="bi bi-check-circle me-1"></i> Verify
-            </a>
             <form method="post" action="{% url 'labs:verify_result' result.id %}" class="d-inline" 
                   onsubmit="return confirmVerify()">
                 {% csrf_token %}
@@ -56,7 +53,7 @@
             </form>
             {% endif %}
             
-            {% if result.released %}
+            {% if result.released_at %}
             <a href="{% url 'labs:download_result_pdf' result.id %}" 
                target="_blank"
                class="btn btn-outline-navy">
@@ -65,11 +62,12 @@
             {% endif %}
             
             {% if can_amend %}
-            <a href="{% url 'labs:edit_result' result.id %}" class="btn btn-danger">
+            <a href="{% url 'labs:amend_result' result.id %}" class="btn btn-danger">
                 <i class="bi bi-exclamation-triangle me-1"></i> Amend
             </a>
             {% endif %}
         </div>
+    
     </div>
 
     <!-- STATUS ALERT WITH CRITICAL INDICATOR -->
@@ -82,7 +80,7 @@
         <div class="d-flex align-items-center">
             <div class="flex-grow-1">
                 <h5 class="alert-heading mb-1">
-                    {% if result.released %}
+                    {% if result.released_at %}
                         <i class="bi bi-check-circle-fill me-2 text-success"></i>Result Released
                     {% elif result.verified_at %}
                         <i class="bi bi-shield-check me-2 text-info"></i>Result Verified - Awaiting Release
@@ -100,7 +98,7 @@
                         {% elif result.verified_at %}bg-info
                         {% elif result.is_critical %}bg-danger
                         {% else %}bg-warning text-dark{% endif %}">
-                        {% if result.released %}RELEASED
+                        {% if result.released_at %}RELEASED
                         {% elif result.verified_at %}VERIFIED
                         {% elif result.is_critical %}CRITICAL
                         {% else %}ENTERED{% endif %}
@@ -116,6 +114,12 @@
             {% endif %}
         </div>
     </div>
+
+
+
+
+
+
 
     <div class="row">
         <!-- LEFT COLUMN - MAIN CONTENT -->
@@ -315,40 +319,27 @@
             </div>
 
             <!-- AMENDMENT HISTORY -->
-            {% if result.is_amended or result.version > 1 %}
-            <div class="card border-warning mb-4">
-                <div class="card-header bg-warning text-dark d-flex justify-content-between">
-                    <h6 class="mb-0">
-                        <i class="bi bi-clock-history me-2"></i>Amendment History
-                    </h6>
+            <div class="card-header text-dark d-flex justify-content-between mb-3">
+                {% if result.is_amended %}
+                    <span class="badge bg-danger">
+                        <i class="bi bi-patch-exclamation-fill"></i> AMENDED REPORT
+                    </span>
                     <span class="badge bg-dark">Version {{ result.version }}</span>
-                </div>
+
+                {% endif %}
+            </div>
+
+            {% if result.is_amended %}
+            <div class="card border-warning bg-light mb-3">
                 <div class="card-body">
-                    <div class="row">
-                        {% if result.previous_value %}
-                        <div class="col-md-6">
-                            <p class="mb-1"><strong>Previous Value:</strong></p>
-                            <p class="text-danger fs-5">{{ result.previous_value }}</p>
-                        </div>
-                        {% endif %}
-                        {% if result.amendment_reason %}
-                        <div class="col-md-6">
-                            <p class="mb-1"><strong>Reason for Amendment:</strong></p>
-                            <p class="text-muted">{{ result.amendment_reason }}</p>
-                        </div>
-                        {% endif %}
-                    </div>
-                    {% if result.amended_by %}
-                    <p class="mb-0 text-end">
-                        <small class="text-muted">
-                            Amended by {{ result.amended_by.get_full_name }} on 
-                            {{ result.amended_at|date:"M d, Y H:i" }}
-                        </small>
-                    </p>
-                    {% endif %}
+                    <h6 class="text-warning"><i class="bi bi-info-circle"></i> Latest Amendment Note:</h6>
+                    <p class="mb-1"><strong>Previous Value:</strong> <del>{{ result.previous_value }}</del></p>
+                    <p class="mb-0"><strong>Count:</strong> {{ amendment_count}}</p>
+                    <p class="mb-0"><strong>Reason for Change:</strong> {{ result.amendment_reason }}</p>
                 </div>
             </div>
             {% endif %}
+
 
             <!-- PREVIOUS RESULTS TREND -->
             {% if previous_results %}
@@ -419,6 +410,22 @@
                 </div>
                 <div class="card-body">
                     <div class="timeline-vertical">
+                        <!-- CURRENT POSITION -->
+                        <div class="timeline-step">
+                            <div class="timeline-marker 
+                                {% if result.released %}bg-success
+                                {% elif result.verified_at %}bg-info
+                                {% else %}bg-warning{% endif %} 
+                                pulse">
+                                <i class="bi bi-record-circle"></i>
+                            </div>
+                            <div class="timeline-content">
+                                <h6 class="mb-1">Current Position</h6>
+                                <p class="mb-0">
+                                    <strong class="text-navy uppercase">{{ workflow_stage|default:"In Progress" }}</strong>
+                                </p>
+                            </div>
+                        </div>
                         <!-- ENTERED -->
                         <div class="timeline-step">
                             <div class="timeline-marker bg-navy">
@@ -452,7 +459,7 @@
                         {% endif %}
                         
                         <!-- RELEASED -->
-                        {% if result.released %}
+                        {% if result.released_at %}
                         <div class="timeline-step">
                             <div class="timeline-marker bg-info">
                                 <i class="bi bi-send-check"></i>
@@ -467,26 +474,32 @@
                             </div>
                         </div>
                         {% endif %}
-                        
-                        <!-- CURRENT POSITION -->
+
+                        <!-- RELEASED -->
+                        {% if result.is_amended %}
                         <div class="timeline-step">
-                            <div class="timeline-marker 
-                                {% if result.released %}bg-success
-                                {% elif result.verified_at %}bg-info
-                                {% else %}bg-warning{% endif %} 
-                                pulse">
-                                <i class="bi bi-record-circle"></i>
+                            <div class="timeline-marker bg-info">
+                                <i class="bi bi-send-check"></i>
                             </div>
                             <div class="timeline-content">
-                                <h6 class="mb-1">Current Position</h6>
-                                <p class="mb-0">
-                                    <strong class="text-navy">{{ workflow_stage|default:"In Progress" }}</strong>
-                                </p>
+                                <h6 class="mb-1">Result Amended/h6> </h6>
+                                <p class="text-muted mb-1">{{ result_amendments.amended_at|date:"M d, Y H:i" }}</p>
+                                <small class="text-info">
+                                    <i class="bi bi-person-badge me-1"></i>
+                                    {{ result_amendments.amended_by.get_full_name|default:"System" }}
+                                </small>
+                                <span class="badge bg-outline-danger ms-1">
+                                    Revision v{{ result.version }}
+                                </span> 
                             </div>
                         </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
+
+
+
 
             <!-- QUALITY CONTROL -->
             <div class="card border-navy shadow-sm mb-4">
@@ -595,6 +608,7 @@
             </div>
             {% endif %}
         </div>
+    
     </div>
 </div>
 

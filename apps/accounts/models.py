@@ -186,6 +186,38 @@ class User(AbstractBaseUser, PermissionsMixin):
     def is_patient(self):
         return self.role == 'patient'
 
+    # =========================================
+    # SAMPLE & ACCESSIONING
+    # ========================================
+
+    @property
+    def can_collect_sample(self):
+        return self.role in ['scientist', 'technologist', 'logistics'] or self.is_vendor_admin
+
+    @property
+    def can_accession_samples(self):
+        return self.role in ['technologist', 'logistics'] or self.role_at_least('technologist')
+
+    @property
+    def can_track_sample_quality(self):
+        return self.role == 'technologist' or self.role_at_least('technologist')
+
+    @property
+    def can_verify_sample(self):
+        """
+        Scientists & Technologists may enter results.
+        Lab Managers are explicitly excluded.
+        """
+        return self.role in ['scientist', 'technologist'] or self.is_vendor_admin
+
+    # =========================================
+    # TEST REQUEST
+    # ========================================
+    @property
+    def can_manage_request(self):
+        return self.role in ['technologist', 'scientist', 'lab_manager'] or self.is_vendor_admin
+
+
     # =======================================
     # RESULT LIFECYCLE PERMISSIONS (CRITICAL)
     # ========================================
@@ -221,40 +253,34 @@ class User(AbstractBaseUser, PermissionsMixin):
         """
         return self.is_vendor_admin or self.has_perm('labs.can_amend_results')
 
-    # =========================================
-    # SAMPLE & ACCESSIONING
     # ========================================
-
-    @property
-    def can_collect_samples(self):
-        return self.role in ['technologist', 'logistics']
-
-    @property
-    def can_accession_samples(self):
-        return self.role in ['technologist', 'logistics'] or self.role_at_least('technologist')
-
-    @property
-    def can_track_sample_quality(self):
-        return self.role == 'technologist' or self.role_at_least('technologist')
-
-    # =========================================
-    # TEST REQUEST
-    # ========================================
-    @property
-    def can_delete_request(self):
-        return self.role in ['technologist', 'scientist', 'lab_manager'] or self.is_vendor_admin
-
-    # ========================================
-    # PATIENT, BILLING, REPORTING
+    # PATIENT
     # =========================================
 
     @property
     def can_register_patients(self):
         return self.role in ['receptionist', 'logistics'] or self.is_vendor_admin
 
+    # ========================================
+    # BILLING
+    # =========================================
+    
     @property
     def can_manage_billing(self):
         return self.role == 'receptionist' or self.is_vendor_admin
+
+    @property
+    def can_authorize_billing(self):
+        "Can proceed without payment but debet remains"
+        return self.role in ['lab_manager', 'vendor_admin', 'scientist']
+
+    @property
+    def can_waive_billing(self):
+        return self.role in ['lab_manager', 'vendor_admin', 'scientist']
+
+    @property
+    def can_receive_payment(self):
+        return self.role in ['lab_manager', 'vendor_admin', 'scientist']
 
     @property
     def can_download_results(self):
@@ -389,14 +415,20 @@ class VendorProfile(BaseProfile):
     def save(self, *args, **kwargs):
         if self.office_address and self.office_city_state and self.office_country:
             full_address = f"{self.office_address}, {self.office_city_state}, {self.office_country}, {self.office_zipcode}"
-            # try:
-            #     geolocator = Nominatim(user_agent="firstjp_lims")
-            #     location = geolocator.geocode(full_address)
-            #     if location:
-            #         self.latitude = location.latitude
-            #         self.longitude = location.longitude
-            # except Exception:
-            #     # Silently fail if geocoding doesn't work
-            #     pass
         super().save(*args, **kwargs)
+
+
+    # def save(self, *args, **kwargs):
+    #     if self.office_address and self.office_city_state and self.office_country:
+    #         full_address = f"{self.office_address}, {self.office_city_state}, {self.office_country}, {self.office_zipcode}"
+    #         # try:
+    #             geolocator = Nominatim(user_agent="firstjp_lims")
+    #             location = geolocator.geocode(full_address)
+    #             if location:
+    #                 self.latitude = location.latitude
+    #                 self.longitude = location.longitude
+    #         except Exception:
+    #             # Silently fail if geocoding doesn't work
+    #             pass
+    #     super().save(*args, **kwargs)
 

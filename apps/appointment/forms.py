@@ -175,7 +175,7 @@ class AppointmentBookingForm(forms.ModelForm):
         if not slot:
             return cleaned_data
 
-        if slot.vendor_id != self.vendor.id:
+        if slot.vendor_id != self.vendor.internal_id:
             raise ValidationError("Invalid slot selected.")
 
         if not slot.is_available:

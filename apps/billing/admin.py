@@ -241,33 +241,33 @@ class BillingInformationAdmin(admin.ModelAdmin):
 # PAYMENT ADMIN
 # ==========================================
 
-@admin.register(Payment)
-class PaymentAdmin(admin.ModelAdmin):
-    list_display = ('billing_request_id', 'amount', 'payment_method', 
-                   'payment_date', 'collected_by')
-    list_filter = ('payment_method', 'payment_date', 'billing__vendor')
-    search_fields = ('transaction_reference', 'billing__request__request_id')
-    readonly_fields = ('payment_date', 'created_at')
+# @admin.register(Payment)
+# class PaymentAdmin(admin.ModelAdmin):
+#     list_display = ('billing_request_id', 'amount', 'payment_method', 
+#                    'payment_date', 'collected_by')
+#     list_filter = ('payment_method', 'payment_date', 'billing__vendor')
+#     search_fields = ('transaction_reference', 'billing__request__request_id')
+#     readonly_fields = ('payment_date', 'created_at')
     
-    fieldsets = (
-        ('Payment Details', {
-            'fields': ('billing', 'amount', 'payment_method', 'transaction_reference', 
-                      'payment_date')
-        }),
-        ('Additional Information', {
-            'fields': ('collected_by', 'notes', 'created_at')
-        }),
-    )
+#     fieldsets = (
+#         ('Payment Details', {
+#             'fields': ('billing', 'amount', 'payment_method', 'transaction_reference', 
+#                       'payment_date')
+#         }),
+#         ('Additional Information', {
+#             'fields': ('collected_by', 'notes', 'created_at')
+#         }),
+#     )
     
-    def billing_request_id(self, obj):
-        return obj.billing.request.request_id if obj.billing.request else 'N/A'
-    billing_request_id.short_description = 'Request ID'
+#     def billing_request_id(self, obj):
+#         return obj.billing.request.request_id if obj.billing.request else 'N/A'
+#     billing_request_id.short_description = 'Request ID'
     
-    def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        if not request.user.is_superuser:
-            qs = qs.filter(billing__vendor=request.user.vendor)
-        return qs
+#     def get_queryset(self, request):
+#         qs = super().get_queryset(request)
+#         if not request.user.is_superuser:
+#             qs = qs.filter(billing__vendor=request.user.vendor)
+#         return qs
 
 
 # ==========================================

@@ -229,6 +229,7 @@ class BillingInformation(models.Model):
     PAYMENT_STATUS = [
         ('UNPAID', 'Unpaid'),
         ('PARTIAL', 'Partially Paid'),
+        ('AUTHORIZED', 'Authorized to Proceed'),
         ('PAID', 'Fully Paid'),
         ('INVOICED', 'Invoiced (Awaiting Payment)'),
         ('OVERDUE', 'Overdue'),
@@ -238,9 +239,19 @@ class BillingInformation(models.Model):
 
     billing_notes = models.TextField(blank=True)
 
+    # Waive payment 
+    authorized_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='billing_authorizations'
+    )
+    authorized_at = models.DateTimeField(null=True, blank=True)
+    authorization_reason = models.TextField(blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
+    
     class Meta:
         ordering = ['-created_at']
         indexes = [
@@ -251,15 +262,23 @@ class BillingInformation(models.Model):
     # -----------------------------
     # Calculation engine
     # -----------------------------
-    def _calculate_totals_internal(self):
-        """Calculate subtotal, discounts, tax and breakdowns safely."""
-        try:
-            assignments = self.request.test_assignments.all()
-        except AttributeError:
-            logger.warning("BillingInformation.request has no test_assignments")
-            assignments = []
 
-        if not getattr(assignments, 'exists', lambda: False)() or len(assignments) == 0:
+    def _calculate_totals_internal(self):
+        """
+        Calculate subtotal, discounts, tax and breakdowns safely.
+        
+        IMPORTANT: Uses requested_tests (M2M on TestRequest) not test_assignments.
+        Test assignments are created AFTER sample collection, but billing 
+        happens BEFORE sample collection.
+        """
+        try:
+            # Use requested_tests from the TestRequest, not test_assignments
+            tests = self.request.requested_tests.all()
+        except AttributeError:
+            logger.warning("BillingInformation.request has no requested_tests")
+            tests = []
+
+        if not tests or len(tests) == 0:
             self.subtotal = D('0.00')
             self.discount = D('0.00')
             self.tax = D('0.00')
@@ -271,19 +290,19 @@ class BillingInformation(models.Model):
         subtotal = D('0.00')
         total_test_discount = D('0.00')
 
-        for assignment in assignments:
+        for lab_test in tests:
             try:
                 # Prefer price from provided price_list, else fallback to test.price
                 if self.price_list:
                     # test.get_price_from_price_list may raise; guard it
-                    price = getattr(assignment.test, 'get_price_from_price_list', None)
+                    price = getattr(lab_test, 'get_price_from_price_list', None)
                     if callable(price):
-                        price = assignment.test.get_price_from_price_list(self.price_list)
+                        price = lab_test.get_price_from_price_list(self.price_list)
                     else:
                         # fallback to attribute
-                        price = getattr(assignment.test, 'price', None)
+                        price = getattr(lab_test, 'price', None)
                 else:
-                    price = getattr(assignment.test, 'price', None)
+                    price = getattr(lab_test, 'price', None)
 
                 if price is None:
                     continue
@@ -294,10 +313,10 @@ class BillingInformation(models.Model):
                 # Test-level discount if TestPrice exists for this price list
                 if self.price_list:
                     try:
-                        test_price_obj = assignment.test.prices.get(price_list=self.price_list)
+                        test_price_obj = lab_test.prices.get(price_list=self.price_list)
                         test_disc = D(price) * (D(test_price_obj.discount_percentage) / D(100))
                         total_test_discount += test_disc
-                    except assignment.test.prices.model.DoesNotExist:
+                    except lab_test.prices.model.DoesNotExist:
                         # no test-specific discount for this price list
                         pass
                     except Exception:
@@ -305,8 +324,8 @@ class BillingInformation(models.Model):
                         logger.debug("Error fetching test-specific price/discount", exc_info=True)
 
             except Exception:
-                # Do not crash billing due to single assignment error
-                logger.exception("Error processing assignment for billing calculation")
+                # Do not crash billing due to single test error
+                logger.exception("Error processing test for billing calculation")
                 continue
 
         # PriceList-level discount
@@ -381,15 +400,34 @@ class BillingInformation(models.Model):
             update_fields = [f for f in dict.fromkeys(update_fields) if hasattr(self, f)]
             super().save(update_fields=update_fields)
 
+    @property
+    def is_payment_cleared(self):
+        """
+        Logic for proceeding to Sample Collection.
+        Cleared means: Status is PAID, AUTHORIZED, or WAIVED.
+        """
+        return self.payment_status in ['PAID', 'AUTHORIZED', 'WAIVED']
+
     def get_balance_due(self):
         total_paid = self.payments.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-        return D(self.total_amount) - D(total_paid)
+        return Decimal(self.total_amount) - Decimal(total_paid)
 
     def is_fully_paid(self):
-        return self.get_balance_due() <= D('0.00')
+        # Logic: Total must be > 0 and balance must be <= 0
+        # OR the status must be explicitly PAID or WAIVED
+        if self.payment_status in ['PAID', 'WAIVED']:
+            return True
+        
+        balance = self.get_balance_due()
+        if self.total_amount > 0:
+            return balance <= 0
+        return False
 
     def __str__(self):
         return f"Billing for {getattr(self.request, 'request_id', str(self.pk))} - ₦{self.total_amount}"
+
+
+"I want you to act as a debugger, I have a few issue with my LIMS operation, the Billing confirmation. I dont understand the is_fully_paid function? The client has no history with the laboratory, so no payment has been made, and also, I am not handing sample collection, at this phase, sample collection button can be on the page, which should appear once payment is cleared, either through waive, or authorize (debt record will be kept), or through cash.. Fully Paid is reflecting on the page for the client who hasn't pay at all, you will need to check the BillingInformation and Payment models, and my views, and commented out sample, since it will not be collected yet --- Incase you want to see the test request and sample collection and examination, they are here also, during the sample collection, test assigment also occurs"
 
 
 # ==========================================
@@ -411,7 +449,7 @@ class Payment(models.Model):
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHODS)
 
     transaction_reference = models.CharField(max_length=100, blank=True,
-                                             help_text="POS ref, transfer ref, etc.")
+    help_text="POS ref, transfer ref, etc.")
     payment_date = models.DateTimeField(default=timezone.now)
 
     collected_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
@@ -422,24 +460,180 @@ class Payment(models.Model):
     class Meta:
         ordering = ['-payment_date']
 
+    # Inside Payment model save()
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-
-        # After saving payment, update billing status
+        
         total_paid = self.billing.payments.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        total_amt = Decimal(self.billing.total_amount)
 
-        if D(total_paid) >= D(self.billing.total_amount):
+        # Only mark as PAID if there was actually something to pay
+        if total_amt > 0 and Decimal(total_paid) >= total_amt:
             self.billing.payment_status = 'PAID'
-        elif D(total_paid) > D('0.00'):
+        elif Decimal(total_paid) > 0:
             self.billing.payment_status = 'PARTIAL'
         else:
-            self.billing.payment_status = 'UNPAID'
+            # If it was AUTHORIZED or WAIVED, don't overwrite it back to UNPAID 
+            # unless total_paid is literally 0 and it wasn't authorized.
+            if self.billing.payment_status not in ['AUTHORIZED', 'WAIVED']:
+                self.billing.payment_status = 'UNPAID'
 
-        # Persist only status (billing totals already maintained in BillingInformation.save)
         self.billing.save(update_fields=['payment_status', 'updated_at'])
 
     def __str__(self):
         return f"₦{self.amount} - {self.get_payment_method_display()} - {self.payment_date.date()}"
+
+
+from django.db import models
+from django.conf import settings
+from decimal import Decimal
+from django.utils import timezone
+
+
+# class Payment(models.Model):
+#     """
+#     Records individual payment transactions for billing records.
+#     Supports multiple payment methods and partial payments.
+#     """
+    
+#     vendor = models.ForeignKey(
+#         'tenants.Vendor',
+#         on_delete=models.CASCADE,
+#         related_name='payments'
+#     )
+    
+#     billing = models.ForeignKey(
+#         'billing.BillingInformation',
+#         on_delete=models.CASCADE,
+#         related_name='payments'
+#     )
+    
+#     # Payment Details
+#     amount = models.DecimalField(
+#         max_digits=12,
+#         decimal_places=2,
+#         help_text="Amount paid in this transaction"
+#     )
+    
+#     PAYMENT_METHODS = [
+#         ('cash', 'Cash'),
+#         ('bank_transfer', 'Bank Transfer'),
+#         ('pos', 'POS/Card Payment'),
+#         ('cheque', 'Cheque'),
+#         ('mobile_money', 'Mobile Money (e.g., PayStack, Flutterwave)'),
+#         ('online', 'Online Payment Gateway'),
+#         ('insurance_claim', 'Insurance Claim Settlement'),
+#         ('corporate_invoice', 'Corporate Invoice Payment'),
+#     ]
+#     payment_method = models.CharField(
+#         max_length=30,
+#         choices=PAYMENT_METHODS,
+#         default='cash'
+#     )
+    
+#     # Transaction tracking
+#     transaction_reference = models.CharField(
+#         max_length=200,
+#         blank=True,
+#         help_text="Bank reference, POS receipt number, or payment gateway transaction ID"
+#     )
+    
+#     receipt_number = models.CharField(
+#         max_length=100,
+#         unique=True,
+#         editable=False,
+#         help_text="Internal receipt number generated by system"
+#     )
+    
+#     # For cheques
+#     cheque_number = models.CharField(max_length=50, blank=True)
+#     cheque_bank = models.CharField(max_length=100, blank=True)
+#     cheque_date = models.DateField(null=True, blank=True)
+    
+#     # Status tracking
+#     PAYMENT_STATUS = [
+#         ('pending', 'Pending Verification'),
+#         ('completed', 'Completed'),
+#         ('failed', 'Failed'),
+#         ('reversed', 'Reversed/Refunded'),
+#         ('cheque_bounced', 'Cheque Bounced'),
+#     ]
+#     status = models.CharField(
+#         max_length=20,
+#         choices=PAYMENT_STATUS,
+#         default='completed'
+#     )
+    
+#     # Staff tracking
+#     received_by = models.ForeignKey(
+#         settings.AUTH_USER_MODEL,
+#         on_delete=models.SET_NULL,
+#         null=True,
+#         related_name='payments_received',
+#         help_text="Staff member who received/confirmed payment"
+#     )
+    
+#     verified_by = models.ForeignKey(
+#         settings.AUTH_USER_MODEL,
+#         on_delete=models.SET_NULL,
+#         null=True,
+#         blank=True,
+#         related_name='payments_verified',
+#         help_text="Staff member who verified payment (for bank transfers)"
+#     )
+    
+#     # Timestamps
+#     payment_date = models.DateTimeField(
+#         default=timezone.now,
+#         help_text="When payment was received"
+#     )
+    
+#     verified_at = models.DateTimeField(
+#         null=True,
+#         blank=True,
+#         help_text="When payment was verified (for online/transfer payments)"
+#     )
+    
+#     created_at = models.DateTimeField(auto_now_add=True)
+#     updated_at = models.DateTimeField(auto_now=True)
+    
+#     # Notes
+#     payment_notes = models.TextField(
+#         blank=True,
+#         help_text="Additional notes about this payment"
+#     )
+    
+#     class Meta:
+#         ordering = ['-payment_date']
+#         indexes = [
+#             models.Index(fields=['vendor', 'payment_date']),
+#             models.Index(fields=['billing', 'status']),
+#             models.Index(fields=['receipt_number']),
+#         ]
+    
+#     def save(self, *args, **kwargs):
+#         """Generate receipt number if not exists"""
+#         if not self.receipt_number:
+#             # Generate unique receipt number
+#             last_payment = Payment.objects.filter(
+#                 vendor=self.vendor
+#             ).order_by('-id').first()
+            
+#             if last_payment and last_payment.receipt_number:
+#                 try:
+#                     last_num = int(last_payment.receipt_number.split('-')[-1])
+#                     new_num = last_num + 1
+#                 except (ValueError, IndexError):
+#                     new_num = 1
+#             else:
+#                 new_num = 1
+            
+#             self.receipt_number = f"RCP-{self.vendor.id}-{new_num:08d}"
+        
+#         super().save(*args, **kwargs)
+    
+#     def __str__(self):
+#         return f"Payment {self.receipt_number} - ₦{self.amount} ({self.get_payment_method_display()})"
 
 
 # ==========================================

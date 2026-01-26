@@ -1,0 +1,108 @@
+{% extends "laboratory/assets/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2 class="fw-bold">Specimen Collection</h2>
+            <p class="text-muted">Request ID: <span class="badge bg-secondary">{{ test_request.request_id }}</span></p>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="card bg-light border-0">
+                <div class="card-body py-2">
+                    <small class="text-muted d-block">Billing Status</small>
+                    <span class="badge {% if billing.payment_status == 'PAID' %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                        {{ billing.get_payment_status_display }}
+                    </span>
+                    {% if billing.payment_status == 'AUTHORIZED' %}
+                    <small class="d-block text-info">Authorized by Manager</small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">Patient Profile</div>
+                <div class="card-body">
+                    <h5 class="mb-0">{{ patient.full_name }}</h5>
+                    <p class="small text-muted mb-3">{{ patient.age }}Y | {{ patient.get_gender_display }} | ID: {{ patient.patient_id }}</p>
+                    <hr>
+                    <h6>Tests to Perform ({{ total_tests }})</h6>
+                    <ul class="list-group list-group-flush">
+                        {% for test in test_request.requested_tests.all %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            {{ test.test_name }}
+                            <span class="badge rounded-pill bg-info text-dark">{{ test.sample_type }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card border-warning shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-warning"><i class="fas fa-exclamation-triangle"></i> Collection Guide</h6>
+                    <p class="small mb-0">Ensure you have gathered the following containers:</p>
+                    <div class="mt-2">
+                        {% for stype in required_sample_types %}
+                        <span class="badge bg-outline-dark border text-dark me-1">{{ stype }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">Collection Details</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="collectionForm">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">{{ form.specimen_type|as_crispy_field }}</div>
+                            <div class="col-md-6">{{ form.collection_method|as_crispy_field }}</div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">{{ form.collection_site|as_crispy_field }}</div>
+                            <div class="col-md-6">{{ form.container_type|as_crispy_field }}</div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4">{{ form.volume_collected_ml|as_crispy_field }}</div>
+                            <div class="col-md-4">{{ form.fasting_status|as_crispy_field }}</div>
+                            <div class="col-md-4">{{ form.location|as_crispy_field }}</div>
+                        </div>
+
+                        <div class="mt-3">
+                            {{ form.specimen_description|as_crispy_field }}
+                        </div>
+
+                        <div class="row mt-3">
+                            <div class="col-md-6">{{ form.collected_by|as_crispy_field }}</div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'billing:billing_detail' billing.pk %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left"></i> Back to Billing
+                            </a>
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-vial"></i> Finalize Collection & Print Label
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

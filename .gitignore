@@ -31,7 +31,8 @@ Thumbs.db
 
 /apps/labs/old_views.py
 /apps/accounts/old_views.py
-/apps/patientviews_old.py
+/apps/patient/views_old.py
+/apps/billing/views_old.py
 /.env
 
 /.venv
@@ -60,7 +61,7 @@ __pycache__/
 /templates_/form_.html
 /templates_/keep.html
 
-/templates/laboratory/examination/sample_detail1.html
+# /templates/laboratory/examination/sample_detail1.html
 
 /apps/labs/m.py
 

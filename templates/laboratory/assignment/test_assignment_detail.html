@@ -57,14 +57,16 @@
                 </div>
                 
                 <div class="col-md-4">
-                    {% if not result %}
-                    <a href="{% url 'labs:enter_test_result' assignment.id %}" class="btn btn-success w-100">
-                        <i class="bi bi-pencil-square me-2"></i>Enter Result Manually
-                    </a>
+                    {% if not assignment.result %}
+                        <a href="{% url 'labs:enter_manual_test_result' assignment.id %}"
+                        class="btn btn-success w-100">
+                            Enter Result
+                        </a>
                     {% else %}
-                    <a href="{% url 'labs:enter_test_result' assignment.id %}" class="btn btn-outline-success w-100">
-                        <i class="bi bi-pencil me-2"></i>Update Result
-                    </a>
+                        <a href="{% url 'labs:update_manual_test_result' assignment.result.id %}"
+                        class="btn btn-outline-success w-100">
+                            Update Result
+                        </a>
                     {% endif %}
                 </div>
                 
@@ -379,7 +381,7 @@
                     <div class="row g-3">
                         <div class="col-md-4">
                             <label class="form-label fw-semibold text-muted small mb-1">Result Value</label>
-                            <p class="fs-5 mb-0 text-dark fw-bold">{{ result.value }}</p>
+                            <p class="fs-5 mb-0 text-dark fw-bold">{{ result.result_value }}</p>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label fw-semibold text-muted small mb-1">Units</label>

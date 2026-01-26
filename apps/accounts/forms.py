@@ -8,6 +8,10 @@ from django.utils import timezone
 from apps.labs.models import Patient 
 from apps.patient.models import PatientUser
 from apps.clinician.models import ClinicianProfile
+from .models import VendorProfile
+# app_name/forms.py
+from django import forms
+from apps.labs.models import Equipment, Department
 
 
 User = get_user_model()
@@ -366,10 +370,6 @@ class TenantPasswordResetForm(PasswordResetForm):
         )
 
 
-
-from django import forms
-from .models import VendorProfile
-
 class VendorProfileForm(forms.ModelForm):
     class Meta:
         model = VendorProfile
@@ -392,10 +392,6 @@ class VendorProfileForm(forms.ModelForm):
             "registration_number": forms.TextInput(attrs={"class": "form-control"}),
         }
 
-
-# app_name/forms.py
-from django import forms
-from apps.labs.models import Equipment, Department
 
 class EquipmentForm(forms.ModelForm):
     class Meta:

@@ -22,7 +22,33 @@ urlpatterns = [
     path('pricelists/<int:pk>/edit/', pricelist.pricelist_update_view, name='pricelist_update'),
     path('pricelists/<int:pk>/delete/', pricelist.pricelist_delete_view, name='pricelist_delete'),
     path('pricelists/<int:pk>/toggle-active/', pricelist.pricelist_toggle_active_view, name='pricelist_toggle_active'), # To be used in details to set active and inactive...
-        
+
+    # Billing Info
+    path('billings/', billing_task.billing_list_view, name='billing_list'),
+    path('billings/create/', billing_task.billing_create_view, name='billing_create'),
+    path('billings/<int:pk>/edit/', billing_task.billing_update_view, name='billing_update'),
+    path('billings/<int:pk>/recalculate/', billing_task.billing_recalculate_view, name='billing_recalculate'),
+    path('billings/<int:pk>/print/', billing_task.billing_print_view, name='billing_print'),
+    path('billings/summary/', billing_task.billing_summary_view, name='billing_summary'),
+    path('billings/bulk-action/', billing_task.billing_bulk_action_view, name='billing_bulk_action'),
+    
+    path('billings/<int:pk>/detail/', billing_task.billing_detail_view, name='billing_detail'),
+
+    # Payment Actions
+    path('billing/<int:pk>/authorize/', billing_task.authorize_billing_view, name='authorize_billing'),
+    path('billing/<int:pk>/waive/', billing_task.waive_billing_view, name='waive_billing'),
+    path('billing/<int:pk>/confirm-payment/', billing_task.confirm_payment_view, name='confirm_payment'),
+    
+    # Payment Gateway (for future implementation)
+    # path('billing/<int:pk>/pay-online/', views.initiate_online_payment, name='pay_online'),
+    # path('payment/callback/', views.payment_gateway_callback, name='payment_callback'),
+
+ 
+    # Payments
+    path('billings/<int:billing_pk>/payment/', billing_task.PaymentCreateView.as_view(), name='payment_create'),
+    
+
+
     # Insurance Providers
     path('insurance/', insurance_provider.insurance_list_view, name='insurance_list'),
     path('insurance/create/', insurance_provider.insurance_create_view, name='insurance_create'),
@@ -47,27 +73,10 @@ urlpatterns = [
     path('corporate/<int:pk>/employee-report/', corporate_client.corporate_employee_report_view, name='corporate_employee_report'),
     path('corporate/<int:pk>/financial-report/', corporate_client.corporate_financial_report_view, name='corporate_financial_report'),
         
-    # Billing Information
-    path('billings/', billing_task.billing_list_view, name='billing_list'),
-    path('billings/create/', billing_task.billing_create_view, name='billing_create'),
-    path('billings/<int:pk>/', billing_task.billing_detail_view, name='billing_detail'),
-    path('billings/<int:pk>/edit/', billing_task.billing_update_view, name='billing_update'),
-    path('billings/<int:pk>/recalculate/', billing_task.billing_recalculate_view, name='billing_recalculate'),
-    path('billings/<int:pk>/print/', billing_task.billing_print_view, name='billing_print'),
-    path('billings/summary/', billing_task.billing_summary_view, name='billing_summary'),
-    path('billings/bulk-action/', billing_task.billing_bulk_action_view, name='billing_bulk_action'),
-
- 
-    # Payments
-    path('billings/<int:billing_pk>/payment/', billing_task.PaymentCreateView.as_view(), name='payment_create'),
-    
     # # Invoices
     path('invoices/', invoice_receipt.invoice_list, name='invoice_list'),
     path('invoices/create/', invoice_receipt.invoice_create, name='invoice_create'),
     path('invoices/<int:pk>/', invoice_receipt.invoice_detail, name='invoice_detail'),
-    path('invoices/<int:invoice_pk>/payments/create/', 
-         invoice_receipt.invoice_payment_create, 
-         name='invoice_payment_create'),
 
     # Invoice Payment
     path('invoices/<int:invoice_pk>/payments/create/', 

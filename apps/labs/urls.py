@@ -3,6 +3,7 @@ from django.urls import path
 from .views import (
     # Core system views (Dashboard, Profiles, Staff)
     base,
+    sample_mgt,
     
     # Configuration (Departments, Test definitions)
     setup, 
@@ -17,9 +18,6 @@ from .views import (
     test_requests, 
     
     # Pre-Analytical (Accessioning & Processing)
-    sample_exam, 
-    
-    # Analytical (Workflow management)
     test_assignments,
     
     # Post-Analytical (Entry, Verification, Release)
@@ -52,6 +50,7 @@ urlpatterns = [
     path("departments/create/", setup.department_create, name="department_create"),
     path("departments/<int:pk>/update/", setup.department_update, name="department_update"),
     path("departments/<int:pk>/delete/", setup.department_delete, name="department_delete"),
+
     # Test Crud
     path("tests/", setup.test_list, name="test_list"),
     path("tests/create/", setup.test_create, name="test_create"),
@@ -70,28 +69,57 @@ urlpatterns = [
     path("requests/download/blank/", downloads.download_test_request, {"blank": True}, name="download_blank_test_request"),
 
     # examination
-    path('examination/samples/', sample_exam.sample_examination_list, name='sample-exam-list'),
-    path('examination/sample/<str:sample_id>/', sample_exam.sample_examination_detail, name='sample-exam-detail'),
-    
+    path('examination/samples/', sample_mgt.sample_examination_list, name='sample-exam-list'),
+
+    # 🆕 Sample Collection URLs
+    path('samples/collect/<int:billing_pk>/', sample_mgt.collect_sample_view, name='collect_sample'),
+
+    # path('examination/sample/<int:sample_id>/', sample_mgt.sample_examination_detail, name='sample-exam-detail'),
+    # urls.py
+    path('examination/sample/<str:sample_id>/', sample_mgt.sample_examination_detail, name='sample-exam-detail'),
+
     # Bulk verification
-    path('samples/bulk/verify/', sample_exam.sample_bulk_verify, name='sample-bulk-verify'),
+    path('samples/bulk/verify/', sample_mgt.sample_bulk_verify, name='sample-bulk-verify'),
     
     # Admin override
-    path('samples/<str:sample_id>/verify-override/', sample_exam.sample_verify_override_payment,  name='sample-verify-override'),
+    path('samples/<str:sample_id>/verify-override/', sample_mgt.sample_verify_override_payment,  name='sample-verify-override'),
+
+    # path('samples/quick-collect/<int:billing_pk>/', views.quick_collect_sample_view, name='quick_collect_sample'),
+    
 
 
     # ===== Test Assignment =====
     path('assignments/', test_assignments.test_assignment_list, name='test_assignment_list'),
+
     path('assignment/<int:assignment_id>/', test_assignments.test_assignment_detail, name='test_assignment_detail'),
 
 
     # Result Management URLs
     # ===== Manual Result Entry =====
-    path('assignment/<int:assignment_id>/enter-result/', test_results.enter_manual_result, name='enter_test_result'),
-    path('results/', test_results.result_list, name='result_list'),
+    path(
+        "result/<int:result_id>/update/",
+        test_results.update_manual_result,
+        name="update_manual_test_result",
+    ),
+
+    path(
+        'assignment/<int:assignment_id>/enter-result/', 
+         test_results.enter_manual_result, 
+         name='enter_manual_test_result'
+    ),
+    
+    path(
+        'results/',
+        test_results.result_list, 
+        name='result_list'
+        ),
+    
     path('result/<int:result_id>/', test_results.result_detail, name='result_detail'),
-    path('result/<int:result_id>/edit/', test_results.edit_result, name='edit_result'),
+
+    path('result/<int:result_id>/amend/', test_results.amend_result, name='amend_result'),
+
     path('result/<int:result_id>/verify/', test_results.verify_result, name='verify_result'),
+
     path('result/<int:result_id>/release/', test_results.release_result, name='release_result'),
 
     path('result/<int:result_id>/download/', test_results.download_result_pdf, name='download_result_pdf'),
@@ -108,8 +136,7 @@ urlpatterns = [
 
     path('assignments/stats/', test_assignments.assignment_quick_stats,name='assignment_quick_stats'),
     # ===== Instrument Integration (from previous) =====
-    path(
-        'assignment/<int:assignment_id>/send-to-instrument/',
+    path('assignment/<int:assignment_id>/send-to-instrument/',
         instruments.send_to_instrument,
         name='send_to_instrument'
     ),

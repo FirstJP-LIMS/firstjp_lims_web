@@ -238,7 +238,7 @@
                                         </a>
                                         
                                         <!-- Sample Verify Buttons -->
-                                        {% for sample in request.samples.all %}
+                                        <!-- {% for sample in request.samples.all %}
                                             {% if sample.sample_id %}
                                             <a href="{% url 'labs:sample-exam-detail' sample.sample_id %}" 
                                                class="btn btn-outline-success btn-sm rounded-2 px-3"
@@ -246,7 +246,48 @@
                                                 <i class="bi bi-check-circle me-1"></i>Verify
                                             </a>
                                             {% endif %}
-                                        {% endfor %}
+                                        {% endfor %} -->
+
+                                        {% if request.samples.exists %}
+                                            {# Sample has been collected - show verify button #}
+                                            {% for sample in request.samples.all %}
+                                                <a href="{% url 'labs:sample-exam-detail' sample.sample_id %}" 
+                                                class="btn btn-outline-success btn-sm rounded-2 px-3"
+                                                data-bs-toggle="tooltip" 
+                                                title="Verify Sample {{ sample.sample_id }}">
+                                                    <i class="bi bi-check-circle me-1"></i>
+                                                    Verify Sample
+                                                </a>
+                                            {% endfor %}
+                                        {% else %}
+                                            {# No sample collected yet - show collect button #}
+                                            {% if request.billing_info %}
+                                                {# Check payment status before allowing collection #}
+                                                {% if request.billing_info.payment_status in 'PAID,AUTHORIZED,WAIVED' %}
+                                                    <a href="{% url 'labs:collect_sample' request.billing_info.pk %}" 
+                                                    class="btn btn-primary btn-sm rounded-2 px-3"
+                                                    data-bs-toggle="tooltip" 
+                                                    title="Collect specimen for this test request">
+                                                        <i class="bi bi-droplet me-1"></i>
+                                                        Collect Sample
+                                                    </a>
+                                                {% else %}
+                                                    {# Payment not cleared #}
+                                                    <a href="{% url 'billing:billing_detail' request.billing_info.pk %}" 
+                                                    class="btn btn-warning btn-sm rounded-2 px-3"
+                                                    data-bs-toggle="tooltip" 
+                                                    title="Payment required before sample collection">
+                                                        <i class="bi bi-exclamation-triangle me-1"></i>
+                                                        Pending Payment
+                                                    </a>
+                                                {% endif %}
+                                            {% else %}
+                                                {# No billing record (shouldn't happen, but handle gracefully) #}
+                                                <span class="badge bg-secondary">No Billing Record</span>
+                                            {% endif %}
+                                        {% endif %}
+
+
                                     </div>
                                     
                                     <!-- Sample IDs Display -->

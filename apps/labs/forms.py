@@ -945,24 +945,50 @@ class TestRequestForm(forms.ModelForm):
         return instance
     
 
+
+
 class SampleForm(forms.ModelForm):
-    """Handles specimen/phlebotomy info for a given test request."""
+    """
+      Handles specimen/phlebotomy info for a given test request.
+    """
     class Meta:
         model = Sample
         fields = [
             'specimen_type', 'specimen_description',
             'collected_by', 'collection_method',
             'collection_site', 'container_type',
-            'volume_collected_ml', 'location'
+            'volume_collected_ml', 'fasting_status', 'location'
         ]
         widgets = {
-            'specimen_description': forms.Textarea(attrs={'rows': 2}),
+            'specimen_type': forms.Select(choices=[
+                ('Blood', 'Blood'), ('Urine', 'Urine'), 
+                ('Serum', 'Serum'), ('Plasma', 'Plasma'),
+                ('Swab', 'Swab'), ('Stool', 'Stool')
+            ], attrs={'class': 'form-select'}),
+            'fasting_status': forms.Select(attrs={'class': 'form-select'}),
+            'specimen_description': forms.Textarea(attrs={'rows': 2, 'placeholder': 'Any physical observations...'}),
             'collection_method': forms.TextInput(attrs={'placeholder': 'e.g., Venipuncture'}),
-            'collection_site': forms.TextInput(attrs={'placeholder': 'e.g., Left Arm'}),
-            'container_type': forms.TextInput(attrs={'placeholder': 'e.g., EDTA Tube'}),
-            'volume_collected_ml': forms.NumberInput(attrs={'min': 0, 'step': '0.1'}),
+            'volume_collected_ml': forms.NumberInput(attrs={'step': '0.1'}),
         }
-        
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Make specific fields required for quality control
+        self.fields['specimen_type'].required = True
+        self.fields['collection_method'].required = True
+
+        # Add Bootstrap classes to all fields
+        for field_name, field in self.fields.items():
+            if 'class' not in field.widget.attrs:
+                if isinstance(field.widget, forms.Select) or isinstance(field.widget, forms.SelectMultiple):
+                    field.widget.attrs['class'] = 'form-select'
+                elif isinstance(field.widget, forms.Textarea):
+                    field.widget.attrs['class'] = 'form-control'
+                elif isinstance(field.widget, forms.CheckboxInput):
+                    field.widget.attrs['class'] = 'form-check-input'
+                else:
+                    field.widget.attrs['class'] = 'form-control'
+
 
 
 """

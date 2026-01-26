@@ -1,0 +1,74 @@
+{% extends "laboratory/assets/base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'labs:result_detail' result.id %}">Result Detail</a></li>
+            <li class="breadcrumb-item active">Amend Result</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-danger shadow">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0"><i class="bi bi-exclamation-triangle-fill me-2"></i> Result Amendment</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <strong>Current Status:</strong> {{ result.get_status_display }} | 
+                        <strong>Current Version:</strong> {{ result.version }}
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row mb-4">
+                            <div class="col-sm-6">
+                                <label class="text-muted small uppercase">Test Name</label>
+                                <p class="fw-bold">{{ lab_test.name }}</p>
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="text-muted small uppercase">Current Result</label>
+                                <p class="text-danger fw-bold">{{ result.formatted_result }}</p>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <div class="mb-3">
+                            <label for="result_value" class="form-label fw-bold">New Corrected Value</label>
+                            <input type="text" name="result_value" id="result_value" 
+                                   class="form-control form-control-lg border-primary" 
+                                   value="{{ result.result_value }}" required>
+                            <div class="form-text">Enter the revised result exactly as it should appear on the report.</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="reason" class="form-label fw-bold text-danger">Legal Reason for Amendment</label>
+                            <textarea name="reason" id="reason" class="form-control" rows="4" 
+                                      placeholder="Provide a clear, clinical reason for this correction (e.g., 'Instrument calibration error discovered', 'Typographical error in manual entry')..." required></textarea>
+                            <div class="form-text text-danger">This reason will be visible on the Corrected Report audit trail.</div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <a href="{% url 'labs:result_detail' result.id %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-danger btn-lg px-5" 
+                                    onclick="return confirm('Confirming this will issue a Corrected Report. Proceed?')">
+                                <i class="bi bi-check-circle"></i> Issue Corrected Result
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="mt-3 text-center text-muted small">
+                <i class="bi bi-shield-lock"></i> All amendments are logged with your user ID: <strong>{{ request.user.username }}</strong>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

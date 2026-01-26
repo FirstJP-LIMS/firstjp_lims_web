@@ -56,7 +56,9 @@ def test_result_post_save_handler(sender, instance, created, **kwargs):
     Check for critical values when results are saved.
     """
     # Only trigger on release and if critical
-    if instance.released and instance.flag == 'C':
+    # if instance.released and instance.flag == 'C':
+    if instance.status == 'released' and instance.flag == 'C':
+
         test_request = instance.assignment.request
         
         # Check if we haven't already notified for critical results

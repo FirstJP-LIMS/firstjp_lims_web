@@ -446,7 +446,7 @@
                                             <i class="bi bi-send"></i>
                                         </button>
                                     {% endif %}
-                                    {% if request.user.is_lab_supervisor %}
+                                    {% if request.user.can_manage_request %}
                                     <a href="{% url 'labs:test_assignment_detail' assignment.id %}" 
                                        class="btn btn-outline-secondary"
                                        title="View Details">

@@ -98,10 +98,14 @@
                                 <small class="text-muted">{{ sample.collected_at|date:"M d, Y H:i" }}</small>
                             </td>
                             <td class="text-end">
-                                <a href="{% url 'labs:sample-exam-detail' sample.sample_id %}" 
-                                   class="btn btn-sm btn-primary">
-                                    <i class="bi bi-eye me-1"></i>View
-                                </a>
+                                {% if user.can_verify_sample %}
+                                    <a href="{% url 'labs:sample-exam-detail' sample_id=sample.sample_id %}" 
+                                    class="btn btn-sm btn-primary">
+                                        <i class="bi bi-eye me-1"></i>View
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">No actions available</span>
+                                {% endif %}
                             </td>
                         </tr>
                         {% empty %}

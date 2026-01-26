@@ -1,0 +1,523 @@
+{% extends "laboratory/assets/base.html" %}
+{% load static %}
+
+{% block title %}Collect Sample - {{ test_request.patient.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-2 text-primary">
+                        <i class="bi bi-droplet-fill me-2"></i>Sample Collection
+                    </h1>
+                    <p class="text-muted mb-0">
+                        Collect specimen for patient: <strong>{{ test_request.patient.get_full_name }}</strong>
+                    </p>
+                </div>
+                <div class="text-end">
+                    <span class="badge bg-success fs-6">
+                        <i class="bi bi-check-circle me-1"></i>Billing Cleared
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Card -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow border-0">
+                <div class="card-header bg-primary text-white py-3">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-clipboard-plus me-2"></i>Specimen Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Patient Info Banner -->
+                    <div class="alert alert-info mb-4">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <strong><i class="bi bi-person-circle me-2"></i>Patient:</strong>
+                                {{ test_request.patient.first_name }} {{ test_request.patient.last_name }}
+                            </div>
+                            <div class="col-md-4">
+                                <strong><i class="bi bi-hash me-2"></i>Request ID:</strong>
+                                {{ test_request.request_id }}
+                            </div>
+                            <div class="col-md-4">
+                                <strong><i class="bi bi-calendar me-2"></i>Date:</strong>
+                                {{ test_request.created_at|date:"M d, Y" }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Form -->
+                    <form method="post" id="sampleCollectionForm">
+                        {% csrf_token %}
+                        
+                        {% if form.errors %}
+                        <div class="alert alert-danger">
+                            <strong>Please correct the errors below:</strong>
+                            {{ form.errors }}
+                        </div>
+                        {% endif %}
+
+                        <div class="row g-3">
+                            <!-- Specimen Type -->
+                            <div class="col-md-6">
+                                <label for="{{ form.specimen_type.id_for_label }}" class="form-label">
+                                    <i class="bi bi-thermometer-sun me-1"></i>Specimen Type *
+                                </label>
+                                {{ form.specimen_type }}
+                                <div class="form-text">Select the type of specimen being collected</div>
+                            </div>
+
+                            <!-- Container Type -->
+                            <div class="col-md-6">
+                                <label for="{{ form.container_type.id_for_label }}" class="form-label">
+                                    <i class="bi bi-box me-1"></i>Container Type
+                                </label>
+                                {{ form.container_type }}
+                            </div>
+
+                            <!-- Collection Method -->
+                            <div class="col-md-6">
+                                <label for="{{ form.collection_method.id_for_label }}" class="form-label">
+                                    <i class="bi bi-eyedropper me-1"></i>Collection Method *
+                                </label>
+                                {{ form.collection_method }}
+                                <div class="form-text">e.g., Venipuncture, Mid-stream catch</div>
+                            </div>
+
+                            <!-- Collection Site -->
+                            <div class="col-md-6">
+                                <label for="{{ form.collection_site.id_for_label }}" class="form-label">
+                                    <i class="bi bi-geo-alt me-1"></i>Collection Site
+                                </label>
+                                {{ form.collection_site }}
+                            </div>
+
+                            <!-- Collected By -->
+                            <div class="col-md-6">
+                                <label for="{{ form.collected_by.id_for_label }}" class="form-label">
+                                    <i class="bi bi-person-badge me-1"></i>Collected By
+                                </label>
+                                {{ form.collected_by }}
+                                <div class="form-text">Name of phlebotomist/technician</div>
+                            </div>
+
+                            <!-- Volume Collected -->
+                            <div class="col-md-6">
+                                <label for="{{ form.volume_collected_ml.id_for_label }}" class="form-label">
+                                    <i class="bi bi-beaker me-1"></i>Volume Collected (ml)
+                                </label>
+                                <div class="input-group">
+                                    {{ form.volume_collected_ml }}
+                                    <span class="input-group-text">ml</span>
+                                </div>
+                            </div>
+
+                            <!-- Fasting Status -->
+                            <div class="col-md-6">
+                                <label for="{{ form.fasting_status.id_for_label }}" class="form-label">
+                                    <i class="bi bi-clock-history me-1"></i>Fasting Status
+                                </label>
+                                {{ form.fasting_status }}
+                            </div>
+
+                            <!-- Location -->
+                            <div class="col-md-6">
+                                <label for="{{ form.location.id_for_label }}" class="form-label">
+                                    <i class="bi bi-geo me-1"></i>Collection Location
+                                </label>
+                                {{ form.location }}
+                                <div class="form-text">Where sample was collected</div>
+                            </div>
+
+                            <!-- Specimen Description -->
+                            <div class="col-12">
+                                <label for="{{ form.specimen_description.id_for_label }}" class="form-label">
+                                    <i class="bi bi-card-text me-1"></i>Specimen Description / Observations
+                                </label>
+                                {{ form.specimen_description }}
+                                <div class="form-text">Note any abnormalities, color, consistency, etc.</div>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="mt-5 pt-3 border-top">
+                            <div class="d-flex justify-content-between">
+                                <a href="{% url 'billing:billing_detail' pk=billing.pk %}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-arrow-left me-1"></i>Back to Billing
+                                </a>
+                                <a href="{% url 'labs:sample-exam-list' %}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-check-circle me-1"></i>Collect Sample
+                                </a>
+
+                                <!-- <button type="submit" class="btn btn-primary px-4" id="submitBtn">
+                                    <i class="bi bi-check-circle me-2"></i>Collect Sample
+                                </button>
+
+                                {% if sample and sample.id %}
+                                    <a href="{% url 'labs:sample-exam-detail' sample_id=sample.id %}"
+                                    class="btn btn-primary px-4">
+                                        <i class="bi bi-check-circle me-2"></i>
+                                        View Sample Examination
+                                    </a>
+                                {% endif %} -->
+
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Requested Tests Card -->
+            <div class="card shadow border-0 mb-4">
+                <div class="card-header bg-info text-white py-3">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-list-check me-2"></i>Requested Tests
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for test in test_request.requested_tests.all %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ test.name }}</h6>
+                                    <small class="text-muted">{{ test.code }}</small>
+                                </div>
+                                <span class="badge bg-light text-dark">
+                                    {% if test.price %}
+                                    ₦{{ test.price }}
+                                    {% else %}
+                                    Price N/A
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="list-group-item text-center text-muted py-4">
+                            <i class="bi bi-exclamation-circle display-6 mb-3"></i>
+                            <p class="mb-0">No tests requested</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Billing Summary Card -->
+            <div class="card shadow border-0">
+                <div class="card-header bg-success text-white py-3">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-credit-card me-2"></i>Billing Summary
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-2">
+                        <div class="col">
+                            <strong>Payment Status:</strong>
+                        </div>
+                        <div class="col text-end">
+                            <span class="badge {% if billing.payment_status == 'PAID' %}bg-success{% elif billing.payment_status == 'AUTHORIZED' %}bg-warning{% elif billing.payment_status == 'WAIVED' %}bg-secondary{% endif %}">
+                                {{ billing.get_payment_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col">
+                            <strong>Billing Type:</strong>
+                        </div>
+                        <div class="col text-end">
+                            {{ billing.get_billing_type_display }}
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row mb-2">
+                        <div class="col">
+                            Subtotal:
+                        </div>
+                        <div class="col text-end">
+                            ₦{{ billing.subtotal }}
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col">
+                            Discount:
+                        </div>
+                        <div class="col text-end text-danger">
+                            -₦{{ billing.discount }}
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col">
+                            Tax:
+                        </div>
+                        <div class="col text-end">
+                            ₦{{ billing.tax }}
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row mb-2">
+                        <div class="col">
+                            <strong>Total Amount:</strong>
+                        </div>
+                        <div class="col text-end">
+                            <strong>₦{{ billing.total_amount }}</strong>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            Patient Portion:
+                        </div>
+                        <div class="col text-end">
+                            ₦{{ billing.patient_portion }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            Insurance Portion:
+                        </div>
+                        <div class="col text-end">
+                            ₦{{ billing.insurance_portion }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Notes -->
+            <div class="card shadow border-0 mt-4">
+                <div class="card-header bg-light py-3">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-info-circle me-2"></i>Collection Guidelines
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            Verify patient identity
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            Use proper PPE
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            Label immediately after collection
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            Store at correct temperature
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            Document any deviations
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Success Modal -->
+<div class="modal fade" id="successModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-check-circle me-2"></i>Success!
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <i class="bi bi-droplet text-success display-1 mb-3"></i>
+                <h4>Sample Collected Successfully</h4>
+                <p class="text-muted">The sample has been logged and test assignments have been created.</p>
+                <div class="alert alert-light mt-3">
+                    <strong>Sample ID:</strong> <span id="generatedSampleId"></span>
+                </div>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-success" id="goToSampleBtn">
+                    <i class="bi bi-arrow-right-circle me-2"></i>View Sample Details
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Custom styles for the sample collection page */
+    .card {
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    
+    .card-header {
+        border-bottom: none;
+    }
+    
+    .form-control, .form-select {
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+        padding: 0.75rem 1rem;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+        border: none;
+        border-radius: 8px;
+        padding: 0.75rem 2rem;
+        font-weight: 500;
+    }
+    
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #0b5ed7 0%, #0a58ca 100%);
+        transform: translateY(-1px);
+        transition: all 0.3s ease;
+    }
+    
+    .badge {
+        border-radius: 20px;
+        padding: 0.5em 1em;
+    }
+    
+    .list-group-item {
+        border-left: none;
+        border-right: none;
+        padding: 1rem 1.25rem;
+    }
+    
+    .list-group-item:first-child {
+        border-top: none;
+    }
+    
+    .list-group-item:last-child {
+        border-bottom: none;
+    }
+    
+    /* Form label styling */
+    .form-label {
+        font-weight: 500;
+        color: #495057;
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .btn {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+        
+        .d-flex.justify-content-between {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Form submission handling
+        const form = document.getElementById('sampleCollectionForm');
+        const submitBtn = document.getElementById('submitBtn');
+        
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                // Simple client-side validation
+                const requiredFields = form.querySelectorAll('[required]');
+                let isValid = true;
+                
+                requiredFields.forEach(field => {
+                    if (!field.value.trim()) {
+                        isValid = false;
+                        field.classList.add('is-invalid');
+                    } else {
+                        field.classList.remove('is-invalid');
+                    }
+                });
+                
+                if (!isValid) {
+                    e.preventDefault();
+                    // Show first error
+                    const firstInvalid = form.querySelector('.is-invalid');
+                    if (firstInvalid) {
+                        firstInvalid.focus();
+                    }
+                    return false;
+                }
+                
+                // Show loading state
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
+            });
+        }
+        
+        // Initialize tooltips
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+        
+        // Volume input validation
+        const volumeInput = document.getElementById('{{ form.volume_collected_ml.id_for_label }}');
+        if (volumeInput) {
+            volumeInput.addEventListener('change', function() {
+                const value = parseFloat(this.value);
+                if (value < 0) {
+                    this.value = 0;
+                } else if (value > 1000) {
+                    this.value = 1000;
+                }
+            });
+        }
+        
+        // Auto-fill current time for collection time if needed
+        const today = new Date();
+        const timeString = today.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        
+    });
+    
+    // If you want to show success modal after form submission (via Django messages)
+    {% if messages %}
+        {% for message in messages %}
+            {% if message.tags == 'success' %}
+                document.addEventListener('DOMContentLoaded', function() {
+                    const modal = new bootstrap.Modal(document.getElementById('successModal'));
+                    // Extract sample ID from message if possible
+                    const messageText = "{{ message }}";
+                    const sampleIdMatch = messageText.match(/Sample (\S+) secured/);
+                    if (sampleIdMatch) {
+                        document.getElementById('generatedSampleId').textContent = sampleIdMatch[1];
+                    }
+                    modal.show();
+                    
+                    // Handle redirect to sample detail page
+                    document.getElementById('goToSampleBtn').addEventListener('click', function() {
+                        window.location.href = "{% url 'labs:sample-exam-detail' sample=0 %}".replace('0', '{{ sample_id_placeholder }}');
+                        // window.location.href = "{% url 'labs:sample-exam-detail' sample_id=999999 %}".replace('999999', sampleIdFromServer);
+                    });
+                });
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+</script>
+{% endblock %}
