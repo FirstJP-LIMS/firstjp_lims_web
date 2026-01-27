@@ -11,14 +11,20 @@ urlpatterns = [
     path('booking/', appointments.appointment_booking,name='public_appointment_book'),
 
     path('appointments/book/<slug:subdomain_prefix>/', appointments.appointment_booking, name='public_appointment_book_vendor'),
-    path('appointments/<str:appointment_id>/', appointments.appointment_confirmation, name='public_appointment_detail'),
+
+    path('appointments/<str:appointment_id>/', appointments.appointment_confirmation, 
+    name='public_appointment_detail'),
+
+    path('appointments/<int:appointment_id>/', appointments.appointment_confirm, 
+    name='public_appointment_confirm'),
+
     path('appointments/<str:appointment_id>/cancel/', appointments.appointment_cancel, name='public_appointment_cancel'),
 
     # =====================================================
     # STAFF — APPOINTMENT OPERATIONS
     # =====================================================
     path('staff/appointments/', slot_managements.staff_appointment_list, name='staff_appointment_list'),
-    path('staff/appointments/<str:appointment_id>/confirm/', slot_managements.staff_appointment_confirm, name='appointment_confirm'),
+    path('staff/appointments/<str:appointment_id>/confirm/', slot_managements.staff_appointment_confirm, name='staff_appointment_confirm'),
 
     # =====================================================
     # SLOT TEMPLATES (HOW THE LAB WORKS)

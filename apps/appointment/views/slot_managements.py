@@ -606,7 +606,9 @@ def staff_appointment_list(request):
 def staff_appointment_confirm(request, appointment_id):
     appointment = get_object_or_404(Appointment, appointment_id=appointment_id)
 
-    if not appointment.can_be_confirmed():
+    # if not appointment.confirm():
+    # if not appointment.can_be_confirmed():
+    if not appointment.can_confirm():
         messages.warning(request, "Appointment is already processed.")
         return redirect('appointment:staff_appointment_list')
 
@@ -625,3 +627,5 @@ def staff_appointment_confirm(request, appointment_id):
         messages.error(request, "An error occurred.")
 
     return redirect('appointment:staff_appointment_list')
+
+

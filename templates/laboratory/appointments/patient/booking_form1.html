@@ -1,159 +1,592 @@
-{% extends "laboratory/assets/base_public_apt.html" %}
 {% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% block title %}
+        <title>Book Appointment | {{ vendor.name }}</title>
+    {% endblock %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    
+    <!-- tailwind setup -->
+    <link rel="stylesheet" href="{% static 'dist/styles.css' %}">
+    <link rel="stylesheet" href="{% static 'assets/css/tailwind.css' %}">
+    
+    <!-- google fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
 
-{% block title %}Book Appointment | {{ vendor.name }}{% endblock %}
+    <!-- font-awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" referrerpolicy="no-referrer"/>
+    
+    <style>
+        .step-indicator {
+            position: relative;
+        }
+        .step-indicator::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #e5e7eb;
+            z-index: -1;
+        }
+        .step-active {
+            background: #001f3f;
+            color: white;
+        }
+        .step-complete {
+            background: #10b981;
+            color: white;
+        }
+        .slot-card {
+            transition: all 0.2s ease;
+        }
+        .slot-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 31, 63, 0.15);
+        }
+        .slot-radio:checked + .slot-label {
+            background: #001f3f;
+            color: white;
+            border-color: #001f3f;
+        }
+        /* FIXED: Changed color for checked slot label text */
+        .slot-radio:checked + .slot-label .slot-time,
+        .slot-radio:checked + .slot-label .slot-type,
+        .slot-radio:checked + .slot-label .slot-spots {
+            color: white;
+        }
+        .form-section {
+            display: none;
+        }
+        .form-section.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* ADDED: Better form field styling */
+        input[type="text"],
+        input[type="email"],
+        input[type="tel"],
+        input[type="date"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+        }
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        input[type="tel"]:focus,
+        input[type="date"]:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #001f3f;
+            box-shadow: 0 0 0 3px rgba(0, 31, 63, 0.1);
+        }
+        textarea {
+            min-height: 100px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <nav class="bg-white border-b border-gray-200 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <i class="fas fa-flask text-navy text-2xl mr-3"></i>
+                    <span class="text-xl font-bold text-navy">{{ vendor.name }}</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    {% if request.user.is_authenticated %}
+                    <span class="text-sm text-gray-600">Welcome, {{ request.user.get_full_name }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
 
-{% block content %}
-<div class="min-h-screen bg-gray-50 py-8">
-    <div class="max-w-4xl mx-auto px-4">
-
-        <!-- Header -->
-        <div class="mb-8 text-center">
-            <h1 class="text-3xl font-bold text-navy">
-                Book an Appointment
-            </h1>
-            <p class="text-gray-600 mt-2">
-                {{ vendor.name }}
-            </p>
+    <div class="max-w-5xl mx-auto px-4 py-8">
+        <!-- Progress Steps -->
+        <div class="mb-8">
+            <div class="flex items-center justify-center space-x-4 step-indicator">
+                <div class="flex flex-col items-center">
+                    <div id="step1-indicator" class="w-10 h-10 rounded-full bg-navy text-white flex items-center justify-center font-semibold mb-2 step-active">
+                        1
+                    </div>
+                    <span class="text-sm font-medium text-gray-700">Select Date & Time</span>
+                </div>
+                <div class="w-20 h-0.5 bg-gray-300"></div>
+                <div class="flex flex-col items-center">
+                    <div id="step2-indicator" class="w-10 h-10 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-semibold mb-2">
+                        2
+                    </div>
+                    <span class="text-sm font-medium text-gray-500">Your Information</span>
+                </div>
+                <div class="w-20 h-0.5 bg-gray-300"></div>
+                <div class="flex flex-col items-center">
+                    <div id="step3-indicator" class="w-10 h-10 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-semibold mb-2">
+                        3
+                    </div>
+                    <span class="text-sm font-medium text-gray-500">Appointment Details</span>
+                </div>
+            </div>
         </div>
 
-        <form method="post" class="space-y-8">
+        <!-- Messages -->
+        {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+            <div class="{% if message.tags == 'error' %}bg-red-50 border border-red-200 text-red-800{% else %}bg-green-50 border border-green-200 text-green-800{% endif %} rounded-lg p-4 flex items-center">
+                <i class="fas {% if message.tags == 'error' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %} mr-3"></i>
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Form -->
+        <form method="post" id="bookingForm" class="space-y-6">
             {% csrf_token %}
 
-            <!-- Slot Selection -->
-            <section class="bg-white rounded-lg shadow p-6">
-                <h2 class="text-lg font-semibold text-gray-900 mb-4">
-                    Select a Time Slot
-                </h2>
+            <!-- Step 1: Select Slot -->
+            <div id="step1" class="form-section active">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h2 class="text-2xl font-bold text-navy mb-4">
+                        <i class="fas fa-calendar-alt mr-2"></i>
+                        Select Date & Time
+                    </h2>
 
-                {% if slots_by_date %}
+                    {% if slots_by_date %}
                     <div class="space-y-6">
                         {% for date, slots in slots_by_date.items %}
-                            <div>
-                                <h3 class="text-sm font-medium text-gray-700 mb-3">
-                                    {{ date|date:"l, F j, Y" }}
-                                </h3>
-
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    {% for slot in slots %}
-                                        <label class="border rounded-lg p-4 cursor-pointer
-                                            hover:border-navy
-                                            {% if form.slot.value|stringformat:'s' == slot.id|stringformat:'s' %}
-                                                border-navy bg-navy/5
-                                            {% else %}
-                                                border-gray-200
-                                            {% endif %}">
-                                            
-                                            <input type="radio"
-                                                   name="{{ form.slot.name }}"
-                                                   value="{{ slot.id }}"
-                                                   class="hidden"
-                                                   {% if form.slot.value == slot.id %}checked{% endif %}>
-
-                                            <div class="flex justify-between items-center">
-                                                <div>
-                                                    <div class="font-medium text-gray-900">
-                                                        {{ slot.start_time|time:"g:i A" }} – {{ slot.end_time|time:"g:i A" }}
-                                                    </div>
-                                                    <div class="text-xs text-gray-500">
-                                                        {{ slot.get_slot_type_display }}
-                                                    </div>
-                                                </div>
-
-                                                <div class="text-xs text-gray-500">
-                                                    {{ slot.current_bookings }}/{{ slot.max_appointments }}
-                                                </div>
-                                            </div>
-                                        </label>
-                                    {% endfor %}
+                        <div data-date="{{ date|date:'Y-m-d' }}">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                                <i class="fas fa-calendar text-navy mr-2"></i>
+                                {{ date|date:"l, F d, Y" }}
+                            </h3>
+                            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                                {% for slot in slots %}
+                                <div class="slot-card">
+                                    <input type="radio" 
+                                           name="slot" 
+                                           value="{{ slot.id }}" 
+                                           id="slot_{{ slot.id }}"
+                                           class="slot-radio hidden"
+                                           data-date="{{ date|date:'l, F d, Y' }}"
+                                           data-time="{{ slot.start_time|time:'g:i A' }}"
+                                           required>
+                                    <label for="slot_{{ slot.id }}" 
+                                           class="slot-label block p-4 border-2 border-gray-200 rounded-lg cursor-pointer text-center hover:border-navy transition-all">
+                                        <div class="slot-time text-sm font-semibold text-gray-900">
+                                            {{ slot.start_time|time:"g:i A" }}
+                                        </div>
+                                        <div class="slot-type text-xs text-gray-500 mt-1">
+                                            {{ slot.get_slot_type_display }}
+                                        </div>
+                                        <!-- FIXED: Corrected available spots calculation -->
+                                        <div class="slot-spots text-xs text-green-600 mt-2 flex items-center justify-center">
+                                            <i class="fas fa-circle text-xs mr-1"></i>
+                                            {{ slot.max_appointments|add:slot.current_bookings|add:"-" }} available
+                                        </div>
+                                    </label>
                                 </div>
+                                {% endfor %}
                             </div>
+                        </div>
                         {% endfor %}
                     </div>
-                {% else %}
-                    <p class="text-sm text-gray-500">
-                        No available slots in the next 30 days.
-                    </p>
-                {% endif %}
-
-                {% if form.slot.errors %}
-                    <p class="text-sm text-red-600 mt-2">
-                        {{ form.slot.errors.0 }}
-                    </p>
-                {% endif %}
-            </section>
-
-            <!-- Patient / Visitor Info -->
-            <section class="bg-white rounded-lg shadow p-6">
-                <h2 class="text-lg font-semibold text-gray-900 mb-4">
-                    Patient Information
-                </h2>
-
-                {% if is_authenticated and form.existing_patient.field.queryset %}
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                            Existing Patient
-                        </label>
-                        {{ form.existing_patient }}
+                    {% else %}
+                    <div class="text-center py-12">
+                        <i class="fas fa-calendar-times text-gray-300 text-6xl mb-4"></i>
+                        <h3 class="text-xl font-semibold text-gray-900 mb-2">No Available Slots</h3>
+                        <p class="text-gray-600">
+                            There are currently no available appointment slots. Please check back later or contact us.
+                        </p>
                     </div>
-                {% endif %}
+                    {% endif %}
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {{ form.visitor_first_name }}
-                    {{ form.visitor_last_name }}
-                    {{ form.visitor_email }}
-                    {{ form.visitor_phone }}
-                    {{ form.visitor_date_of_birth }}
-                    {{ form.visitor_gender }}
+                    {% if form.slot.errors %}
+                    <p class="mt-2 text-sm text-red-600">{{ form.slot.errors.0 }}</p>
+                    {% endif %}
+
+                    {% if slots_by_date %}
+                    <div class="mt-6 flex justify-end">
+                        <button type="button" onclick="goToStep(2)" 
+                                class="px-6 py-3 bg-navy text-white rounded-lg hover:bg-navy-dark transition-colors duration-200 flex items-center space-x-2">
+                            <span>Continue</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                    {% endif %}
                 </div>
-
-                {% if form.non_field_errors %}
-                    <p class="text-sm text-red-600 mt-3">
-                        {{ form.non_field_errors.0 }}
-                    </p>
-                {% endif %}
-            </section>
-
-            <!-- Appointment Details -->
-            <section class="bg-white rounded-lg shadow p-6">
-                <h2 class="text-lg font-semibold text-gray-900 mb-4">
-                    Appointment Details
-                </h2>
-
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                            Appointment Type
-                        </label>
-                        {{ form.appointment_type }}
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                            Reason for Visit
-                        </label>
-                        {{ form.reason_for_visit }}
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                            Special Requirements
-                        </label>
-                        {{ form.special_requirements }}
-                    </div>
-                </div>
-            </section>
-
-            <!-- Submit -->
-            <div class="flex justify-end">
-                <button type="submit"
-                        class="px-6 py-3 bg-navy text-white rounded-lg
-                               hover:bg-navy-dark transition">
-                    Confirm Appointment
-                </button>
             </div>
 
+            <!-- Step 2: Patient Information -->
+            <div id="step2" class="form-section">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h2 class="text-2xl font-bold text-navy mb-4">
+                        <i class="fas fa-user mr-2"></i>
+                        Your Information
+                    </h2>
+
+                    <!-- FIXED: Check if existing_patient field exists and has queryset -->
+                    {% if request.user.is_authenticated and form.existing_patient.field.queryset.exists %}
+                    <!-- Existing Patient Selection -->
+                    <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <label class="flex items-center space-x-3 cursor-pointer">
+                            {{ form.existing_patient }}
+                            <span class="text-sm font-medium text-blue-900">Book as existing patient</span>
+                        </label>
+                    </div>
+
+                    <div class="mb-4 text-center text-gray-500 text-sm">— OR —</div>
+                    {% endif %}
+
+                    <div id="visitorFields">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <!-- First Name -->
+                            <div>
+                                <label for="id_visitor_first_name" class="block text-sm font-medium text-gray-700 mb-2">
+                                    First Name <span class="text-red-500">*</span>
+                                </label>
+                                {{ form.visitor_first_name }}
+                                {% if form.visitor_first_name.errors %}
+                                <p class="mt-1 text-sm text-red-600">{{ form.visitor_first_name.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+
+                            <!-- Last Name -->
+                            <div>
+                                <label for="id_visitor_last_name" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Last Name <span class="text-red-500">*</span>
+                                </label>
+                                {{ form.visitor_last_name }}
+                                {% if form.visitor_last_name.errors %}
+                                <p class="mt-1 text-sm text-red-600">{{ form.visitor_last_name.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+
+                            <!-- Email -->
+                            <div>
+                                <label for="id_visitor_email" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Email Address <span class="text-red-500">*</span>
+                                </label>
+                                {{ form.visitor_email }}
+                                {% if form.visitor_email.errors %}
+                                <p class="mt-1 text-sm text-red-600">{{ form.visitor_email.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+
+                            <!-- Phone -->
+                            <div>
+                                <label for="id_visitor_phone" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Phone Number <span class="text-red-500">*</span>
+                                </label>
+                                {{ form.visitor_phone }}
+                                {% if form.visitor_phone.errors %}
+                                <p class="mt-1 text-sm text-red-600">{{ form.visitor_phone.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+
+                            <!-- Date of Birth -->
+                            <div>
+                                <label for="id_visitor_date_of_birth" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Date of Birth (Optional)
+                                </label>
+                                {{ form.visitor_date_of_birth }}
+                            </div>
+
+                            <!-- Gender -->
+                            <div>
+                                <label for="id_visitor_gender" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Gender (Optional)
+                                </label>
+                                {{ form.visitor_gender }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex justify-between">
+                        <button type="button" onclick="goToStep(1)" 
+                                class="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors duration-200 flex items-center space-x-2">
+                            <i class="fas fa-arrow-left"></i>
+                            <span>Back</span>
+                        </button>
+                        <button type="button" onclick="goToStep(3)" 
+                                class="px-6 py-3 bg-navy text-white rounded-lg hover:bg-navy-dark transition-colors duration-200 flex items-center space-x-2">
+                            <span>Continue</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Appointment Details -->
+            <div id="step3" class="form-section">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h2 class="text-2xl font-bold text-navy mb-4">
+                        <i class="fas fa-clipboard-list mr-2"></i>
+                        Appointment Details
+                    </h2>
+
+                    <div class="space-y-4">
+                        <!-- Appointment Type -->
+                        <div>
+                            <label for="id_appointment_type" class="block text-sm font-medium text-gray-700 mb-2">
+                                Appointment Type <span class="text-red-500">*</span>
+                            </label>
+                            {{ form.appointment_type }}
+                            {% if form.appointment_type.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.appointment_type.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Reason for Visit -->
+                        <div>
+                            <label for="id_reason_for_visit" class="block text-sm font-medium text-gray-700 mb-2">
+                                Reason for Visit (Optional)
+                            </label>
+                            {{ form.reason_for_visit }}
+                            {% if form.reason_for_visit.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.reason_for_visit.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Special Requirements -->
+                        <div>
+                            <label for="id_special_requirements" class="block text-sm font-medium text-gray-700 mb-2">
+                                Special Requirements (Optional)
+                            </label>
+                            {{ form.special_requirements }}
+                            {% if form.special_requirements.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.special_requirements.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Summary -->
+                    <div id="bookingSummary" class="mt-6 p-4 bg-navy bg-opacity-5 border border-navy rounded-lg">
+                        <h3 class="text-lg font-semibold text-navy mb-3">Booking Summary</h3>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Date & Time:</span>
+                                <span id="summarySlot" class="font-semibold text-gray-900">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Patient Name:</span>
+                                <span id="summaryName" class="font-semibold text-gray-900">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Contact:</span>
+                                <span id="summaryContact" class="font-semibold text-gray-900">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex justify-between">
+                        <button type="button" onclick="goToStep(2)" 
+                                class="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors duration-200 flex items-center space-x-2">
+                            <i class="fas fa-arrow-left"></i>
+                            <span>Back</span>
+                        </button>
+                        <button type="submit" 
+                                class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 flex items-center space-x-2">
+                            <i class="fas fa-check"></i>
+                            <span>Confirm Booking</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
         </form>
     </div>
-</div>
-{% endblock %}
+    {% if can_confirm %}
+    <form method="post" action="{% url 'appointment:public_appointment_confirm' appointment.appointment_id %}">
+    {% csrf_token %}
+    <button class="btn btn-success">Confirm Appointment</button>
+    </form>
+    {% endif %}
+
+    {% if can_cancel %}
+    <form method="post" action="{% url 'appointment:public_appointment_confirm' appointment.appointment_id %}">
+    {% csrf_token %}
+    <button class="btn btn-danger">Cancel Appointment</button>
+    </form>
+    {% endif %}
+
+    <script>
+        let currentStep = 1;
+
+        function goToStep(step) {
+            // Validate current step
+            if (!validateStep(currentStep)) {
+                return;
+            }
+
+            // Hide all steps
+            document.querySelectorAll('.form-section').forEach(section => {
+                section.classList.remove('active');
+            });
+
+            // Show target step
+            document.getElementById('step' + step).classList.add('active');
+
+            // Update indicators
+            updateStepIndicators(step);
+
+            // Update summary if going to step 3
+            if (step === 3) {
+                updateSummary();
+            }
+
+            currentStep = step;
+
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function validateStep(step) {
+            if (step === 1) {
+                const selectedSlot = document.querySelector('input[name="slot"]:checked');
+                if (!selectedSlot) {
+                    alert('Please select a time slot');
+                    return false;
+                }
+            }
+            
+            if (step === 2) {
+                // FIXED: Check if existing patient is selected first
+                const existingPatientSelect = document.getElementById('id_existing_patient');
+                const existingPatientSelected = existingPatientSelect && existingPatientSelect.value;
+
+                // Skip validation if existing patient is selected
+                if (existingPatientSelected) {
+                    return true;
+                }
+
+                const firstName = document.getElementById('id_visitor_first_name').value.trim();
+                const lastName = document.getElementById('id_visitor_last_name').value.trim();
+                const email = document.getElementById('id_visitor_email').value.trim();
+                const phone = document.getElementById('id_visitor_phone').value.trim();
+
+                if (!firstName || !lastName) {
+                    alert('Please provide your first and last name');
+                    return false;
+                }
+
+                // FIXED: Require BOTH email and phone (based on your form validation)
+                if (!email || !phone) {
+                    alert('Please provide both email and phone number');
+                    return false;
+                }
+
+                // Basic email validation
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(email)) {
+                    alert('Please provide a valid email address');
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        function updateStepIndicators(activeStep) {
+            for (let i = 1; i <= 3; i++) {
+                const indicator = document.getElementById('step' + i + '-indicator');
+                const label = indicator.nextElementSibling;
+                
+                if (i < activeStep) {
+                    indicator.classList.add('step-complete');
+                    indicator.classList.remove('step-active', 'bg-gray-200', 'text-gray-500');
+                    label.classList.remove('text-gray-500');
+                    label.classList.add('text-gray-700');
+                } else if (i === activeStep) {
+                    indicator.classList.add('step-active');
+                    indicator.classList.remove('step-complete', 'bg-gray-200', 'text-gray-500');
+                    label.classList.remove('text-gray-500');
+                    label.classList.add('text-gray-700');
+                } else {
+                    indicator.classList.remove('step-active', 'step-complete');
+                    indicator.classList.add('bg-gray-200', 'text-gray-500');
+                    label.classList.remove('text-gray-700');
+                    label.classList.add('text-gray-500');
+                }
+            }
+        }
+
+        function updateSummary() {
+            // Update slot info
+            const selectedSlot = document.querySelector('input[name="slot"]:checked');
+            if (selectedSlot) {
+                const dateText = selectedSlot.getAttribute('data-date');
+                const timeText = selectedSlot.getAttribute('data-time');
+                document.getElementById('summarySlot').textContent = `${dateText} at ${timeText}`;
+            }
+
+            // FIXED: Check for existing patient first
+            const existingPatientSelect = document.getElementById('id_existing_patient');
+            if (existingPatientSelect && existingPatientSelect.value) {
+                const selectedOption = existingPatientSelect.options[existingPatientSelect.selectedIndex];
+                document.getElementById('summaryName').textContent = selectedOption.text;
+                document.getElementById('summaryContact').textContent = 'Existing Patient';
+            } else {
+                // Update name from visitor fields
+                const firstName = document.getElementById('id_visitor_first_name').value.trim();
+                const lastName = document.getElementById('id_visitor_last_name').value.trim();
+                if (firstName && lastName) {
+                    document.getElementById('summaryName').textContent = `${firstName} ${lastName}`;
+                }
+
+                // Update contact
+                const email = document.getElementById('id_visitor_email').value.trim();
+                const phone = document.getElementById('id_visitor_phone').value.trim();
+                document.getElementById('summaryContact').textContent = email || phone || '-';
+            }
+        }
+
+        // ADDED: Toggle visitor fields when existing patient is selected/deselected
+        const existingPatientSelect = document.getElementById('id_existing_patient');
+        if (existingPatientSelect) {
+            existingPatientSelect.addEventListener('change', function() {
+                const visitorFields = document.getElementById('visitorFields');
+                const visitorInputs = visitorFields.querySelectorAll('input, select');
+                
+                if (this.value) {
+                    // Existing patient selected - disable visitor fields
+                    visitorInputs.forEach(input => {
+                        input.disabled = true;
+                        input.required = false;
+                    });
+                    visitorFields.style.opacity = '0.5';
+                } else {
+                    // No existing patient - enable visitor fields
+                    visitorInputs.forEach(input => {
+                        input.disabled = false;
+                    });
+                    visitorFields.style.opacity = '1';
+                }
+            });
+        }
+
+        // Form submission
+        document.getElementById('bookingForm').addEventListener('submit', function(e) {
+            if (!validateStep(3)) {
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>

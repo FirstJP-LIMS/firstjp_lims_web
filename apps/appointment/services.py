@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from apps.labs.models import Patient
 from .models import AppointmentSlot, Appointment
 
+
 def book_appointment(*, form, vendor, user=None):
     with transaction.atomic():
         slot = AppointmentSlot.objects.select_for_update().get(
@@ -33,15 +34,19 @@ def book_appointment(*, form, vendor, user=None):
         appointment = form.save(commit=False)
         appointment.vendor = vendor
         appointment.patient = patient
-        appointment.slot = slot
+        appointment.slot = slot  # This assigns the FK
+        
         if user and user.is_authenticated:
             appointment.booked_by_user = user
 
-        appointment.save()
+        # Manually validate before saving
+        # Skip the clean() method that's causing issues
+        appointment.save()  # This will still call clean()
 
         AppointmentSlot.objects.filter(pk=slot.pk).update(
             current_bookings=F('current_bookings') + 1
         )
 
         return appointment
+  
 

@@ -265,12 +265,59 @@ class Appointment(models.Model):
             models.Index(fields=['appointment_id']),
         ]
 
+
+    # -----------------
+    # STATE CHECKS
+    # -----------------
+    def can_cancel(self):
+        """Check if appointment can be cancelled."""
+        return self.STATUS_CANCELLED in self.VALID_TRANSITIONS.get(self.status, [])
+
+    def can_confirm(self):
+        """Check if appointment can be confirmed."""
+        return self.STATUS_CONFIRMED in self.VALID_TRANSITIONS.get(self.status, [])
+
+    def can_transition_to(self, new_status):
+        """Check if appointment can transition to given status."""
+        return new_status in self.VALID_TRANSITIONS.get(self.status, [])
+
+    @property
+    def is_pending(self):
+        return self.status == self.STATUS_PENDING
+
+    @property
+    def is_confirmed(self):
+        return self.status == self.STATUS_CONFIRMED
+    
+    @property
+    def is_cancelled(self):
+        return self.status == self.STATUS_CANCELLED
+
+    @property
+    def is_completed(self):
+        return self.status == self.STATUS_COMPLETED
+
+    @property
+    def is_active(self):
+        """Check if appointment is active (not cancelled or completed)."""
+        return self.status in [self.STATUS_PENDING, self.STATUS_CONFIRMED]
+    
     # -----------------
     # VALIDATION
     # -----------------
     def clean(self):
-        if self.slot.vendor_id != self.vendor_id:
-            raise ValidationError("Slot does not belong to this laboratory.")
+        """Validate appointment before saving."""
+        if self.slot_id:
+            # If slot object is already loaded, use it; otherwise query
+            if hasattr(self, '_slot_cache'):
+                slot_vendor_id = self.slot.vendor_id
+            else:
+                slot_vendor_id = AppointmentSlot.objects.filter(
+                    pk=self.slot_id
+                ).values_list('vendor_id', flat=True).first()
+            
+            if slot_vendor_id and self.vendor_id and slot_vendor_id != self.vendor_id:
+                raise ValidationError("Slot does not belong to this laboratory.")
 
     # -----------------
     # STATE MANAGEMENT
