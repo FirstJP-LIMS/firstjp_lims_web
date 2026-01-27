@@ -215,11 +215,10 @@ def test_assignment_detail(request, assignment_id):
             not result.verified_at and 
             result.entered_by != request.user
         ),
-        'can_release': result and result.verified_at and not result.released,
+        'can_release': result and result.verified_at and not result.released_at,
     }
     
     return render(request, 'laboratory/assignment/test_assignment_detail.html', context)
-
 
 
 @login_required
