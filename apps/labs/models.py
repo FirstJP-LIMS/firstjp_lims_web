@@ -333,10 +333,10 @@ class Sample(models.Model):
     """
 
     SAMPLE_STATUS = [
-        ('AC', 'Accessioned'),   # Logged into LIMS
-        ('RJ', 'Rejected'),      # Rejected during verification
-        ('AP', 'Accepted'),      # Approved for analysis
-        ('ST', 'Stored'),        # In cold storage after analysis
+        ('AC', 'Accessioned'), # Logged into LIMS
+        ('RJ', 'Rejected'), # Rejected during verification
+        ('AP', 'Accepted'), # Approved for analysis
+        ('ST', 'Stored'), # In cold storage after analysis
         ('CO', 'Consumed'),      # Fully used up in processing
     ]
 
@@ -474,22 +474,25 @@ class Sample(models.Model):
 # TEST REQUEST MODEL
 # ------------------------
     
-PRIORITY_STATUS = [
-        ("urgent","URGENT"),
-        ("routine","ROUTINE"),
-    ]
 
 class TestRequest(models.Model):
-    """Represents a full lab order for a patient, possibly containing multiple tests."""
+    """
+    Represents a full lab order for a patient, possibly containing multiple tests.
+    """
 
+    PRIORITY_STATUS = [
+            ("urgent","URGENT"),
+            ("routine","ROUTINE"),
+        ]
+    
     ORDER_STATUS = [
-        ('P', 'Pending'),           # Created, awaiting approval/sample
+        ('P', 'Pending'), # Created, awaiting approval/sample
         ('W', 'Awaiting Approval'), # 🆕 Patient order needs physician review
-        ('A', 'Approved'),          # 🆕 Physician approved patient order
-        ('R', 'Received'),          # Sample received/accessioned
-        ('N', 'Analysis'),          # Tests being analyzed (changed from 'A' to avoid conflict)
-        ('C', 'Complete'),          # Results generated, awaiting verification
-        ('V', 'Verified'),          # Final report verified and ready for release
+        ('A', 'Approved'),  # 🆕 Physician approved patient order
+        ('R', 'Received'),  # Sample received/accessioned
+        ('N', 'Analysis'), # Tests being analyzed (changed from 'A' to avoid conflict)
+        ('C', 'Complete'), # Results generated, awaiting verification
+        ('V', 'Verified'),  # Final report verified and ready for release
         ('X', 'Rejected'),          # 🆕 Order rejected (insufficient info, contraindicated, etc.)
     ]
 
@@ -803,9 +806,9 @@ class TestResult(models.Model):
         related_name="result"
     )
 
-    # ======================================================
+    # ==================================
     # RESULT STATE MACHINE
-    # ======================================================
+    # ==================================
 
     RESULT_STATUS = [
         ('draft', 'Draft'),
@@ -1080,6 +1083,7 @@ class TestResult(models.Model):
 
 # For amend results 
 class ResultAmendment(models.Model):
+    """ For Adjusting Result after it has been reslead"""
     result = models.ForeignKey(
         'TestResult', 
         on_delete=models.CASCADE, 

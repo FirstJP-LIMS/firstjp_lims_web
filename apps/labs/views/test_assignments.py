@@ -1,11 +1,7 @@
 import json
 import logging
-# from datetime import timedelta
-# from decimal import Decimal, InvalidOperation
-# from functools import wraps
 
 # Django Core
-# from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
@@ -15,20 +11,7 @@ from django.db.models import (
 )
 from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-# from django.urls import reverse, reverse_lazy
-# from django.utils import timezone
-# from django.views.decorators.http import require_http_methods, require_POST
 
-# # App-Specific Imports
-# from apps.accounts.models import VendorProfile
-# from apps.tenants.models import Vendor
-
-# from ..forms import (
-#     DepartmentForm,
-#     SampleForm,
-#     TestRequestForm,
-#     VendorLabTestForm
-# )
 from ..models import (
     Department,
     Equipment,
@@ -39,8 +22,6 @@ from ..models import (
 # Logger Setup
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-
-
 
 
 # **************************************************
@@ -210,15 +191,15 @@ def test_assignment_detail(request, assignment_id):
         'result': result,
         'logs': logs,
         'can_send': assignment.can_send_to_instrument(),
-        'can_verify': (
-            result and 
-            not result.verified_at and 
-            result.entered_by != request.user
-        ),
-        'can_release': result and result.verified_at and not result.released_at,
+        # 'can_verify': (
+        #     result and 
+        #     not result.verified_at and 
+        #     result.entered_by != request.user
+        # ),
+        # 'can_release': result and result.verified_at and not result.released_at,
     }
     
-    return render(request, 'laboratory/assignment/test_assignment_detail.html', context)
+    return render(request, 'laboratory/assignment/test_assignment_detail1.html', context)
 
 
 @login_required

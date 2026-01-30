@@ -119,7 +119,6 @@ class BulkSlotActionForm(forms.Form):
         return ids
 
 
-
 # API READY BOOKING FORM
 class AppointmentBookingForm(forms.ModelForm):
     existing_patient = forms.ModelChoiceField(

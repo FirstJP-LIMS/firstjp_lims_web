@@ -11,15 +11,18 @@ from django.core.paginator import Paginator
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 from django.core.exceptions import ValidationError
-
+from django.views.decorators.http import require_POST
+from django.db.models import Q, Count
 
 from ..models import AppointmentSlot, AppointmentSlotTemplate, Appointment
+
 from ..forms import (
     AppointmentSlotTemplateForm,
     GenerateSlotsForm,
     AppointmentSlotEditForm,
     BulkSlotActionForm
 )
+
 from apps.accounts.decorators import require_capability
 # Import notification handlers
 # from apps.notification.appointment_notifications import AppointmentNotifications
@@ -553,61 +556,223 @@ def slot_bulk_action(request):
 # APPOINTMENT CHECK 
 # ========================= 
 
+# @login_required
+# @require_capability('can_view_appointment')
+# def staff_appointment_list(request):
+#     """
+#     Staff view to see all appointments.
+#     """
+#     vendor = getattr(request.user, 'vendor', None) or getattr(request, 'tenant', None)
+#     if not vendor:
+#         messages.error(request, "Vendor not found.")
+#         return redirect('account:login')
+    
+#     appointments = Appointment.objects.filter(vendor=vendor).select_related(
+#         'patient', 'slot'
+#     ).only(
+#         'appointment_id', 'status', 'created_at',
+#         'patient__first_name', 'patient__last_name', 'patient__is_shadow',
+#         'slot__date', 'slot__start_time'
+#     )
+#     # Search Logic
+#     search_query = request.GET.get('search')
+#     if search_query:
+#         appointments = appointments.filter(
+#             Q(appointment_id__icontains=search_query) |
+#             Q(patient__first_name__icontains=search_query) |
+#             Q(patient__last_name__icontains=search_query)
+#         )
+        
+#     # Filters
+#     status_filter = request.GET.get('status')
+#     date_filter = request.GET.get('date')
+    
+#     if status_filter:
+#         appointments = appointments.filter(status=status_filter)
+#     if date_filter:
+#         try:
+#             filter_date = timezone.datetime.strptime(date_filter, '%Y-%m-%d').date()
+#             appointments = appointments.filter(slot__date=filter_date)
+#         except ValueError:
+#             pass
+    
+#     # Pagination
+#     paginator = Paginator(appointments, 20)
+#     page = request.GET.get('page', 1)
+#     appointments = paginator.get_page(page)
+    
+#     context = {
+#         'appointments': appointments,
+#         'status_filter': status_filter,
+#         'date_filter': date_filter,
+#         'vendor': vendor,
+#     }
+    
+#     return render(request, 'laboratory/appointments/staff/appt_list.html', context)
+
+
 @login_required
 @require_capability('can_view_appointment')
 def staff_appointment_list(request):
     """
-    Staff view to see all appointments.
+    Staff view to list appointments with filters, stats, and pagination.
     """
+
+    # -------------------------
+    # Resolve vendor context
+    # -------------------------
     vendor = getattr(request.user, 'vendor', None) or getattr(request, 'tenant', None)
     if not vendor:
         messages.error(request, "Vendor not found.")
         return redirect('account:login')
-    
-    appointments = Appointment.objects.filter(vendor=vendor).select_related(
-        'patient', 'slot'
-    ).only(
-        'appointment_id', 'status', 'created_at',
-        'patient__first_name', 'patient__last_name', 'patient__is_shadow',
-        'slot__date', 'slot__start_time'
+
+    # -------------------------
+    # Base queryset (single source of truth)
+    # -------------------------
+    qs = (
+        Appointment.objects
+        .filter(vendor=vendor)
+        .select_related('patient', 'slot')
+        .only(
+            'appointment_id', 'status', 'created_at',
+            'patient__first_name', 'patient__last_name', 'patient__is_shadow',
+            'slot__date', 'slot__start_time'
+        )
     )
 
+    # -------------------------
     # Filters
+    # -------------------------
+    search_query = request.GET.get('search')
     status_filter = request.GET.get('status')
     date_filter = request.GET.get('date')
-    
+
+    if search_query:
+        qs = qs.filter(
+            Q(appointment_id__icontains=search_query) |
+            Q(patient__first_name__icontains=search_query) |
+            Q(patient__last_name__icontains=search_query)
+        )
+
     if status_filter:
-        appointments = appointments.filter(status=status_filter)
+        qs = qs.filter(status=status_filter)
+
     if date_filter:
         try:
             filter_date = timezone.datetime.strptime(date_filter, '%Y-%m-%d').date()
-            appointments = appointments.filter(slot__date=filter_date)
+            qs = qs.filter(slot__date=filter_date)
         except ValueError:
             pass
-    
+
+    # -------------------------
+    # Stats (use filtered qs)
+    # -------------------------
+    today = timezone.localdate()
+
+    stats = qs.aggregate(
+        total_today=Count('id', filter=Q(slot__date=today)),
+        pending=Count('id', filter=Q(status=Appointment.STATUS_PENDING)),
+        confirmed=Count('id', filter=Q(status=Appointment.STATUS_CONFIRMED)),
+        completed=Count('id', filter=Q(status=Appointment.STATUS_COMPLETED)),
+        cancelled=Count('id', filter=Q(status=Appointment.STATUS_CANCELLED)),
+        no_show=Count('id', filter=Q(status=Appointment.STATUS_NO_SHOW)),
+    )
+
+    # -------------------------
     # Pagination
-    paginator = Paginator(appointments, 20)
-    page = request.GET.get('page', 1)
-    appointments = paginator.get_page(page)
-    
+    # -------------------------
+    paginator = Paginator(qs, 20)
+    page_number = request.GET.get('page', 1)
+    appointments = paginator.get_page(page_number)
+
+    # -------------------------
+    # Context
+    # -------------------------
     context = {
         'appointments': appointments,
+        'stats': stats,
+        'search_query': search_query,
         'status_filter': status_filter,
         'date_filter': date_filter,
         'vendor': vendor,
     }
+
+    return render(
+        request,
+        'laboratory/appointments/staff/appt_list.html',
+        context
+    )
+
+
+@login_required
+@require_capability('can_manage_appointment')
+def staff_appointment_detail(request, pk):
+    """
+    Internal work-order view for lab staff.
+    """
+    vendor = getattr(request, 'tenant', None)
     
-    return render(request, 'laboratory/appointments/staff/appointment_list.html', context)
+    appointment = get_object_or_404(
+        Appointment.objects.select_related(
+            'patient', 
+            'slot', 
+            'test_request', 
+            'booked_by_user'
+            ),
+        pk=pk, 
+        vendor=vendor
+    )
+    
+    context = {
+        'appointment': appointment,
+        'vendor': vendor,
+        # Determine valid next steps based on current status for UI buttons
+        'next_statuses': Appointment.VALID_TRANSITIONS.get(appointment.status, [])
+    }
+    return render(request, 'laboratory/appointments/staff/appt_detail.html', context)
 
 
+@login_required
+@require_capability('can_view_appointment')
+@require_POST
+def staff_appointment_status_update(request, pk):
+    """
+    Unified endpoint to transition appointment states.
+    """
+    vendor = getattr(request, 'tenant', None)
+    appointment = get_object_or_404(Appointment, pk=pk, vendor=vendor)
+    new_status = request.POST.get('status')
+    reason = request.POST.get('reason', '')
+
+    try:
+        with transaction.atomic():
+            appointment.transition(
+                new_status=new_status, 
+                user=request.user, 
+                reason=reason
+            )
+            
+            # --- NOTIFICATION HOOKS ---
+            # We can trigger tasks here (Mail/SMS)
+            # send_appointment_update_notification.delay(appointment.id, new_status)
+            
+        messages.success(request, f"Appointment {appointment.appointment_id} is now {new_status}.")
+    except ValidationError as e:
+        messages.error(request, str(e))
+    except Exception as e:
+        logger.error(f"Transition error: {e}")
+        messages.error(request, "Failed to update status.")
+
+    return redirect('appointment:staff_appointment_detail', pk=pk)
+
+
+# To drop the view. It will be replaced by the staff_appointment_status_update which works with the transitions in the model
 @login_required
 @require_capability('can_view_appointment')
 @require_http_methods(["POST"])
 def staff_appointment_confirm(request, appointment_id):
     appointment = get_object_or_404(Appointment, appointment_id=appointment_id)
 
-    # if not appointment.confirm():
-    # if not appointment.can_be_confirmed():
     if not appointment.can_confirm():
         messages.warning(request, "Appointment is already processed.")
         return redirect('appointment:staff_appointment_list')
@@ -628,4 +793,93 @@ def staff_appointment_confirm(request, appointment_id):
 
     return redirect('appointment:staff_appointment_list')
 
+
+
+"""
+Would you like me to help you refactor the staff list template to use this new unified "Quick Action" button with Tailwind?
+
+Would you like me to show you how to add a "Status History" log to the detail page so staff can see exactly when and who moved the appointment from Pending to Confirmed?
+"""
+
+
+
+"""
+AttributeError at /appointment/staff/appointments/
+'QuerySet' object has no attribute 'status'
+Request Method:	GET
+Request URL:	http://olulori.localhost.test:8000/appointment/staff/appointments/
+Django Version:	5.2.7
+Exception Type:	AttributeError
+Exception Value:	
+'QuerySet' object has no attribute 'status'
+
+template update:
+
+                                {% if 'confirmed' in next_statuses %}
+                                <form method="post" action="{% url 'appointment:appointment_status_update' appointment.appointment_id %}" class="inline">
+                                    {% csrf_token %}
+                                    <button type="submit" 
+                                            class="text-red-600 hover:text-green-700" 
+                                            title="Confirm Appointment"
+                                            onclick="return confirm('Confirm this appointment?')">
+                                        <i class="fas fa-check-circle"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+
+"""
+# @login_required
+# @require_capability('can_view_appointment')
+# def staff_appointment_list(request):
+#     """
+#     Staff view to see all appointments.
+#     """
+#     vendor = getattr(request.user, 'vendor', None) or getattr(request, 'tenant', None)
+#     if not vendor:
+#         messages.error(request, "Vendor not found.")
+#         return redirect('account:login')
+    
+#     appointment = Appointment.objects.filter(vendor=vendor).select_related(
+#         'patient', 'slot'
+#     ).only(
+#         'appointment_id', 'status', 'created_at',
+#         'patient__first_name', 'patient__last_name', 'patient__is_shadow',
+#         'slot__date', 'slot__start_time'
+#     )
+#     # Search Logic
+#     search_query = request.GET.get('search')
+#     if search_query:
+#         appointments = appointments.filter(
+#             Q(appointment_id__icontains=search_query) |
+#             Q(patient__first_name__icontains=search_query) |
+#             Q(patient__last_name__icontains=search_query)
+#         )
+        
+#     # Filters
+#     status_filter = request.GET.get('status')
+#     date_filter = request.GET.get('date')
+    
+#     if status_filter:
+#         appointments = appointments.filter(status=status_filter)
+#     if date_filter:
+#         try:
+#             filter_date = timezone.datetime.strptime(date_filter, '%Y-%m-%d').date()
+#             appointments = appointments.filter(slot__date=filter_date)
+#         except ValueError:
+#             pass
+    
+#     # Pagination
+#     paginator = Paginator(appointment, 20)
+#     page = request.GET.get('page', 1)
+#     appointments = paginator.get_page(page)
+    
+#     context = {
+#         'appointments': appointment,
+#         'status_filter': status_filter,
+#         'date_filter': date_filter,
+#         'vendor': vendor,
+#         'next_statuses': Appointment.VALID_TRANSITIONS.get(appointment.status, [])
+#     }
+    
+#     return render(request, 'laboratory/appointments/staff/appointment_list.html', context)
 

@@ -1,0 +1,164 @@
+{% extends 'laboratory/assets/base_apt.html' %}
+{% load static %}
+
+{% block title %}
+<title>Appointment Details | {{ vendor.name }}</title>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto my-6 p-4">
+    <nav class="flex mb-4 text-sm text-slate-500">
+        <a href="{% url 'appointment:staff_appointment_list' %}" class="hover:text-blue-600">Appointments</a>
+        <span class="mx-2">/</span>
+        <span class="font-semibold text-slate-800">{{ appointment.appointment_id }}</span>
+    </nav>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <div class="lg:col-span-2 space-y-6">
+            
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <div class="flex justify-between items-start">
+                    <div class="flex items-center gap-4">
+                        <div class="h-16 w-16 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-2xl font-bold">
+                            {{ appointment.patient.first_name|slice:":1" }}{{ appointment.patient.last_name|slice:":1" }}
+                        </div>
+                        <div>
+                            <h1 class="text-2xl font-bold text-slate-900">{{ appointment.patient.get_full_name }}</h1>
+                            <p class="text-slate-500">
+                                {% if appointment.patient.is_shadow %}
+                                    <span class="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded">Shadow Record</span>
+                                {% else %}
+                                    Patient ID: {{ appointment.patient.id|slice:":8" }}
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    <span class="px-3 py-1 rounded-full text-sm font-bold uppercase tracking-wider
+                        {% if appointment.status == 'pending' %} bg-yellow-100 text-yellow-700
+                        {% elif appointment.status == 'confirmed' %} bg-green-100 text-green-700
+                        {% elif appointment.status == 'cancelled' %} bg-red-100 text-red-700
+                        {% else %} bg-slate-100 text-slate-700 {% endif %}">
+                        {{ appointment.status }}
+                    </span>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="border-b border-slate-100 bg-slate-50/50 px-6 py-4">
+                    <h3 class="font-bold text-slate-800 uppercase text-xs tracking-widest">Appointment Logistics</h3>
+                </div>
+                <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <label class="text-xs font-bold text-slate-400 uppercase">Schedule</label>
+                        <p class="text-slate-900 font-medium mt-1">{{ appointment.slot.date|date:"l, F j, Y" }}</p>
+                        <p class="text-lg font-bold text-blue-600">{{ appointment.slot.start_time|time:"g:i A" }} - {{ appointment.slot.end_time|time:"g:i A" }}</p>
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-400 uppercase">Service Type</label>
+                        <p class="text-slate-900 font-medium mt-1">{{ appointment.get_appointment_type_display }}</p>
+                        <p class="text-sm text-slate-500 mt-1">Ref: {{ appointment.appointment_id }}</p>
+                    </div>
+                </div>
+                
+                {% if appointment.reason_for_visit %}
+                <div class="px-6 pb-6">
+                    <label class="text-xs font-bold text-slate-400 uppercase">Reason for Visit / Staff Notes</label>
+                    <div class="mt-2 bg-slate-50 p-4 rounded-lg border border-slate-100 text-slate-700 italic">
+                        {{ appointment.reason_for_visit }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="space-y-6">
+            
+            <div class="bg-white rounded-xl shadow-md border border-slate-200 p-6">
+                <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                    Internal Actions
+                </h3>
+                
+                <div class="flex flex-col gap-3">
+                    {% if 'confirmed' in next_statuses %}
+                    <form method="post" action="{% url 'appointment:appointment_status_update' appointment.pk %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="status" value="confirmed">
+                        <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg shadow transition">
+                            Confirm Arrival
+                        </button>
+                    </form>
+                    {% endif %}
+
+                    {% if 'completed' in next_statuses %}
+                    <form method="post" action="{% url 'appointment:appointment_status_update' appointment.pk %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="status" value="completed">
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow transition">
+                            Mark as Completed
+                        </button>
+                    </form>
+                    {% endif %}
+
+                    {% if 'cancelled' in next_statuses %}
+                    <button onclick="openCancelModal()" class="w-full bg-red-50 text-red-700 hover:bg-red-100 font-bold py-3 px-4 rounded-lg border border-red-200 transition">
+                        Cancel Appointment
+                    </button>
+                    {% endif %}
+
+                    {% if not next_statuses %}
+                    <div class="text-center py-4 px-2 bg-slate-50 rounded-lg border border-dashed border-slate-300">
+                        <p class="text-sm text-slate-500 italic">No further actions available for this status.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="bg-slate-900 rounded-xl p-6 text-white shadow-lg">
+                <h4 class="text-xs font-bold text-slate-400 uppercase mb-4 tracking-widest">Audit Trail</h4>
+                <div class="space-y-4 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Booked on:</span>
+                        <span>{{ appointment.created_at|date:"M d, Y" }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">By User:</span>
+                        <span>{{ appointment.booked_by_user.get_short_name|default:"Self-Booked" }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="cancelModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+    <div class="relative p-8 border w-full max-w-md shadow-2xl rounded-2xl bg-white">
+        <h3 class="text-xl font-bold text-slate-900 mb-2">Cancel Appointment</h3>
+        <p class="text-slate-500 text-sm mb-6">Please provide a reason for canceling this appointment. This will be visible to the patient.</p>
+        
+        <form method="post" action="{% url 'appointment:appointment_status_update' appointment.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="status" value="cancelled">
+            <textarea name="reason" rows="4" required 
+                class="w-full border border-slate-300 rounded-xl p-3 text-slate-900 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition" 
+                placeholder="Patient called to reschedule, test no longer needed..."></textarea>
+            
+            <div class="flex gap-3 mt-6">
+                <button type="button" onclick="closeCancelModal()" class="flex-1 px-4 py-3 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200">
+                    Nevermind
+                </button>
+                <button type="submit" class="flex-1 px-4 py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 shadow-lg shadow-red-200">
+                    Confirm Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openCancelModal() { document.getElementById('cancelModal').classList.remove('hidden'); }
+    function closeCancelModal() { document.getElementById('cancelModal').classList.add('hidden'); }
+</script>
+{% endblock %}
+

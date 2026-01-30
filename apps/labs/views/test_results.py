@@ -29,16 +29,73 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
+# def _handle_manual_result_submission(request, assignment, result):
+#     lab_test = assignment.lab_test
+#     is_quantitative = lab_test.result_type == "QNT"
+#     is_qualitative = lab_test.result_type == "QLT"
+
+#     raw_value = request.POST.get("result_value", "").strip()
+#     unit = request.POST.get("unit", "").strip()
+#     remarks = request.POST.get("remarks", "").strip()
+#     interpretation = request.POST.get("interpretation", "").strip()
+
+#     if not raw_value:
+#         messages.error(request, "Result value is required.")
+#         return _render_manual_result_form(request, assignment, result)
+
+#     try:
+#         with transaction.atomic():
+#             if result is None:
+#                 result = TestResult.objects.create(
+#                     assignment=assignment,
+#                     result_value=raw_value,
+#                     units=unit,
+#                     remarks=remarks,
+#                     interpretation=interpretation,
+#                     entered_by=request.user,
+#                     data_source="manual",
+#                     status="draft",
+#                 )
+#             else:
+#                 if result.result_value != raw_value:
+#                     result.previous_value = result.result_value
+#                     result.result_value = raw_value
+#                     result.version += 1
+
+#                 result.units = unit
+#                 result.remarks = remarks
+#                 result.interpretation = interpretation
+
+#             result.auto_flag_result()
+#             result.save()
+
+#             assignment.mark_analyzed()
+
+#             messages.success(
+#                 request,
+#                 "Result saved successfully. Awaiting verification."
+#             )
+
+#             # return redirect(
+#             #     "labs:sample-exam-detail",
+#             #     sample_id=assignment.sample.sample_id,
+#             # )
+#             # return redirect(
+#             #     "labs:test_assignment_detail",
+#             #     assignment_id=assignment.id,
+#             # )
+#             return redirect(
+#                 "labs:result_detail",
+#                 result_id=result.id,
+#             )
+
+#     except Exception as e:
+#         messages.error(request, f"Error saving result: {e}")
+#         return _render_manual_result_form(request, assignment, result)
+
 def _handle_manual_result_submission(request, assignment, result):
-    lab_test = assignment.lab_test
-    is_quantitative = lab_test.result_type == "QNT"
-    is_qualitative = lab_test.result_type == "QLT"
-
     raw_value = request.POST.get("result_value", "").strip()
-    unit = request.POST.get("unit", "").strip()
-    remarks = request.POST.get("remarks", "").strip()
-    interpretation = request.POST.get("interpretation", "").strip()
-
+    
     if not raw_value:
         messages.error(request, "Result value is required.")
         return _render_manual_result_form(request, assignment, result)
@@ -46,48 +103,42 @@ def _handle_manual_result_submission(request, assignment, result):
     try:
         with transaction.atomic():
             if result is None:
+                # CREATE logic
                 result = TestResult.objects.create(
                     assignment=assignment,
                     result_value=raw_value,
-                    units=unit,
-                    remarks=remarks,
-                    interpretation=interpretation,
+                    units=request.POST.get("unit", "").strip(),
+                    remarks=request.POST.get("remarks", "").strip(),
+                    interpretation=request.POST.get("interpretation", "").strip(),
                     entered_by=request.user,
                     data_source="manual",
                     status="draft",
                 )
             else:
+                # UPDATE logic (Sync with your update view)
                 if result.result_value != raw_value:
                     result.previous_value = result.result_value
                     result.result_value = raw_value
                     result.version += 1
 
-                result.units = unit
-                result.remarks = remarks
-                result.interpretation = interpretation
+                result.units = request.POST.get("unit", "").strip()
+                result.remarks = request.POST.get("remarks", "").strip()
+                result.interpretation = request.POST.get("interpretation", "").strip()
 
             result.auto_flag_result()
             result.save()
 
-            assignment.mark_analyzed()
+            # Ensure assignment is updated
+            assignment.status = 'entered' # Or assignment.mark_analyzed()
+            assignment.save()
 
-            messages.success(
-                request,
-                "Result saved successfully. Awaiting verification."
-            )
-
-            # return redirect(
-            #     "labs:sample-exam-detail",
-            #     sample_id=assignment.sample.sample_id,
-            # )
-            return redirect(
-                "labs:test_assignment_detail",
-                assignment_id=assignment.id,
-            )
+            messages.success(request, "Result saved successfully.")
+            return redirect("labs:result_detail", result_id=result.id)
 
     except Exception as e:
         messages.error(request, f"Error saving result: {e}")
         return _render_manual_result_form(request, assignment, result)
+    
 
 def _render_manual_result_form(request, assignment, result):
     lab_test = assignment.lab_test
@@ -105,7 +156,7 @@ def _render_manual_result_form(request, assignment, result):
 
     return render(
         request,
-        "laboratory/result/manual_result_form.html",
+        "laboratory/result/manual_result_form1.html",
         context,
     )
 
@@ -150,94 +201,71 @@ def enter_manual_result(request, assignment_id):
     )
 
 
+# @login_required
+# @require_capability("can_enter_results")
+# def update_manual_result(request, result_id):
+#     """
+#         To be used for manual and instruments generated results
+#     """
+#     result = get_object_or_404(
+#         TestResult.objects.select_related("assignment__lab_test", "assignment__vendor"),
+#         id=result_id,
+#         assignment__vendor=request.user.vendor,
+#     )
+
+#     # ❌ Logic Guard: Only DRAFT results can be updated here
+#     if result.status != "draft":
+#         messages.error(request, "This result is already verified/released. Please use the Amendment process.")
+#         return redirect('labs:result_detail', result_id=result.id)
+
+#     if request.method == "POST":
+#         raw_value = request.POST.get("result_value", "").strip()
+        
+#         if not raw_value:
+#             messages.error(request, "Result value is required.")
+#         else:
+#             try:
+#                 with transaction.atomic():
+#                     # Update fields
+#                     result.result_value = raw_value
+#                     result.units = request.POST.get("unit", "").strip()
+#                     result.remarks = request.POST.get("remarks", "").strip()
+#                     result.interpretation = request.POST.get("interpretation", "").strip()
+                    
+#                     # Scientific Logic
+#                     result.auto_flag_result()
+#                     result.save()
+                    
+#                     # Update Assignment status if it was just 'pending'
+#                     if result.assignment.status == 'pending':
+#                         result.assignment.status = 'entered'
+#                         result.assignment.save()
+
+#                     messages.success(request, "Result updated successfully.")
+#                     return redirect("labs:result_detail", result_id=result.id)
+#             except Exception as e:
+#                 messages.error(request, f"System Error: {str(e)}")
+
+#     return _render_manual_result_form(request, result.assignment, result)
 
 @login_required
 @require_capability("can_enter_results")
 def update_manual_result(request, result_id):
-    """
-        To be used for manual and instruments generated results
-    """
     result = get_object_or_404(
         TestResult.objects.select_related("assignment__lab_test", "assignment__vendor"),
         id=result_id,
         assignment__vendor=request.user.vendor,
     )
 
-    # ❌ Logic Guard: Only DRAFT results can be updated here
     if result.status != "draft":
-        messages.error(request, "This result is already verified/released. Please use the Amendment process.")
+        messages.error(request, "This result is already verified. Use Amendment.")
         return redirect('labs:result_detail', result_id=result.id)
 
     if request.method == "POST":
-        raw_value = request.POST.get("result_value", "").strip()
-        
-        if not raw_value:
-            messages.error(request, "Result value is required.")
-        else:
-            try:
-                with transaction.atomic():
-                    # Update fields
-                    result.result_value = raw_value
-                    result.units = request.POST.get("unit", "").strip()
-                    result.remarks = request.POST.get("remarks", "").strip()
-                    result.interpretation = request.POST.get("interpretation", "").strip()
-                    
-                    # Scientific Logic
-                    result.auto_flag_result()
-                    result.save()
-                    
-                    # Update Assignment status if it was just 'pending'
-                    if result.assignment.status == 'pending':
-                        result.assignment.status = 'entered'
-                        result.assignment.save()
-
-                    messages.success(request, "Result updated successfully.")
-                    return redirect("labs:result_detail", result_id=result.id)
-            except Exception as e:
-                messages.error(request, f"System Error: {str(e)}")
+        # Call the helper!
+        return _handle_manual_result_submission(request, result.assignment, result)
 
     return _render_manual_result_form(request, result.assignment, result)
-
-# @login_required
-# @require_capability("can_enter_results")
-# @require_http_methods(["GET", "POST"])
-# def update_manual_result(request, result_id):
-#     result = get_object_or_404(
-#         TestResult.objects.select_related(
-#             "assignment__lab_test",
-#             "assignment__vendor",
-#             "assignment__sample",
-#         ),
-#         id=result_id,
-#         assignment__vendor=request.user.vendor,
-#     )
-
-#     assignment = result.assignment
-
-#     # ❌ Hard stop if not draft
-#     if result.status != "draft":
-#         messages.error(
-#             request,
-#             "Only draft results can be updated."
-#         )
-#         return redirect(
-#             "labs:sample-exam-detail",
-#             sample_id=assignment.sample.sample_id,
-#         )
-
-#     if request.method == "POST":
-#         return _handle_manual_result_submission(
-#             request=request,
-#             assignment=assignment,
-#             result=result,
-#         )
-
-#     return _render_manual_result_form(
-#         request=request,
-#         assignment=assignment,
-#         result=result,
-#     )
-
 
 # # ===== RESULT VIEW =====
 @login_required
@@ -374,7 +402,9 @@ def result_detail(request, result_id):
     )
 
     # result_amendments = ResultAmendment.objects.filter(result=result).order_by('-amended_at')
-    result_amendments = get_object_or_404(ResultAmendment.objects.filter(result=result).order_by('-amended_at'))
+    # result_amendments = get_object_or_404(ResultAmendment.objects.filter(result=result).order_by('-amended_at'))
+    # ✅ FIX: Use filter directly. It returns an empty list [] if no amendments exist.
+    result_amendments = ResultAmendment.objects.filter(result=result).order_by('-amended_at')
 
     # ==============================
     # Previous released results (trend)
@@ -705,5 +735,46 @@ def send_result_email(result):
     
     return email.send()
 
+
+
+# @login_required
+# @require_capability("can_enter_results")
+# @require_http_methods(["GET", "POST"])
+# def update_manual_result(request, result_id):
+#     result = get_object_or_404(
+#         TestResult.objects.select_related(
+#             "assignment__lab_test",
+#             "assignment__vendor",
+#             "assignment__sample",
+#         ),
+#         id=result_id,
+#         assignment__vendor=request.user.vendor,
+#     )
+
+#     assignment = result.assignment
+
+#     # ❌ Hard stop if not draft
+#     if result.status != "draft":
+#         messages.error(
+#             request,
+#             "Only draft results can be updated."
+#         )
+#         return redirect(
+#             "labs:sample-exam-detail",
+#             sample_id=assignment.sample.sample_id,
+#         )
+
+#     if request.method == "POST":
+#         return _handle_manual_result_submission(
+#             request=request,
+#             assignment=assignment,
+#             result=result,
+#         )
+
+#     return _render_manual_result_form(
+#         request=request,
+#         assignment=assignment,
+#         result=result,
+#     )
 
 

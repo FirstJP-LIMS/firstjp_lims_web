@@ -96,11 +96,6 @@ urlpatterns = [
 
     # Result Management URLs
     # ===== Manual Result Entry =====
-    path(
-        "result/<int:result_id>/update/",
-        test_results.update_manual_result,
-        name="update_manual_test_result",
-    ),
 
     path(
         'assignment/<int:assignment_id>/enter-result/', 
@@ -108,6 +103,12 @@ urlpatterns = [
          name='enter_manual_test_result'
     ),
     
+    path(
+        "result/<int:result_id>/update/",
+        test_results.update_manual_result,
+        name="update_manual_test_result",
+    ),
+
     path(
         'results/',
         test_results.result_list, 
@@ -123,6 +124,7 @@ urlpatterns = [
     path('result/<int:result_id>/release/', test_results.release_result, name='release_result'),
 
     path('result/<int:result_id>/download/', test_results.download_result_pdf, name='download_result_pdf'),
+
 
     # ===== Quick Instrument Assignment =====
     # ===== Bulk Actions =====

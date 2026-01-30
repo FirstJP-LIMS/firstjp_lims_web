@@ -1,264 +1,297 @@
 {% extends "laboratory/assets/base.html" %}
 {% load static %}
 
-{% block title %}Sample {{ sample.sample_id }} - FirstJP LIMS{% endblock %}
+{% block title %}Sample Examination - {{ sample.sample_id }}{% endblock %}
 
 {% block content %}
-<div class="page-header mb-4">
-    <div class="d-flex justify-content-between align-items-center">
-        <div>
-            <h1 class="page-title fw-bold text-dark mb-1">
-                Sample Verification
-                <span class="badge bg-{{ sample.status|default:'pending' }}-badge ms-2">
-                    {{ sample.get_status_display|default:'Pending' }}
-                </span>
-            </h1>
-            <p class="page-subtitle text-muted mb-0">
-                Sample ID: <strong>{{ sample.sample_id }}</strong> | 
-                Request: <strong>{{ test_request.request_id }}</strong>
-            </p>
-        </div>
-        <div class="d-flex gap-2">
-            <a href="{% url 'labs:sample-exam-list' %}" class="btn btn-outline-secondary btn-lg">
-                <i class="bi bi-arrow-left me-2"></i>Back to List
-            </a>
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'labs:sample-exam-list' %}">
+                            <i class="bi bi-grid-3x3-gap-fill"></i> Samples
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active" aria-current="page">Examination</li>
+                </ol>
+            </nav>
+            
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-2 text-dark">
+                        <i class="bi bi-clipboard-check-fill me-2 text-primary"></i>
+                        Sample Examination
+                    </h1>
+                    <p class="text-muted mb-0">
+                        Verify and process specimen <strong>{{ sample.sample_id }}</strong>
+                    </p>
+                </div>
+                <div>
+                    <span class="badge {% if sample.status == 'AC' %}bg-info{% elif sample.status == 'AP' %}bg-success{% elif sample.status == 'RJ' %}bg-danger{% endif %} fs-6">
+                        <i class="bi bi-circle-fill me-1"></i>
+                        {{ sample.get_status_display }}
+                    </span>
+                </div>
+            </div>
         </div>
     </div>
-</div>
 
-<div class="dashboard-content">
-    <!-- Messages -->
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm border-0" role="alert">
-                <i class="bi bi-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}-fill me-2"></i>
-                {{ message|safe }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    <!-- Status Timeline -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4">
+                    <div class="row text-center">
+                        {% for status_code, status_label in status_steps %}
+                        <div class="col-md-4">
+                            <div class="d-flex flex-column align-items-center">
+                                <div class="mb-2">
+                                    <div class="rounded-circle 
+                                        {% if sample.status == status_code %} 
+                                            {% if status_code == 'AC' %}bg-primary
+                                            {% elif status_code == 'AP' %}bg-success
+                                            {% elif status_code == 'RJ' %}bg-danger{% endif %}
+                                        {% elif sample.status_rank >= forloop.counter0 %}bg-secondary
+                                        {% else %}bg-light border{% endif %} 
+                                        d-flex align-items-center justify-content-center"
+                                        style="width: 60px; height: 60px;">
+                                        {% if sample.status == status_code %}
+                                            <i class="bi 
+                                                {% if status_code == 'AC' %}bi-droplet
+                                                {% elif status_code == 'AP' %}bi-check-circle
+                                                {% elif status_code == 'RJ' %}bi-x-circle{% endif %} 
+                                                text-white fs-4"></i>
+                                        {% else %}
+                                            <span class="text-muted fs-5">{{ forloop.counter }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <h6 class="mb-1 {% if sample.status == status_code %}fw-bold text-dark{% endif %}">
+                                    {{ status_label }}
+                                </h6>
+                                {% if sample.status == status_code %}
+                                    <small class="text-muted">
+                                        {% if status_code == 'AC' and sample.verified_at %}
+                                            {{ sample.verified_at|date:"M d, Y H:i" }}
+                                        {% elif status_code == 'AP' and sample.accepted_at %}
+                                            {{ sample.accepted_at|date:"M d, Y H:i" }}
+                                        {% elif status_code == 'RJ' and sample.rejected_at %}
+                                            {{ sample.rejected_at|date:"M d, Y H:i" }}
+                                        {% else %}
+                                            Current
+                                        {% endif %}
+                                    </small>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
             </div>
-        {% endfor %}
-    {% endif %}
+        </div>
+    </div>
 
-    <div class="row">
-        <!-- Left Column: Sample & Payment Info -->
+    <!-- Main Content -->
+    <div class="row g-4">
+        <!-- Left Column: Sample Info -->
         <div class="col-lg-8">
-            <!-- Payment Status Alert -->
-            {% if not payment_status.billing_exists %}
-                <div class="alert alert-danger border-0 shadow-sm mb-4">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-exclamation-octagon-fill fs-2 me-3"></i>
-                        <div class="flex-grow-1">
-                            <h5 class="alert-heading mb-1">No Billing Information</h5>
-                            <p class="mb-0">
-                                This test request does not have billing information. 
-                                Please create billing before proceeding.
-                            </p>
-                        </div>
-                        <a href="{% url 'labs:request_detail' test_request.pk %}" 
-                           class="btn btn-danger">
-                            View Request
-                        </a>
-                    </div>
-                </div>
-            {% elif not payment_status.is_paid %}
-                <div class="alert alert-warning border-0 shadow-sm mb-4">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-credit-card-fill fs-2 me-3 text-warning"></i>
-                        <div class="flex-grow-1">
-                            <h5 class="alert-heading mb-1 text-warning">Payment Required</h5>
-                            <p class="mb-2">
-                                <strong>Status:</strong> {{ payment_status.payment_status }}<br>
-                                <strong>Total Amount:</strong> ₦{{ payment_status.total_amount|floatformat:2 }}<br>
-                                <strong>Outstanding Balance:</strong> 
-                                <span class="text-danger fw-bold">₦{{ payment_status.balance_due|floatformat:2 }}</span>
-                            </p>
-                            <p class="mb-0 small">
-                                <i class="bi bi-info-circle me-1"></i>
-                                Sample verification requires full payment. Please complete payment to proceed.
-                            </p>
-                        </div>
-                        <a href="{% url 'billing:initiate_payment' test_request.billing_info.pk %}" 
-                           class="btn btn-warning">
-                            <i class="bi bi-credit-card me-2"></i>Pay Now
-                        </a>
-                    </div>
-                </div>
-            {% else %}
-                <div class="alert alert-success border-0 shadow-sm mb-4">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-check-circle-fill fs-2 me-3"></i>
-                        <div class="flex-grow-1">
-                            <h5 class="alert-heading mb-1">Payment Complete</h5>
-                            <p class="mb-0">
-                                ✅ All payments received (₦{{ payment_status.total_amount|floatformat:2 }}). 
-                                Sample verification is allowed.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            {% endif %}
-
             <!-- Sample Information Card -->
-            <div class="main-card card border-0 shadow-sm mb-4">
+            <div class="card shadow-sm border-0 mb-4">
                 <div class="card-header bg-white border-0 py-3">
-                    <h5 class="card-title mb-0 fw-semibold">
-                        <i class="bi bi-droplet me-2 text-primary"></i>
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-info-circle-fill text-primary me-2"></i>
                         Sample Information
                     </h5>
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="text-muted small">Sample ID</label>
-                            <div class="fw-bold">{{ sample.sample_id }}</div>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="text-muted small">Specimen Type</label>
-                            <div class="fw-bold">{{ sample.specimen_type|title }}</div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="text-muted small">Container Type</label>
-                            <div>{{ sample.container_type|default:"Not specified" }}</div>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="text-muted small">Volume</label>
-                            <div>{{ sample.volume_collected_ml|default:"—" }} ml</div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="text-muted small">Collection Method</label>
-                            <div>{{ sample.collection_method|default:"Not specified" }}</div>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="text-muted small">Collection Site</label>
-                            <div>{{ sample.collection_site|default:"Not specified" }}</div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="text-muted small">Collected By</label>
-                            <div>{{ sample.collected_by|default:"Not recorded" }}</div>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="text-muted small">Collection Date</label>
-                            <div>{{ sample.collected_at|date:"Y-m-d H:i"|default:"Not recorded" }}</div>
-                        </div>
-                    </div>
-
-                    {% if sample.specimen_description %}
-                    <div class="mb-3">
-                        <label class="text-muted small">Description</label>
-                        <div>{{ sample.specimen_description }}</div>
-                    </div>
-                    {% endif %}
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="text-muted small">Status</label>
-                            <div>
-                                <span class="badge bg-{{ sample.status|default:'pending' }}-badge">
-                                    {{ sample.get_status_display|default:'Pending' }}
-                                </span>
+                    <div class="row g-3">
+                        <!-- Patient Info -->
+                        <div class="col-md-6">
+                            <div class="border rounded p-3 h-100">
+                                <h6 class="text-muted mb-3">
+                                    <i class="bi bi-person me-2"></i>Patient Details
+                                </h6>
+                                <table class="table table-sm table-borderless">
+                                    <tr>
+                                        <td width="40%"><strong>Name:</strong></td>
+                                        <td>{{ sample.patient.first_name }} {{ sample.patient.first_name }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Request ID:</strong></td>
+                                        <td>{{ test_request.request_id }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Age/Gender:</strong></td>
+                                        <td>{{ sample.patient.age }} / {{ sample.patient.gender }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Collection Date:</strong></td>
+                                        <td>{{ sample.collected_at|date:"M d, Y H:i" }}</td>
+                                    </tr>
+                                </table>
                             </div>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="text-muted small">Location</label>
-                            <div>{{ sample.location|default:"Lab" }}</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Patient Information Card -->
-            <div class="main-card card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white border-0 py-3">
-                    <h5 class="card-title mb-0 fw-semibold">
-                        <i class="bi bi-person me-2 text-primary"></i>
-                        Patient Information
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="text-muted small">Patient ID</label>
-                            <div class="fw-bold">{{ test_request.patient.patient_id }}</div>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="text-muted small">Full Name</label>
-                            <div class="fw-bold">
-                                {{ test_request.patient.first_name }} {{ test_request.patient.last_name }}
+                        <!-- Specimen Info -->
+                        <div class="col-md-6">
+                            <div class="border rounded p-3 h-100">
+                                <h6 class="text-muted mb-3">
+                                    <i class="bi bi-droplet me-2"></i>Specimen Details
+                                </h6>
+                                <table class="table table-sm table-borderless">
+                                    <tr>
+                                        <td width="40%"><strong>Type:</strong></td>
+                                        <td>{{ sample.specimen_type }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Method:</strong></td>
+                                        <td>{{ sample.collection_method|default:"—" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Site:</strong></td>
+                                        <td>{{ sample.collection_site|default:"—" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Volume:</strong></td>
+                                        <td>
+                                            {% if sample.volume_collected_ml %}
+                                                {{ sample.volume_collected_ml }} ml
+                                            {% else %}
+                                                —
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Container:</strong></td>
+                                        <td>{{ sample.container_type|default:"—" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Fasting:</strong></td>
+                                        <td>{{ sample.fasting_status|default:"—" }}</td>
+                                    </tr>
+                                </table>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="text-muted small">Date of Birth</label>
-                            <div>{{ test_request.patient.date_of_birth|date:"Y-m-d"|default:"Not provided" }}</div>
+                        <!-- Collection Notes -->
+                        {% if sample.specimen_description %}
+                        <div class="col-12">
+                            <div class="border rounded p-3">
+                                <h6 class="text-muted mb-3">
+                                    <i class="bi bi-card-text me-2"></i>Collection Notes
+                                </h6>
+                                <p class="mb-0">{{ sample.specimen_description }}</p>
+                            </div>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="text-muted small">Gender</label>
-                            <div>{{ test_request.patient.get_gender_display|default:"Not specified" }}</div>
-                        </div>
-                    </div>
+                        {% endif %}
 
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="text-muted small">Contact Phone</label>
-                            <div>{{ test_request.patient.contact_phone|default:"Not provided" }}</div>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="text-muted small">Contact Email</label>
-                            <div>{{ test_request.patient.contact_email|default:"Not provided" }}</div>
+                        <!-- Verification History -->
+                        <div class="col-12">
+                            <div class="border rounded p-3">
+                                <h6 class="text-muted mb-3">
+                                    <i class="bi bi-clock-history me-2"></i>Verification History
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <small class="text-muted d-block">Collected By</small>
+                                        <strong>{{ sample.collected_by|default:"—" }}</strong>
+                                        {% if sample.collected_at %}
+                                            <div class="text-muted small">{{ sample.collected_at|date:"M d, Y H:i" }}</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-4">
+                                        <small class="text-muted d-block">Verified By</small>
+                                        {% if sample.verified_by %}
+                                            <strong>{{ sample.verified_by.get_full_name }}</strong>
+                                            <div class="text-muted small">{{ sample.verified_at|date:"M d, Y H:i" }}</div>
+                                        {% else %}
+                                            <span class="text-muted">Pending</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-4">
+                                        <small class="text-muted d-block">Accepted/Rejected By</small>
+                                        {% if sample.accepted_by %}
+                                            <strong class="text-success">{{ sample.accepted_by.get_full_name }}</strong>
+                                            <div class="text-muted small">{{ sample.accepted_at|date:"M d, Y H:i" }}</div>
+                                        {% elif sample.rejected_by %}
+                                            <strong class="text-danger">{{ sample.rejected_by.get_full_name }}</strong>
+                                            <div class="text-muted small">{{ sample.rejected_at|date:"M d, Y H:i" }}</div>
+                                        {% else %}
+                                            <span class="text-muted">Pending</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Requested Tests Card -->
-            <div class="main-card card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white border-0 py-3">
-                    <h5 class="card-title mb-0 fw-semibold">
-                        <i class="bi bi-clipboard-check me-2 text-primary"></i>
-                        Requested Tests ({{ test_request.requested_tests.count }})
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-list-check text-primary me-2"></i>
+                        Requested Tests
                     </h5>
+                    <span class="badge bg-light text-dark">
+                        {{ assignments.count }} test(s)
+                    </span>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
                                 <tr>
                                     <th>Test Code</th>
                                     <th>Test Name</th>
                                     <th>Department</th>
-                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Assigned To</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for test in test_request.requested_tests.all %}
+                                {% for assignment in assignments %}
                                 <tr>
-                                    <td><strong class="text-primary">{{ test.code }}</strong></td>
-                                    <td>{{ test.name }}</td>
                                     <td>
-                                        <span class="badge bg-secondary bg-opacity-15 text-secondary">
-                                            {{ test.assigned_department.name }}
+                                        <strong>{{ assignment.lab_test.code }}</strong>
+                                    </td>
+                                    <td>
+                                        {{ assignment.lab_test.name }}
+                                        {% if assignment.lab_test.description %}
+                                            <small class="text-muted d-block">{{ assignment.lab_test.description|truncatechars:60 }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if assignment.department %}
+                                            <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25">
+                                                {{ assignment.department.name }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if assignment.status == 'P' %}bg-warning{% elif assignment.status == 'IP' %}bg-info{% elif assignment.status == 'C' %}bg-success{% else %}bg-secondary{% endif %}">
+                                            {{ assignment.get_status_display }}
                                         </span>
                                     </td>
                                     <td>
-                                        <span class="badge bg-info bg-opacity-15 text-info">
-                                            {{ test.get_result_type_display }}
-                                        </span>
+                                        {% if assignment.assigned_to %}
+                                            {{ assignment.assigned_to.get_full_name }}
+                                        {% else %}
+                                            <span class="text-muted">Not assigned</span>
+                                        {% endif %}
                                     </td>
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="4" class="text-center text-muted">
-                                        No tests requested
+                                    <td colspan="5" class="text-center py-4">
+                                        <i class="bi bi-exclamation-circle text-muted display-6 mb-3"></i>
+                                        <p class="text-muted mb-0">No tests assigned to this sample</p>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -272,187 +305,421 @@
         <!-- Right Column: Actions -->
         <div class="col-lg-4">
             <!-- Action Card -->
-            <div class="main-card card border-0 shadow-sm mb-4">
+            <div class="card shadow-sm border-0 sticky-top" style="top: 20px;">
                 <div class="card-header bg-white border-0 py-3">
-                    <h5 class="card-title mb-0 fw-semibold">
-                        <i class="bi bi-gear me-2 text-primary"></i>
-                        Sample Actions
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-gear-fill text-primary me-2"></i>
+                        Laboratory Actions
                     </h5>
                 </div>
                 <div class="card-body">
-                    {% if sample.status == 'collected' or sample.status == 'pending' %}
-                        <!-- Verify Action -->
-                        <form method="post" class="mb-3">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="verify">
-                            <button type="submit" 
-                                    class="btn btn-primary w-100 btn-lg"
-                                    {% if not payment_status.is_paid %}disabled{% endif %}>
-                                <i class="bi bi-check-circle me-2"></i>
-                                Verify Sample
-                            </button>
-                            {% if not payment_status.is_paid %}
-                            <small class="text-muted d-block mt-2">
-                                <i class="bi bi-lock me-1"></i>
-                                Payment required to verify
-                            </small>
+                    
+                    <!-- Messages Display -->
+                    {% if messages %}
+                    <div class="mb-4">
+                        {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {% if 'success' in message.tags %}
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                            {% elif 'error' in message.tags or 'danger' in message.tags %}
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            {% elif 'warning' in message.tags %}
+                                <i class="bi bi-exclamation-circle-fill me-2"></i>
+                            {% else %}
+                                <i class="bi bi-info-circle-fill me-2"></i>
                             {% endif %}
-                        </form>
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        {% endfor %}
+                    </div>
                     {% endif %}
 
-                    {% if sample.status == 'verified' %}
-                        <!-- Accept Action -->
-                        <form method="post" class="mb-3">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="accept">
-                            <button type="submit" 
-                                    class="btn btn-success w-100 btn-lg"
-                                    {% if not payment_status.is_paid %}disabled{% endif %}>
-                                <i class="bi bi-check-all me-2"></i>
-                                Accept Sample
-                            </button>
-                            {% if not payment_status.is_paid %}
-                            <small class="text-muted d-block mt-2">
-                                <i class="bi bi-lock me-1"></i>
-                                Payment required to accept
-                            </small>
+                    <!-- Action Forms -->
+                    {% if sample.status == 'AC' %}
+                        <!-- Verification Action -->
+                        <div class="border rounded p-3 mb-3 bg-light">
+                            <h6 class="text-primary mb-3">
+                                <i class="bi bi-check-square me-2"></i>Step 1: Verify Sample
+                            </h6>
+                            <p class="small text-muted mb-3">
+                                Confirm sample arrived, matches label, and is properly stored.
+                            </p>
+                            
+                            {% if not sample.verified_by %}
+                            <form method="post" class="needs-validation" novalidate>
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="verify">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="bi bi-check-circle me-2"></i>Verify Sample
+                                </button>
+                            </form>
+                            {% else %}
+                            <div class="alert alert-success mb-0">
+                                <div class="d-flex">
+                                    <i class="bi bi-check-circle-fill fs-5 me-2"></i>
+                                    <div>
+                                        <strong>Verified</strong>
+                                        <div class="small">
+                                            by {{ sample.verified_by.get_full_name }}<br>
+                                            on {{ sample.verified_at|date:"M d, Y H:i" }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                             {% endif %}
-                        </form>
+                        </div>
+
+                        <!-- Acceptance/Rejection Actions -->
+                        {% if sample.verified_by %}
+                        <div class="border rounded p-3 bg-light">
+                            <h6 class="text-primary mb-3">
+                                <i class="bi bi-clipboard-check me-2"></i>Step 2: Quality Check
+                            </h6>
+                            <p class="small text-muted mb-3">
+                                Inspect sample quality and decide if suitable for analysis.
+                            </p>
+
+                            <!-- Acceptance Form -->
+                            <form method="post" class="mb-3 needs-validation" novalidate>
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="accept">
+                                <button type="submit" class="btn btn-success w-100 mb-3">
+                                    <i class="bi bi-check-lg me-2"></i>Accept & Queue for Analysis
+                                </button>
+                            </form>
+
+                            <!-- Rejection Form -->
+                            <div class="accordion" id="rejectionAccordion">
+                                <div class="accordion-item border-0">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed btn btn-outline-danger w-100" type="button" data-bs-toggle="collapse" data-bs-target="#rejectionCollapse">
+                                            <i class="bi bi-x-circle me-2"></i>Reject Sample
+                                        </button>
+                                    </h2>
+                                    <div id="rejectionCollapse" class="accordion-collapse collapse" data-bs-parent="#rejectionAccordion">
+                                        <div class="accordion-body pt-3">
+                                            <form method="post" class="needs-validation" novalidate>
+                                                {% csrf_token %}
+                                                <input type="hidden" name="action" value="reject">
+                                                <div class="mb-3">
+                                                    <label for="rejectionReason" class="form-label small">
+                                                        <strong>Reason for Rejection *</strong>
+                                                    </label>
+                                                    <select class="form-select form-select-sm" id="rejectionReason" name="reason" required>
+                                                        <option value="" selected disabled>Select a reason...</option>
+                                                        <option value="Hemolysed">Hemolysed</option>
+                                                        <option value="Clotted">Clotted</option>
+                                                        <option value="Insufficient Volume">Insufficient Volume</option>
+                                                        <option value="Wrong Container">Wrong Container</option>
+                                                        <option value="Improper Storage">Improper Storage</option>
+                                                        <option value="Expired">Expired</option>
+                                                        <option value="Contaminated">Contaminated</option>
+                                                        <option value="Label Mismatch">Label Mismatch</option>
+                                                        <option value="Other">Other</option>
+                                                    </select>
+                                                    <div class="form-text">Specify why sample cannot be processed</div>
+                                                </div>
+                                                <button type="submit" class="btn btn-danger w-100">
+                                                    <i class="bi bi-exclamation-triangle me-2"></i>Confirm Rejection
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                    {% elif sample.status == 'AP' %}
+                        <!-- Sample Accepted State -->
+                        <div class="border rounded p-3 bg-success bg-opacity-10 border-success">
+                            <div class="text-center py-4">
+                                <i class="bi bi-check-circle-fill text-success display-1 mb-3"></i>
+                                <h5 class="text-success mb-2">Sample Accepted</h5>
+                                <p class="text-muted mb-0">
+                                    This sample has been accepted and queued for analysis.
+                                </p>
+                                <hr class="my-3">
+                                <div class="text-start">
+                                    <small class="text-muted d-block">Verified By</small>
+                                    <strong>{{ sample.verified_by.get_full_name }}</strong>
+                                    <div class="small text-muted">{{ sample.verified_at|date:"M d, Y H:i" }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                    {% elif sample.status == 'RJ' %}
+                        <!-- Sample Rejected State -->
+                        <div class="border rounded p-3 bg-danger bg-opacity-10 border-danger">
+                            <div class="text-center py-4">
+                                <i class="bi bi-x-circle-fill text-danger display-1 mb-3"></i>
+                                <h5 class="text-danger mb-2">Sample Rejected</h5>
+                                <p class="mb-3">
+                                    <strong>Reason:</strong> {{ sample.rejection_reason }}
+                                </p>
+                                <hr class="my-3">
+                                <div class="text-start">
+                                    <small class="text-muted d-block">Rejected By</small>
+                                    <strong>{{ sample.rejected_by.get_full_name }}</strong>
+                                    <div class="small text-muted">{{ sample.rejected_at|date:"M d, Y H:i" }}</div>
+                                </div>
+                            </div>
+                        </div>
                     {% endif %}
 
-                    <!-- Reject Action -->
-                    <button type="button" 
-                            class="btn btn-danger w-100" 
-                            data-bs-toggle="modal" 
-                            data-bs-target="#rejectModal">
-                        <i class="bi bi-x-circle me-2"></i>
-                        Reject Sample
-                    </button>
+                    <!-- Quick Actions -->
+                    <div class="mt-4">
+                        <h6 class="text-muted mb-3">
+                            <i class="bi bi-lightning-fill me-2"></i>Quick Actions
+                        </h6>
+                        <div class="d-grid gap-2">
 
-                    <div class="mt-3 pt-3 border-top">
-                        <small class="text-muted">
-                            <i class="bi bi-info-circle me-1"></i>
-                            <strong>Note:</strong> Rejection is allowed regardless of payment status
-                            (quality issues, contamination, etc.)
-                        </small>
+                            {% for assignment in sample.assignments.all %}
+                                {% if user.can_enter_results and sample.status == 'AP' %}
+                                    <a href="{% url 'labs:enter_manual_test_result' assignment.id %}"
+                                    class="btn btn-outline-primary btn-sm mb-1">
+                                        Enter Result ({{ assignment.lab_test.code }})
+                                    </a>
+                                {% endif %}
+                            {% endfor %}
+
+                            <a href="{% url 'labs:sample-exam-list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left me-2"></i>Back to Samples
+                            </a>
+                            <a href="#labs:sample_print_label" class="btn btn-outline-primary" target="_blank">
+                                <i class="bi bi-printer me-2"></i>Print Label
+                            </a>
+                            {% if request.user.capabilities.can_view_patient %}
+                            <a href="{% url 'patients:patient_detail' pk=sample.patient.id %}" class="btn btn-outline-info">
+                                <i class="bi bi-person-lines-fill me-2"></i>View Patient
+                            </a>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Payment Override (Admin Only) -->
-            {% if user.role == 'vendor_admin' or user.role == 'lab_supervisor' %}
-                {% if not payment_status.is_paid %}
-                <div class="main-card card border-0 shadow-sm border-warning mb-4">
-                    <div class="card-header bg-warning bg-opacity-10 border-0 py-3">
-                        <h6 class="card-title mb-0 fw-semibold text-warning">
-                            <i class="bi bi-shield-exclamation me-2"></i>
-                            Admin Override
-                        </h6>
-                    </div>
-                    <div class="card-body">
-                        <p class="small text-muted mb-3">
-                            As an administrator, you can override payment requirement in emergency cases.
-                        </p>
-                        <a href="{% url 'labs:sample-verify-override' sample.sample_id %}" 
-                           class="btn btn-warning w-100">
-                            <i class="bi bi-unlock me-2"></i>
-                            Override Payment Check
-                        </a>
-                    </div>
-                </div>
-                {% endif %}
-            {% endif %}
-
-            <!-- Quick Info Card -->
-            <div class="main-card card border-0 shadow-sm">
+            <!-- Status Legend -->
+            <div class="card shadow-sm border-0 mt-4">
                 <div class="card-header bg-white border-0 py-3">
-                    <h6 class="card-title mb-0 fw-semibold">
-                        <i class="bi bi-info-circle me-2 text-primary"></i>
-                        Status Guide
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-tags-fill text-primary me-2"></i>
+                        Status Legend
                     </h6>
                 </div>
                 <div class="card-body">
-                    <div class="mb-2">
-                        <span class="badge bg-secondary">Pending</span>
-                        <small class="text-muted ms-2">Awaiting verification</small>
-                    </div>
-                    <div class="mb-2">
-                        <span class="badge bg-primary">Verified</span>
-                        <small class="text-muted ms-2">Ready for acceptance</small>
-                    </div>
-                    <div class="mb-2">
-                        <span class="badge bg-success">Accepted</span>
-                        <small class="text-muted ms-2">In analysis queue</small>
-                    </div>
-                    <div class="mb-2">
-                        <span class="badge bg-danger">Rejected</span>
-                        <small class="text-muted ms-2">Quality issue</small>
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item border-0 px-0 py-2">
+                            <span class="badge bg-info me-2">AC</span>
+                            <small>Collected (Awaiting verification)</small>
+                        </div>
+                        <div class="list-group-item border-0 px-0 py-2">
+                            <span class="badge bg-success me-2">AP</span>
+                            <small>Accepted (Ready for analysis)</small>
+                        </div>
+                        <div class="list-group-item border-0 px-0 py-2">
+                            <span class="badge bg-danger me-2">RJ</span>
+                            <small>Rejected (Not processable)</small>
+                        </div>
+                        <div class="list-group-item border-0 px-0 py-2">
+                            <span class="badge bg-warning me-2">P</span>
+                            <small>Pending (Test assignment)</small>
+                        </div>
+                        <div class="list-group-item border-0 px-0 py-2">
+                            <span class="badge bg-primary me-2">IP</span>
+                            <small>In Progress (Analysis ongoing)</small>
+                        </div>
+                        <div class="list-group-item border-0 px-0 py-2">
+                            <span class="badge bg-dark me-2">C</span>
+                            <small>Completed (Results ready)</small>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
 
-<!-- Reject Modal -->
-<div class="modal fade" id="rejectModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">
-                    <i class="bi bi-x-circle me-2"></i>
-                    Reject Sample
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <form method="post">
-                {% csrf_token %}
-                <div class="modal-body">
-                    <input type="hidden" name="action" value="reject">
-                    
-                    <div class="alert alert-warning">
-                        <i class="bi bi-exclamation-triangle me-2"></i>
-                        <strong>Warning:</strong> This action cannot be undone. 
-                        A new sample will need to be collected.
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="reason" class="form-label fw-semibold">
-                            Rejection Reason <span class="text-danger">*</span>
-                        </label>
-                        <textarea class="form-control" 
-                                  id="reason" 
-                                  name="reason" 
-                                  rows="4" 
-                                  placeholder="Explain why this sample is being rejected (e.g., contamination, insufficient volume, hemolyzed, etc.)"
-                                  required></textarea>
-                    </div>
-
-                    <p class="small text-muted mb-0">
-                        <i class="bi bi-info-circle me-1"></i>
-                        The patient and ordering clinician will be notified of this rejection.
-                    </p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        Cancel
-                    </button>
-                    <button type="submit" class="btn btn-danger">
-                        <i class="bi bi-x-circle me-2"></i>
-                        Confirm Rejection
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
+{% block extra_css %}
 <style>
-/* Status badges */
-.bg-pending-badge { background-color: #6c757d !important; color: white; }
-.bg-verified-badge { background-color: #0d6efd !important; color: white; }
-.bg-accepted-badge { background-color: #198754 !important; color: white; }
-.bg-rejected-badge { background-color: #dc3545 !important; color: white; }
-.bg-collected-badge { background-color: #ffc107 !important; color: #000; }
+    /* Custom styling for sample detail page */
+    .card {
+        border-radius: 10px;
+        border: 1px solid rgba(0,0,0,0.08);
+    }
+    
+    .card-header {
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+    
+    .table th {
+        font-weight: 600;
+        color: #495057;
+        background-color: #f8f9fa;
+        border-bottom: 2px solid #dee2e6;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+        padding: 1rem 1.25rem;
+    }
+    
+    .table td {
+        padding: 1rem 1.25rem;
+        vertical-align: middle;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(13, 110, 253, 0.02);
+    }
+    
+    .badge {
+        padding: 0.4em 0.8em;
+        font-weight: 500;
+        font-size: 0.75rem;
+    }
+    
+    .btn {
+        border-radius: 8px;
+        font-weight: 500;
+        padding: 0.625rem 1.25rem;
+        transition: all 0.2s ease;
+    }
+    
+    .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+        border: none;
+    }
+    
+    .btn-success {
+        background: linear-gradient(135deg, #198754 0%, #157347 100%);
+        border: none;
+    }
+    
+    .btn-danger {
+        background: linear-gradient(135deg, #dc3545 0%, #b02a37 100%);
+        border: none;
+    }
+    
+    .border {
+        border: 1px solid rgba(0,0,0,0.08) !important;
+    }
+    
+    .form-select, .form-control {
+        border-radius: 6px;
+        border: 1px solid #dee2e6;
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .form-select:focus, .form-control:focus {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    
+    .accordion-button {
+        border-radius: 8px !important;
+        font-weight: 500;
+    }
+    
+    .accordion-button:not(.collapsed) {
+        background-color: #fff5f5;
+        color: #dc3545;
+        box-shadow: none;
+        border: 1px solid #dc3545;
+    }
+    
+    .accordion-button:focus {
+        box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25);
+        border-color: #dc3545;
+    }
+    
+    /* Status timeline circles */
+    .rounded-circle {
+        transition: all 0.3s ease;
+    }
+    
+    .rounded-circle:hover {
+        transform: scale(1.05);
+    }
+    
+    /* Alert styling */
+    .alert {
+        border-radius: 8px;
+        border: none;
+    }
+    
+    .alert-success {
+        background-color: #d1e7dd;
+        color: #0f5132;
+    }
+    
+    .alert-danger {
+        background-color: #f8d7da;
+        color: #842029;
+    }
+    
+    .alert-warning {
+        background-color: #fff3cd;
+        color: #664d03;
+    }
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Basic form validation
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add Bootstrap validation to forms
+        const forms = document.querySelectorAll('.needs-validation');
+        
+        forms.forEach(form => {
+            form.addEventListener('submit', function(event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            });
+        });
+        
+        // Auto-dismiss alerts after 5 seconds
+        const alerts = document.querySelectorAll('.alert:not(.alert-danger, .alert-warning)');
+        alerts.forEach(alert => {
+            setTimeout(() => {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            }, 5000);
+        });
+        
+        // Confirmation for rejection
+        const rejectionForm = document.querySelector('form[action*="reject"]');
+        if (rejectionForm) {
+            rejectionForm.addEventListener('submit', function(e) {
+                const reason = this.querySelector('[name="reason"]').value;
+                if (!reason || reason === "") {
+                    e.preventDefault();
+                    alert('Please select a rejection reason.');
+                } else if (!confirm(`Are you sure you want to reject this sample?\n\nReason: ${reason}`)) {
+                    e.preventDefault();
+                }
+            });
+        }
+        
+        // Confirmation for acceptance
+        const acceptanceForm = document.querySelector('form[action*="accept"]');
+        if (acceptanceForm) {
+            acceptanceForm.addEventListener('submit', function(e) {
+                if (!confirm('Are you sure this sample meets all quality criteria and is ready for analysis?')) {
+                    e.preventDefault();
+                }
+            });
+        }
+    });
+</script>
 {% endblock %}

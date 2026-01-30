@@ -608,8 +608,70 @@
             </div>
             {% endif %}
         </div>
-    
     </div>
+
+    <div class="card border-0 shadow-sm mt-4">
+        <div class="card-header bg-white py-3">
+            <h5 class="card-title mb-0 text-primary">
+                <i class="bi bi-clock-history me-2"></i>Result Lifecycle
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="timeline-small">
+                
+                <div class="timeline-item pb-3 border-start border-2 border-success position-relative ps-4">
+                    <span class="position-absolute start-0 translate-middle-x bg-success rounded-circle" style="width: 12px; height: 12px; margin-left: -1px; top: 5px;"></span>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 fw-bold">Result Entered</h6>
+                        <small class="text-muted">{{ result.entered_at|date:"M d, Y H:i" }}</small>
+                    </div>
+                    <p class="text-muted small mb-0">Entered by: <strong>{{ result.entered_by.get_full_name }}</strong></p>
+                    <span class="badge bg-light text-dark border small mt-1">Source: {{ result.get_data_source_display }}</span>
+                </div>
+
+                <div class="timeline-item pb-3 border-start border-2 {% if result.verified_at %}border-success{% else %}border-light{% endif %} position-relative ps-4">
+                    <span class="position-absolute start-0 translate-middle-x {% if result.verified_at %}bg-success{% else %}bg-light border{% endif %} rounded-circle" style="width: 12px; height: 12px; margin-left: -1px; top: 5px;"></span>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 {% if not result.verified_at %}text-muted{% endif %} fw-bold">Quality Verification</h6>
+                        {% if result.verified_at %}
+                            <small class="text-muted">{{ result.verified_at|date:"M d, Y H:i" }}</small>
+                        {% else %}
+                            <span class="badge bg-warning bg-opacity-10 text-warning small">Pending</span>
+                        {% endif %}
+                    </div>
+                    {% if result.verified_at %}
+                        <p class="text-muted small mb-0">Verified by: <strong>{{ result.verified_by.get_full_name }}</strong></p>
+                    {% endif %}
+                </div>
+
+                <div class="timeline-item pb-3 border-start border-2 {% if result.released_at %}border-primary{% else %}border-light{% endif %} position-relative ps-4">
+                    <span class="position-absolute start-0 translate-middle-x {% if result.released_at %}bg-primary{% else %}bg-light border{% endif %} rounded-circle" style="width: 12px; height: 12px; margin-left: -1px; top: 5px;"></span>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 {% if not result.released_at %}text-muted{% endif %} fw-bold">Final Release</h6>
+                        {% if result.released_at %}
+                            <small class="text-muted">{{ result.released_at|date:"M d, Y H:i" }}</small>
+                        {% endif %}
+                    </div>
+                    {% if result.released_at %}
+                        <p class="text-muted small mb-0">Authorized by: <strong>{{ result.released_by.get_full_name }}</strong></p>
+                    {% endif %}
+                </div>
+
+                {% if result.is_amended %}
+                <div class="timeline-item position-relative ps-4">
+                    <span class="position-absolute start-0 translate-middle-x bg-danger rounded-circle" style="width: 12px; height: 12px; margin-left: -1px; top: 5px;"></span>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 text-danger fw-bold">Result Amended</h6>
+                        <small class="text-muted">Version {{ result.version }}</small>
+                    </div>
+                    <p class="text-muted small mb-0">Total Amendments: <strong>{{ amendment_count }}</strong></p>
+                </div>
+                {% endif %}
+
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <!-- STYLES FOR BRAND COLORS AND ENHANCEMENTS -->
@@ -713,6 +775,18 @@
 .btn-group .btn {
     margin-right: 0.5rem;
     margin-bottom: 0.5rem;
+}
+
+.timeline-item:last-child {
+    border-start-color: transparent !important;
+}
+.spin {
+    animation: rotate 2s linear infinite;
+    display: inline-block;
+}
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 </style>
 

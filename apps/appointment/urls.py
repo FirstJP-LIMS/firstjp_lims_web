@@ -9,22 +9,26 @@ urlpatterns = [
     # PUBLIC / PATIENT-FACING APPOINTMENTS
     # =====================================================
     path('booking/', appointments.appointment_booking,name='public_appointment_book'),
-
+    path('booking/confirmation/<uuid:pk>/', appointments.appointment_detail, name='public_appointment_detail'),
+    
     path('appointments/book/<slug:subdomain_prefix>/', appointments.appointment_booking, name='public_appointment_book_vendor'),
 
-    path('appointments/<str:appointment_id>/', appointments.appointment_confirmation, 
-    name='public_appointment_detail'),
-
-    path('appointments/<int:appointment_id>/', appointments.appointment_confirm, 
-    name='public_appointment_confirm'),
-
-    path('appointments/<str:appointment_id>/cancel/', appointments.appointment_cancel, name='public_appointment_cancel'),
-
-    # =====================================================
+    # # Should be for staffs 
+    
+    # path('appointments/<str:appointment_id>/cancel/', appointments.appointment_cancel, name='public_appointment_cancel'),
+    
+    # ========================================
     # STAFF — APPOINTMENT OPERATIONS
-    # =====================================================
+    # ========================================
     path('staff/appointments/', slot_managements.staff_appointment_list, name='staff_appointment_list'),
-    path('staff/appointments/<str:appointment_id>/confirm/', slot_managements.staff_appointment_confirm, name='staff_appointment_confirm'),
+
+    path('staff/appointments/<uuid:pk>/', slot_managements.staff_appointment_detail, name='staff_appointment_detail'),
+    
+    path('staff/appointments/<uuid:pk>/confirm/', slot_managements.staff_appointment_status_update, name='appointment_status_update'),
+
+    path('appointments/<str:appointment_id>/confirm/', slot_managements.staff_appointment_confirm, name='staff_appointment_confirm'), 
+    
+    # Added
 
     # =====================================================
     # SLOT TEMPLATES (HOW THE LAB WORKS)

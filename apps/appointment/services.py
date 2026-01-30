@@ -6,17 +6,22 @@ from apps.labs.models import Patient
 from .models import AppointmentSlot, Appointment
 
 
+
 def book_appointment(*, form, vendor, user=None):
+    """
+    Service layer for booking. Logic remains outside the model 
+    because it involves multiple objects (Patient, Slot, Appointment).
+    """
     with transaction.atomic():
-        slot = AppointmentSlot.objects.select_for_update().get(
-            pk=form.cleaned_data['slot'].pk
-        )
+        slot = form.cleaned_data['slot']
+        # Re-fetch with lock to prevent overbooking in high traffic
+        slot = AppointmentSlot.objects.select_for_update().get(pk=slot.pk)
 
         if slot.current_bookings >= slot.max_appointments:
             raise ValidationError("This slot is fully booked.")
 
+        # Resolve Patient
         patient = form.cleaned_data.get('existing_patient')
-
         if not patient:
             patient, _ = Patient.objects.get_or_create(
                 vendor=vendor,
@@ -25,28 +30,66 @@ def book_appointment(*, form, vendor, user=None):
                     'first_name': form.cleaned_data['visitor_first_name'],
                     'last_name': form.cleaned_data['visitor_last_name'],
                     'contact_phone': form.cleaned_data['visitor_phone'],
-                    'date_of_birth': form.cleaned_data['visitor_date_of_birth'],
-                    'gender': form.cleaned_data['visitor_gender'],
-                    'is_shadow': True,
                 }
             )
 
         appointment = form.save(commit=False)
         appointment.vendor = vendor
         appointment.patient = patient
-        appointment.slot = slot  # This assigns the FK
-        
+        appointment.slot = slot
         if user and user.is_authenticated:
             appointment.booked_by_user = user
+        
+        # Save triggers the ID generation and validation
+        appointment.save()
 
-        # Manually validate before saving
-        # Skip the clean() method that's causing issues
-        appointment.save()  # This will still call clean()
-
-        AppointmentSlot.objects.filter(pk=slot.pk).update(
-            current_bookings=F('current_bookings') + 1
-        )
+        # Update slot count
+        slot.current_bookings = F('current_bookings') + 1
+        slot.save()
 
         return appointment
+
+# def book_appointment(*, form, vendor, user=None):
+#     with transaction.atomic():
+#         slot = AppointmentSlot.objects.select_for_update().get(
+#             pk=form.cleaned_data['slot'].pk
+#         )
+
+#         if slot.current_bookings >= slot.max_appointments:
+#             raise ValidationError("This slot is fully booked.")
+
+#         patient = form.cleaned_data.get('existing_patient')
+
+#         if not patient:
+#             patient, _ = Patient.objects.get_or_create(
+#                 vendor=vendor,
+#                 contact_email=form.cleaned_data['visitor_email'],
+#                 defaults={
+#                     'first_name': form.cleaned_data['visitor_first_name'],
+#                     'last_name': form.cleaned_data['visitor_last_name'],
+#                     'contact_phone': form.cleaned_data['visitor_phone'],
+#                     'date_of_birth': form.cleaned_data['visitor_date_of_birth'],
+#                     'gender': form.cleaned_data['visitor_gender'],
+#                     'is_shadow': True,
+#                 }
+#             )
+
+#         appointment = form.save(commit=False)
+#         appointment.vendor = vendor
+#         appointment.patient = patient
+#         appointment.slot = slot  # This assigns the FK
+        
+#         if user and user.is_authenticated:
+#             appointment.booked_by_user = user
+
+#         # Manually validate before saving
+#         # Skip the clean() method that's causing issues
+#         appointment.save()  # This will still call clean()
+
+#         AppointmentSlot.objects.filter(pk=slot.pk).update(
+#             current_bookings=F('current_bookings') + 1
+#         )
+
+#         return appointment
   
 

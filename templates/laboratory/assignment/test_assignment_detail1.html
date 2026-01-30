@@ -1,0 +1,749 @@
+{% extends "laboratory/assets/base.html" %}
+{% load static %}
+
+{% block title %}{{ assignment.lab_test.name }} - {{ vendor.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
+        <div>
+            <nav aria-label="breadcrumb" class="mb-3">
+                <ol class="breadcrumb bg-transparent px-0">
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'labs:test_assignment_list' %}" class="text-decoration-none text-muted">
+                            <i class="bi bi-list-check me-2"></i>Assignments
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active fw-medium text-dark">{{ assignment.lab_test.code }}</li>
+                </ol>
+            </nav>
+            <div class="d-flex align-items-center gap-3">
+                <div>
+                    <h1 class="h2 fw-bold text-dark mb-1">{{ assignment.lab_test.name }}</h1>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-primary bg-opacity-10 text-primary border-0">
+                            {{ assignment.lab_test.code }}
+                        </span>
+                        <span class="text-muted">•</span>
+                        <a href="{% url 'labs:request_detail' assignment.request.id %}" class="text-decoration-none text-dark">
+                            <i class="bi bi-file-text me-1"></i>{{ assignment.request.request_id }}
+                        </a>
+                    </div>
+                </div>
+
+                <div class="status-badge">
+                    {% if assignment.status == 'P' %}
+                        {# PENDING #}
+                        <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-3 py-2">
+                            <i class="bi bi-hourglass-split me-1"></i>Pending
+                        </span>
+
+                    {% elif assignment.status == 'Q' %}
+                        {# QUEUED #}
+                        <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 px-3 py-2">
+                            <i class="bi bi-layers me-1"></i>Queued
+                        </span>
+
+                    {% elif assignment.status == 'I' %}
+                        {# IN PROGRESS #}
+                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-3 py-2">
+                            <i class="bi bi-gear-wide-connected spin me-1"></i>In Progress
+                        </span>
+
+                    {% elif assignment.status == 'A' %}
+                        {# ANALYSIS COMPLETE #}
+                        <span class="badge bg-warning bg-opacity-10 text-dark border border-warning border-opacity-25 px-3 py-2">
+                            <i class="bi bi-beaker me-1"></i>Analysis Complete
+                        </span>
+
+                    {% elif assignment.status == 'V' %}
+                        {# RESULT VERIFIED #}
+                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-2">
+                            <i class="bi bi-shield-check me-1"></i>Result Verified
+                        </span>
+
+                    {% elif assignment.status == 'F' %}
+                        {# FREED #}
+                        <span class="badge bg-dark bg-opacity-10 text-dark border border-dark border-opacity-25 px-3 py-2">
+                            <i class="bi bi-unlock me-1"></i>Freed
+                        </span>
+
+                    {% elif assignment.status == 'R' %}
+                        {# REJECTED #}
+                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-3 py-2">
+                            <i class="bi bi-x-octagon me-1"></i>Rejected
+                        </span>
+
+                    {% endif %}
+                </div>
+
+            </div>
+        </div>
+        <div>
+            <a href="{% url 'labs:test_assignment_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to List
+            </a>
+        </div>
+    </div>
+
+    <!-- Quick Actions Card -->
+    <div class="card border-0 shadow-sm mb-4 bg-gradient">
+        <div class="card-body p-4">
+            <h5 class="card-title fw-semibold mb-4 text-dark">
+                <i class="bi bi-lightning me-2 text-warning"></i>Quick Actions
+            </h5>
+            <div class="row g-3">
+                <div class="col-xl-3 col-md-6">
+                    {% if can_send and assignment.instrument %}
+                    <form method="post" action="{% url 'labs:send_assignment_to_instrument' assignment.id %}" class="h-100">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-primary w-100 h-100 py-3">
+                            <i class="bi bi-send fs-4 mb-2 d-block"></i>
+                            <span class="fw-semibold">Send to Instrument</span>
+                        </button>
+                    </form>
+                    {% elif not assignment.instrument %}
+                    <div class="card bg-light border-0 h-100 text-center p-3">
+                        <i class="bi bi-exclamation-triangle fs-4 text-warning mb-2"></i>
+                        <p class="small text-muted mb-0">No instrument assigned</p>
+                    </div>
+                    {% else %}
+                    <div class="card bg-light border-0 h-100 text-center p-3">
+                        <i class="bi bi-check-circle fs-4 text-success mb-2"></i>
+                        <p class="small text-muted mb-0">Already sent</p>
+                    </div>
+                    {% endif %}
+                </div>
+                
+    
+                <div class="col-xl-3 col-md-6">
+                    {% if not assignment.result %}
+                        {# 1. NO RESULT RECORD YET #}
+                        <a href="{% url 'labs:enter_manual_test_result' assignment.id %}" 
+                        class="btn btn-success w-100 h-100 py-3">
+                            <i class="bi bi-pencil-square fs-4 mb-2 d-block"></i>
+                            <span class="fw-semibold">Enter Result</span>
+                        </a>
+
+                    {% elif assignment.result.status == 'draft' %}
+                        {# 2. DRAFT STATUS - STILL EDITABLE #}
+                        <a href="{% url 'labs:update_manual_test_result' assignment.result.id %}"
+                        class="btn btn-outline-success w-100 h-100 py-3">
+                            <i class="bi bi-arrow-clockwise fs-4 mb-2 d-block"></i>
+                            <span class="fw-semibold">Update Result</span>
+                        </a>
+
+                    {% elif assignment.result.status == 'verified' %}
+                        {# 3. VERIFIED - WAITING FOR RELEASE #}
+                        <div class="btn btn-info w-100 h-100 py-3 disabled">
+                            <i class="bi bi-check-all fs-4 mb-2 d-block"></i>
+                            <span class="fw-semibold">Verified</span>
+                        </div>
+
+                    {% else %}
+                        {# 4. RELEASED OR AMENDED #}
+                        <div class="btn btn-secondary w-100 h-100 py-3 disabled">
+                            <i class="bi bi-lock-fill fs-4 mb-2 d-block"></i>
+                            <span class="fw-semibold">Released</span>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-xl-3 col-md-6">
+                    <div class="card bg-light border-0 h-100 p-3">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-currency-dollar fs-4 text-info me-2"></i>
+                            <span class="fw-semibold">Price</span>
+                        </div>
+                        <h4 class="fw-bold text-dark mb-0">₦{{ assignment.lab_test.price|floatformat:2 }}</h4>
+                    </div>
+                </div>
+                
+                <div class="col-xl-3 col-md-6">
+                    <div class="card bg-light border-0 h-100 p-3">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-building fs-4 text-secondary me-2"></i>
+                            <span class="fw-semibold">Department</span>
+                        </div>
+                        <p class="fw-bold text-dark mb-0">{{ assignment.department.name }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="row g-4">
+        <!-- Left Column: Assignment & Patient Info -->
+        <div class="col-xl-8">
+            <!-- Test Information Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="card-title mb-0 fw-semibold text-dark">
+                        <i class="bi bi-clipboard-data me-2 text-primary"></i>
+                        Test Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold text-muted small mb-2">Test Details</label>
+                                <div class="d-flex flex-column gap-2">
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Test Name:</span>
+                                        <span class="fw-medium text-dark">{{ assignment.lab_test.name }}</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Test Code:</span>
+                                        <code class="fw-medium text-dark">{{ assignment.lab_test.code }}</code>
+                                    </div>
+
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="text-muted small text-uppercase fw-semibold letter-spacing-1">Result Type</span>
+                                        <span class="fw-medium">
+                                            {% if assignment.lab_test.result_type == 'QNT' %}
+                                                <span class="d-inline-flex align-items-center px-2 py-1 rounded-2 bg-info bg-opacity-10 text-info" style="font-size: 0.85rem;">
+                                                    <i class="bi bi-calculator me-1"></i>Quantitative
+                                                </span>
+                                            {% elif assignment.lab_test.result_type == 'QLT' %}
+                                                <span class="d-inline-flex align-items-center px-2 py-1 rounded-2 bg-purple bg-opacity-10 text-purple" style="font-size: 0.85rem;">
+                                                    <i class="bi bi-card-checklist me-1"></i>Qualitative
+                                                </span>
+                                            {% endif %}
+                                        </span>
+                                    </div>
+
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold text-muted small mb-2">Technical Details</label>
+                                <div class="d-flex flex-column gap-2">
+                                    {% if assignment.lab_test.default_units %}
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Default Units:</span>
+                                        <span class="fw-medium text-dark">{{ assignment.lab_test.default_units }}</span>
+                                    </div>
+                                    {% endif %}
+                                    {% if assignment.lab_test.specimen_type %}
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Specimen Type:</span>
+                                        <span class="fw-medium text-dark">{{ assignment.lab_test.specimen_type }}</span>
+                                    </div>
+                                    {% endif %}
+                                    {% if assignment.lab_test.turnaround_time %}
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Turnaround Time:</span>
+                                        <span class="fw-medium text-dark">{{ assignment.lab_test.turnaround_time }}</span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold text-muted small mb-2">Workflow Status</label>
+                                <div class="d-flex flex-column gap-2">
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Created:</span>
+                                        <span class="fw-medium text-dark">{{ assignment.created_at|date:"M d, Y H:i" }}</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Updated:</span>
+                                        <span class="fw-medium text-dark">{{ assignment.updated_at|date:"M d, Y H:i" }}</span>
+                                    </div>
+                                    {% if assignment.queued_at %}
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Queued:</span>
+                                        <span class="fw-medium text-dark">{{ assignment.queued_at|date:"M d, Y H:i" }}</span>
+                                    </div>
+                                    {% endif %}
+                                    {% if assignment.analyzed_at %}
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Analyzed:</span>
+                                        <span class="fw-medium text-dark">{{ assignment.analyzed_at|date:"M d, Y H:i" }}</span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold text-muted small mb-2">Assignment Details</label>
+                                <div class="d-flex flex-column gap-2">
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Assigned To:</span>
+                                        <span class="fw-medium text-dark">
+                                            {% if assignment.assigned_to %}
+                                                {{ assignment.assigned_to.get_full_name }}
+                                            {% else %}
+                                                <span class="text-muted">Not assigned</span>
+                                            {% endif %}
+                                        </span>
+                                    </div>
+
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="text-muted small text-uppercase fw-semibold letter-spacing-1">Priority</span>
+                                        <span class="fw-medium">
+                                            {% if assignment.request.priority == 'urgent' %}
+                                                {# STAT / URGENT #}
+                                                <span class="d-inline-flex align-items-center px-2 py-1 rounded-2 bg-danger bg-opacity-10 text-danger fw-bold" style="font-size: 0.85rem;">
+                                                    <i class="bi bi-lightning-charge-fill me-1"></i>URGENT
+                                                </span>
+                                                <div class="text-end mt-1">
+                                                    <small class="text-danger-emphasis x-small">
+                                                        Requested {{ assignment.request.created_at|timesince }} ago
+                                                    </small>
+                                                </div>
+
+                                            {% else %}
+                                                {# ROUTINE #}
+                                                <span class="d-inline-flex align-items-center px-2 py-1 rounded-2 bg-secondary bg-opacity-10 text-secondary" style="font-size: 0.85rem;">
+                                                    <i class="bi bi-calendar-event me-1"></i>Routine
+                                                </span>
+                                            {% endif %}
+                                        </span>
+                                    </div>
+
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Retry Count:</span>
+                                        <span class="fw-medium text-dark">{{ assignment.retry_count }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Patient Information Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="card-title mb-0 fw-semibold text-dark">
+                        <i class="bi bi-person-badge me-2 text-success"></i>
+                        Patient Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start mb-4">
+                                <div class="flex-shrink-0">
+                                    <div class="bg-success bg-opacity-10 rounded-circle p-3">
+                                        <i class="bi bi-person fs-4 text-success"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h5 class="mb-1">{{ assignment.request.patient.first_name }} {{ assignment.request.patient.last_name }}</h5>
+                                    <div class="d-flex flex-wrap gap-2 mb-2">
+                                        <span class="badge bg-light text-dark border">
+                                            <i class="bi bi-card-text me-1"></i> {{ assignment.request.patient.patient_id }}
+                                        </span>
+                                        {% if assignment.request.patient.date_of_birth %}
+                                        <span class="badge bg-light text-dark border">
+                                            <i class="bi bi-calendar me-1"></i> {{ assignment.request.patient.date_of_birth|date:"M d, Y" }}
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold text-muted small mb-2">Demographics</label>
+                                <div class="d-flex flex-column gap-2">
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Gender:</span>
+                                        <span class="fw-medium text-dark">{{ assignment.request.patient.get_gender_display }}</span>
+                                    </div>
+                                    {% if assignment.request.patient.date_of_birth %}
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Age:</span>
+                                        <span class="fw-medium text-dark">{{ assignment.request.patient.date_of_birth|timesince }}</span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold text-muted small mb-2">Contact Information</label>
+                                <div class="d-flex flex-column gap-3">
+                                    {% if assignment.request.patient.phone_number %}
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-telephone text-muted me-3" style="width: 20px;"></i>
+                                        <div>
+                                            <div class="fw-medium text-dark">{{ assignment.request.patient.phone_number }}</div>
+                                            <small class="text-muted">Phone</small>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                    {% if assignment.request.patient.email %}
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-envelope text-muted me-3" style="width: 20px;"></i>
+                                        <div>
+                                            <div class="fw-medium text-dark">{{ assignment.request.patient.email }}</div>
+                                            <small class="text-muted">Email</small>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                    {% if assignment.request.patient.address %}
+                                    <div class="d-flex align-items-start">
+                                        <i class="bi bi-geo-alt text-muted me-3 mt-1" style="width: 20px;"></i>
+                                        <div>
+                                            <div class="fw-medium text-dark">{{ assignment.request.patient.address|truncatechars:50 }}</div>
+                                            <small class="text-muted">Address</small>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Result Section -->
+            {% if result %}
+            <div class="card border-0 shadow-sm mb-4 border-success border-2">
+                <div class="card-header bg-success bg-opacity-10 border-0 py-3">
+                    <a href="{% url 'labs:result_detail' result.pk %}" class="card-title mb-0 fw-semibold text-dark">
+                        <i class="bi bi-clipboard-check me-2 text-success"></i>
+                        Test Result
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold text-muted small mb-2">Result Value</label>
+                                <div class="bg-light rounded p-3">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="h2 fw-bold text-dark">{{ result.result_value }}</span>
+                                        <span class="text-muted">{{ result.units|default:assignment.lab_test.default_units }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {% if result.interpretation %}
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold text-muted small mb-2">Interpretation</label>
+                                <div class="bg-light rounded p-3">
+                                    <p class="mb-0 text-dark">{{ result.interpretation }}</p>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold text-muted small mb-2">Reference Range</label>
+                                <div class="bg-light rounded p-3">
+                                    <p class="mb-0 text-dark fw-medium">{{ result.reference_range|default:"Not specified" }}</p>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold text-muted small mb-2">Result Metadata</label>
+                                <div class="d-flex flex-column gap-2">
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Entered By:</span>
+                                        <span class="fw-medium text-dark">{{ result.entered_by.get_full_name }}</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Entered At:</span>
+                                        <span class="fw-medium text-dark">{{ result.created_at|date:"M d, Y H:i" }}</span>
+                                    </div>
+                                    {% if result.verified_at %}
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Verified By:</span>
+                                        <span class="fw-medium text-dark">{{ result.verified_by.get_full_name }}</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Verified At:</span>
+                                        <span class="fw-medium text-dark">{{ result.verified_at|date:"M d, Y H:i" }}</span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {% if result.notes %}
+                        <div class="col-12">
+                            <label class="form-label fw-semibold text-muted small mb-2">Notes</label>
+                            <div class="bg-light rounded p-3">
+                                <p class="mb-0 text-dark">{{ result.notes }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Right Column: Instrument & Sample Info -->
+        <div class="col-xl-4">
+            <!-- Instrument Information -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white border-0 py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0 fw-semibold text-dark">
+                            <i class="bi bi-cpu me-2 text-info"></i>
+                            Instrument
+                        </h5>
+                        {% if assignment.instrument %}
+                            <span class="badge {% if assignment.instrument.status == 'active' %}bg-success{% else %}bg-danger{% endif %} bg-opacity-10 text-{% if assignment.instrument.status == 'active' %}success{% else %}danger{% endif %} border-0">
+                                {{ assignment.instrument.get_status_display }}
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if assignment.instrument %}
+                    <div class="d-flex align-items-start mb-4">
+                        <div class="flex-shrink-0">
+                            <div class="bg-info bg-opacity-10 rounded-circle p-3">
+                                <i class="bi bi-cpu fs-4 text-info"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="mb-1">{{ assignment.instrument.name }}</h6>
+                            <p class="text-muted small mb-2">{{ assignment.instrument.model }}</p>
+                            <code class="small text-muted">{{ assignment.instrument.serial_number }}</code>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-muted small mb-2">Instrument Details</label>
+                        <div class="d-flex flex-column gap-2">
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">API Endpoint:</span>
+                                <span class="fw-medium">
+                                    {% if assignment.instrument.api_endpoint %}
+                                        <span class="badge bg-success bg-opacity-15 text-success border-0">Configured</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary bg-opacity-15 text-secondary border-0">Not Configured</span>
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">External ID:</span>
+                                <span class="fw-medium text-dark">
+                                    {% if assignment.external_id %}
+                                        <code>{{ assignment.external_id }}</code>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <a href="{% url 'account:equipment_detail' assignment.instrument.id %}" 
+                           class="btn btn-outline-info w-100">
+                            <i class="bi bi-eye me-2"></i>View Instrument Details
+                        </a>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <div class="bg-light rounded-circle d-inline-flex p-4 mb-3">
+                            <i class="bi bi-cpu fs-2 text-muted opacity-50"></i>
+                        </div>
+                        <h6 class="text-muted mb-3">No Instrument Assigned</h6>
+                        <p class="text-muted small mb-4">This test is not linked to any laboratory instrument</p>
+                        <a href="#" class="btn btn-outline-warning btn-sm">
+                            <i class="bi bi-plus-circle me-2"></i>Assign Instrument
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Sample Information -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="card-title mb-0 fw-semibold text-dark">
+                        <i class="bi bi-droplet me-2 text-success"></i>
+                        Sample Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if assignment.sample %}
+                    <div class="d-flex align-items-start mb-4">
+                        <div class="flex-shrink-0">
+                            <div class="bg-success bg-opacity-10 rounded-circle p-3">
+                                <i class="bi bi-droplet fs-4 text-success"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="mb-1 fw-bold text-dark">{{ assignment.sample.sample_id }}</h6>
+                            <p class="text-muted small mb-2">
+                                <i class="bi bi-droplet me-1"></i>{{ assignment.sample.specimen_type.name|default:assignment.sample.specimen_type }}
+                            </p>
+                            
+                            <div class="status-pill">
+                                {% if assignment.sample.status == 'AC' %}
+                                    <span class="d-inline-flex align-items-center px-2 py-1 rounded-2 bg-secondary bg-opacity-10 text-secondary small fw-medium">
+                                        <i class="bi bi-qr-code-scan me-1"></i>Accessioned
+                                    </span>
+                                {% elif assignment.sample.status == 'AP' %}
+                                    <span class="d-inline-flex align-items-center px-2 py-1 rounded-2 bg-success bg-opacity-10 text-success small fw-medium">
+                                        <i class="bi bi-check2-circle me-1"></i>Accepted
+                                    </span>
+                                {% elif assignment.sample.status == 'ST' %}
+                                    <span class="d-inline-flex align-items-center px-2 py-1 rounded-2 bg-info bg-opacity-10 text-info small fw-medium">
+                                        <i class="bi bi-snow2 me-1"></i>Stored
+                                    </span>
+                                {% elif assignment.sample.status == 'CO' %}
+                                    <span class="d-inline-flex align-items-center px-2 py-1 rounded-2 bg-dark bg-opacity-10 text-dark small fw-medium">
+                                        <i class="bi bi-trash3 me-1"></i>Consumed
+                                    </span>
+                                {% elif assignment.sample.status == 'RJ' %}
+                                    <span class="d-inline-flex align-items-center px-2 py-1 rounded-2 bg-danger bg-opacity-10 text-danger small fw-medium">
+                                        <i class="bi bi-exclamation-octagon me-1"></i>Rejected
+                                    </span>
+                                {% else %}
+                                    <span class="d-inline-flex align-items-center px-2 py-1 rounded-2 bg-light text-muted small fw-medium">
+                                        {{ assignment.sample.status }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if assignment.sample.status == 'ST' and assignment.sample.storage_location %}
+                        <div class="mt-1">
+                            <small class="text-info">
+                                <i class="bi bi-geo-alt"></i> Loc: {{ assignment.sample.storage_location }}
+                            </small>
+                        </div>
+                    {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-muted small mb-2">Collection Details</label>
+                        <div class="d-flex flex-column gap-2">
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">Collection Date:</span>
+                                <span class="fw-medium text-dark">{{ assignment.sample.collected_at|date:"M d, Y H:i" }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">Collected By:</span>
+                                <span class="fw-medium text-dark">{{ assignment.sample.collected_by|default:"—" }}</span>
+                            </div>
+                            {% if assignment.sample.volume_collected %}
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">Volume:</span>
+                                <span class="fw-medium text-dark">{{ assignment.sample.volume_collected }} mL</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <div class="bg-light rounded-circle d-inline-flex p-3 mb-3">
+                            <i class="bi bi-droplet fs-2 text-muted opacity-50"></i>
+                        </div>
+                        <p class="text-muted mb-0">No sample information available</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Communication Logs -->
+            {% if logs %}
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="card-title mb-0 fw-semibold text-dark">
+                        <i class="bi bi-clock-history me-2 text-secondary"></i>
+                        Recent Activity
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="timeline-container p-3">
+                        {% for log in logs %}
+                        <div class="timeline-item mb-3 pb-3 {% if not forloop.last %}border-bottom{% endif %}">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    {% if log.success %}
+                                    <div class="bg-success bg-opacity-10 rounded-circle p-2">
+                                        <i class="bi bi-check-circle text-success"></i>
+                                    </div>
+                                    {% else %}
+                                    <div class="bg-danger bg-opacity-10 rounded-circle p-2">
+                                        <i class="bi bi-x-circle text-danger"></i>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <h6 class="mb-1 fw-medium">{{ log.get_action_display }}</h6>
+                                        <small class="text-muted">{{ log.timestamp|date:"H:i" }}</small>
+                                    </div>
+                                    <p class="small text-muted mb-1">{{ log.message|truncatechars:80 }}</p>
+                                    <small class="text-muted">{{ log.timestamp|date:"M d, Y" }}</small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.page-header .breadcrumb {
+    background: transparent;
+    padding: 0;
+}
+
+.bg-gradient {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.status-badge .badge {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.card {
+    border-radius: 10px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+}
+
+.timeline-container .timeline-item:last-child {
+    border-bottom: none !important;
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+.btn {
+    transition: all 0.2s ease;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start !important;
+    }
+    
+    .status-badge {
+        margin-top: 1rem;
+    }
+}
+</style>
+{% endblock %}

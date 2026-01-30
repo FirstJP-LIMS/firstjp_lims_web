@@ -558,7 +558,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm text-gray-600">Total Today</p>
-                    <p class="text-2xl font-bold text-navy" id="totalToday">{{ appointments.paginator.count }}</p>
+                    <p class="text-2xl font-bold text-navy">{{ stats.total_today }}</p>
                 </div>
                 <div class="w-12 h-12 bg-navy bg-opacity-10 rounded-full flex items-center justify-center">
                     <i class="fas fa-calendar-check text-navy"></i>
@@ -570,9 +570,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm text-gray-600">Pending</p>
-                    <p class="text-2xl font-bold text-yellow-600" id="pendingCount">
-                        {{ appointments.object_list|length }}
-                    </p>
+                    <p class="text-2xl font-bold text-yellow-600">{{ stats.pending }}</p>
                 </div>
                 <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
                     <i class="fas fa-clock text-yellow-600"></i>
@@ -584,7 +582,31 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm text-gray-600">Confirmed</p>
-                    <p class="text-2xl font-bold text-green-600" id="confirmedCount">0</p>
+                    <p class="text-2xl font-bold text-green-600">{{ stats.confirmed }}</p>
+                </div>
+                <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                    <i class="fas fa-check-circle text-green-600"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600">No Show</p>
+                    <p class="text-2xl font-bold text-red-600">{{ stats.no_show }}</p>
+                </div>
+                <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                    <i class="fas fa-times-circle text-red-600"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600">Completed</p>
+                    <p class="text-2xl font-bold text-green-600">{{ stats.completed }}</p>
                 </div>
                 <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
                     <i class="fas fa-check-circle text-green-600"></i>
@@ -596,7 +618,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm text-gray-600">Cancelled</p>
-                    <p class="text-2xl font-bold text-red-600" id="cancelledCount">0</p>
+                    <p class="text-2xl font-bold text-red-600">{{ stats.cancelled }}</p>
                 </div>
                 <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
                     <i class="fas fa-times-circle text-red-600"></i>
@@ -698,7 +720,7 @@
                         <!-- Patient Name -->
                         <td class="px-6 py-4">
                             <div class="text-sm font-medium text-gray-900">
-                                {{ appointment.get_patient_name }}
+                                {{ appointment.patient.first_name }} {{ appointment.patient.last_name }}
                             </div>
                             {% if appointment.patient %}
                             <div class="text-xs text-gray-500">
@@ -773,8 +795,7 @@
                         <td class="px-6 py-4 whitespace-nowrap text-sm">
                             <div class="flex items-center space-x-3">
                                 <!-- View Details -->
-                                <a href="{% url 'appointment:public_appointment_detail' appointment.appointment_id %}" 
-                                   class="text-navy hover:text-navy-dark" title="View Details">
+                                <a href="{% url 'appointment:staff_appointment_detail' appointment.id %}" class="text-navy hover:text-navy-dark" title="View Details">
                                     <i class="fas fa-eye"></i>
                                 </a>
 
@@ -790,29 +811,6 @@
                                     </button>
                                 </form>
                                 {% endif %}
-
-                                <!-- More Options Dropdown -->
-                                <div class="relative" x-data="{ open: false }">
-                                    <button @click="open = !open" class="text-gray-400 hover:text-gray-600">
-                                        <i class="fas fa-ellipsis-v"></i>
-                                    </button>
-                                    <div x-show="open" 
-                                         @click.away="open = false"
-                                         class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10"
-                                         style="display: none;">
-                                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                            <i class="fas fa-edit mr-2"></i>Edit
-                                        </a>
-                                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                            <i class="fas fa-print mr-2"></i>Print
-                                        </a>
-                                        {% if appointment.status not in 'cancelled,completed' %}
-                                        <button class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
-                                            <i class="fas fa-times-circle mr-2"></i>Cancel
-                                        </button>
-                                        {% endif %}
-                                    </div>
-                                </div>
                             </div>
                         </td>
                     </tr>

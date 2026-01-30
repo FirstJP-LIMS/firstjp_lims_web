@@ -62,15 +62,15 @@ class User(AbstractBaseUser, PermissionsMixin):
     - Hierarchy is enforced through permission helpers.
     """
 
-    # ============================================================
+    # =====================================
     # ROLE DEFINITIONS (CANONICAL)
-    # ============================================================
+    # =====================================
 
     ROLE_CHOICES = [
-        # ---------------- PLATFORM ----------------
+        # --------- PLATFORM -------------
         ('platform_admin', 'Platform Administrator'),
 
-        # ---------------- LABORATORY CORE ----------------
+        # -------- LABORATORY CORE --------
         ('vendor_admin', 'Lab Director / Super Admin'),
         ('lab_manager', 'Lab Manager / Supervisor'),
         ('scientist', 'Scientist / Pathologist / MLS'),
@@ -78,16 +78,16 @@ class User(AbstractBaseUser, PermissionsMixin):
         ('logistics', 'Logistics Officer / Sample Collector'),
         ('receptionist', 'Receptionist / Front Desk'),
 
-        # ---------------- EXTENDED ----------------
+        # ------------ EXTENDED -------------
         ('clinician', 'Clinician'),
         ('patient', 'Patient'),
         ('learner', 'Learner'),
         ('facilitator', 'Facilitator'),
     ]
 
-    # ============================================================
+    # =====================================
     # CORE IDENTITY FIELDS
-    # ============================================================
+    # =====================================
 
     email = models.EmailField()
     first_name = models.CharField(max_length=150, blank=True)

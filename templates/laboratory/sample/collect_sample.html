@@ -28,7 +28,7 @@
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-primary text-white">Patient Profile</div>
                 <div class="card-body">
-                    <h5 class="mb-0">{{ patient.full_name }}</h5>
+                    <h5 class="mb-0">{{ billing.patient.first_name }}</h5>
                     <p class="small text-muted mb-3">{{ patient.age }}Y | {{ patient.get_gender_display }} | ID: {{ patient.patient_id }}</p>
                     <hr>
                     <h6>Tests to Perform ({{ total_tests }})</h6>

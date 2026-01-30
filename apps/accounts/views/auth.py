@@ -108,9 +108,15 @@ def learn_register(request, role_name):
         'role_name': role_name.title(),
     })
 
+from django.contrib.messages import get_messages
 
 # @ratelimit(key='ip', rate='5/m', method='POST')
 def tenant_login(request):
+
+    storage = get_messages(request)
+    for message in storage:
+        pass
+    
     tenant = getattr(request, 'tenant', None)
     is_learning = getattr(request, 'is_learning_portal', False)
 

@@ -1,523 +1,414 @@
 {% extends "laboratory/assets/base.html" %}
-{% load static %}
-
-{% block title %}Collect Sample - {{ test_request.patient.name }}{% endblock %}
+{% load crispy_forms_tags %}
 
 {% block content %}
 <div class="container-fluid py-4">
     <!-- Header Section -->
     <div class="row mb-4">
-        <div class="col">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h1 class="h3 mb-2 text-primary">
-                        <i class="bi bi-droplet-fill me-2"></i>Sample Collection
-                    </h1>
-                    <p class="text-muted mb-0">
-                        Collect specimen for patient: <strong>{{ test_request.patient.get_full_name }}</strong>
-                    </p>
+        <div class="col-md-8">
+            <div class="d-flex align-items-center">
+                <div class="me-3">
+                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                        <i class="fas fa-vial fa-lg"></i>
+                    </div>
                 </div>
-                <div class="text-end">
-                    <span class="badge bg-success fs-6">
-                        <i class="bi bi-check-circle me-1"></i>Billing Cleared
-                    </span>
+                <div>
+                    <h1 class="h3 fw-bold mb-1">Specimen Collection</h1>
+                    <div class="d-flex align-items-center">
+                        <p class="text-muted mb-0 me-3">Request ID: <span class="badge bg-dark">{{ test_request.request_id }}</span></p>
+                        <span class="badge bg-light border text-dark">
+                            <i class="fas fa-clock me-1"></i> {{ test_request.created_at|date:"M d, Y" }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <small class="text-muted d-block">Collection Status</small>
+                            <div class="d-flex align-items-center">
+                                <div class="bg-success rounded-circle me-2" style="width: 10px; height: 10px;"></div>
+                                <span class="fw-bold text-success">Ready for Collection</span>
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <small class="text-muted d-block">Billing Status</small>
+                            <span class="badge {% if billing.payment_status == 'PAID' %}bg-success{% elif billing.payment_status == 'AUTHORIZED' %}bg-info{% elif billing.payment_status == 'WAIVED' %}bg-warning{% else %}bg-danger{% endif %} fs-6 px-3 py-2">
+                                {{ billing.get_payment_status_display }}
+                            </span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Main Card -->
     <div class="row">
-        <div class="col-lg-8">
-            <div class="card shadow border-0">
-                <div class="card-header bg-primary text-white py-3">
-                    <h5 class="card-title mb-0">
-                        <i class="bi bi-clipboard-plus me-2"></i>Specimen Information
+        <!-- Left Column: Patient & Billing Info -->
+        <div class="col-lg-4">
+            <!-- Patient Profile Card -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white border-0 pb-0">
+                    <h5 class="card-title mb-3">
+                        <i class="fas fa-user-circle text-primary me-2"></i>Patient Profile
                     </h5>
                 </div>
-                <div class="card-body">
-                    <!-- Patient Info Banner -->
-                    <div class="alert alert-info mb-4">
-                        <div class="row">
-                            <div class="col-md-4">
-                                <strong><i class="bi bi-person-circle me-2"></i>Patient:</strong>
-                                {{ test_request.patient.first_name }} {{ test_request.patient.last_name }}
+                <div class="card-body pt-0">
+                    <div class="d-flex align-items-start mb-4">
+                        <div class="flex-shrink-0">
+                            <div class="bg-light text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                <i class="fas fa-user fa-2x"></i>
                             </div>
-                            <div class="col-md-4">
-                                <strong><i class="bi bi-hash me-2"></i>Request ID:</strong>
-                                {{ test_request.request_id }}
-                            </div>
-                            <div class="col-md-4">
-                                <strong><i class="bi bi-calendar me-2"></i>Date:</strong>
-                                {{ test_request.created_at|date:"M d, Y" }}
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h4 class="mb-1">{{ test_request.patient.first_name }} {{ test_request.patient.last_name }}</h4>
+                            <div class="d-flex flex-wrap gap-2 mb-2">
+                                <span class="badge bg-light text-dark border">
+                                    <i class="fas fa-id-card me-1"></i> {{ test_request.patient.patient_id }}
+                                </span>
+                                {% if test_request.patient.date_of_birth %}
+                                <span class="badge bg-light text-dark border">
+                                    <i class="fas fa-birthday-cake me-1"></i> {{ test_request.patient.date_of_birth|timesince }}
+                                </span>
+                                {% endif %}
+                                <span class="badge bg-light text-dark border">
+                                    <i class="fas fa-venus-mars me-1"></i> {{ test_request.patient.get_gender_display }}
+                                </span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Form -->
-                    <form method="post" id="sampleCollectionForm">
-                        {% csrf_token %}
-                        
-                        {% if form.errors %}
-                        <div class="alert alert-danger">
-                            <strong>Please correct the errors below:</strong>
-                            {{ form.errors }}
+                    <!-- Patient Contact Info -->
+                    <div class="border-top pt-3">
+                        <h6 class="text-muted mb-2"><i class="fas fa-info-circle me-2"></i>Contact Information</h6>
+                        {% if test_request.patient.phone_number %}
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-phone text-muted me-2" style="width: 20px;"></i>
+                            <span>{{ test_request.patient.phone_number }}</span>
                         </div>
                         {% endif %}
-
-                        <div class="row g-3">
-                            <!-- Specimen Type -->
-                            <div class="col-md-6">
-                                <label for="{{ form.specimen_type.id_for_label }}" class="form-label">
-                                    <i class="bi bi-thermometer-sun me-1"></i>Specimen Type *
-                                </label>
-                                {{ form.specimen_type }}
-                                <div class="form-text">Select the type of specimen being collected</div>
-                            </div>
-
-                            <!-- Container Type -->
-                            <div class="col-md-6">
-                                <label for="{{ form.container_type.id_for_label }}" class="form-label">
-                                    <i class="bi bi-box me-1"></i>Container Type
-                                </label>
-                                {{ form.container_type }}
-                            </div>
-
-                            <!-- Collection Method -->
-                            <div class="col-md-6">
-                                <label for="{{ form.collection_method.id_for_label }}" class="form-label">
-                                    <i class="bi bi-eyedropper me-1"></i>Collection Method *
-                                </label>
-                                {{ form.collection_method }}
-                                <div class="form-text">e.g., Venipuncture, Mid-stream catch</div>
-                            </div>
-
-                            <!-- Collection Site -->
-                            <div class="col-md-6">
-                                <label for="{{ form.collection_site.id_for_label }}" class="form-label">
-                                    <i class="bi bi-geo-alt me-1"></i>Collection Site
-                                </label>
-                                {{ form.collection_site }}
-                            </div>
-
-                            <!-- Collected By -->
-                            <div class="col-md-6">
-                                <label for="{{ form.collected_by.id_for_label }}" class="form-label">
-                                    <i class="bi bi-person-badge me-1"></i>Collected By
-                                </label>
-                                {{ form.collected_by }}
-                                <div class="form-text">Name of phlebotomist/technician</div>
-                            </div>
-
-                            <!-- Volume Collected -->
-                            <div class="col-md-6">
-                                <label for="{{ form.volume_collected_ml.id_for_label }}" class="form-label">
-                                    <i class="bi bi-beaker me-1"></i>Volume Collected (ml)
-                                </label>
-                                <div class="input-group">
-                                    {{ form.volume_collected_ml }}
-                                    <span class="input-group-text">ml</span>
-                                </div>
-                            </div>
-
-                            <!-- Fasting Status -->
-                            <div class="col-md-6">
-                                <label for="{{ form.fasting_status.id_for_label }}" class="form-label">
-                                    <i class="bi bi-clock-history me-1"></i>Fasting Status
-                                </label>
-                                {{ form.fasting_status }}
-                            </div>
-
-                            <!-- Location -->
-                            <div class="col-md-6">
-                                <label for="{{ form.location.id_for_label }}" class="form-label">
-                                    <i class="bi bi-geo me-1"></i>Collection Location
-                                </label>
-                                {{ form.location }}
-                                <div class="form-text">Where sample was collected</div>
-                            </div>
-
-                            <!-- Specimen Description -->
-                            <div class="col-12">
-                                <label for="{{ form.specimen_description.id_for_label }}" class="form-label">
-                                    <i class="bi bi-card-text me-1"></i>Specimen Description / Observations
-                                </label>
-                                {{ form.specimen_description }}
-                                <div class="form-text">Note any abnormalities, color, consistency, etc.</div>
-                            </div>
+                        {% if test_request.patient.email %}
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-envelope text-muted me-2" style="width: 20px;"></i>
+                            <span>{{ test_request.patient.email }}</span>
                         </div>
-
-                        <!-- Form Actions -->
-                        <div class="mt-5 pt-3 border-top">
-                            <div class="d-flex justify-content-between">
-                                <a href="{% url 'billing:billing_detail' pk=billing.pk %}" class="btn btn-outline-secondary">
-                                    <i class="bi bi-arrow-left me-1"></i>Back to Billing
-                                </a>
-                                <a href="{% url 'labs:sample-exam-list' %}" class="btn btn-outline-secondary">
-                                    <i class="bi bi-check-circle me-1"></i>Collect Sample
-                                </a>
-
-                                <!-- <button type="submit" class="btn btn-primary px-4" id="submitBtn">
-                                    <i class="bi bi-check-circle me-2"></i>Collect Sample
-                                </button>
-
-                                {% if sample and sample.id %}
-                                    <a href="{% url 'labs:sample-exam-detail' sample_id=sample.id %}"
-                                    class="btn btn-primary px-4">
-                                        <i class="bi bi-check-circle me-2"></i>
-                                        View Sample Examination
-                                    </a>
-                                {% endif %} -->
-
-                            </div>
+                        {% endif %}
+                        {% if test_request.patient.address %}
+                        <div class="d-flex align-items-start">
+                            <i class="fas fa-home text-muted me-2 mt-1" style="width: 20px;"></i>
+                            <span class="small">{{ test_request.patient.address }}</span>
                         </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- Sidebar -->
-        <div class="col-lg-4">
-            <!-- Requested Tests Card -->
-            <div class="card shadow border-0 mb-4">
-                <div class="card-header bg-info text-white py-3">
-                    <h5 class="card-title mb-0">
-                        <i class="bi bi-list-check me-2"></i>Requested Tests
-                    </h5>
-                </div>
-                <div class="card-body p-0">
-                    <div class="list-group list-group-flush">
-                        {% for test in test_request.requested_tests.all %}
-                        <div class="list-group-item">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h6 class="mb-1">{{ test.name }}</h6>
-                                    <small class="text-muted">{{ test.code }}</small>
-                                </div>
-                                <span class="badge bg-light text-dark">
-                                    {% if test.price %}
-                                    ₦{{ test.price }}
-                                    {% else %}
-                                    Price N/A
-                                    {% endif %}
-                                </span>
-                            </div>
-                        </div>
-                        {% empty %}
-                        <div class="list-group-item text-center text-muted py-4">
-                            <i class="bi bi-exclamation-circle display-6 mb-3"></i>
-                            <p class="mb-0">No tests requested</p>
-                        </div>
-                        {% endfor %}
+                        {% endif %}
                     </div>
                 </div>
             </div>
 
             <!-- Billing Summary Card -->
-            <div class="card shadow border-0">
-                <div class="card-header bg-success text-white py-3">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white border-0">
                     <h5 class="card-title mb-0">
-                        <i class="bi bi-credit-card me-2"></i>Billing Summary
+                        <i class="fas fa-receipt text-success me-2"></i>Billing Summary
                     </h5>
                 </div>
                 <div class="card-body">
-                    <div class="row mb-2">
-                        <div class="col">
-                            <strong>Payment Status:</strong>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="text-muted">Billing Type:</span>
+                            <span class="badge bg-primary">{{ billing.get_billing_type_display }}</span>
                         </div>
-                        <div class="col text-end">
-                            <span class="badge {% if billing.payment_status == 'PAID' %}bg-success{% elif billing.payment_status == 'AUTHORIZED' %}bg-warning{% elif billing.payment_status == 'WAIVED' %}bg-secondary{% endif %}">
-                                {{ billing.get_payment_status_display }}
-                            </span>
+                        {% if billing.billing_type == 'HMO' and billing.insurance_provider %}
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="text-muted">Insurance Provider:</span>
+                            <span class="fw-bold">{{ billing.insurance_provider.name }}</span>
                         </div>
+                        {% if billing.policy_number %}
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-muted">Policy Number:</span>
+                            <span class="fw-bold">{{ billing.policy_number }}</span>
+                        </div>
+                        {% endif %}
+                        {% elif billing.billing_type == 'CORPORATE' and billing.corporate_client %}
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-muted">Corporate Client:</span>
+                            <span class="fw-bold">{{ billing.corporate_client.name }}</span>
+                        </div>
+                        {% endif %}
                     </div>
-                    <div class="row mb-2">
-                        <div class="col">
-                            <strong>Billing Type:</strong>
+
+                    <div class="border-top pt-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>Total Amount:</span>
+                            <span class="h5 fw-bold text-dark">₦{{ billing.total_amount|floatformat:2 }}</span>
                         </div>
-                        <div class="col text-end">
-                            {{ billing.get_billing_type_display }}
+                        {% if billing.billing_type == 'HMO' %}
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="text-muted">Patient Portion:</span>
+                            <span class="fw-bold">₦{{ billing.patient_portion|floatformat:2 }}</span>
                         </div>
-                    </div>
-                    <hr>
-                    <div class="row mb-2">
-                        <div class="col">
-                            Subtotal:
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-muted">Insurance Portion:</span>
+                            <span class="fw-bold">₦{{ billing.insurance_portion|floatformat:2 }}</span>
                         </div>
-                        <div class="col text-end">
-                            ₦{{ billing.subtotal }}
-                        </div>
-                    </div>
-                    <div class="row mb-2">
-                        <div class="col">
-                            Discount:
-                        </div>
-                        <div class="col text-end text-danger">
-                            -₦{{ billing.discount }}
-                        </div>
-                    </div>
-                    <div class="row mb-2">
-                        <div class="col">
-                            Tax:
-                        </div>
-                        <div class="col text-end">
-                            ₦{{ billing.tax }}
-                        </div>
-                    </div>
-                    <hr>
-                    <div class="row mb-2">
-                        <div class="col">
-                            <strong>Total Amount:</strong>
-                        </div>
-                        <div class="col text-end">
-                            <strong>₦{{ billing.total_amount }}</strong>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col">
-                            Patient Portion:
-                        </div>
-                        <div class="col text-end">
-                            ₦{{ billing.patient_portion }}
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col">
-                            Insurance Portion:
-                        </div>
-                        <div class="col text-end">
-                            ₦{{ billing.insurance_portion }}
+                        {% endif %}
+                        
+                        <!-- Payment Details -->
+                        <div class="mt-3 pt-3 border-top">
+                            <small class="text-muted d-block mb-2">Payment Details:</small>
+                            {% if billing.authorized_by %}
+                            <div class="d-flex align-items-center mb-1">
+                                <i class="fas fa-user-check text-info me-2"></i>
+                                <small>Authorized by: {{ billing.authorized_by.get_full_name }}</small>
+                            </div>
+                            {% endif %}
+                            {% if billing.authorization_reason %}
+                            <div class="mt-2">
+                                <small class="text-muted">Reason:</small>
+                                <p class="small mb-0">{{ billing.authorization_reason|truncatechars:60 }}</p>
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Quick Notes -->
-            <div class="card shadow border-0 mt-4">
-                <div class="card-header bg-light py-3">
-                    <h6 class="card-title mb-0">
-                        <i class="bi bi-info-circle me-2"></i>Collection Guidelines
-                    </h6>
+            <!-- Tests Card -->
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white border-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-flask text-info me-2"></i>Tests to Perform
+                        </h5>
+                        <span class="badge bg-info">{{ test_request.requested_tests.all|length }}</span>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for test in test_request.requested_tests.all %}
+                        <div class="list-group-item border-0 px-4 py-3">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1">{{ test.test_name }}</h6>
+                                    <small class="text-muted">{{ test.code }}</small>
+                                    {% if test.category %}
+                                    <span class="badge bg-light text-dark border ms-2">{{ test.category }}</span>
+                                    {% endif %}
+                                </div>
+                                <span class="badge {% if test.sample_type == 'BLOOD' %}bg-danger{% elif test.sample_type == 'URINE' %}bg-warning{% elif test.sample_type == 'SWAB' %}bg-primary{% else %}bg-secondary{% endif %}">
+                                    {{ test.sample_type }}
+                                </span>
+                            </div>
+                            {% if test.turnaround_time %}
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    <i class="fas fa-clock me-1"></i> {{ test.turnaround_time }}
+                                </small>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Collection Form -->
+        <div class="col-lg-8">
+            <!-- Collection Details Card -->
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white border-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-clipboard-check text-success me-2"></i>Collection Details
+                        </h5>
+                        <div class="text-end">
+                            <small class="text-muted d-block">Technician</small>
+                            <span class="badge bg-light text-dark">{{ request.user.get_full_name }}</span>
+                        </div>
+                    </div>
                 </div>
                 <div class="card-body">
-                    <ul class="list-unstyled mb-0">
-                        <li class="mb-2">
-                            <i class="bi bi-check-circle-fill text-success me-2"></i>
-                            Verify patient identity
-                        </li>
-                        <li class="mb-2">
-                            <i class="bi bi-check-circle-fill text-success me-2"></i>
-                            Use proper PPE
-                        </li>
-                        <li class="mb-2">
-                            <i class="bi bi-check-circle-fill text-success me-2"></i>
-                            Label immediately after collection
-                        </li>
-                        <li class="mb-2">
-                            <i class="bi bi-check-circle-fill text-success me-2"></i>
-                            Store at correct temperature
-                        </li>
-                        <li class="mb-2">
-                            <i class="bi bi-check-circle-fill text-success me-2"></i>
-                            Document any deviations
-                        </li>
-                    </ul>
+                    <!-- Collection Guide Alert -->
+                    <div class="alert alert-warning border-warning bg-light-warning mb-4">
+                        <div class="d-flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-exclamation-triangle text-warning fa-lg mt-1"></i>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6 class="alert-heading mb-2">Collection Guidelines</h6>
+                                <p class="small mb-2">Ensure you have gathered the appropriate containers before proceeding:</p>
+                                <div class="mt-2">
+                                    {% with sample_types=test_request.requested_tests.all|dictsort:"sample_type" %}
+                                    {% for test in sample_types %}
+                                    <span class="badge bg-warning-subtle text-warning border border-warning me-1 mb-1">
+                                        <i class="fas fa-vial me-1"></i> {{ test.sample_type }}
+                                    </span>
+                                    {% endfor %}
+                                    {% endwith %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Collection Form -->
+                    <form method="post" id="collectionForm">
+                        {% csrf_token %}
+                        
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <div class="card h-100 border">
+                                    <div class="card-body">
+                                        <h6 class="card-title text-muted mb-3">Specimen Information</h6>
+                                        {{ form.specimen_type|as_crispy_field }}
+                                        {{ form.collection_method|as_crispy_field }}
+                                        {{ form.collection_site|as_crispy_field }}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="card h-100 border">
+                                    <div class="card-body">
+                                        <h6 class="card-title text-muted mb-3">Collection Details</h6>
+                                        {{ form.container_type|as_crispy_field }}
+                                        {{ form.volume_collected_ml|as_crispy_field }}
+                                        {{ form.fasting_status|as_crispy_field }}
+                                        {{ form.location|as_crispy_field }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Additional Information -->
+                        <div class="card border mb-4">
+                            <div class="card-body">
+                                <h6 class="card-title text-muted mb-3">Additional Information</h6>
+                                {{ form.specimen_description|as_crispy_field }}
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        {{ form.collected_by|as_crispy_field }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="border-top pt-4">
+                            <div class="d-flex justify-content-between">
+                                <a href="{% url 'billing:billing_detail' billing.pk %}" class="btn btn-outline-secondary btn-lg px-4">
+                                    <i class="fas fa-arrow-left me-2"></i> Back to Billing
+                                </a>
+                                <button type="submit" class="btn btn-success btn-lg px-5">
+                                    <i class="fas fa-vial me-2"></i> Finalize Collection
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Quick Stats Footer -->
+            <div class="mt-4">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="card border-0 bg-light">
+                            <div class="card-body text-center py-3">
+                                <h3 class="text-primary mb-0">{{ test_request.requested_tests.all|length }}</h3>
+                                <small class="text-muted">Total Tests</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-0 bg-light">
+                            <div class="card-body text-center py-3">
+                                <h3 class="text-success mb-0">₦{{ billing.total_amount|floatformat:0 }}</h3>
+                                <small class="text-muted">Total Amount</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-0 bg-light">
+                            <div class="card-body text-center py-3">
+                                <h3 class="text-info mb-0">
+                                    {% with sample_types=test_request.requested_tests.all|dictsort:"sample_type" %}
+                                    {{ sample_types|slice:":1"|first }}
+                                    {% endwith %}
+                                </h3>
+                                <small class="text-muted">Primary Sample Type</small>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Success Modal -->
-<div class="modal fade" id="successModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title">
-                    <i class="bi bi-check-circle me-2"></i>Success!
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body text-center py-4">
-                <i class="bi bi-droplet text-success display-1 mb-3"></i>
-                <h4>Sample Collected Successfully</h4>
-                <p class="text-muted">The sample has been logged and test assignments have been created.</p>
-                <div class="alert alert-light mt-3">
-                    <strong>Sample ID:</strong> <span id="generatedSampleId"></span>
-                </div>
-            </div>
-            <div class="modal-footer justify-content-center">
-                <button type="button" class="btn btn-success" id="goToSampleBtn">
-                    <i class="bi bi-arrow-right-circle me-2"></i>View Sample Details
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block extra_css %}
 <style>
-    /* Custom styles for the sample collection page */
     .card {
         border-radius: 10px;
-        overflow: hidden;
     }
     
     .card-header {
-        border-bottom: none;
+        border-bottom: 1px solid rgba(0,0,0,.05);
+        padding: 1.25rem 1.5rem;
     }
     
-    .form-control, .form-select {
-        border-radius: 8px;
-        border: 1px solid #dee2e6;
-        padding: 0.75rem 1rem;
+    .card-body {
+        padding: 1.5rem;
+    }
+    
+    .list-group-item {
+        border-left: 0;
+        border-right: 0;
+        border-color: rgba(0,0,0,.03);
+    }
+    
+    .list-group-item:first-child {
+        border-top: 0;
+    }
+    
+    .list-group-item:last-child {
+        border-bottom: 0;
+    }
+    
+    .bg-light-warning {
+        background-color: rgba(255, 193, 7, 0.1);
+    }
+    
+    .bg-warning-subtle {
+        background-color: #fff3cd;
+    }
+    
+    .badge {
+        font-weight: 500;
+        padding: 0.35em 0.65em;
     }
     
     .form-control:focus, .form-select:focus {
         border-color: #0d6efd;
-        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
     }
     
-    .btn-primary {
-        background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
-        border: none;
-        border-radius: 8px;
-        padding: 0.75rem 2rem;
-        font-weight: 500;
+    /* Improve form field spacing */
+    .form-group {
+        margin-bottom: 1.25rem;
     }
     
-    .btn-primary:hover {
-        background: linear-gradient(135deg, #0b5ed7 0%, #0a58ca 100%);
-        transform: translateY(-1px);
+    /* Custom styling for the submit button */
+    .btn-success {
+        background: linear-gradient(135deg, #198754 0%, #157347 100%);
+        border-color: #198754;
         transition: all 0.3s ease;
     }
     
-    .badge {
-        border-radius: 20px;
-        padding: 0.5em 1em;
-    }
-    
-    .list-group-item {
-        border-left: none;
-        border-right: none;
-        padding: 1rem 1.25rem;
-    }
-    
-    .list-group-item:first-child {
-        border-top: none;
-    }
-    
-    .list-group-item:last-child {
-        border-bottom: none;
-    }
-    
-    /* Form label styling */
-    .form-label {
-        font-weight: 500;
-        color: #495057;
-        margin-bottom: 0.5rem;
-    }
-    
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-        .btn {
-            width: 100%;
-            margin-bottom: 0.5rem;
-        }
-        
-        .d-flex.justify-content-between {
-            flex-direction: column;
-        }
+    .btn-success:hover {
+        background: linear-gradient(135deg, #157347 0%, #0d5c3a 100%);
+        border-color: #146c43;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(25, 135, 84, 0.3);
     }
 </style>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Form submission handling
-        const form = document.getElementById('sampleCollectionForm');
-        const submitBtn = document.getElementById('submitBtn');
-        
-        if (form) {
-            form.addEventListener('submit', function(e) {
-                // Simple client-side validation
-                const requiredFields = form.querySelectorAll('[required]');
-                let isValid = true;
-                
-                requiredFields.forEach(field => {
-                    if (!field.value.trim()) {
-                        isValid = false;
-                        field.classList.add('is-invalid');
-                    } else {
-                        field.classList.remove('is-invalid');
-                    }
-                });
-                
-                if (!isValid) {
-                    e.preventDefault();
-                    // Show first error
-                    const firstInvalid = form.querySelector('.is-invalid');
-                    if (firstInvalid) {
-                        firstInvalid.focus();
-                    }
-                    return false;
-                }
-                
-                // Show loading state
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
-            });
-        }
-        
-        // Initialize tooltips
-        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
-        });
-        
-        // Volume input validation
-        const volumeInput = document.getElementById('{{ form.volume_collected_ml.id_for_label }}');
-        if (volumeInput) {
-            volumeInput.addEventListener('change', function() {
-                const value = parseFloat(this.value);
-                if (value < 0) {
-                    this.value = 0;
-                } else if (value > 1000) {
-                    this.value = 1000;
-                }
-            });
-        }
-        
-        // Auto-fill current time for collection time if needed
-        const today = new Date();
-        const timeString = today.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        
-    });
-    
-    // If you want to show success modal after form submission (via Django messages)
-    {% if messages %}
-        {% for message in messages %}
-            {% if message.tags == 'success' %}
-                document.addEventListener('DOMContentLoaded', function() {
-                    const modal = new bootstrap.Modal(document.getElementById('successModal'));
-                    // Extract sample ID from message if possible
-                    const messageText = "{{ message }}";
-                    const sampleIdMatch = messageText.match(/Sample (\S+) secured/);
-                    if (sampleIdMatch) {
-                        document.getElementById('generatedSampleId').textContent = sampleIdMatch[1];
-                    }
-                    modal.show();
-                    
-                    // Handle redirect to sample detail page
-                    document.getElementById('goToSampleBtn').addEventListener('click', function() {
-                        window.location.href = "{% url 'labs:sample-exam-detail' sample=0 %}".replace('0', '{{ sample_id_placeholder }}');
-                        // window.location.href = "{% url 'labs:sample-exam-detail' sample_id=999999 %}".replace('999999', sampleIdFromServer);
-                    });
-                });
-            {% endif %}
-        {% endfor %}
-    {% endif %}
-</script>
 {% endblock %}

@@ -82,17 +82,28 @@
     <div class="max-w-4xl mx-auto px-4 py-8">
         <!-- Success Animation -->
         <div class="text-center mb-8 fade-in-up">
-            <div class="inline-flex items-center justify-center w-24 h-24 bg-green-100 rounded-full mb-4">
-                <svg class="w-16 h-16" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="45" fill="none" stroke="#10b981" stroke-width="6"/>
-                    <path class="checkmark" fill="none" stroke="#10b981" stroke-width="6" stroke-linecap="round" 
-                          d="M30 50 L45 65 L70 35"/>
-                </svg>
-            </div>
-            <h1 class="text-3xl font-bold text-gray-900 mb-2">Appointment Confirmed!</h1>
-            <p class="text-gray-600">Your appointment has been successfully booked</p>
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="inline-flex items-center justify-center w-24 h-24 bg-green-100 rounded-full mb-4">
+                        <svg class="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                    </div>
+                    <h1 class="text-3xl font-bold text-gray-900 mb-2">Success!</h1>
+                    <p class="text-gray-600">{{ message }}</p>
+                {% endfor %}
+            {% else %}
+                <div class="inline-flex items-center justify-center w-24 h-24 bg-green-100 rounded-full mb-4">
+                    <svg class="w-16 h-16" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="45" fill="none" stroke="#10b981" stroke-width="6"/>
+                        <path class="checkmark" fill="none" stroke="#10b981" stroke-width="6" stroke-linecap="round" 
+                            d="M30 50 L45 65 L70 35"/>
+                    </svg>
+                </div>
+                <h1 class="text-3xl font-bold text-gray-900 mb-2">Appointment Confirmed!</h1>
+                <p class="text-gray-600">Your appointment has been successfully booked</p>
+            {% endif %}
         </div>
-
         <!-- Appointment Details Card -->
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-6">
             <!-- Header -->

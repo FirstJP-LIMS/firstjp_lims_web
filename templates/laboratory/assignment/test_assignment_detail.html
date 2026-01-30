@@ -70,7 +70,7 @@
                     {% endif %}
                 </div>
                 
-                <div class="col-md-4">
+                {% comment %} <div class="col-md-4">
                     {% if result and not result.verified_at and result.entered_by != request.user %}
                     <form method="post" action="{% url 'labs:verify_result' result.id %}" class="d-inline">
                         {% csrf_token %}
@@ -90,7 +90,7 @@
                         <i class="bi bi-check-circle me-2"></i>Completed
                     </button>
                     {% endif %}
-                </div>
+                </div> {% endcomment %}
             </div>
         </div>
     </div>

@@ -1,4 +1,5 @@
 import logging
+import uuid
 import pytz
 from datetime import timedelta
 from collections import defaultdict
@@ -110,10 +111,21 @@ class AppointmentSlot(models.Model):
     # -----------------
     # BUSINESS LOGIC
     # -----------------
+    # def _slot_datetime(self):
+    #     vendor_tz = pytz.timezone(self.vendor.timezone)
+    #     naive = timezone.datetime.combine(self.date, self.start_time)
+    #     return vendor_tz.localize(naive)
+
+
     def _slot_datetime(self):
-        vendor_tz = pytz.timezone(self.vendor.timezone)
-        naive = timezone.datetime.combine(self.date, self.start_time)
-        return vendor_tz.localize(naive)
+    # def get_start_datetime(self):
+        """Returns a timezone-aware datetime for the start of the slot."""
+        # Combine date and time into a naive datetime
+        naive_dt = timezone.datetime.combine(self.date, self.start_time)
+        
+        # Use the vendor's timezone or default to UTC
+        vendor_tz = pytz.timezone(self.vendor.timezone or 'UTC')
+        return timezone.make_aware(naive_dt, vendor_tz)
 
     @property
     def is_past(self):
@@ -172,6 +184,8 @@ class Appointment(models.Model):
         STATUS_PENDING: [STATUS_CONFIRMED, STATUS_CANCELLED],
         STATUS_CONFIRMED: [STATUS_COMPLETED, STATUS_NO_SHOW, STATUS_CANCELLED],
     }
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     vendor = models.ForeignKey(
         'tenants.Vendor',

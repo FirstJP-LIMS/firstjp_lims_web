@@ -191,7 +191,6 @@
                             <th class="border-0">Flag</th>
                             <th class="border-0">Status</th>
                             <th class="border-0">Source</th>
-                            <th class="border-0">Entered</th>
                             <th class="border-0 pe-4 text-end">Actions</th>
                         </tr>
                     </thead>
@@ -240,83 +239,128 @@
                             </td>
                             
                             <td>
+
                                 {% if result.flag == 'H' %}
-                                    <span class="badge bg-warning bg-opacity-15 text-warning border-0">
-                                        <i class="bi bi-arrow-up me-1"></i>High
+                                    {# HIGH #}
+                                    <span class="d-inline-flex align-items-center px-2 py-1 rounded-2 bg-warning bg-opacity-10 text-warning fw-bold" style="font-size: 0.85rem;">
+                                        <i class="bi bi-graph-up-arrow me-1"></i>High
                                     </span>
+
                                 {% elif result.flag == 'L' %}
-                                    <span class="badge bg-info bg-opacity-15 text-info border-0">
-                                        <i class="bi bi-arrow-down me-1"></i>Low
+                                    {# LOW #}
+                                    <span class="d-inline-flex align-items-center px-2 py-1 rounded-2 bg-info bg-opacity-10 text-info fw-bold" style="font-size: 0.85rem;">
+                                        <i class="bi bi-graph-down-arrow me-1"></i>Low
                                     </span>
+
                                 {% elif result.flag == 'C' %}
-                                    <span class="badge bg-danger bg-opacity-15 text-danger border-0">
-                                        <i class="bi bi-exclamation-triangle me-1"></i>Critical
+                                    {# CRITICAL - Enhanced urgency #}
+                                    <span class="d-inline-flex align-items-center px-2 py-1 rounded-2 bg-danger text-white fw-bold shadow-sm" style="font-size: 0.85rem;">
+                                        <i class="bi bi-exclamation-triangle-fill me-1"></i>CRITICAL
                                     </span>
+
                                 {% elif result.flag == 'A' %}
-                                    <span class="badge bg-warning bg-opacity-15 text-warning border-0">
+                                    {# ABNORMAL #}
+                                    <span class="d-inline-flex align-items-center px-2 py-1 rounded-2 bg-warning bg-opacity-10 text-dark fw-medium" style="font-size: 0.85rem;">
                                         <i class="bi bi-exclamation-circle me-1"></i>Abnormal
                                     </span>
+
                                 {% elif result.flag == 'M' %}
-                                    <span class="badge bg-secondary bg-opacity-15 text-secondary border-0">
-                                        <i class="bi bi-x-circle me-1"></i>Unmeasurable
+                                    {# UNMEASURABLE #}
+                                    <span class="d-inline-flex align-items-center px-2 py-1 rounded-2 bg-secondary bg-opacity-10 text-secondary small" style="font-size: 0.85rem;">
+                                        <i class="bi bi-dash-circle me-1"></i>Outside AMR
                                     </span>
+
                                 {% elif result.flag == 'R' %}
-                                    <span class="badge bg-danger bg-opacity-15 text-danger border-0">
-                                        <i class="bi bi-exclamation me-1"></i>Out of Range
+                                    {# OUT OF RANGE #}
+                                    <span class="d-inline-flex align-items-center px-2 py-1 rounded-2 bg-danger bg-opacity-10 text-danger fw-bold border border-danger border-opacity-25" style="font-size: 0.85rem;">
+                                        <i class="bi bi-fullscreen-exit me-1"></i>Out of Range
                                     </span>
+
+                                {% elif result.flag == '*' %}
+                                    {# CORRECTED #}
+                                    <span class="d-inline-flex align-items-center px-2 py-1 rounded-2 bg-dark bg-opacity-10 text-dark fw-medium" style="font-size: 0.85rem;">
+                                        <i class="bi bi-pencil-square me-1"></i>Corrected
+                                    </span>
+
                                 {% else %}
-                                    <span class="badge bg-success bg-opacity-15 text-success border-0">
-                                        <i class="bi bi-check-circle me-1"></i>Normal
+                                    {# NORMAL #}
+                                    <span class="d-inline-flex align-items-center px-2 py-1 rounded-2 bg-success bg-opacity-10 text-success fw-medium" style="font-size: 0.85rem;">
+                                        <i class="bi bi-check-circle-fill me-1"></i>Normal
                                     </span>
                                 {% endif %}
                             </td>
                             
-                            <td>
-                                {% if result.released %}
-                                    <span class="badge bg-success bg-opacity-15 text-success border-0">
-                                        <i class="bi bi-send-check me-1"></i>Released
+                        <td class="align-middle">
+                            <div class="d-flex flex-column align-items-start gap-1">
+                                {% if result.status == 'released' %}
+                                    {# RELEASED #}
+                                    <span class="d-inline-flex align-items-center px-2 py-1 rounded-2 bg-success bg-opacity-10 text-success fw-bold" style="font-size: 0.85rem;">
+                                        <i class="bi bi-send-check-fill me-1"></i>Released
                                     </span>
-                                {% elif result.verified_at %}
-                                    <span class="badge bg-info bg-opacity-15 text-info border-0">
+
+                                {% elif result.status == 'verified' %}
+                                    {# VERIFIED #}
+                                    <span class="d-inline-flex align-items-center px-2 py-1 rounded-2 bg-info bg-opacity-10 text-info fw-bold" style="font-size: 0.85rem;">
                                         <i class="bi bi-shield-check me-1"></i>Verified
                                     </span>
+
+                                {% elif result.status == 'amended' %}
+                                    {# AMENDED #}
+                                    <span class="d-inline-flex align-items-center px-2 py-1 rounded-2 bg-purple bg-opacity-10 text-purple fw-bold border border-purple border-opacity-25" style="font-size: 0.85rem;">
+                                        <i class="bi bi-patch-exclamation me-1"></i>Amended
+                                    </span>
+
                                 {% else %}
-                                    <span class="badge bg-warning bg-opacity-15 text-warning border-0">
-                                        <i class="bi bi-clock me-1"></i>Pending
+                                    {# DRAFT / PENDING #}
+                                    <span class="d-inline-flex align-items-center px-2 py-1 rounded-2 bg-warning bg-opacity-10 text-warning fw-medium" style="font-size: 0.85rem;">
+                                        <i class="bi bi-clock-history me-1"></i>Draft
                                     </span>
                                 {% endif %}
-                                
-                                {% if result.is_amended %}
-                                <br>
-                                <span class="badge bg-secondary bg-opacity-15 text-secondary border-0 mt-1">
-                                    <i class="bi bi-pencil me-1"></i>Amended
-                                </span>
+
+                                {# Secondary Marker: Show 'Is Amended' flag if the result has history but is currently in another state #}
+                                {% if result.is_amended and result.status != 'amended' %}
+                                    <small class="text-muted ps-1" style="font-size: 0.75rem;">
+                                        <i class="bi bi-info-circle"></i> Previously Amended
+                                    </small>
                                 {% endif %}
-                            </td>
-                            
-                            <td>
-                                {% if result.data_source == 'instrument' %}
-                                    <span class="badge bg-primary bg-opacity-15 text-primary border-0">
-                                        <i class="bi bi-cpu me-1"></i>Instrument
-                                    </span>
-                                {% elif result.data_source == 'manual' %}
-                                    <span class="badge bg-secondary bg-opacity-15 text-secondary border-0">
-                                        <i class="bi bi-pencil me-1"></i>Manual
-                                    </span>
-                                {% else %}
-                                    <span class="badge bg-info bg-opacity-15 text-info border-0">
-                                        <i class="bi bi-download me-1"></i>Imported
-                                    </span>
-                                {% endif %}
-                            </td>
-                            
-                            <td>
-                                <small class="text-dark fw-medium d-block">{{ result.entered_at|date:"M d, Y" }}</small>
-                                <small class="text-muted">{{ result.entered_at|time:"H:i" }}</small>
-                                <br>
-                                <small class="text-muted">by {{ result.entered_by.get_full_name }}</small>
-                            </td>
-                            
+                            </div>
+                        </td> 
+                        
+                        
+
+                        <td class="align-middle">
+                        {% if result.data_source == 'instrument' %}
+                            {# INSTRUMENT #}
+                            <span class="d-inline-flex align-items-center px-2 py-1 rounded-2 bg-primary bg-opacity-10 text-primary fw-medium" style="font-size: 0.82rem;" title="ID: {{ result.instrument_name|default:'Unknown Device' }}">
+                                <i class="bi bi-robot me-1"></i>Instrument
+                            </span>
+
+                        {% elif result.data_source == 'manual' %}
+                            {# MANUAL #}
+                            <span class="d-inline-flex align-items-center px-2 py-1 rounded-2 bg-secondary bg-opacity-10 text-secondary fw-medium" style="font-size: 0.82rem;">
+                                <i class="bi bi-keyboard me-1"></i>Manual
+                            </span>
+
+                        {% elif result.data_source == 'calculated' %}
+                            {# CALCULATED #}
+                            <span class="d-inline-flex align-items-center px-2 py-1 rounded-2 bg-purple bg-opacity-10 text-purple fw-medium" style="font-size: 0.82rem;">
+                                <i class="bi bi-braces me-1"></i>Calculated
+                            </span>
+
+                        {% elif result.data_source == 'imported' %}
+                            {# IMPORTED #}
+                            <span class="d-inline-flex align-items-center px-2 py-1 rounded-2 bg-info bg-opacity-10 text-info fw-medium" style="font-size: 0.82rem;">
+                                <i class="bi bi-file-earmark-arrow-down me-1"></i>Imported
+                            </span>
+
+                        {% else %}
+                            {# FALLBACK #}
+                            <span class="d-inline-flex align-items-center px-2 py-1 rounded-2 bg-light text-muted small">
+                                {{ result.get_data_source_display }}
+                            </span>
+                        {% endif %}
+                    </td>               
+                                                        
                             <td class="pe-4 text-end">
                                 <div class="d-flex gap-1 justify-content-end">
                                     <!-- View Details -->
@@ -358,7 +402,9 @@
                                     
                                     <!-- Edit Button - Only if not verified -->
                                     {% if not result.verified_at and not result.released %}
-                                    <a href="{% url 'labs:edit_result' result.id %}" 
+                                    <a href="{% url 'labs:update_manual_test_result' result.id %}" 
+                                    {% comment %} <a href="{% url 'labs:update_manual_test_result' result.id %}"  {% endcomment %}
+                                    
                                     class="btn btn-outline-warning btn-sm rounded-2 px-3"
                                     data-bs-toggle="tooltip" title="Edit Result">
                                         <i class="bi bi-pencil me-1"></i>Edit
@@ -488,6 +534,7 @@
         width: 100%;
     }
 }
+
 </style>
 
 <script>
