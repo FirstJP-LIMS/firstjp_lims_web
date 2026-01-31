@@ -88,17 +88,13 @@ def collect_sample_view(request, billing_pk):
                     test_request.save(update_fields=['status'])
 
                 messages.success(request, f"✅ Sample {sample.sample_id} secured.")
-
                 return redirect('labs:sample-exam-list')
-            
             except Exception as e:
                 messages.error(request, f"Database Error: {str(e)}")
     else:
         # Pre-fill with technician name
         form = SampleForm(initial={'collected_by': request.user.get_full_name()})
 
-
-    # return render(request, 'laboratory/sample/collect_sample.html', {
     return render(request, 'laboratory/sample/collect_sample1.html', {
         'form': form,
         'billing': billing,

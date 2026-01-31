@@ -1,4 +1,4 @@
-from django.db import transaction
+from django.db import transaction, models
 from django.db.models import F
 from apps.tenants.models import Vendor
 
@@ -25,26 +25,49 @@ def check_tenant_access(request):
     return None, is_platform_admin
 
 
-# --- Sequence Generator Function for ids ---
-def get_next_sequence(prefix: str, vendor: Vendor = None) -> str:
+# # --- Sequence Generator Function for ids ---
+# def get_next_sequence(prefix: str, vendor: Vendor = None) -> str:
+#     """
+#     Thread-safe counter generator. 
+#     Each vendor (tenant) can have its own independent counters if needed.
+#     """
+#     from apps.labs.models import SequenceCounter 
+
+#     with transaction.atomic():
+#         counter, _ = SequenceCounter.objects.select_for_update().get_or_create(
+#             vendor=vendor,
+#             prefix=prefix,
+#             defaults={"last_number": 0}
+#         )
+#         counter.last_number = F("last_number") + 1
+#         counter.save()
+#         counter.refresh_from_db()
+#         return f"{prefix}{counter.last_number:06d}"
+
+
+def get_next_sequence(prefix: str, vendor=None) -> str:
     """
-    Thread-safe counter generator. 
-    Each vendor (tenant) can have its own independent counters if needed.
+    Thread-safe and tenant-aware counter generator.
+    Uses row-level locking to prevent duplicate IDs in high-concurrency environments.
     """
     from apps.labs.models import SequenceCounter 
 
     with transaction.atomic():
-        counter, _ = SequenceCounter.objects.select_for_update().get_or_create(
+        # select_for_update() locks this specific row until the transaction commits
+        counter, created = SequenceCounter.objects.select_for_update().get_or_create(
             vendor=vendor,
             prefix=prefix,
             defaults={"last_number": 0}
         )
+
+        # Increment using F() to avoid race conditions at the python level
         counter.last_number = F("last_number") + 1
-        counter.save()
+        counter.save(update_fields=["last_number"])
+        
+        # We must refresh to get the new integer value back from the DB
         counter.refresh_from_db()
+        
         return f"{prefix}{counter.last_number:06d}"
-
-
 
 
 # utils.py

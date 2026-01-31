@@ -527,7 +527,7 @@ class TestRequest(models.Model):
         help_text="Why was this order rejected?"
     )
 
-    request_id = models.CharField(max_length=64, unique=True)
+    request_id = models.CharField(max_length=64) # unique=False
     requested_tests = models.ManyToManyField('VendorTest', related_name="test_requests")
     clinical_history = models.TextField(blank=True)
     clinical_indication = models.TextField(blank=True)
@@ -552,6 +552,12 @@ class TestRequest(models.Model):
     # Request Result 
 
     class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['vendor', 'request_id'], 
+                name='unique_request_id_per_vendor'
+            )
+        ]
         ordering = ["-created_at"]
         verbose_name = "Test Request"
         verbose_name_plural = "Test Requests"
