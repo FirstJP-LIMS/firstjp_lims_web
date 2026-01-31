@@ -137,10 +137,11 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Email setting - Gmail
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-# EMAIL_HOST = os.getenv("EMAIL_HOST")
-# EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
-# EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
-# EMAIL_PORT = os.getenv("EMAIL_PORT")
+
+EMAIL_HOST = os.getenv("EMAIL_HOST")
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
+EMAIL_PORT = os.getenv("EMAIL_PORT")
 EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS")
 DEFAULT_FROM_EMAIL = os.getenv("PLATFORM_ADMIN_EMAIL")
 SERVER_EMAIL = DEFAULT_FROM_EMAIL
@@ -149,20 +150,17 @@ SERVER_EMAIL = DEFAULT_FROM_EMAIL
 
 # Using MailTrap Sandbox for email testing
 # Looking to send emails in production? Check out our Email API/SMTP product!
-EMAIL_HOST = 'sandbox.smtp.mailtrap.io'
-EMAIL_HOST_USER = '29d1b943562a3e'
-EMAIL_HOST_PASSWORD = 'b5ad38fa222492'
-EMAIL_PORT = '2525'
-
+# EMAIL_HOST = 'sandbox.smtp.mailtrap.io'
+# EMAIL_HOST_USER = '29d1b943562a3e'
+# EMAIL_HOST_PASSWORD = 'b5ad38fa222492'
+# EMAIL_PORT = '2525'
 
 
 SITE_NAME = "mednovu.com"
-# SITE_URL = "mednovu.com"
 
-PLATFORM_ADMIN_EMAIL = "firstjpinternationalconsult@gmail.com"
+PLATFORM_ADMIN_EMAIL = "medvuno@gmail.com"
 
 # STATIC_ROOT = BASE_DIR / "staticfiles"
-
 
 # SMS
 PHONENUMBER_DEFAULT_REGION = "NG"
@@ -188,10 +186,8 @@ if ENVIRONMENT == "production":
         "medvuno.com",
         "www.medvuno.com",
         ".medvuno.com",
-        # '16.171.161.101', 
         '13.63.45.144',
         'localhost', '127.0.0.1'
-    # "firstjp-lims-web-ytsi.onrender.com",
     ]
 
     PLATFORM_BASE_DOMAIN = "medvuno.com"
@@ -266,7 +262,7 @@ else:
     # Development settings
     DEBUG = True
     
-    # NPM_BIN_PATH = r"C:\Program Files\nodejs\npm.cmd" # Replace with nodejs tailwind
+    # NPM_BIN_PATH = r"C:\Program Files\nodejs\npm.cmd" # Replaced with nodejs tailwind
 
     ALLOWED_HOSTS = [
         "127.0.0.1",
@@ -274,8 +270,8 @@ else:
         ".localhost.test",
     ]
     
-    # Database
     DATABASES = {
+        # iyanudb12345
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": BASE_DIR / "db.sqlite3",
@@ -292,7 +288,7 @@ else:
         "learn.localhost.test"
     ]
     
-    # Add development-only apps
+    # Development-only apps
     INSTALLED_APPS += [
         "debug_toolbar",
         "django_browser_reload",
