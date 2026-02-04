@@ -29,70 +29,6 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-# def _handle_manual_result_submission(request, assignment, result):
-#     lab_test = assignment.lab_test
-#     is_quantitative = lab_test.result_type == "QNT"
-#     is_qualitative = lab_test.result_type == "QLT"
-
-#     raw_value = request.POST.get("result_value", "").strip()
-#     unit = request.POST.get("unit", "").strip()
-#     remarks = request.POST.get("remarks", "").strip()
-#     interpretation = request.POST.get("interpretation", "").strip()
-
-#     if not raw_value:
-#         messages.error(request, "Result value is required.")
-#         return _render_manual_result_form(request, assignment, result)
-
-#     try:
-#         with transaction.atomic():
-#             if result is None:
-#                 result = TestResult.objects.create(
-#                     assignment=assignment,
-#                     result_value=raw_value,
-#                     units=unit,
-#                     remarks=remarks,
-#                     interpretation=interpretation,
-#                     entered_by=request.user,
-#                     data_source="manual",
-#                     status="draft",
-#                 )
-#             else:
-#                 if result.result_value != raw_value:
-#                     result.previous_value = result.result_value
-#                     result.result_value = raw_value
-#                     result.version += 1
-
-#                 result.units = unit
-#                 result.remarks = remarks
-#                 result.interpretation = interpretation
-
-#             result.auto_flag_result()
-#             result.save()
-
-#             assignment.mark_analyzed()
-
-#             messages.success(
-#                 request,
-#                 "Result saved successfully. Awaiting verification."
-#             )
-
-#             # return redirect(
-#             #     "labs:sample-exam-detail",
-#             #     sample_id=assignment.sample.sample_id,
-#             # )
-#             # return redirect(
-#             #     "labs:test_assignment_detail",
-#             #     assignment_id=assignment.id,
-#             # )
-#             return redirect(
-#                 "labs:result_detail",
-#                 result_id=result.id,
-#             )
-
-#     except Exception as e:
-#         messages.error(request, f"Error saving result: {e}")
-#         return _render_manual_result_form(request, assignment, result)
-
 def _handle_manual_result_submission(request, assignment, result):
     raw_value = request.POST.get("result_value", "").strip()
     
@@ -156,7 +92,7 @@ def _render_manual_result_form(request, assignment, result):
 
     return render(
         request,
-        "laboratory/result/manual_result_form1.html",
+        "laboratory/result/manual_result_form.html",
         context,
     )
 
@@ -266,6 +202,7 @@ def update_manual_result(request, result_id):
         return _handle_manual_result_submission(request, result.assignment, result)
 
     return _render_manual_result_form(request, result.assignment, result)
+
 
 # # ===== RESULT VIEW =====
 @login_required

@@ -6,6 +6,8 @@ from django.conf import settings
 from django.db import models
 from django.db.models import Sum
 from django.utils import timezone
+import uuid
+
 
 logger = logging.getLogger(__name__)
 
@@ -188,12 +190,12 @@ class CorporateClient(models.Model):
     def __str__(self):
         return f"{self.company_name} on payment terms {self.payment_terms_days} days"
 
-
 # ==========================================
 # 4. BILLING INFORMATION (fixed)
 # ==========================================
 
 class BillingInformation(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     vendor = models.ForeignKey('tenants.Vendor', on_delete=models.CASCADE, related_name='billing_records')
     request = models.OneToOneField('labs.TestRequest', on_delete=models.CASCADE, related_name='billing_info')
 

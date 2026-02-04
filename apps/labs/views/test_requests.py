@@ -2,23 +2,17 @@ import logging
 
 # Django Core
 from django.contrib import messages
-from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db import transaction
 from django.db.models import Sum
-# from django.core.exceptions import ValidationError
+
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 
-# from apps.labs.models import TestRequest, TestAssignment, Sample, Patient
 from apps.labs.forms import TestRequestForm, SampleForm
 from apps.billing.models import BillingInformation, PriceList
-
-# App-Specific Imports
-# from apps.accounts.models import VendorProfile
-# from apps.tenants.models import Vendor
 
 from ..forms import (
     SampleForm,
@@ -87,7 +81,6 @@ def test_request_list(request):
     return render(request, "laboratory/requests/list.html", context)
 
 
-
 @login_required
 @require_capability('can_manage_request')
 def test_request_create(request):
@@ -97,10 +90,28 @@ def test_request_create(request):
     payment or admin authorization.
     """
 
+    # vendor = getattr(request.user, 'vendor', None) or getattr(request, 'tenant', None)
+
     vendor = getattr(request.user, 'vendor', None) or getattr(request, 'tenant', None)
     if not vendor:
         messages.error(request, "Vendor not found for this user.")
         return redirect('dashboard')
+
+    # if not ensure_lab_pricing_ready(vendor):
+    #     messages.error(
+    #         request,
+    #         (
+    #             "⚠️ Lab setup incomplete. "
+    #             "Please create and activate a RETAIL price list "
+    #             "before creating test requests."
+    #         )
+    #     )
+    #     return redirect('billing:pricelist_create')
+
+    if not ensure_lab_pricing_ready(vendor):
+        messages.warning(request, "Setup Required: Please create a RETAIL price list before accepting requests.")
+            # Pass 'next' so you can come back here after creation
+        return redirect(f"{reverse('billing:pricelist_create')}?next={request.path}")
 
     if request.method == 'POST':
         request_form = TestRequestForm(
@@ -151,16 +162,16 @@ def test_request_create(request):
                         corporate_client = request_form.cleaned_data.get('corporate_client')
                         price_list = getattr(corporate_client, 'price_list', None)
 
-                    if not ensure_lab_pricing_ready(vendor):
-                        messages.error(
-                            request,
-                            (
-                                "⚠️ Lab setup incomplete. "
-                                "Please create and activate a RETAIL price list "
-                                "before creating test requests."
-                            )
-                        )
-                        return redirect('billing:pricelist_create')
+                    # if not ensure_lab_pricing_ready(vendor):
+                    #     messages.error(
+                    #         request,
+                    #         (
+                    #             "⚠️ Lab setup incomplete. "
+                    #             "Please create and activate a RETAIL price list "
+                    #             "before creating test requests."
+                    #         )
+                    #     )
+                    #     return redirect('billing:pricelist_create')
 
                     # =========================
                     # STEP 4: Create Billing Record
@@ -222,48 +233,85 @@ def test_request_create(request):
     )
 
 
+# @login_required
+# @require_capability("can_manage_request")
+# def test_request_update(request, pk):
+#     vendor = getattr(request.user, "vendor", None)
+#     request_instance = get_object_or_404(TestRequest, pk=pk, vendor=vendor)
+
+#     # Get sample if it exists
+#     sample = Sample.objects.filter(test_request=request_instance).first()
+
+#     if request.method == "POST":
+#         form = TestRequestForm(request.POST, instance=request_instance, vendor=vendor)
+#         sample_form = SampleForm(request.POST, instance=sample)
+
+#         if form.is_valid() and sample_form.is_valid():
+#             try:
+#                 with transaction.atomic():
+#                     updated_request = form.save(commit=False)
+#                     updated_request.vendor = vendor
+#                     updated_request.save()
+
+#                     # Update M2M ordered tests
+#                     updated_request.requested_tests.set(form.cleaned_data["tests_to_order"])
+
+#                     # Save sample info
+#                     sample_form.instance.test_request = updated_request
+#                     sample_form.save()
+
+#                     messages.success(request, f"{updated_request.request_id} updated successfully.")
+#                     return redirect("labs:test_request_list")
+
+#             except Exception as e:
+#                 messages.error(request, f"Error updating request: {e}")
+
+#     else:
+#         # GET — instantiate both forms
+#         form = TestRequestForm(instance=request_instance, vendor=vendor)
+#         sample_form = SampleForm(instance=sample)
+
+#     return render(request,'laboratory/requests/request_form.html', {
+#         "form": form,
+#         "sample_form": sample_form,
+#         "update_mode": True,
+#     })
+
+
 @login_required
 @require_capability("can_manage_request")
 def test_request_update(request, pk):
     vendor = getattr(request.user, "vendor", None)
     request_instance = get_object_or_404(TestRequest, pk=pk, vendor=vendor)
-
-    # Get sample if it exists
-    sample = Sample.objects.filter(test_request=request_instance).first()
+    
+    # Check if a billing record exists to prevent pricing errors during update
+    billing_instance = getattr(request_instance, 'billing_info', None)
 
     if request.method == "POST":
         form = TestRequestForm(request.POST, instance=request_instance, vendor=vendor)
-        sample_form = SampleForm(request.POST, instance=sample)
-
-        if form.is_valid() and sample_form.is_valid():
+        
+        if form.is_valid():
             try:
                 with transaction.atomic():
-                    updated_request = form.save(commit=False)
-                    updated_request.vendor = vendor
-                    updated_request.save()
-
-                    # Update M2M ordered tests
+                    updated_request = form.save()
+                    # Update M2M
                     updated_request.requested_tests.set(form.cleaned_data["tests_to_order"])
-
-                    # Save sample info
-                    sample_form.instance.test_request = updated_request
-                    sample_form.save()
-
-                    messages.success(request, f"{updated_request.request_id} updated successfully.")
+                    
+                    # Update Billing if it exists (Recalculate prices if tests changed)
+                    if billing_instance:
+                        billing_instance.recalculate_total() # You'll need this method in Billing model
+                    
+                    messages.success(request, f"Request {updated_request.request_id} updated.")
                     return redirect("labs:test_request_list")
-
             except Exception as e:
-                messages.error(request, f"Error updating request: {e}")
-
+                messages.error(request, f"Update failed: {str(e)}")
     else:
-        # GET — instantiate both forms
         form = TestRequestForm(instance=request_instance, vendor=vendor)
-        sample_form = SampleForm(instance=sample)
 
-    return render(request,'laboratory/requests/request_form.html', {
+    return render(request, 'laboratory/requests/request_form.html', {
         "form": form,
-        "sample_form": sample_form,
         "update_mode": True,
+        "instance": request_instance
     })
 
 

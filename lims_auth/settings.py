@@ -11,7 +11,7 @@ import dj_database_url
 load_dotenv()
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
-ENVIRONMENT = "production" 
+# ENVIRONMENT = "production" 
 
 # BASE_DIR = Path(__file__).resolve().parent.parent.parent
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -156,7 +156,7 @@ SERVER_EMAIL = DEFAULT_FROM_EMAIL
 # EMAIL_PORT = '2525'
 
 
-SITE_NAME = "mednovu.com"
+SITE_NAME = "medvuno.com"
 
 PLATFORM_ADMIN_EMAIL = "medvuno@gmail.com"
 
@@ -278,6 +278,19 @@ else:
         }
     }
     
+
+    # DATABASES = {
+    #     'default': {
+    #         'ENGINE': 'django.db.backends.postgresql',
+    #         'NAME': 'medvuno-local-db',
+    #         'USER': 'postgres',
+    #         'PASSWORD': 'iyanudb12345',
+    #         'HOST': 'localhost',
+    #         'PORT': '5432',
+    #     }
+    # }
+
+
     PLATFORM_BASE_DOMAIN = "localhost.test"
     LEARN_BASE_URL = "http://learn.localhost.test:8000"
 

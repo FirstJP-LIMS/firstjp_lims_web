@@ -25,19 +25,21 @@ urlpatterns = [
 
     # Billing Info
     path('billings/', billing_task.billing_list_view, name='billing_list'),
-    path('billings/create/', billing_task.billing_create_view, name='billing_create'),
-    path('billings/<int:pk>/edit/', billing_task.billing_update_view, name='billing_update'),
-    path('billings/<int:pk>/recalculate/', billing_task.billing_recalculate_view, name='billing_recalculate'),
-    path('billings/<int:pk>/print/', billing_task.billing_print_view, name='billing_print'),
+    path('billings/create/<int:request_id>/', billing_task.billing_create_view, name='billing_create'),
+    
+    path('billings/<uuid:pk>/edit/', billing_task.billing_update_view, name='billing_update'),
+    
+    path('billings/<uuid:pk>/recalculate/', billing_task.billing_recalculate_view, name='billing_recalculate'),
+    path('billings/<uuid:pk>/print/', billing_task.billing_print_view, name='billing_print'),
     path('billings/summary/', billing_task.billing_summary_view, name='billing_summary'),
     path('billings/bulk-action/', billing_task.billing_bulk_action_view, name='billing_bulk_action'),
     
-    path('billings/<int:pk>/detail/', billing_task.billing_detail_view, name='billing_detail'),
+    path('billings/<uuid:pk>/detail/', billing_task.billing_detail_view, name='billing_detail'),
 
     # Payment Actions
-    path('billing/<int:pk>/authorize/', billing_task.authorize_billing_view, name='authorize_billing'),
-    path('billing/<int:pk>/waive/', billing_task.waive_billing_view, name='waive_billing'),
-    path('billing/<int:pk>/confirm-payment/', billing_task.confirm_payment_view, name='confirm_payment'),
+    path('billing/<uuid:pk>/authorize/', billing_task.authorize_billing_view, name='authorize_billing'),
+    path('billing/<uuid:pk>/waive/', billing_task.waive_billing_view, name='waive_billing'),
+    path('billing/<uuid:pk>/confirm-payment/', billing_task.confirm_payment_view, name='confirm_payment'),
     
     # Payment Gateway (for future implementation)
     # path('billing/<int:pk>/pay-online/', views.initiate_online_payment, name='pay_online'),
@@ -88,7 +90,7 @@ urlpatterns = [
          invoice_receipt.generate_invoice_pdf_view, 
          name='invoice_pdf_download'),
     
-    path('invoices/<int:invoice_pk>/pdf/preview/', 
+    path('invoices/<uuid:invoice_pk>/pdf/preview/', 
          invoice_receipt.preview_invoice_pdf_view, 
          name='invoice_pdf_preview'),
     

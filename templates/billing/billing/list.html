@@ -287,9 +287,9 @@
             <a href="{% url 'billing:dashboard' %}" class="btn btn-outline-primary">
                 <i class="bi bi-arrow-left me-2"></i>Dashboard
             </a>
-            <a href="{% url 'billing:billing_create' %}" class="btn btn-primary">
+            {% comment %} <a href="{% url 'billing:billing_create' request.id %}" class="btn btn-primary">
                 <i class="bi bi-plus-circle me-2"></i>Create Billing
-            </a>
+            </a> {% endcomment %}
         </div>
     </div>
 
@@ -541,6 +541,7 @@
                         <td>
                             <strong class="text-primary">{{ billing.request.request_id|default:"N/A" }}</strong>
                         </td>
+                        
                         <td>
                             {% if billing.request.patient %}
                             <div class="d-flex align-items-center">

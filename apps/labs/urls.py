@@ -60,22 +60,20 @@ urlpatterns = [
     # Test request
     path('test-requests/create/', test_requests.test_request_create, name='create_test_request'),
     path('test-requests/', test_requests.test_request_list, name='test_request_list'),
-    path('requests/<int:pk>/update/', test_requests.test_request_update, name='request_update'),
-    path('requests/<int:pk>/detail/', test_requests.test_request_detail, name='request_detail'),
-    path('requests/<int:pk>/delete/', test_requests.test_request_delete, name='delete_request'),
+    path('requests/<uuid:pk>/update/', test_requests.test_request_update, name='request_update'),
+    path('requests/<uuid:pk>/detail/', test_requests.test_request_detail, name='request_detail'),
+    path('requests/<uuid:pk>/delete/', test_requests.test_request_delete, name='delete_request'),
 
     # download Test Request 
-    path('test-request/<int:pk>/download/', downloads.download_test_request, name='download_test_request'),
+    path('test-request/<uuid:pk>/download/', downloads.download_test_request, name='download_test_request'),
     path("requests/download/blank/", downloads.download_test_request, {"blank": True}, name="download_blank_test_request"),
 
     # examination
     path('examination/samples/', sample_mgt.sample_examination_list, name='sample-exam-list'),
 
     # 🆕 Sample Collection URLs
-    path('samples/collect/<int:billing_pk>/', sample_mgt.collect_sample_view, name='collect_sample'),
+    path('samples/collect/<uuid:billing_pk>/', sample_mgt.collect_sample_view, name='collect_sample'),
 
-    # path('examination/sample/<int:sample_id>/', sample_mgt.sample_examination_detail, name='sample-exam-detail'),
-    # urls.py
     path('examination/sample/<str:sample_id>/', sample_mgt.sample_examination_detail, name='sample-exam-detail'),
 
     # Bulk verification
@@ -91,20 +89,20 @@ urlpatterns = [
     # ===== Test Assignment =====
     path('assignments/', test_assignments.test_assignment_list, name='test_assignment_list'),
 
-    path('assignment/<int:assignment_id>/', test_assignments.test_assignment_detail, name='test_assignment_detail'),
+    path('assignment/<uuid:assignment_id>/', test_assignments.test_assignment_detail, name='test_assignment_detail'),
 
 
     # Result Management URLs
     # ===== Manual Result Entry =====
 
     path(
-        'assignment/<int:assignment_id>/enter-result/', 
+        'assignment/<uuid:assignment_id>/enter-result/', 
          test_results.enter_manual_result, 
          name='enter_manual_test_result'
     ),
     
     path(
-        "result/<int:result_id>/update/",
+        "result/<uuid:result_id>/update/",
         test_results.update_manual_result,
         name="update_manual_test_result",
     ),
@@ -115,20 +113,21 @@ urlpatterns = [
         name='result_list'
         ),
     
-    path('result/<int:result_id>/', test_results.result_detail, name='result_detail'),
+    path('result/<uuid:result_id>/', test_results.result_detail, name='result_detail'),
+    # path('result/<int:result_id>/', test_results.result_detail, name='result_detail'),
 
-    path('result/<int:result_id>/amend/', test_results.amend_result, name='amend_result'),
+    path('result/<uuid:result_id>/amend/', test_results.amend_result, name='amend_result'),
 
-    path('result/<int:result_id>/verify/', test_results.verify_result, name='verify_result'),
+    path('result/<uuid:result_id>/verify/', test_results.verify_result, name='verify_result'),
 
-    path('result/<int:result_id>/release/', test_results.release_result, name='release_result'),
+    path('result/<uuid:result_id>/release/', test_results.release_result, name='release_result'),
 
-    path('result/<int:result_id>/download/', test_results.download_result_pdf, name='download_result_pdf'),
+    path('result/<uuid:result_id>/download/', test_results.download_result_pdf, name='download_result_pdf'),
 
 
     # ===== Quick Instrument Assignment =====
     # ===== Bulk Actions =====
-    path('assignment/<int:assignment_id>/assign-instrument/', instruments.assign_instrument, name='assign_instrument'),
+    path('assignment/<uuid:assignment_id>/assign-instrument/', instruments.assign_instrument, name='assign_instrument'),
     path('assignments/bulk-assign-instrument/', instruments.bulk_assign_instrument, name='bulk_assign_instrument'),    
     path('assignments/auto_assign_instruments/', instruments.auto_assign_instruments, name='auto_assign_instruments'),
     # Unclear
@@ -138,13 +137,13 @@ urlpatterns = [
 
     path('assignments/stats/', test_assignments.assignment_quick_stats,name='assignment_quick_stats'),
     # ===== Instrument Integration (from previous) =====
-    path('assignment/<int:assignment_id>/send-to-instrument/',
+    path('assignment/<uuid:assignment_id>/send-to-instrument/',
         instruments.send_to_instrument,
         name='send_to_instrument'
     ),
     
     path(
-        'assignment/<int:assignment_id>/fetch-result/',
+        'assignment/<uuid:assignment_id>/fetch-result/',
         instruments.fetch_result_from_instrument,
         name='fetch_result_from_instrument'
     ),

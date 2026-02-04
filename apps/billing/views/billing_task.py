@@ -33,6 +33,13 @@ from ..models import BillingInformation, Payment, InsuranceProvider, CorporateCl
 from ..forms import BillingInformationForm, BillingFilterForm, PaymentForm
 from apps.accounts.decorators import require_capability
 
+from django.utils import timezone
+from django.db import transaction
+from django.db.models import Sum
+from decimal import Decimal as D
+
+
+
 # ==========================================
 # DASHBOARD
 # ==========================================
@@ -326,410 +333,6 @@ def billing_create_view(request, request_id):
     return render(request, "billing/billing_create.html", ctx)
 
 
-# UPDATED
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.utils import timezone
-from django.db import transaction
-from django.db.models import Sum
-from decimal import Decimal as D
-
-
-# # ========================================
-# # 1. AUTHORIZE TO PROCEED (Emergency/VIP)
-# # ========================================
-# @login_required
-# @require_capability('can_authorize_billing')
-# def authorize_billing_view(request, pk):
-#     """
-#     Authorize sample collection to proceed WITHOUT payment.
-#     Debt remains tracked - use for emergencies, VIP, or pre-approved cases.
-    
-#     Real-world scenarios:
-#     - Emergency patient needs immediate testing
-#     - VIP/staff with monthly billing arrangement
-#     - Insurance pre-authorization pending
-    
-#     Status: UNPAID → AUTHORIZED (debt still exists)
-#     """
-#     billing = get_object_or_404(
-#         BillingInformation,
-#         pk=pk,
-#         vendor=request.user.vendor
-#     )
-
-#     # Already cleared - no action needed
-#     if billing.payment_status in ('PAID', 'AUTHORIZED', 'WAIVED'):
-#         messages.info(request, "Billing already cleared for sample collection.")
-#         return redirect('billing:billing_detail', pk=pk)
-
-#     if request.method == 'POST':
-#         reason = request.POST.get('reason', '').strip()
-#         if not reason:
-#             messages.error(request, "Authorization reason is required.")
-#             return redirect('billing:billing_detail', pk=pk)
-
-#         billing.payment_status = 'AUTHORIZED'
-#         billing.authorized_by = request.user
-#         billing.authorized_at = timezone.now()
-#         billing.authorization_reason = reason
-#         billing.save()
-
-#         messages.success(
-#             request,
-#             f"✅ Billing authorized. Sample collection can proceed. "
-#             f"Outstanding balance: ₦{billing.total_amount:,.2f} (tracked for later payment)"
-#         )
-
-#     return redirect('billing:billing_detail', pk=pk)
-
-
-# # ========================================
-# # 2. WAIVE PAYMENT (Write-off)
-# # ========================================
-# @login_required
-# @require_capability('can_waive_billing')
-# def waive_billing_view(request, pk):
-#     """
-#     Completely waive/write-off payment - debt is forgiven.
-    
-#     Real-world scenarios:
-#     - Charity cases
-#     - Staff medical benefits
-#     - Goodwill gestures
-#     - Uncollectable debt write-offs
-    
-#     Status: ANY → WAIVED (debt eliminated)
-#     """
-#     billing = get_object_or_404(
-#         BillingInformation,
-#         pk=pk,
-#         vendor=request.user.vendor
-#     )
-
-#     # Already waived
-#     if billing.payment_status == 'WAIVED':
-#         messages.info(request, "Billing already waived.")
-#         return redirect('billing:billing_detail', pk=pk)
-
-#     if request.method == 'POST':
-#         reason = request.POST.get('waiver_reason', '').strip()
-#         waiver_type = request.POST.get('waiver_type', 'full')  # full or partial
-        
-#         if not reason:
-#             messages.error(request, "Waiver reason is required.")
-#             return redirect('billing:billing_detail', pk=pk)
-
-#         with transaction.atomic():
-#             if waiver_type == 'full':
-#                 # Full waiver - entire amount forgiven
-#                 billing.waiver_amount = billing.total_amount
-#                 billing.payment_status = 'WAIVED'
-#             else:
-#                 # Partial waiver - user specifies amount
-#                 partial_amount = request.POST.get('partial_waiver_amount', '0')
-#                 try:
-#                     partial_amount = D(partial_amount)
-#                     if partial_amount <= 0 or partial_amount > billing.total_amount:
-#                         raise ValueError("Invalid waiver amount")
-                    
-#                     billing.waiver_amount = partial_amount
-#                     # Recalculate - if balance is now zero, mark as waived
-#                     billing.save()  # Triggers recalculation
-                    
-#                     if billing.get_balance_due() <= D('0.00'):
-#                         billing.payment_status = 'WAIVED'
-                    
-#                 except (ValueError, TypeError):
-#                     messages.error(request, "Invalid waiver amount.")
-#                     return redirect('billing:billing_detail', pk=pk)
-
-#             billing.authorized_by = request.user
-#             billing.authorized_at = timezone.now()
-#             billing.authorization_reason = f"WAIVER: {reason}"
-#             billing.save()
-
-#             messages.success(
-#                 request,
-#                 f"✅ Payment waived (₦{billing.waiver_amount:,.2f}). "
-#                 f"Sample collection can proceed."
-#             )
-
-#     return redirect('billing:billing_detail', pk=pk)
-
-
-# # ========================================
-# # 3. CONFIRM CASH/TRANSFER PAYMENT (Reception)
-# # ========================================
-# @login_required
-# @require_capability('can_receive_payment')
-# def confirm_payment_view(request, pk):
-#     """
-#     Reception confirms cash or bank transfer payment received.
-#     Creates Payment record and updates billing status.
-    
-#     Real-world flow:
-#     1. Patient pays cash or shows transfer proof
-#     2. Receptionist confirms payment in system
-#     3. Receipt printed
-#     4. Sample collection proceeds
-    
-#     Status: UNPAID/PARTIAL → PAID (or PARTIAL if underpaid)
-#     """
-#     billing = get_object_or_404(
-#         BillingInformation,
-#         pk=pk,
-#         vendor=request.user.vendor
-#     )
-
-#     # Already fully paid
-#     if billing.payment_status == 'PAID':
-#         messages.info(request, "Billing already fully paid.")
-#         return redirect('billing:billing_detail', pk=pk)
-
-#     if request.method == 'POST':
-#         payment_method = request.POST.get('payment_method', '').strip()
-#         amount_str = request.POST.get('amount', '0').strip()
-#         transaction_ref = request.POST.get('transaction_reference', '').strip()
-#         payment_notes = request.POST.get('payment_notes', '').strip()
-
-#         # Validation
-#         if not payment_method:
-#             messages.error(request, "Payment method is required.")
-#             return redirect('billing:billing_detail', pk=pk)
-
-#         try:
-#             amount = D(amount_str)
-#             if amount <= D('0.00'):
-#                 raise ValueError("Amount must be greater than zero")
-#         except (ValueError, TypeError):
-#             messages.error(request, "Invalid payment amount.")
-#             return redirect('billing:billing_detail', pk=pk)
-
-#         # Get current balance
-#         balance_due = billing.get_balance_due()
-        
-#         if amount > balance_due:
-#             messages.warning(
-#                 request,
-#                 f"Payment amount (₦{amount:,.2f}) exceeds balance due (₦{balance_due:,.2f}). "
-#                 f"Accepting payment for full balance."
-#             )
-#             amount = balance_due
-
-#         try:
-#             with transaction.atomic():
-#                 # Create Payment record
-#                 payment = Payment.objects.create(
-#                     vendor=request.user.vendor,
-#                     billing=billing,
-#                     amount=amount,
-#                     payment_method=payment_method,
-#                     transaction_reference=transaction_ref,
-#                     payment_notes=payment_notes,
-#                     received_by=request.user,
-#                     payment_date=timezone.now(),
-#                     status='completed'
-#                 )
-
-#                 # Update billing status
-#                 new_balance = billing.get_balance_due()
-                
-#                 if new_balance <= D('0.00'):
-#                     billing.payment_status = 'PAID'
-#                     status_msg = "fully paid"
-#                 elif billing.payment_status == 'UNPAID':
-#                     billing.payment_status = 'PARTIAL'
-#                     status_msg = f"partially paid (₦{new_balance:,.2f} remaining)"
-#                 else:
-#                     status_msg = f"payment recorded (₦{new_balance:,.2f} remaining)"
-
-#                 billing.save()
-
-#                 messages.success(
-#                     request,
-#                     f"✅ Payment of ₦{amount:,.2f} confirmed. "
-#                     f"Billing is now {status_msg}. "
-#                     f"Receipt: {payment.receipt_number}"
-#                 )
-
-#         except Exception as e:
-#             messages.error(request, f"Error processing payment: {str(e)}")
-#             return redirect('billing:billing_detail', pk=pk)
-
-#     return redirect('billing:billing_detail', pk=pk)
-
-
-# # ========================================
-# # 4. BILLING DETAIL VIEW (Enhanced)
-# # ========================================
-# @login_required
-# def billing_detail_view(request, pk):
-#     """
-#     Comprehensive billing record with all payment/authorization options.
-#     """
-#     vendor = getattr(request.user, "vendor", None)
-#     if vendor is None:
-#         from django.core.exceptions import PermissionDenied
-#         raise PermissionDenied("Only vendors can view billing records.")
-
-#     try:
-#         billing = (
-#             BillingInformation.objects
-#             .select_related(
-#                 'request',
-#                 'request__patient',
-#                 'price_list',
-#                 'insurance_provider',
-#                 'corporate_client',
-#                 'authorized_by'
-#             )
-#             .prefetch_related(
-#                 'payments',
-#                 'request__requested_tests'
-#             )
-#             .get(pk=pk, vendor=vendor)
-#         )
-#     except BillingInformation.DoesNotExist:
-#         messages.error(request, "Billing record not found.")
-#         return redirect('billing:billing_list')
-
-#     test_request = billing.request
-
-#     # ========================================
-#     # BILLING STATE FLAGS
-#     # ========================================
-#     is_fully_paid = billing.is_fully_paid()
-#     is_authorized = billing.payment_status == 'AUTHORIZED'
-#     is_waived = billing.payment_status == 'WAIVED'
-#     is_blocked = billing.payment_status not in ('PAID', 'AUTHORIZED', 'WAIVED')
-    
-#     # Can proceed to sample collection?
-#     can_collect_sample = not is_blocked
-
-#     # ========================================
-#     # PAYMENT SUMMARY
-#     # ========================================
-#     total_paid = (
-#         billing.payments.aggregate(total=Sum('amount'))['total']
-#         or D('0.00')
-#     )
-#     balance_due = billing.get_balance_due()
-#     payment_count = billing.payments.count()
-
-#     # ========================================
-#     # TEST BREAKDOWN
-#     # ========================================
-#     test_details = []
-#     for lab_test in test_request.requested_tests.all():
-#         if billing.price_list:
-#             try:
-#                 price = lab_test.get_price_from_price_list(billing.price_list)
-#             except Exception:
-#                 price = lab_test.price
-#         else:
-#             price = lab_test.price
-
-#         test_details.append({
-#             'test': lab_test,
-#             'price': price,
-#         })
-
-#     # # ========================================
-#     # # SAMPLE STATUS
-#     # # ========================================
-#     # sample = getattr(test_request, 'sample', None)
-#     # sample_collected = sample is not None
-
-#     # ========================================
-#     # TIMELINE
-#     # ========================================
-#     timeline = [{
-#         'type': 'billing',
-#         'date': billing.created_at,
-#         'description': 'Billing record created',
-#         'amount': billing.total_amount,
-#         'user': None,
-#     }]
-
-#     if is_authorized and billing.authorized_at:
-#         timeline.append({
-#             'type': 'authorization',
-#             'date': billing.authorized_at,
-#             'description': f'Authorized to proceed',
-#             'reference': billing.authorization_reason,
-#             'user': billing.authorized_by,
-#         })
-
-#     if is_waived and billing.waiver_amount:
-#         timeline.append({
-#             'type': 'waiver',
-#             'date': billing.authorized_at,
-#             'description': f'Payment waived',
-#             'amount': billing.waiver_amount,
-#             'reference': billing.authorization_reason,
-#             'user': billing.authorized_by,
-#         })
-
-#     for payment in billing.payments.all():
-#         timeline.append({
-#             'type': 'payment',
-#             'date': payment.payment_date,
-#             'description': f'{payment.get_payment_method_display()} payment',
-#             'amount': payment.amount,
-#             'reference': payment.transaction_reference or payment.receipt_number,
-#             'user': payment.received_by,
-#         })
-
-#     timeline.sort(key=lambda x: x['date'], reverse=True)
-
-#     # ========================================
-#     # CONTEXT
-#     # ========================================
-#     context = {
-#         "billing": billing,
-#         "test_request": test_request,
-
-#         # State flags
-#         "is_fully_paid": is_fully_paid,
-#         "is_authorized": is_authorized,
-#         "is_waived": is_waived,
-#         "is_blocked": is_blocked,
-#         "can_collect_sample": can_collect_sample,
-#         # "sample_collected": sample_collected,
-
-#         # Financials
-#         "balance_due": balance_due,
-#         "total_paid": total_paid,
-#         "payment_count": payment_count,
-
-#         # # Permissions
-#         # "can_authorize": can_authorize,
-#         # "can_waive": can_waive,
-#         # "can_receive_payment": can_receive_payment,
-
-#         # Tests & Sample
-#         "test_details": test_details,
-#         # "sample": sample,
-
-#         # UI
-#         "timeline": timeline,
-        
-#         # Payment methods for form
-#         "payment_methods": [
-#             ('cash', 'Cash'),
-#             ('bank_transfer', 'Bank Transfer'),
-#             ('pos', 'POS/Card'),
-#             ('cheque', 'Cheque'),
-#             ('mobile_money', 'Mobile Money'),
-#         ],
-#     }
-
-#     return render(request, "billing/billing/detail3.html", context)
-
-
-
 # ========================================
 # 1. AUTHORIZE TO PROCEED (Emergency/VIP)
 # ========================================
@@ -851,108 +454,6 @@ def waive_billing_view(request, pk):
             )
 
     return redirect('billing:billing_detail', pk=pk)
-
-
-# ========================================
-# 3. CONFIRM CASH/TRANSFER PAYMENT (Reception)
-# ========================================
-# @login_required
-# @require_capability('can_receive_payment')
-# def confirm_payment_view(request, pk):
-#     """
-#     Reception confirms cash or bank transfer payment received.
-#     Creates Payment record and updates billing status.
-    
-#     Real-world flow:
-#     1. Patient pays cash or shows transfer proof
-#     2. Receptionist confirms payment in system
-#     3. Receipt printed
-#     4. Sample collection proceeds
-    
-#     Status: UNPAID/PARTIAL → PAID (or PARTIAL if underpaid)
-#     """
-#     billing = get_object_or_404(
-#         BillingInformation,
-#         pk=pk,
-#         vendor=request.user.vendor
-#     )
-
-#     # Already fully paid
-#     if billing.payment_status == 'PAID':
-#         messages.info(request, "Billing already fully paid.")
-#         return redirect('billing:billing_detail', pk=pk)
-
-#     if request.method == 'POST':
-#         payment_method = request.POST.get('payment_method', '').strip()
-#         amount_str = request.POST.get('amount', '0').strip()
-#         transaction_ref = request.POST.get('transaction_reference', '').strip()
-#         payment_notes = request.POST.get('payment_notes', '').strip()
-
-#         # Validation
-#         if not payment_method:
-#             messages.error(request, "Payment method is required.")
-#             return redirect('billing:billing_detail', pk=pk)
-
-#         try:
-#             amount = D(amount_str)
-#             if amount <= D('0.00'):
-#                 raise ValueError("Amount must be greater than zero")
-#         except (ValueError, TypeError):
-#             messages.error(request, "Invalid payment amount.")
-#             return redirect('billing:billing_detail', pk=pk)
-
-#         # Get current balance
-#         balance_due = billing.get_balance_due()
-        
-#         if amount > balance_due:
-#             messages.warning(
-#                 request,
-#                 f"Payment amount (₦{amount:,.2f}) exceeds balance due (₦{balance_due:,.2f}). "
-#                 f"Accepting payment for full balance."
-#             )
-#             amount = balance_due
-
-#         try:
-#             with transaction.atomic():
-#                 # Create Payment record
-#                 payment = Payment.objects.create(
-#                     vendor=request.user.vendor,
-#                     billing=billing,
-#                     amount=amount,
-#                     payment_method=payment_method,
-#                     transaction_reference=transaction_ref,
-#                     payment_notes=payment_notes,
-#                     received_by=request.user,
-#                     payment_date=timezone.now(),
-#                     status='completed'
-#                 )
-
-#                 # Update billing status
-#                 new_balance = billing.get_balance_due()
-                
-#                 if new_balance <= D('0.00'):
-#                     billing.payment_status = 'PAID'
-#                     status_msg = "fully paid"
-#                 elif billing.payment_status == 'UNPAID':
-#                     billing.payment_status = 'PARTIAL'
-#                     status_msg = f"partially paid (₦{new_balance:,.2f} remaining)"
-#                 else:
-#                     status_msg = f"payment recorded (₦{new_balance:,.2f} remaining)"
-
-#                 billing.save()
-
-#                 messages.success(
-#                     request,
-#                     f"✅ Payment of ₦{amount:,.2f} confirmed. "
-#                     f"Billing is now {status_msg}. "
-#                     f"Receipt: {payment.receipt_number}"
-#                 )
-
-#         except Exception as e:
-#             messages.error(request, f"Error processing payment: {str(e)}")
-#             return redirect('billing:billing_detail', pk=pk)
-
-#     return redirect('billing:billing_detail', pk=pk)
 
 
 @login_required
@@ -1573,3 +1074,406 @@ class BillingReportView(LoginRequiredMixin, View):
         return render(request, self.template_name, context)
      
      
+
+
+
+
+
+
+
+
+
+
+# # ========================================
+# # 1. AUTHORIZE TO PROCEED (Emergency/VIP)
+# # ========================================
+# @login_required
+# @require_capability('can_authorize_billing')
+# def authorize_billing_view(request, pk):
+#     """
+#     Authorize sample collection to proceed WITHOUT payment.
+#     Debt remains tracked - use for emergencies, VIP, or pre-approved cases.
+    
+#     Real-world scenarios:
+#     - Emergency patient needs immediate testing
+#     - VIP/staff with monthly billing arrangement
+#     - Insurance pre-authorization pending
+    
+#     Status: UNPAID → AUTHORIZED (debt still exists)
+#     """
+#     billing = get_object_or_404(
+#         BillingInformation,
+#         pk=pk,
+#         vendor=request.user.vendor
+#     )
+
+#     # Already cleared - no action needed
+#     if billing.payment_status in ('PAID', 'AUTHORIZED', 'WAIVED'):
+#         messages.info(request, "Billing already cleared for sample collection.")
+#         return redirect('billing:billing_detail', pk=pk)
+
+#     if request.method == 'POST':
+#         reason = request.POST.get('reason', '').strip()
+#         if not reason:
+#             messages.error(request, "Authorization reason is required.")
+#             return redirect('billing:billing_detail', pk=pk)
+
+#         billing.payment_status = 'AUTHORIZED'
+#         billing.authorized_by = request.user
+#         billing.authorized_at = timezone.now()
+#         billing.authorization_reason = reason
+#         billing.save()
+
+#         messages.success(
+#             request,
+#             f"✅ Billing authorized. Sample collection can proceed. "
+#             f"Outstanding balance: ₦{billing.total_amount:,.2f} (tracked for later payment)"
+#         )
+
+#     return redirect('billing:billing_detail', pk=pk)
+
+
+# # ========================================
+# # 2. WAIVE PAYMENT (Write-off)
+# # ========================================
+# @login_required
+# @require_capability('can_waive_billing')
+# def waive_billing_view(request, pk):
+#     """
+#     Completely waive/write-off payment - debt is forgiven.
+    
+#     Real-world scenarios:
+#     - Charity cases
+#     - Staff medical benefits
+#     - Goodwill gestures
+#     - Uncollectable debt write-offs
+    
+#     Status: ANY → WAIVED (debt eliminated)
+#     """
+#     billing = get_object_or_404(
+#         BillingInformation,
+#         pk=pk,
+#         vendor=request.user.vendor
+#     )
+
+#     # Already waived
+#     if billing.payment_status == 'WAIVED':
+#         messages.info(request, "Billing already waived.")
+#         return redirect('billing:billing_detail', pk=pk)
+
+#     if request.method == 'POST':
+#         reason = request.POST.get('waiver_reason', '').strip()
+#         waiver_type = request.POST.get('waiver_type', 'full')  # full or partial
+        
+#         if not reason:
+#             messages.error(request, "Waiver reason is required.")
+#             return redirect('billing:billing_detail', pk=pk)
+
+#         with transaction.atomic():
+#             if waiver_type == 'full':
+#                 # Full waiver - entire amount forgiven
+#                 billing.waiver_amount = billing.total_amount
+#                 billing.payment_status = 'WAIVED'
+#             else:
+#                 # Partial waiver - user specifies amount
+#                 partial_amount = request.POST.get('partial_waiver_amount', '0')
+#                 try:
+#                     partial_amount = D(partial_amount)
+#                     if partial_amount <= 0 or partial_amount > billing.total_amount:
+#                         raise ValueError("Invalid waiver amount")
+                    
+#                     billing.waiver_amount = partial_amount
+#                     # Recalculate - if balance is now zero, mark as waived
+#                     billing.save()  # Triggers recalculation
+                    
+#                     if billing.get_balance_due() <= D('0.00'):
+#                         billing.payment_status = 'WAIVED'
+                    
+#                 except (ValueError, TypeError):
+#                     messages.error(request, "Invalid waiver amount.")
+#                     return redirect('billing:billing_detail', pk=pk)
+
+#             billing.authorized_by = request.user
+#             billing.authorized_at = timezone.now()
+#             billing.authorization_reason = f"WAIVER: {reason}"
+#             billing.save()
+
+#             messages.success(
+#                 request,
+#                 f"✅ Payment waived (₦{billing.waiver_amount:,.2f}). "
+#                 f"Sample collection can proceed."
+#             )
+
+#     return redirect('billing:billing_detail', pk=pk)
+
+
+# # ========================================
+# # 3. CONFIRM CASH/TRANSFER PAYMENT (Reception)
+# # ========================================
+# @login_required
+# @require_capability('can_receive_payment')
+# def confirm_payment_view(request, pk):
+#     """
+#     Reception confirms cash or bank transfer payment received.
+#     Creates Payment record and updates billing status.
+    
+#     Real-world flow:
+#     1. Patient pays cash or shows transfer proof
+#     2. Receptionist confirms payment in system
+#     3. Receipt printed
+#     4. Sample collection proceeds
+    
+#     Status: UNPAID/PARTIAL → PAID (or PARTIAL if underpaid)
+#     """
+#     billing = get_object_or_404(
+#         BillingInformation,
+#         pk=pk,
+#         vendor=request.user.vendor
+#     )
+
+#     # Already fully paid
+#     if billing.payment_status == 'PAID':
+#         messages.info(request, "Billing already fully paid.")
+#         return redirect('billing:billing_detail', pk=pk)
+
+#     if request.method == 'POST':
+#         payment_method = request.POST.get('payment_method', '').strip()
+#         amount_str = request.POST.get('amount', '0').strip()
+#         transaction_ref = request.POST.get('transaction_reference', '').strip()
+#         payment_notes = request.POST.get('payment_notes', '').strip()
+
+#         # Validation
+#         if not payment_method:
+#             messages.error(request, "Payment method is required.")
+#             return redirect('billing:billing_detail', pk=pk)
+
+#         try:
+#             amount = D(amount_str)
+#             if amount <= D('0.00'):
+#                 raise ValueError("Amount must be greater than zero")
+#         except (ValueError, TypeError):
+#             messages.error(request, "Invalid payment amount.")
+#             return redirect('billing:billing_detail', pk=pk)
+
+#         # Get current balance
+#         balance_due = billing.get_balance_due()
+        
+#         if amount > balance_due:
+#             messages.warning(
+#                 request,
+#                 f"Payment amount (₦{amount:,.2f}) exceeds balance due (₦{balance_due:,.2f}). "
+#                 f"Accepting payment for full balance."
+#             )
+#             amount = balance_due
+
+#         try:
+#             with transaction.atomic():
+#                 # Create Payment record
+#                 payment = Payment.objects.create(
+#                     vendor=request.user.vendor,
+#                     billing=billing,
+#                     amount=amount,
+#                     payment_method=payment_method,
+#                     transaction_reference=transaction_ref,
+#                     payment_notes=payment_notes,
+#                     received_by=request.user,
+#                     payment_date=timezone.now(),
+#                     status='completed'
+#                 )
+
+#                 # Update billing status
+#                 new_balance = billing.get_balance_due()
+                
+#                 if new_balance <= D('0.00'):
+#                     billing.payment_status = 'PAID'
+#                     status_msg = "fully paid"
+#                 elif billing.payment_status == 'UNPAID':
+#                     billing.payment_status = 'PARTIAL'
+#                     status_msg = f"partially paid (₦{new_balance:,.2f} remaining)"
+#                 else:
+#                     status_msg = f"payment recorded (₦{new_balance:,.2f} remaining)"
+
+#                 billing.save()
+
+#                 messages.success(
+#                     request,
+#                     f"✅ Payment of ₦{amount:,.2f} confirmed. "
+#                     f"Billing is now {status_msg}. "
+#                     f"Receipt: {payment.receipt_number}"
+#                 )
+
+#         except Exception as e:
+#             messages.error(request, f"Error processing payment: {str(e)}")
+#             return redirect('billing:billing_detail', pk=pk)
+
+#     return redirect('billing:billing_detail', pk=pk)
+
+
+# # ========================================
+# # 4. BILLING DETAIL VIEW (Enhanced)
+# # ========================================
+# @login_required
+# def billing_detail_view(request, pk):
+#     """
+#     Comprehensive billing record with all payment/authorization options.
+#     """
+#     vendor = getattr(request.user, "vendor", None)
+#     if vendor is None:
+#         from django.core.exceptions import PermissionDenied
+#         raise PermissionDenied("Only vendors can view billing records.")
+
+#     try:
+#         billing = (
+#             BillingInformation.objects
+#             .select_related(
+#                 'request',
+#                 'request__patient',
+#                 'price_list',
+#                 'insurance_provider',
+#                 'corporate_client',
+#                 'authorized_by'
+#             )
+#             .prefetch_related(
+#                 'payments',
+#                 'request__requested_tests'
+#             )
+#             .get(pk=pk, vendor=vendor)
+#         )
+#     except BillingInformation.DoesNotExist:
+#         messages.error(request, "Billing record not found.")
+#         return redirect('billing:billing_list')
+
+#     test_request = billing.request
+
+#     # ========================================
+#     # BILLING STATE FLAGS
+#     # ========================================
+#     is_fully_paid = billing.is_fully_paid()
+#     is_authorized = billing.payment_status == 'AUTHORIZED'
+#     is_waived = billing.payment_status == 'WAIVED'
+#     is_blocked = billing.payment_status not in ('PAID', 'AUTHORIZED', 'WAIVED')
+    
+#     # Can proceed to sample collection?
+#     can_collect_sample = not is_blocked
+
+#     # ========================================
+#     # PAYMENT SUMMARY
+#     # ========================================
+#     total_paid = (
+#         billing.payments.aggregate(total=Sum('amount'))['total']
+#         or D('0.00')
+#     )
+#     balance_due = billing.get_balance_due()
+#     payment_count = billing.payments.count()
+
+#     # ========================================
+#     # TEST BREAKDOWN
+#     # ========================================
+#     test_details = []
+#     for lab_test in test_request.requested_tests.all():
+#         if billing.price_list:
+#             try:
+#                 price = lab_test.get_price_from_price_list(billing.price_list)
+#             except Exception:
+#                 price = lab_test.price
+#         else:
+#             price = lab_test.price
+
+#         test_details.append({
+#             'test': lab_test,
+#             'price': price,
+#         })
+
+#     # # ========================================
+#     # # SAMPLE STATUS
+#     # # ========================================
+#     # sample = getattr(test_request, 'sample', None)
+#     # sample_collected = sample is not None
+
+#     # ========================================
+#     # TIMELINE
+#     # ========================================
+#     timeline = [{
+#         'type': 'billing',
+#         'date': billing.created_at,
+#         'description': 'Billing record created',
+#         'amount': billing.total_amount,
+#         'user': None,
+#     }]
+
+#     if is_authorized and billing.authorized_at:
+#         timeline.append({
+#             'type': 'authorization',
+#             'date': billing.authorized_at,
+#             'description': f'Authorized to proceed',
+#             'reference': billing.authorization_reason,
+#             'user': billing.authorized_by,
+#         })
+
+#     if is_waived and billing.waiver_amount:
+#         timeline.append({
+#             'type': 'waiver',
+#             'date': billing.authorized_at,
+#             'description': f'Payment waived',
+#             'amount': billing.waiver_amount,
+#             'reference': billing.authorization_reason,
+#             'user': billing.authorized_by,
+#         })
+
+#     for payment in billing.payments.all():
+#         timeline.append({
+#             'type': 'payment',
+#             'date': payment.payment_date,
+#             'description': f'{payment.get_payment_method_display()} payment',
+#             'amount': payment.amount,
+#             'reference': payment.transaction_reference or payment.receipt_number,
+#             'user': payment.received_by,
+#         })
+
+#     timeline.sort(key=lambda x: x['date'], reverse=True)
+
+#     # ========================================
+#     # CONTEXT
+#     # ========================================
+#     context = {
+#         "billing": billing,
+#         "test_request": test_request,
+
+#         # State flags
+#         "is_fully_paid": is_fully_paid,
+#         "is_authorized": is_authorized,
+#         "is_waived": is_waived,
+#         "is_blocked": is_blocked,
+#         "can_collect_sample": can_collect_sample,
+#         # "sample_collected": sample_collected,
+
+#         # Financials
+#         "balance_due": balance_due,
+#         "total_paid": total_paid,
+#         "payment_count": payment_count,
+
+#         # # Permissions
+#         # "can_authorize": can_authorize,
+#         # "can_waive": can_waive,
+#         # "can_receive_payment": can_receive_payment,
+
+#         # Tests & Sample
+#         "test_details": test_details,
+#         # "sample": sample,
+
+#         # UI
+#         "timeline": timeline,
+        
+#         # Payment methods for form
+#         "payment_methods": [
+#             ('cash', 'Cash'),
+#             ('bank_transfer', 'Bank Transfer'),
+#             ('pos', 'POS/Card'),
+#             ('cheque', 'Cheque'),
+#             ('mobile_money', 'Mobile Money'),
+#         ],
+#     }
+
+#     return render(request, "billing/billing/detail3.html", context)
+
+

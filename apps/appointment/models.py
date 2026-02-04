@@ -111,12 +111,6 @@ class AppointmentSlot(models.Model):
     # -----------------
     # BUSINESS LOGIC
     # -----------------
-    # def _slot_datetime(self):
-    #     vendor_tz = pytz.timezone(self.vendor.timezone)
-    #     naive = timezone.datetime.combine(self.date, self.start_time)
-    #     return vendor_tz.localize(naive)
-
-
     def _slot_datetime(self):
     # def get_start_datetime(self):
         """Returns a timezone-aware datetime for the start of the slot."""

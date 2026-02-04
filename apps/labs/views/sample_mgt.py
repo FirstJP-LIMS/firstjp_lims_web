@@ -27,11 +27,19 @@ logger.setLevel(logging.INFO)
 # **************
 # Phase 2: Sample Examination                 
 # **************
+
 @login_required
 def sample_examination_list(request):
-    """List all samples awaiting verification or processing."""
-    samples = Sample.objects.filter(status__in=['AC', 'RJ', 'AP']).select_related('patient', 'test_request')
-    return render(request, 'laboratory/examination/sample_list.html', {'samples': samples})
+    """List all samples awaiting verification or processing for the specific vendor."""
+    # 1. Identity the vendor
+    vendor = request.user.vendor 
+    
+    samples = Sample.objects.filter(
+        vendor=vendor,                
+        status__in=['AC', 'RJ', 'AP']
+    ).select_related('patient', 'test_request')
+    
+    return render(request, 'laboratory/sample/sample_list.html', {'samples': samples})
 
 
 @login_required
@@ -91,6 +99,10 @@ def collect_sample_view(request, billing_pk):
                 return redirect('labs:sample-exam-list')
             except Exception as e:
                 messages.error(request, f"Database Error: {str(e)}")
+        else:
+        # LOG THE ERRORS to the console so you can see them immediately
+            print(form.errors) 
+            messages.error(request, "Please correct the errors in the form.")
     else:
         # Pre-fill with technician name
         form = SampleForm(initial={'collected_by': request.user.get_full_name()})
@@ -100,6 +112,106 @@ def collect_sample_view(request, billing_pk):
         'billing': billing,
         'test_request': test_request
     })
+
+
+# @login_required
+# @require_capability('can_collect_sample')
+# def collect_sample_view(request, billing_pk):
+#     vendor = request.user.vendor
+
+#     billing = get_object_or_404(
+#         BillingInformation.objects.select_related(
+#             'request',
+#             'request__patient'
+#         ),
+#         pk=billing_pk,
+#         vendor=vendor
+#     )
+
+#     test_request = billing.request
+
+#     # ─────────────────────────────────────────────
+#     # 1. Verification / Guard Clauses
+#     # ─────────────────────────────────────────────
+#     if billing.payment_status not in ('PAID', 'AUTHORIZED', 'WAIVED'):
+#         messages.error(request, "Clearance required from billing.")
+#         return redirect('billing:billing_detail', pk=billing.pk)
+
+#     if hasattr(test_request, 'sample'):
+#         messages.warning(request, "Sample already exists for this request.")
+#         return redirect('labs:sample_detail', pk=test_request.sample.pk)
+
+#     # ─────────────────────────────────────────────
+#     # 2. Sample Collection
+#     # ─────────────────────────────────────────────
+#     if request.method == 'POST':
+#         form = SampleForm(
+#             request.POST,
+#             instance=Sample(
+#                 vendor=vendor,
+#                 test_request=test_request,
+#                 patient=test_request.patient,
+#             )
+#         )
+
+#         if form.is_valid():
+#             try:
+#                 with transaction.atomic():
+#                     sample = form.save(commit=False)
+
+#                     # Enforce audit integrity
+#                     sample.collected_by = request.user.get_full_name()
+#                     sample.status = 'AC'
+#                     sample.save()  # sample_id auto-generated here
+
+#                     # Create test assignments
+#                     assignments = [
+#                         TestAssignment(
+#                             vendor=vendor,
+#                             request=test_request,
+#                             lab_test=lab_test,
+#                             sample=sample,
+#                             department=lab_test.assigned_department,
+#                             status='P',  # Pending Analysis
+#                         )
+#                         for lab_test in test_request.requested_tests.all()
+#                     ]
+#                     TestAssignment.objects.bulk_create(assignments)
+
+#                     # Advance request lifecycle
+#                     test_request.status = 'R'  # Sample Collected
+#                     test_request.save(update_fields=['status'])
+
+#                 messages.success(
+#                     request,
+#                     f"Sample {sample.sample_id} successfully collected."
+#                 )
+#                 return redirect('labs:sample-exam-list')
+
+#             except Exception as exc:
+#                 messages.error(request, "An unexpected error occurred while saving the sample.")
+#                 # Optional: logger.exception(exc)
+
+#         else:
+#             # Visible + debuggable validation feedback
+#             messages.error(request, "Please correct the errors below.")
+#             # Optional for dev:
+#             print(form.errors)
+
+#     else:
+#         form = SampleForm(initial={
+#             'collected_by': request.user.get_full_name()
+#         })
+
+#     return render(
+#         request,
+#         'laboratory/sample/collect_sample1.html',
+#         {
+#             'form': form,
+#             'billing': billing,
+#             'test_request': test_request,
+#         }
+#     )
 
 
 @login_required

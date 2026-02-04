@@ -31,7 +31,7 @@
                 <h1 class="h3 mb-1">Billing Record</h1>
                 <div class="text-muted">
                     Request ID: <strong>{{ test_request.request_id }}</strong>
-                    • Billing ID: <code>{{ billing.id }}</code>
+                    {% comment %} • Billing ID: <code>{{ billing.id }}</code> {% endcomment %}
                 </div>
             </div>
         </div>
@@ -293,18 +293,33 @@
                 <div class="card-body">
                     <p class="mb-3">
                         {% if is_fully_paid %}
-                        Payment has been received in full.
+                            <span class="text-success"><i class="fas fa-check-circle me-1"></i> Payment received in full.</span>
                         {% elif is_authorized %}
-                        Authorization granted. Debt of <strong>₦{{ billing.total_amount|floatformat:2 }}</strong> tracked.
+                            <span class="text-info"><i class="fas fa-file-signature me-1"></i> Authorization granted.</span> 
+                            Debt of <strong>₦{{ billing.total_amount|floatformat:2 }}</strong> tracked.
                         {% elif is_waived %}
-                        Payment has been waived.
+                            <span class="text-warning"><i class="fas fa-hand-holding-heart me-1"></i> Payment waived.</span>
                         {% endif %}
                     </p>
-                    <a href="{% url 'labs:collect_sample' billing_pk=billing.pk %}" 
-                       class="btn btn-success w-100">
-                        <i class="fas fa-syringe me-2"></i>Proceed to Sample Collection
-                    </a>
+
+                    {# Check if a sample has already been linked to this request #}
+                    {% if billing.request.samples.exists %}
+                        <div class="alert alert-secondary d-flex align-items-center justify-content-between mb-0">
+                            <div>
+                                <i class="fas fa-vial me-2"></i>
+                                <strong>Sample Collected</strong>
+                            </div>
+                        </div>
+                    {% else %}
+                        {# Only show the collection button if no sample exists yet #}
+                        <a href="{% url 'labs:collect_sample' billing_pk=billing.pk %}" 
+                        class="btn btn-success w-100">
+                            <i class="fas fa-syringe me-2"></i>Proceed to Sample Collection
+                        </a>
+                    {% endif %}
                 </div>
+
+
             </div>
             {% endif %}
             

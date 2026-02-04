@@ -3,6 +3,8 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 import logging
+import uuid 
+
 
 logger = logging.getLogger(__name__)
 
@@ -12,16 +14,7 @@ class PatientUser(models.Model):
     Links an authenticated user account to lab patient records.
     Created automatically during patient registration.
     """
-    # user = models.ForeignKey(
-    #     settings.AUTH_USER_MODEL,
-    #     on_delete=models.CASCADE,
-    #     related_name='patient_links'
-    # )
-    # patient = models.ForeignKey(
-    #     'labs.Patient',
-    #     on_delete=models.CASCADE,
-    #     related_name='user_links'
-    # )
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='patient_profile', help_text="Link to authenticated user account")
     
@@ -96,3 +89,4 @@ class PatientUser(models.Model):
         """Track portal login time."""
         self.last_portal_login = timezone.now()
         self.save(update_fields=['last_portal_login'])
+

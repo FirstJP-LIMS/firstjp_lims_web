@@ -339,12 +339,12 @@ class Sample(models.Model):
         ('ST', 'Stored'), # In cold storage after analysis
         ('CO', 'Consumed'),      # Fully used up in processing
     ]
-
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="samples")  # ✅ Direct reference
     test_request = models.ForeignKey('TestRequest', on_delete=models.CASCADE, related_name='samples')
     patient = models.ForeignKey('Patient', on_delete=models.CASCADE, related_name="samples")
 
-    sample_id = models.CharField(max_length=64, unique=True, help_text="Globally unique barcode/sample ID (auto-generated).")
+    sample_id = models.CharField(max_length=64, help_text="Globally unique barcode/sample ID (auto-generated).")
 
     specimen_type = models.CharField(max_length=100, help_text="Specimen type e.g., Blood, Urine, Serum, Swab, etc.")
     specimen_description = models.TextField(blank=True, null=True)
@@ -384,6 +384,13 @@ class Sample(models.Model):
         ordering = ['-collected_at']
         verbose_name = "Sample / Specimen"
         verbose_name_plural = "Samples / Specimens"
+        # This is the key for multitenancy:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['vendor', 'sample_id'], 
+                name='unique_sample_per_vendor'
+            )
+        ]
 
     def save(self, *args, **kwargs):
         """Auto-generate unique sample ID if not set."""
@@ -470,11 +477,6 @@ class Sample(models.Model):
         return f"{self.sample_id} — {self.specimen_type}"
 
 
-# ------------------------
-# TEST REQUEST MODEL
-# ------------------------
-    
-
 class TestRequest(models.Model):
     """
     Represents a full lab order for a patient, possibly containing multiple tests.
@@ -495,6 +497,8 @@ class TestRequest(models.Model):
         ('V', 'Verified'),  # Final report verified and ready for release
         ('X', 'Rejected'),          # 🆕 Order rejected (insufficient info, contraindicated, etc.)
     ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="requests")
     patient = models.ForeignKey('Patient', on_delete=models.PROTECT, related_name="requests")
@@ -714,6 +718,8 @@ class TestAssignment(models.Model):
         ('V', 'Result Verified'),
     ]
 
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    
     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="assignments")  # ✅ Direct reference
     request = models.ForeignKey('TestRequest', on_delete=models.CASCADE, related_name="assignments")
     lab_test = models.ForeignKey('VendorTest', on_delete=models.PROTECT, related_name="assignments") 
@@ -802,9 +808,11 @@ class TestResult(models.Model):
     - QC, Delta checks, AMR, CRR, Panic values
     """
 
-    # ======================================================
-    # RELATIONSHIP
-    # ======================================================
+    # ====================
+    # RELATIONSHIP...
+    # ====================
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     assignment = models.OneToOneField(
         'TestAssignment',
@@ -812,9 +820,9 @@ class TestResult(models.Model):
         related_name="result"
     )
 
-    # ==================================
+    # =======================
     # RESULT STATE MACHINE
-    # ==================================
+    # =======================
 
     RESULT_STATUS = [
         ('draft', 'Draft'),
@@ -829,9 +837,9 @@ class TestResult(models.Model):
         default='draft'
     )
 
-    # ======================================================
+    # ==============
     # RESULT DATA
-    # ======================================================
+    # ==============
 
     result_value = models.TextField()
     units = models.CharField(max_length=50, blank=True)
@@ -864,9 +872,9 @@ class TestResult(models.Model):
     instrument_name = models.CharField(max_length=150, blank=True)
     instrument_run_id = models.CharField(max_length=100, blank=True)
 
-    # ======================================================
+    # =======================
     # AUDIT FIELDS
-    # ======================================================
+    # =======================
 
     entered_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -894,18 +902,18 @@ class TestResult(models.Model):
     )
     released_at = models.DateTimeField(null=True, blank=True)
 
-    # ======================================================
+    # ======================
     # AMENDMENT CONTROL
-    # ======================================================
+    # ======================
 
     is_amended = models.BooleanField(default=False)
     version = models.PositiveIntegerField(default=1)
     previous_value = models.TextField(blank=True)
     amendment_reason = models.TextField(blank=True)
 
-    # ======================================================
+    # =======================
     # QUALITY CONTROL
-    # ======================================================
+    # =======================
 
     qc_passed = models.BooleanField(default=True)
     qc_comment = models.TextField(blank=True)
@@ -913,9 +921,9 @@ class TestResult(models.Model):
     delta_flag = models.BooleanField(default=False)
     delta_percent = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
 
-    # ======================================================
+    # ============
     # META
-    # ======================================================
+    # ============
 
     class Meta:
         ordering = ['-entered_at']
@@ -937,9 +945,9 @@ class TestResult(models.Model):
             models.Index(fields=['flag', 'data_source']),
         ]
 
-    # ======================================================
+    # ===========================
     # STATE TRANSITIONS (STRICT)
-    # ======================================================
+    # ===========================
 
     def verify(self, user):
         """
@@ -1001,9 +1009,9 @@ class TestResult(models.Model):
 
         self.save()
 
-    # ======================================================
+    # ============================
     # SCIENTIFIC UTILITIES
-    # ======================================================
+    # ===========================
 
     @property
     def test(self):
@@ -1027,9 +1035,9 @@ class TestResult(models.Model):
             return f"{self.result_value} {self.units}"
         return self.result_value
 
-    # ======================================================
+    # =========================
     # VALIDATION
-    # ======================================================
+    # =========================
 
     def clean(self):
         if self.is_quantitative:
@@ -1038,9 +1046,9 @@ class TestResult(models.Model):
             except (InvalidOperation, ValueError):
                 raise ValidationError({"result_value": "Quantitative result must be numeric."})
 
-    # ======================================================
+    # ==================================
     # AUTO FLAGGING (UNCHANGED LOGIC, GOVERNED SAVE)
-    # ======================================================
+    # =================================
 
     def auto_flag_result(self):
         """
@@ -1112,7 +1120,6 @@ class ResultAmendment(models.Model):
     def __str__(self):
         return f"Amendment for {self.result.id} on {self.amended_at.date()}"
     
-
 
 
 class Equipment(models.Model):

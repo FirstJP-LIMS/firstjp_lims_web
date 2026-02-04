@@ -44,31 +44,24 @@ def check_tenant_access(request):
 #         counter.refresh_from_db()
 #         return f"{prefix}{counter.last_number:06d}"
 
+# Django handles nested atomics automatically.
 
 def get_next_sequence(prefix: str, vendor=None) -> str:
-    """
-    Thread-safe and tenant-aware counter generator.
-    Uses row-level locking to prevent duplicate IDs in high-concurrency environments.
-    """
     from apps.labs.models import SequenceCounter 
 
-    with transaction.atomic():
-        # select_for_update() locks this specific row until the transaction commits
-        counter, created = SequenceCounter.objects.select_for_update().get_or_create(
-            vendor=vendor,
-            prefix=prefix,
-            defaults={"last_number": 0}
-        )
+    counter, created = SequenceCounter.objects.select_for_update().get_or_create(
+        vendor=vendor,
+        prefix=prefix,
+        defaults={"last_number": 0}
+    )
 
-        # Increment using F() to avoid race conditions at the python level
-        counter.last_number = F("last_number") + 1
-        counter.save(update_fields=["last_number"])
-        
-        # We must refresh to get the new integer value back from the DB
-        counter.refresh_from_db()
-        
-        return f"{prefix}{counter.last_number:06d}"
-
+    counter.last_number = F("last_number") + 1
+    counter.save(update_fields=["last_number"])
+    counter.refresh_from_db()
+    
+    # Optional: Add vendor ID to the string to make it globally unique for your own peace of mind
+    return f"{vendor.tenant_id}-{prefix}{counter.last_number:06d}" 
+    # return f"{prefix}{counter.last_number:06d}"
 
 # utils.py
 import io

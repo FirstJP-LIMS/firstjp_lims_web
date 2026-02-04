@@ -7,11 +7,12 @@ ADMIN
 medvuno@gmail.com
 medvuno
 
-Vendor1 -- http://olulori.localhost.test:8000
-ADMIN
-lastborn.ai@gmail.com
-olulori#12345
+Vendor1 -- 
+iarowosola@yahoo.com
+password#12345
 
+iarowosola25@gmail.com
+password#1234567
 
 """
 

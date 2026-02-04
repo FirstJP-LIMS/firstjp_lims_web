@@ -475,12 +475,34 @@
                         </h6>
                         <div class="d-grid gap-2">
 
-                            {% for assignment in sample.assignments.all %}
+                            {% comment %} {% for assignment in sample.assignments.all %}
                                 {% if user.can_enter_results and sample.status == 'AP' %}
                                     <a href="{% url 'labs:enter_manual_test_result' assignment.id %}"
                                     class="btn btn-outline-primary btn-sm mb-1">
                                         Enter Result ({{ assignment.lab_test.code }})
                                     </a>
+                                {% endif %}
+                            {% endfor %} {% endcomment %}
+
+                            {% for assignment in sample.assignments.all %}
+                                {% if assignment.result %}
+                                    {# Case 1: Result already exists #}
+                                    <span class="badge bg-success text-white mb-1 d-inline-block">
+                                        <i class="bi bi-check-circle-fill"></i> Result Entered ({{ assignment.lab_test.code }})
+                                    </span>
+                                {% else %}
+                                    {# Case 2: No result yet, check if user has permission to enter one #}
+                                    {% if user.can_enter_results and sample.status == 'AP' %}
+                                        <a href="{% url 'labs:enter_manual_test_result' assignment.id %}"
+                                        class="btn btn-outline-primary btn-sm mb-1">
+                                            <i class="bi bi-plus-circle"></i> Enter Result ({{ assignment.lab_test.code }})
+                                        </a>
+                                    {% else %}
+                                        {# Case 3: Waiting for sample approval or permissions #}
+                                        <span class="badge bg-light text-muted mb-1">
+                                            Pending ({{ assignment.lab_test.code }})
+                                        </span>
+                                    {% endif %}
                                 {% endif %}
                             {% endfor %}
 
