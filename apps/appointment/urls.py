@@ -8,15 +8,16 @@ urlpatterns = [
     # =====================================================
     # PUBLIC / PATIENT-FACING APPOINTMENTS
     # =====================================================
-    path('booking/', appointments.appointment_booking,name='public_appointment_book'),
     path('booking/confirmation/<uuid:pk>/', appointments.appointment_detail, name='public_appointment_detail'),
+
+    path('booking/', appointments.appointment_booking,name='public_appointment_book'), # To be used by visitors without authetication
     
-    path('appointments/book/<slug:subdomain_prefix>/', appointments.appointment_booking, name='public_appointment_book_vendor'),
+    path('appointments/book/<slug:subdomain_prefix>/', appointments.appointment_booking, name='public_appointment_book_vendor'), # To be used in the lab or by registered patient
+
+    path('appointments/book/<int:vendor_id>/', appointments.appointment_booking, name='public_appointment_book_vendor'), # To be used in the lab or by registered patient
 
     # # Should be for staffs 
-    
-    # path('appointments/<str:appointment_id>/cancel/', appointments.appointment_cancel, name='public_appointment_cancel'),
-    
+     
     # ========================================
     # STAFF — APPOINTMENT OPERATIONS
     # ========================================

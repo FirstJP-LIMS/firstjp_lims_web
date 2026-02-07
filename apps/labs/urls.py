@@ -37,11 +37,14 @@ app_name = "labs"
 urlpatterns = [
     # dashboard
     path('dashboard/', base.dashboard, name='vendor_dashboard'),
+
     path('assistants/', base.lab_assistants, name='lab_assistants'),
+    
     path('profile/', base.profile, name='vendor_profile'),
 
     # Patient Seen in the Lab
     path('patient/', patient.PatientListView.as_view(), name="patient_list"),
+    
     path('patient-detail/<int:pk>/', patient.PatientDetailView.as_view(), name="patient_detail"),
 
     # Lab Setup

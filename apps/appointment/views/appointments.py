@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 from django.http import Http404
 
 @transaction.atomic
-def appointment_booking(request):
+def appointment_booking(request, *args, **kwargs):
     vendor = getattr(request, 'tenant', None)
     if not vendor:
         raise Http404("Vendor context not resolved")
@@ -44,7 +44,6 @@ def appointment_booking(request):
                 user=request.user
             )
             messages.success(request, "Appointment booked successfully.")
-            # return redirect('appointment:public_appointment_detail', appointment_id=appointment.appointment_id)
             return redirect('appointment:public_appointment_detail', pk=appointment.id)
         except ValidationError as e:
             messages.error(request, str(e))

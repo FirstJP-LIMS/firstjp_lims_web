@@ -42,18 +42,3 @@ class PatientDetailView(DetailView):
         context['total_appointments'] = self.object.appointments.count()
         return context
     
-
-# <script>
-#     tailwind.config = {
-#         theme: {
-#             extend: {
-#                 colors: {
-#                     'navy': '#001f40',
-#                     'medvuno-red': '#cc0033',
-#                     'medvuno-gold': '#d4af37',
-#                 }
-#             }
-#         }
-#     }
-# </script>
-
