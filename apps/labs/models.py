@@ -856,7 +856,7 @@ class TestResult(models.Model):
         ('*', 'Corrected'),
     ]
 
-    flag = models.CharField(max_length=15, choices=FLAG_CHOICES, default='N')
+    flag = models.CharField(max_length=1, choices=FLAG_CHOICES, default='N')
 
     remarks = models.TextField(blank=True)
     interpretation = models.TextField(blank=True)

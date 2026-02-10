@@ -63,10 +63,9 @@ def _handle_manual_result_submission(request, assignment, result):
 
             result.auto_flag_result()
 
-            # result.save()
-
             # Ensure assignment is updated
-            assignment.status = 'entered' # Or assignment.mark_analyzed()
+            assignment.mark_analyzed()
+            
             assignment.save()
 
             messages.success(request, "Result saved successfully.")
