@@ -619,12 +619,19 @@ def download_result_pdf(request, result_id):
         assignment__vendor=request.user.vendor
     )
 
-    # Fetch history just like your detail view does
+    # # Fetch history just like your detail view does
+    # previous_results = TestResult.objects.filter(
+    #     assignment__request__patient=result.assignment.request.patient,
+    #     assignment__lab_test=result.assignment.lab_test,
+    #     released=True
+    # ).exclude(id=result.id).order_by('-entered_at')[:3] # Show last 3 for trend
+   
     previous_results = TestResult.objects.filter(
         assignment__request__patient=result.assignment.request.patient,
         assignment__lab_test=result.assignment.lab_test,
-        released=True
-    ).exclude(id=result.id).order_by('-entered_at')[:3] # Show last 3 for trend
+        status='released'
+    ).exclude(id=result.id).order_by('-entered_at')[:3]
+
 
     context = {
         'result': result,
@@ -672,47 +679,4 @@ def send_result_email(result):
     email.attach(filename, pdf_content, 'application/pdf')
     
     return email.send()
-
-
-
-# @login_required
-# @require_capability("can_enter_results")
-# @require_http_methods(["GET", "POST"])
-# def update_manual_result(request, result_id):
-#     result = get_object_or_404(
-#         TestResult.objects.select_related(
-#             "assignment__lab_test",
-#             "assignment__vendor",
-#             "assignment__sample",
-#         ),
-#         id=result_id,
-#         assignment__vendor=request.user.vendor,
-#     )
-
-#     assignment = result.assignment
-
-#     # ❌ Hard stop if not draft
-#     if result.status != "draft":
-#         messages.error(
-#             request,
-#             "Only draft results can be updated."
-#         )
-#         return redirect(
-#             "labs:sample-exam-detail",
-#             sample_id=assignment.sample.sample_id,
-#         )
-
-#     if request.method == "POST":
-#         return _handle_manual_result_submission(
-#             request=request,
-#             assignment=assignment,
-#             result=result,
-#         )
-
-#     return _render_manual_result_form(
-#         request=request,
-#         assignment=assignment,
-#         result=result,
-#     )
-
 
