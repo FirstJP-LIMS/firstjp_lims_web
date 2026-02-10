@@ -89,7 +89,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     # CORE IDENTITY FIELDS
     # =====================================
 
-    email = models.EmailField()
+    # email = models.EmailField()
+    email = models.EmailField(unique=True) # Add unique=True
     first_name = models.CharField(max_length=150, blank=True)
     last_name = models.CharField(max_length=150, blank=True)
     contact_number = PhoneNumberField(blank=True, null=True)
