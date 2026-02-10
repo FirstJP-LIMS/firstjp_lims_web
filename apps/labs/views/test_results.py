@@ -62,7 +62,8 @@ def _handle_manual_result_submission(request, assignment, result):
                 result.interpretation = request.POST.get("interpretation", "").strip()
 
             result.auto_flag_result()
-            result.save()
+
+            # result.save()
 
             # Ensure assignment is updated
             assignment.status = 'entered' # Or assignment.mark_analyzed()
@@ -73,6 +74,7 @@ def _handle_manual_result_submission(request, assignment, result):
 
     except Exception as e:
         messages.error(request, f"Error saving result: {e}")
+        print(f"CRITICAL: Failed to save field values: flag={result.flag}, value={result.result_value}")
         return _render_manual_result_form(request, assignment, result)
     
 
