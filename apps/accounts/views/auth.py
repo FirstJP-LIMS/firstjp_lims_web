@@ -11,6 +11,7 @@ from django.shortcuts import render, redirect
 from django_ratelimit.decorators import ratelimit
 from django.contrib.auth import get_user_model
 import logging
+from django.contrib.messages import get_messages
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -108,7 +109,6 @@ def learn_register(request, role_name):
         'role_name': role_name.title(),
     })
 
-from django.contrib.messages import get_messages
 
 # @ratelimit(key='ip', rate='5/m', method='POST')
 def tenant_login(request):
@@ -211,6 +211,7 @@ def tenant_logout(request):
     Tasks to complete:
     Password Resetting...
 """
+
 # apps/accounts/views.py
 from django.contrib.auth import views as auth_views
 
@@ -240,6 +241,7 @@ class TenantPasswordResetView(auth_views.PasswordResetView):
                 f"If your email is registered with {tenant.name}, you'll receive reset instructions."
             )
         return super().form_valid(form)
+
 
 # ------------------------------
 # Tenant-Aware Auth. ends here
