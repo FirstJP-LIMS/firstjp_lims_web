@@ -13,10 +13,13 @@ from .models import VendorProfile
 from django import forms
 from apps.labs.models import Equipment, Department
 
+from django.contrib.auth.forms import SetPasswordForm
+from django.core.exceptions import ValidationError
+import re
+
 
 User = get_user_model()
 
-# TENANT_ALLOWED = {'vendor_admin', 'lab_staff', 'clinician', 'patient'}
 LEARN_ALLOWED = {'learner', 'facilitator'}
 TENANT_ALLOWED = {'lab_staff', 'clinician', 'patient'}
 
@@ -370,6 +373,167 @@ class TenantPasswordResetForm(PasswordResetForm):
         )
 
 
+class TenantSetPasswordForm(SetPasswordForm):
+    """
+    Enhanced password reset form with tenant awareness and strong validation.
+    
+    SCALABILITY NOTES:
+    - Validation rules defined here apply to both Django and REST API
+    - Password complexity requirements are business rules (centralized)
+    - Can be serialized to JSON schema for frontend validation
+    """
+    
+    def __init__(self, user, *args, **kwargs):
+        super().__init__(user, *args, **kwargs)
+        
+        # Update field styling
+        self.fields['new_password1'].widget.attrs.update({
+            'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
+            'placeholder': 'Enter new password',
+            'autocomplete': 'new-password'
+        })
+        self.fields['new_password2'].widget.attrs.update({
+            'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
+            'placeholder': 'Confirm new password',
+            'autocomplete': 'new-password'
+        })
+        
+        # Update labels
+        self.fields['new_password1'].label = 'New Password'
+        self.fields['new_password2'].label = 'Confirm New Password'
+        
+        # Add help text
+        self.fields['new_password1'].help_text = (
+            'Password must be at least 8 characters and contain: '
+            'uppercase, lowercase, number, and special character.'
+        )
+    
+    def clean_new_password1(self):
+        """
+        Enforce strong password requirements.
+        
+        BUSINESS RULES:
+        - Minimum 8 characters
+        - At least one uppercase letter
+        - At least one lowercase letter
+        - At least one digit
+        - At least one special character
+        - Cannot contain common patterns (e.g., "password", "12345")
+        
+        REST API NOTE:
+        These same rules will be enforced via DRF serializer validators
+        """
+        password = self.cleaned_data.get('new_password1')
+        
+        if not password:
+            raise ValidationError("Password is required.")
+        
+        # Minimum length
+        if len(password) < 8:
+            raise ValidationError("Password must be at least 8 characters long.")
+        
+        # Must contain uppercase
+        if not re.search(r'[A-Z]', password):
+            raise ValidationError("Password must contain at least one uppercase letter.")
+        
+        # Must contain lowercase
+        if not re.search(r'[a-z]', password):
+            raise ValidationError("Password must contain at least one lowercase letter.")
+        
+        # Must contain digit
+        if not re.search(r'\d', password):
+            raise ValidationError("Password must contain at least one number.")
+        
+        # Must contain special character
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+            raise ValidationError(
+                "Password must contain at least one special character (!@#$%^&* etc.)."
+            )
+        
+        # Check for common weak patterns
+        weak_patterns = [
+            'password', '12345678', 'qwerty', 'abc123', 
+            'letmein', 'welcome', 'admin'
+        ]
+        
+        for pattern in weak_patterns:
+            if pattern in password.lower():
+                raise ValidationError(
+                    f"Password cannot contain common patterns like '{pattern}'."
+                )
+        
+        # Check if password contains user's email (if available)
+        user = self.user
+        if user and user.email:
+            email_parts = user.email.lower().split('@')[0]
+            if len(email_parts) > 3 and email_parts in password.lower():
+                raise ValidationError("Password cannot contain parts of your email address.")
+        
+        return password
+    
+    def save(self, commit=True):
+        """
+        Save new password and log the reset.
+        
+        AUDIT TRAIL:
+        - Password resets should be logged for security auditing
+        - Track: user, timestamp, IP address (if available)
+        """
+        user = super().save(commit=False)
+        
+        if commit:
+            user.save()
+            
+            # Log password reset (for security audit)
+            logger.info(
+                f"Password reset completed for user: {user.email} "
+                f"(ID: {user.id}, Tenant: {user.vendor})"
+            )
+            
+            # Optional: Send confirmation email
+            # self._send_password_changed_notification(user)
+        
+        return user
+    
+    def _send_password_changed_notification(self, user):
+        """
+        Send email notification that password was changed.
+        
+        SECURITY BEST PRACTICE:
+        - Alerts user if password was changed without their knowledge
+        - Provides contact info for reporting unauthorized access
+        
+        REST API NOTE:
+        This would be triggered via Celery task for async processing
+        """
+        from django.core.mail import send_mail
+        from django.template.loader import render_to_string
+        from django.conf import settings
+        
+        context = {
+            'user': user,
+            'tenant': user.vendor,
+            'timestamp': timezone.now(),
+            'support_email': settings.DEFAULT_FROM_EMAIL,
+        }
+        
+        email_body = render_to_string(
+            'authentication/password_reset/password_changed_notification.html',
+            context
+        )
+        
+        try:
+            send_mail(
+                subject='Your Password Was Changed',
+                message=email_body,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                fail_silently=True,
+            )
+        except Exception as e:
+            logger.error(f"Failed to send password change notification: {str(e)}")
+
+
 class VendorProfileForm(forms.ModelForm):
     class Meta:
         model = VendorProfile
@@ -419,210 +583,4 @@ class EquipmentForm(forms.ModelForm):
             raise forms.ValidationError("Equipment with this serial number already exists.")
         return serial
 
-
-
-# # apps/accounts/forms.py
-# from django import forms
-# from django.contrib.auth import get_user_model
-# from apps.tenants.models import Vendor
-# from django.contrib.auth.forms import AuthenticationForm
-
-# User = get_user_model()
-
-# class RegistrationForm(forms.ModelForm):
-#     password1 = forms.CharField(
-#         widget=forms.PasswordInput(attrs={
-#             'class': 'form-control',
-#             'placeholder': 'Create a strong password'
-#         }),
-#         label="Password"
-#     )
-#     password2 = forms.CharField(
-#         widget=forms.PasswordInput(attrs={
-#             'class': 'form-control',
-#             'placeholder': 'Confirm your password'
-#         }),
-#         label="Confirm Password"
-#     )
-
-#     class Meta:
-#         model = User
-#         fields = ('email', 'first_name', 'last_name')
-#         widgets = {
-#             'email': forms.EmailInput(attrs={
-#                 'class': 'form-control',
-#                 'placeholder': 'your@email.com'
-#             }),
-#             'first_name': forms.TextInput(attrs={
-#                 'class': 'form-control',
-#                 'placeholder': 'First Name'
-#             }),
-#             'last_name': forms.TextInput(attrs={
-#                 'class': 'form-control', 
-#                 'placeholder': 'Last Name'
-#             }),
-#         }
-
-#     def clean_password2(self):
-#         p1 = self.cleaned_data.get('password1')
-#         p2 = self.cleaned_data.get('password2')
-#         if p1 and p2 and p1 != p2:
-#             raise forms.ValidationError('Passwords do not match')
-#         return p2
-
-#     def clean_email(self):
-#         # email can exist across vendors — so check within vendor in save() instead if needed
-#         return self.cleaned_data['email'].lower()
-
-#     # def save(self, commit=True, vendor=None, role='lab_staff'):
-#     #     user = super().save(commit=False)
-#     #     user.set_password(self.cleaned_data['password1'])
-#     #     user.role = role
-#     #     if vendor:
-#     #         user.vendor = vendor
-#     #     else:
-#     #         user.vendor = None
-#     #     if role in ('platform_admin',):
-#     #         user.is_staff = True
-#     #     if commit:
-#     #         user.save()
-#     #     return user
-    
-#     def save(self, commit=True, vendor=None, role='lab_staff'):
-#         """
-#         Save a global user. Tenant-specific role/membership should be created separately.
-#         """
-#         user = super().save(commit=False)
-#         user.set_password(self.cleaned_data['password1'])
-#         user.role = role
-
-#         # Platform-level admin gets staff access
-#         if role in ('platform_admin',):
-#             user.is_staff = True
-
-#         if commit:
-#             user.save()
-#             # If tenant is provided, create membership here
-#             if vendor:
-#                 from .models import UserTenantMembership
-#                 UserTenantMembership.objects.create(
-#                     user=user,
-#                     vendor=vendor,
-#                     role=role
-#                 )
-#         return user
-
-
-# class TenantAuthenticationForm(AuthenticationForm):
-#     email = forms.EmailField(
-#         widget=forms.EmailInput(attrs={
-#             'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
-#             'placeholder': 'Enter your email address',
-#             'autofocus': True,
-#         }),
-#         label='Email Address',
-#     )
-#     password = forms.CharField(
-#         widget=forms.PasswordInput(attrs={
-#             'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
-#             'placeholder': 'Enter your password',
-#         }),
-#         label='Password',
-#     )
-
-# # apps/accounts/forms.py (add)
-
-
-# class TenantPasswordResetForm(PasswordResetForm):
-#     """
-#     Tenant-scoped password reset lookup.
-#     """
-#     def get_users(self, email):
-#         tenant = getattr(self.request, 'tenant', None)
-#         email = email.lower()
-#         qs = User._default_manager.filter(email__iexact=email, is_active=True)
-
-#         if tenant:
-#             qs = qs.filter(memberships__vendor=tenant, memberships__is_active=True)
-#         else:
-#             qs = qs.filter(vendor__isnull=True)
-
-#         return qs
-
-
-
-
-# # class TenantPasswordResetForm(PasswordResetForm):
-# #     """
-# #     Override to perform tenant-scoped lookup.
-# #     """
-# #     def get_users(self, email):
-# #         """Yield active users matching the email for the current tenant."""
-# #         # request is available as self.request when using PasswordResetView; ensure you pass request.
-# #         tenant = getattr(self.request, 'tenant', None)
-# #         email = email.lower()
-# #         qs = User._default_manager.filter(email__iexact=email, is_active=True)
-# #         if tenant:
-# #             qs = qs.filter(vendor=tenant)
-# #         else:
-# #             qs = qs.filter(vendor__isnull=True)
-# #         return qs
-
-
-
-# from django import forms
-# from .models import VendorProfile
-
-# class VendorProfileForm(forms.ModelForm):
-#     class Meta:
-#         model = VendorProfile
-#         fields = [
-#             "logo",
-#             "registration_number",
-#             "contact_number",
-#             "office_address",
-#             "office_city_state",
-#             "office_country",
-#             "office_zipcode",
-#         ]
-
-#         widgets = {
-#             "office_address": forms.Textarea(attrs={"rows": 2, "class": "form-control"}),
-#             "office_city_state": forms.TextInput(attrs={"class": "form-control"}),
-#             "office_country": forms.TextInput(attrs={"class": "form-control"}),
-#             "office_zipcode": forms.TextInput(attrs={"class": "form-control"}),
-#             "contact_number": forms.TextInput(attrs={"class": "form-control"}),
-#             "registration_number": forms.TextInput(attrs={"class": "form-control"}),
-#         }
-
-
-# # app_name/forms.py
-# from django import forms
-# from apps.labs.models import Equipment, Department
-
-# class EquipmentForm(forms.ModelForm):
-#     class Meta:
-#         model = Equipment
-#         fields = [
-#             "name",
-#             "model",
-#             "serial_number",
-#             "department",
-#             "api_endpoint",
-#             "api_key",
-#             "supports_auto_fetch",
-#         ]
-#     def __init__(self, *args, **kwargs):
-#         vendor = kwargs.pop("vendor", None)
-#         super().__init__(*args, **kwargs)
-
-#         # Filter departments based on vendor
-#         if vendor:
-#             self.fields["department"].queryset = Department.objects.filter(vendor=vendor)
-
-#     def clean_serial_number(self):
-#         serial = self.cleaned_data.get("serial_number")
-#         if Equipment.objects.filter(serial_number=serial).exists():
-#             raise forms.ValidationError("Equipment with this serial number already exists.")
-#         return serial
 

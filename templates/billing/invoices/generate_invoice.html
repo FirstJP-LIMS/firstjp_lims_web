@@ -1,0 +1,614 @@
+{% extends "laboratory/assets/base.html" %}
+{% load static %}
+
+{% block title %}Generate HMO Invoice - {{ vendor.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <!-- Header Section -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
+        <div>
+            <nav aria-label="breadcrumb" class="mb-2">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'billing:invoice_list' %}" class="text-decoration-none text-muted hover-primary">
+                            <i class="bi bi-receipt me-1"></i>Invoices
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active fw-semibold text-dark">Generate HMO Invoice</li>
+                </ol>
+            </nav>
+            <div class="d-flex align-items-center gap-3">
+                <h1 class="h2 fw-bold text-dark mb-0">
+                    <span class="bg-info bg-opacity-10 rounded-3 p-2 me-2">
+                        <i class="bi bi-shield text-info"></i>
+                    </span>
+                    Generate HMO Invoice
+                </h1>
+                <span class="badge bg-info bg-opacity-15 text-info border-0 px-3 py-2">
+                    <i class="bi bi-building me-1"></i>Insurance Billing
+                </span>
+            </div>
+            <p class="text-muted mb-0 mt-2">Select billable records to include in the invoice. You can exclude specific tests that were rejected by the HMO.</p>
+        </div>
+        <div>
+            <a href="{% url 'billing:invoice_list' %}" class="btn btn-outline-secondary rounded-3 px-4">
+                <i class="bi bi-arrow-left me-2"></i>Back to Invoices
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Form Card -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-0 py-3 px-4">
+            <div class="d-flex align-items-center">
+                <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-3">
+                    <i class="bi bi-funnel text-primary"></i>
+                </div>
+                <div>
+                    <h6 class="fw-semibold text-dark mb-0">Filter Billable Records</h6>
+                    <p class="text-muted small mb-0">Select HMO provider and date range to view eligible billing records</p>
+                </div>
+            </div>
+        </div>
+        <div class="card-body px-4 py-3">
+            <form method="get" id="filterForm" class="row g-3">
+                <div class="col-md-5">
+                    <label class="form-label fw-semibold text-muted small mb-2">
+                        <i class="bi bi-building me-1"></i>Insurance Provider
+                    </label>
+                    {{ form.insurance_provider }}
+                    {% if form.insurance_provider.errors %}
+                        <div class="text-danger small mt-1">{{ form.insurance_provider.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold text-muted small mb-2">
+                        <i class="bi bi-calendar me-1"></i>Start Date
+                    </label>
+                    {{ form.start_date }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold text-muted small mb-2">
+                        <i class="bi bi-calendar me-1"></i>End Date
+                    </label>
+                    {{ form.end_date }}
+                </div>
+                <div class="col-md-1 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if records %}
+    <!-- Results and Invoice Creation -->
+    <form method="post" id="invoiceForm">
+        {% csrf_token %}
+        <input type="hidden" name="provider_id" value="{{ form.insurance_provider.value.id }}">
+        <input type="hidden" name="start_date" value="{{ form.start_date.value }}">
+        <input type="hidden" name="end_date" value="{{ form.end_date.value }}">
+
+        <div class="row g-4">
+            <!-- Main Content - Billable Records Table -->
+            <div class="col-lg-8">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-0 py-3 px-4">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-info bg-opacity-10 rounded-circle p-2 me-3">
+                                    <i class="bi bi-list-check text-info"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-semibold text-dark mb-0">Billable Records</h6>
+                                    <p class="text-muted small mb-0">{{ records.count }} records found for selected period</p>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <span class="badge bg-secondary bg-opacity-15 text-secondary border-0 px-3 py-2" id="selectedCount">
+                                    <i class="bi bi-check-circle me-1"></i>0 selected
+                                </span>
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-outline-primary" id="selectAllBtn">
+                                        <i class="bi bi-check-all me-1"></i>Select All
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary" id="deselectAllBtn">
+                                        <i class="bi bi-x me-1"></i>Clear
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-body p-0">
+                        <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="bg-light sticky-top">
+                                    <tr>
+                                        <th class="ps-4 py-3" style="width: 50px;">
+                                            <div class="form-check">
+                                                <input type="checkbox" class="form-check-input" id="masterCheckbox">
+                                            </div>
+                                        </th>
+                                        <th class="py-3 fw-semibold text-muted small">PATIENT</th>
+                                        <th class="py-3 fw-semibold text-muted small">REQUEST ID</th>
+                                        <th class="py-3 fw-semibold text-muted small">TESTS</th>
+                                        <th class="py-3 fw-semibold text-muted small">DATE</th>
+                                        <th class="py-3 fw-semibold text-muted small text-end">TOTAL</th>
+                                        <th class="py-3 fw-semibold text-muted small text-end">PATIENT PORTION</th>
+                                        <th class="pe-4 py-3 fw-semibold text-muted small text-end">INSURANCE PORTION</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for record in records %}
+                                    <tr class="record-row" data-record-id="{{ record.id }}" data-amount="{{ record.insurance_portion }}">
+                                        <td class="ps-4">
+                                            <div class="form-check">
+                                                <input type="checkbox" 
+                                                       class="form-check-input record-checkbox" 
+                                                       name="record_ids" 
+                                                       value="{{ record.id }}" 
+                                                       id="record_{{ record.id }}"
+                                                       data-amount="{{ record.insurance_portion }}">
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <label for="record_{{ record.id }}" class="mb-0 cursor-pointer d-block">
+                                                <span class="fw-medium text-dark">
+                                                    {% if record.request.patient %}
+                                                        {{ record.request.patient.first_name }} {{ record.request.patient.last_name }}
+                                                    {% else %}
+                                                        <span class="text-muted">—</span>
+                                                    {% endif %}
+                                                </span>
+                                                {% if record.policy_number %}
+                                                <small class="text-muted d-block">Policy: {{ record.policy_number|truncatechars:15 }}</small>
+                                                {% endif %}
+                                            </label>
+                                        </td>
+                                        <td>
+                                            <code class="text-dark">{{ record.request.request_id|default:"—" }}</code>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-light text-dark border">
+                                                {{ record.request.requested_tests.count }} tests
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="text-muted small">{{ record.created_at|date:"M d, Y" }}</span>
+                                        </td>
+                                        <td class="text-end fw-medium text-dark">₦{{ record.total_amount|floatformat:2 }}</td>
+                                        <td class="text-end text-warning fw-medium">₦{{ record.patient_portion|floatformat:2 }}</td>
+                                        <td class="pe-4 text-end">
+                                            <span class="fw-bold text-info">₦{{ record.insurance_portion|floatformat:2 }}</span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {% if records.count > 15 %}
+                    <div class="card-footer bg-white border-0 py-3 px-4">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-muted small">Showing all {{ records.count }} records</span>
+                            <nav aria-label="Page navigation">
+                                <ul class="pagination pagination-sm mb-0">
+                                    <li class="page-item disabled">
+                                        <a class="page-link" href="#" tabindex="-1">Previous</a>
+                                    </li>
+                                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                                    <li class="page-item"><a class="page-link" href="#">2</a></li>
+                                    <li class="page-item"><a class="page-link" href="#">3</a></li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="#">Next</a>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Right Column - Invoice Summary -->
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm sticky-top" style="top: 2rem;">
+                    <div class="card-header bg-white border-0 py-3 px-4">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-warning bg-opacity-10 rounded-circle p-2 me-3">
+                                <i class="bi bi-file-text text-warning"></i>
+                            </div>
+                            <div>
+                                <h6 class="fw-semibold text-dark mb-0">Invoice Summary</h6>
+                                <p class="text-muted small mb-0">Preview before generation</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-body px-4 py-4">
+                        <!-- Provider Info -->
+                        <div class="mb-4">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="bg-info bg-opacity-10 rounded-circle p-2 me-2">
+                                    <i class="bi bi-building text-info"></i>
+                                </div>
+                                <span class="fw-semibold text-dark">{{ form.insurance_provider.value.name|default:"No provider selected" }}</span>
+                            </div>
+                            {% if form.insurance_provider.value %}
+                            <div class="bg-light rounded-3 p-3">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted small">Provider Code:</span>
+                                    <span class="fw-medium text-dark">{{ form.insurance_provider.value.code }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted small">Payment Terms:</span>
+                                    <span class="fw-medium text-dark">{{ form.insurance_provider.value.payment_terms_days }} days</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted small">Due Date:</span>
+                                    <span class="fw-medium text-primary">{{ due_date|default:"Will be calculated" }}</span>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Period Info -->
+                        <div class="mb-4">
+                            <h6 class="fw-semibold text-muted small mb-3">BILLING PERIOD</h6>
+                            <div class="bg-light rounded-3 p-3">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted">From:</span>
+                                    <span class="fw-medium text-dark">{{ form.start_date.value|date:"M d, Y"|default:"—" }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">To:</span>
+                                    <span class="fw-medium text-dark">{{ form.end_date.value|date:"M d, Y"|default:"—" }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Financial Summary -->
+                        <div class="mb-4">
+                            <h6 class="fw-semibold text-muted small mb-3">FINANCIAL SUMMARY</h6>
+                            <div class="bg-light rounded-3 p-3">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted">Selected Records:</span>
+                                    <span class="fw-semibold text-dark" id="summarySelectedCount">0</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted">Total Amount:</span>
+                                    <span class="fw-semibold text-dark" id="summaryTotalAmount">₦0.00</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted">Patient Portion:</span>
+                                    <span class="fw-semibold text-warning" id="summaryPatientPortion">₦0.00</span>
+                                </div>
+                                <div class="d-flex justify-content-between pt-2 border-top">
+                                    <span class="fw-semibold">Insurance Portion:</span>
+                                    <span class="fw-bold text-info fs-5" id="summaryInsurancePortion">₦0.00</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pre-auth Alert -->
+                        <div class="alert alert-warning bg-warning bg-opacity-10 border-0 rounded-3 py-3 mb-4">
+                            <div class="d-flex">
+                                <i class="bi bi-exclamation-triangle text-warning me-3 fs-5"></i>
+                                <div class="small">
+                                    <p class="mb-1 fw-medium">Pre-authorization Required</p>
+                                    <p class="text-muted mb-0">Uncheck any tests that were rejected by the HMO. These will need to be billed to the patient or written off.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" name="create_invoice" class="btn btn-primary btn-lg rounded-3 py-3" id="createInvoiceBtn" disabled>
+                                <i class="bi bi-file-earmark-check me-2"></i>
+                                Generate Invoice
+                            </button>
+                            <a href="{% url 'billing:invoice_list' %}" class="btn btn-outline-secondary rounded-3 py-2">
+                                Cancel
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+    {% elif form.is_bound %}
+    <!-- No Results State -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body py-5">
+            <div class="text-center py-5">
+                <i class="bi bi-inbox text-muted opacity-25" style="font-size: 4rem;"></i>
+                <h5 class="text-muted mt-4 mb-2">No billable records found</h5>
+                <p class="text-muted small mb-4">
+                    No eligible billing records found for {{ form.insurance_provider.value.name }} between 
+                    {{ form.start_date.value|date:"M d, Y" }} and {{ form.end_date.value|date:"M d, Y" }}
+                </p>
+                <div class="d-flex justify-content-center gap-3">
+                    <a href="{% url 'billing:create_invoice' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-arrow-clockwise me-2"></i>Try Different Dates
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.hover-primary:hover {
+    color: #0d6efd !important;
+    transition: color 0.2s ease;
+}
+
+.breadcrumb {
+    background: transparent;
+    padding: 0;
+}
+.breadcrumb-item a {
+    transition: color 0.2s ease;
+}
+.breadcrumb-item a:hover {
+    color: #0d6efd !important;
+}
+
+.card {
+    border-radius: 12px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.1) !important;
+}
+
+.table thead th {
+    background-color: #f8fafc;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.table tbody tr {
+    transition: background-color 0.2s ease;
+    cursor: pointer;
+}
+
+.table tbody tr:hover {
+    background-color: rgba(13, 110, 253, 0.02);
+}
+
+.table tbody tr.selected {
+    background-color: rgba(13, 110, 253, 0.05);
+    border-left: 3px solid #0d6efd;
+}
+
+.sticky-top {
+    position: sticky;
+    top: 2rem;
+    z-index: 1020;
+}
+
+.form-check-input {
+    cursor: pointer;
+    width: 1.2em;
+    height: 1.2em;
+    margin-top: 0.2em;
+}
+
+.form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.badge {
+    font-weight: 500;
+    letter-spacing: 0.3px;
+}
+
+.form-control, .form-select {
+    border-radius: 8px;
+    border-color: #e2e8f0;
+    padding: 0.6rem 1rem;
+    transition: all 0.2s ease;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.1);
+}
+
+.btn {
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.btn-lg {
+    padding: 0.75rem 1.5rem;
+}
+
+/* Custom scrollbar */
+.table-responsive::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.table-responsive::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+.table-responsive::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 10px;
+}
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+@media (max-width: 768px) {
+    .d-flex.justify-content-between {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 1rem;
+    }
+    
+    .sticky-top {
+        position: relative;
+        top: 0;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // DOM Elements
+    const masterCheckbox = document.getElementById('masterCheckbox');
+    const recordCheckboxes = document.querySelectorAll('.record-checkbox');
+    const recordRows = document.querySelectorAll('.record-row');
+    const selectAllBtn = document.getElementById('selectAllBtn');
+    const deselectAllBtn = document.getElementById('deselectAllBtn');
+    const createInvoiceBtn = document.getElementById('createInvoiceBtn');
+    
+    // Summary elements
+    const selectedCountSpan = document.getElementById('selectedCount');
+    const summarySelectedCount = document.getElementById('summarySelectedCount');
+    const summaryTotalAmount = document.getElementById('summaryTotalAmount');
+    const summaryPatientPortion = document.getElementById('summaryPatientPortion');
+    const summaryInsurancePortion = document.getElementById('summaryInsurancePortion');
+
+    // Function to update summary
+    function updateSummary() {
+        const checkedBoxes = document.querySelectorAll('.record-checkbox:checked');
+        const checkedCount = checkedBoxes.length;
+        
+        // Update counts
+        selectedCountSpan.innerHTML = `<i class="bi bi-check-circle me-1"></i>${checkedCount} selected`;
+        summarySelectedCount.textContent = checkedCount;
+        
+        // Calculate totals
+        let totalAmount = 0;
+        let patientPortion = 0;
+        let insurancePortion = 0;
+        
+        checkedBoxes.forEach(cb => {
+            const row = cb.closest('tr');
+            if (row) {
+                // Extract amounts from the row
+                const cells = row.querySelectorAll('td');
+                const total = parseFloat(cells[5]?.textContent.replace(/[₦,]/g, '')) || 0;
+                const patient = parseFloat(cells[6]?.textContent.replace(/[₦,]/g, '')) || 0;
+                const insurance = parseFloat(cells[7]?.textContent.replace(/[₦,]/g, '')) || 0;
+                
+                totalAmount += total;
+                patientPortion += patient;
+                insurancePortion += insurance;
+            }
+        });
+        
+        // Format and display
+        summaryTotalAmount.textContent = '₦' + totalAmount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        summaryPatientPortion.textContent = '₦' + patientPortion.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        summaryInsurancePortion.textContent = '₦' + insurancePortion.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        
+        // Enable/disable create button
+        createInvoiceBtn.disabled = checkedCount === 0;
+        
+        // Update master checkbox
+        if (masterCheckbox) {
+            if (checkedCount === recordCheckboxes.length) {
+                masterCheckbox.checked = true;
+                masterCheckbox.indeterminate = false;
+            } else if (checkedCount === 0) {
+                masterCheckbox.checked = false;
+                masterCheckbox.indeterminate = false;
+            } else {
+                masterCheckbox.indeterminate = true;
+            }
+        }
+        
+        // Highlight selected rows
+        recordRows.forEach(row => {
+            const checkbox = row.querySelector('.record-checkbox');
+            if (checkbox && checkbox.checked) {
+                row.classList.add('selected');
+            } else {
+                row.classList.remove('selected');
+            }
+        });
+    }
+
+    // Master checkbox functionality
+    if (masterCheckbox) {
+        masterCheckbox.addEventListener('change', function() {
+            recordCheckboxes.forEach(cb => {
+                cb.checked = masterCheckbox.checked;
+            });
+            updateSummary();
+        });
+    }
+
+    // Individual checkboxes
+    recordCheckboxes.forEach(cb => {
+        cb.addEventListener('change', updateSummary);
+    });
+
+    // Row click handler
+    recordRows.forEach(row => {
+        row.addEventListener('click', function(e) {
+            // Don't toggle if clicking on checkbox directly
+            if (e.target.type === 'checkbox' || e.target.closest('.form-check')) return;
+            
+            const checkbox = this.querySelector('.record-checkbox');
+            if (checkbox) {
+                checkbox.checked = !checkbox.checked;
+                updateSummary();
+            }
+        });
+    });
+
+    // Select All button
+    if (selectAllBtn) {
+        selectAllBtn.addEventListener('click', function() {
+            recordCheckboxes.forEach(cb => {
+                cb.checked = true;
+            });
+            updateSummary();
+        });
+    }
+
+    // Deselect All button
+    if (deselectAllBtn) {
+        deselectAllBtn.addEventListener('click', function() {
+            recordCheckboxes.forEach(cb => {
+                cb.checked = false;
+            });
+            updateSummary();
+        });
+    }
+
+    // Form submission validation
+    document.getElementById('invoiceForm')?.addEventListener('submit', function(e) {
+        const checkedBoxes = document.querySelectorAll('.record-checkbox:checked');
+        if (checkedBoxes.length === 0) {
+            e.preventDefault();
+            alert('Please select at least one billing record to include in the invoice.');
+        }
+    });
+
+    // Initialize
+    updateSummary();
+});
+</script>
+{% endblock %}

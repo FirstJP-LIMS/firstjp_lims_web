@@ -10,64 +10,92 @@
 
 {% block content %}
 <div class="container-fluid py-4 bg-white">
+    {% if messages %}
+        <div class="container mt-3">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
     
     <!-- HEADER WITH ACTIONS -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2 class="text-navy mb-1">
-                <i class="bi bi-clipboard-data me-2"></i>Test Result Detail
-            </h2>
-            <p class="text-muted mb-0">
-                <small>Viewing as: <span class="badge bg-gold text-dark">{{ user_role }}</span></small>
-            </p>
-        </div>
-        
-        <div class="btn-group">
-            <a href="{% url 'labs:result_list' %}" class="btn btn-outline-navy">
-                <i class="bi bi-arrow-left me-1"></i> Back
-            </a>
+    <div class="page-header mb-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+            <div>
+                <nav aria-label="breadcrumb" class="mb-3">
+                    <ol class="breadcrumb bg-transparent px-0">
+                        <li class="breadcrumb-item">
+                            <a href="{% url 'labs:result_list' %}" class="text-decoration-none text-muted">
+                                <i class="bi bi-list-check me-2"></i>Results
+                            </a>
+                        </li>
+                        <li class="breadcrumb-item active fw-medium text-dark">Test Result Detail</li>
+                    </ol>
+                </nav>
+                <div class="d-flex align-items-center gap-3">
+                    <h1 class="h2 fw-bold text-dark mb-0">
+                        <span class="bg-primary bg-opacity-10 rounded-3 p-2 me-2">
+                            <i class="bi bi-clipboard-data text-primary"></i>
+                        </span>
+                        Test Result Detail
+                    </h1>
+                    <div class="status-badge">
+                        <span class="badge bg-gold text-dark px-3 py-2 fw-semibold">
+                            <i class="bi bi-eye me-2"></i>{{ user_role }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{% url 'labs:result_list' %}" class="btn btn-outline-secondary d-inline-flex align-items-center">
+                    <i class="bi bi-arrow-left me-2"></i> Back
+                </a>
 
-            {% if can_edit %}
-            <a href="{% url 'labs:update_manual_test_result' result.id %}" class="btn btn-warning">
-                <i class="bi bi-pencil me-1"></i> Update Result
-            </a>
-            {% endif %}
-            
-            {% if can_verify %}
-            <form method="post" action="{% url 'labs:verify_result' result.id %}" class="d-inline" 
-                  onsubmit="return confirmVerify()">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-success">
-                    <i class="bi bi-check-circle me-1"></i> Verify
-                </button>
-            </form>
-            {% endif %}
-            
-            {% if can_release %}
-            <form method="post" action="{% url 'labs:release_result' result.id %}" class="d-inline"
-                  onsubmit="return confirmRelease()">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-primary bg-navy border-navy">
-                    <i class="bi bi-send me-1"></i> Release
-                </button>
-            </form>
-            {% endif %}
-            
-            {% if result.released_at %}
-            <a href="{% url 'labs:download_result_pdf' result.id %}" 
-               target="_blank"
-               class="btn btn-outline-navy">
-                <i class="bi bi-printer me-1"></i> Download
-            </a>
-            {% endif %}
-            
-            {% if can_amend %}
-            <a href="{% url 'labs:amend_result' result.id %}" class="btn btn-danger">
-                <i class="bi bi-exclamation-triangle me-1"></i> Amend
-            </a>
-            {% endif %}
+                {% if can_edit %}
+                <a href="{% url 'labs:update_manual_test_result' result.id %}" class="btn btn-warning d-inline-flex align-items-center">
+                    <i class="bi bi-pencil me-2"></i> Update Result
+                </a>
+                {% endif %}
+                
+                {% if can_verify %}
+                <form method="post" action="{% url 'labs:verify_result' result.id %}" class="d-inline" 
+                    onsubmit="return confirmVerify()">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success d-inline-flex align-items-center">
+                        <i class="bi bi-check-circle me-2"></i> Verify
+                    </button>
+                </form>
+                {% endif %}
+                
+                {% if can_release %}
+                <form method="post" action="{% url 'labs:release_result' result.id %}" class="d-inline"
+                    onsubmit="return confirmRelease()">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary d-inline-flex align-items-center">
+                        <i class="bi bi-send me-2"></i> Release
+                    </button>
+                </form>
+                {% endif %}
+                
+                {% if result.released_at %}
+                <a href="{% url 'labs:download_result_pdf' result.id %}" 
+                target="_blank"
+                class="btn btn-outline-primary d-inline-flex align-items-center">
+                    <i class="bi bi-printer me-2"></i> Download PDF
+                </a>
+                {% endif %}
+                
+                {% if can_amend %}
+                <a href="{% url 'labs:amend_result' result.id %}" class="btn btn-outline-danger d-inline-flex align-items-center">
+                    <i class="bi bi-exclamation-triangle me-2"></i> Amend
+                </a>
+                {% endif %}
+            </div>
         </div>
-    
     </div>
 
     <!-- STATUS ALERT WITH CRITICAL INDICATOR -->
@@ -114,12 +142,6 @@
             {% endif %}
         </div>
     </div>
-
-
-
-
-
-
 
     <div class="row">
         <!-- LEFT COLUMN - MAIN CONTENT -->
@@ -172,7 +194,7 @@
                                         <dt class="col-sm-5 text-muted">Age / Sex</dt>
                                         <dd class="col-sm-7">
                                             {{ result.assignment.request.patient.age|default:"--" }} / 
-                                            {{ result.assignment.request.patient.get_sex_display|default:"--" }}
+                                            {{ result.assignment.request.patient.gender |default:"--" }}
                                         </dd>
                                         
                                         <dt class="col-sm-5 text-muted">Request ID</dt>
@@ -672,6 +694,160 @@
         </div>
     </div>
 
+    <!-- AI INSIGHT CARD -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-0 py-3">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <div class="d-flex align-items-center">
+                    <div class="bg-info bg-opacity-10 rounded-circle p-3 me-3">
+                        <i class="bi bi-robot text-info fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="fw-semibold text-dark mb-1">AI Clinical Insight</h5>
+                        <p class="text-muted small mb-0">Intelligent interpretation of test results</p>
+                    </div>
+                </div>
+                
+                {# Logic: Only show the Generate button if NO insight exists AND the result isn't released yet #}
+                {% if not result.ai_insight and result.status != 'released' %}
+                    <a href="{% url 'labs:generate_ai_insight' result.id %}" 
+                    class="btn btn-info d-inline-flex align-items-center px-4">
+                        <i class="bi bi-magic me-2"></i> Generate AI Draft
+                    </a>
+                {% endif %}
+                
+                {% if result.ai_insight and result.ai_insight.is_approved %}
+                    <span class="badge bg-success bg-opacity-15 text-success border-0 px-3 py-2">
+                        <i class="bi bi-check-circle-fill me-2"></i>Approved
+                    </span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card-body p-4">
+            {% if result.ai_insight %}
+                <div class="row g-4">
+                    <div class="col-lg-6">
+                        <div class="h-100">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-2">
+                                    <i class="bi bi-mortarboard text-primary small"></i>
+                                </div>
+                                <h6 class="fw-semibold text-primary mb-0">Clinical Interpretation</h6>
+                            </div>
+                            <div class="bg-light p-4 rounded-3 border-start border-primary border-4">
+                                <p class="mb-0 text-dark lh-base">{{ result.ai_insight.clinical_text }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-6">
+                        <div class="h-100">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="bg-success bg-opacity-10 rounded-circle p-2 me-2">
+                                    <i class="bi bi-people text-success small"></i>
+                                </div>
+                                <h6 class="fw-semibold text-success mb-0">Patient-Friendly Summary</h6>
+                            </div>
+                            <div class="bg-light p-4 rounded-3 border-start border-success border-4">
+                                <p class="mb-0 text-muted fst-italic lh-base">{{ result.ai_insight.patient_text }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if result.ai_insight.follow_up_note %}
+                    <div class="col-12">
+                        <div class="alert alert-warning border-0 shadow-sm mb-0">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <i class="bi bi-exclamation-triangle text-warning fs-5 me-3"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <strong class="d-block mb-1">Follow-up Required</strong>
+                                    <p class="mb-0">{{ result.ai_insight.follow_up_note }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <hr class="my-4">
+
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                    <div class="d-flex align-items-center">
+                        {% if result.ai_insight.reviewed_by %}
+                            <div class="d-flex align-items-center">
+                                <div class="bg-light rounded-circle p-2 me-2">
+                                    <i class="bi bi-person-check text-success"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block">Verified by</small>
+                                    <span class="fw-medium text-dark">
+                                        {{ result.ai_insight.reviewed_by.get_full_name }}
+                                    </span>
+                                    {% comment %} <small class="text-muted d-block">
+                                        at {{ result.ai_insight.reviewed_at|date:"M d, Y H:i" }}
+                                    </small> {% endcomment %}
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="d-flex align-items-center">
+                                <div class="bg-warning bg-opacity-10 rounded-circle p-2 me-2">
+                                    <i class="bi bi-hourglass-split text-warning"></i>
+                                </div>
+                                <div>
+                                    <span class="badge bg-warning bg-opacity-15 text-warning border-0 px-3 py-2">
+                                        Pending Pathologist Review
+                                    </span>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        {# Logic: Only allow approval if the result isn't released #}
+                        {% if not result.ai_insight.is_approved and result.status != 'released' %}
+                            <a href="{% url 'labs:approve_ai_insight' result.ai_insight.id %}" 
+                            class="btn btn-success d-inline-flex align-items-center px-4">
+                                <i class="bi bi-check-circle me-2"></i> Approve Interpretation
+                            </a>
+                        {% endif %}
+                        
+                        {% if result.ai_insight.is_approved %}
+                            <span class="badge bg-success bg-opacity-15 text-success border-0 px-4 py-3">
+                                <i class="bi bi-shield-check me-2"></i>Approved & Verified
+                            </span>
+                        {% endif %}
+                        
+                        {% if result.status == 'released' and not result.ai_insight.is_approved %}
+                            <span class="badge bg-danger bg-opacity-15 text-danger border-0 px-4 py-3">
+                                <i class="bi bi-lock me-2"></i>Draft Expired
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+            {% else %}
+                <div class="text-center py-5">
+                    <div class="bg-light rounded-circle d-inline-flex p-4 mb-4">
+                        <i class="bi bi-robot text-muted opacity-50" style="font-size: 3rem;"></i>
+                    </div>
+                    {% if result.status == 'released' %}
+                        <h5 class="text-muted mb-2">AI Insight Locked</h5>
+                        <p class="text-muted mb-0">
+                            <i class="bi bi-lock me-2"></i> AI insight generation is disabled for released results.
+                        </p>
+                    {% else %}
+                        <h5 class="text-muted mb-2">No AI Interpretation Yet</h5>
+                        <p class="text-muted mb-3">Generate an AI draft to get clinical insights from this result.</p>
+                        <small class="text-muted d-block">Click "Generate AI Draft" to analyze this result with Medvuno AI.</small>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
 </div>
 
 <!-- STYLES FOR BRAND COLORS AND ENHANCEMENTS -->
@@ -787,6 +963,86 @@
 @keyframes rotate {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
+}
+{% comment %} </style>
+
+
+<style> {% endcomment %}
+.page-header .breadcrumb {
+    --bs-breadcrumb-divider: '›';
+}
+
+.status-badge .badge {
+    font-weight: 500;
+    letter-spacing: 0.3px;
+}
+
+.btn {
+    transition: all 0.2s ease;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #198754 0%, #157347 100%);
+}
+
+.btn-warning {
+    background: linear-gradient(135deg, #ffc107 0%, #ffb300 100%);
+}
+
+.btn-info {
+    background: linear-gradient(135deg, #0dcaf0 0%, #0bb2d4 100%);
+    color: white;
+}
+
+.btn-info:hover {
+    color: white;
+}
+
+.card {
+    border-radius: 12px;
+}
+
+.card-header {
+    border-bottom: 1px solid rgba(0,0,0,.05);
+}
+
+.bg-gold {
+    background-color: #FFD700;
+}
+
+.badge.bg-success.bg-opacity-15 {
+    background-color: rgba(25, 135, 84, 0.15) !important;
+}
+
+.badge.bg-warning.bg-opacity-15 {
+    background-color: rgba(255, 193, 7, 0.15) !important;
+}
+
+.badge.bg-danger.bg-opacity-15 {
+    background-color: rgba(220, 53, 69, 0.15) !important;
+}
+
+@media (max-width: 768px) {
+    .page-header .d-flex {
+        flex-direction: column;
+        align-items: flex-start !important;
+    }
+    
+    .btn-group {
+        flex-wrap: wrap;
+    }
+    
+    .card-header .d-flex {
+        flex-direction: column;
+        align-items: flex-start !important;
+    }
 }
 </style>
 

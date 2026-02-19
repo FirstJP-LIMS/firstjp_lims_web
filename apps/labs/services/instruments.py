@@ -7,7 +7,7 @@ import logging
 from typing import Optional, Dict, Any
 from django.conf import settings
 from django.utils import timezone
-from .models import TestAssignment, TestResult, InstrumentLog, Equipment
+from ..models import TestAssignment, TestResult, InstrumentLog, Equipment
 
 logger = logging.getLogger(__name__)
 

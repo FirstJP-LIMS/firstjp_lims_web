@@ -1,35 +1,18 @@
 from decimal import Decimal
-from datetime import datetime, timedelta, date
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
-from django.db import models, transaction
-from django.db.models import Q, Sum, Count, Avg, Case, When, DecimalField, F, Value
+from django.db.models import Q, Sum, Count
 from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy, reverse
-from django.utils import timezone
-from django.views.generic import (
-    ListView, DetailView, CreateView, UpdateView, DeleteView, View
-)
 
-from ..models import (
-    PriceList, TestPrice, InsuranceProvider, CorporateClient,
-    BillingInformation, Payment, Invoice, InvoicePayment, D
-)
+from ..models import BillingInformation, InsuranceProvider, D
 
-from ..forms import (
-    PriceListForm, TestPriceForm, InsuranceProviderForm, CorporateClientForm,
-    BillingInformationForm, PaymentForm, InvoiceForm, InvoicePaymentForm,
-    BillingFilterForm, InvoiceFilterForm
-)
-
-from ..utils import generate_invoice_pdf, generate_receipt_pdf
-
-
+from ..forms import InsuranceProviderForm
+    
 # ==========================================
 # INSURANCE PROVIDER
 # ==========================================
@@ -173,21 +156,26 @@ def insurance_detail_view(request, pk):
     ).select_related('request').order_by('-created_at')[:10]
     
     # Statistics
+    # 1. Invoice Stats (Money already moved to formal bills)
     invoice_stats = provider.invoices.aggregate(
-        total_invoices=Count('id'),
-        total_amount=Sum('total_amount'),
-        paid_amount=Sum('amount_paid'),
-        unpaid_count=Count('id', filter=Q(status__in=['SENT', 'OVERDUE', 'PARTIAL']))
+        total_invoiced=Sum('total_amount'),
+        total_collected=Sum('amount_paid')
     )
-    
+
+    # 2. Billing Stats (Raw transactions from the lab floor)
     billing_stats = BillingInformation.objects.filter(
         vendor=vendor,
         insurance_provider=provider
     ).aggregate(
-        total_billings=Count('id'),
-        total_amount=Sum('total_amount'),
-        insurance_portion=Sum('insurance_portion')
+        count=Count('id'),
+        gross_revenue=Sum('total_amount'),      # The full value of tests
+        hmo_liability=Sum('insurance_portion'), # ONLY what the HMO is responsible for
+        hmo_paid=Sum('insurance_amount_paid')   # What they have already paid
     )
+
+    # 3. Calculate the true "Pending" amount
+    # This is Insurance Portion minus what they already paid
+    pending_hmo_payment = (billing_stats['hmo_liability'] or D('0.00')) - (billing_stats['hmo_paid'] or D('0.00'))
     
     context = {
         "provider": provider,
@@ -200,7 +188,8 @@ def insurance_detail_view(request, pk):
         "recent_billings": recent_billings,
         "invoice_stats": invoice_stats,
         "billing_stats": billing_stats,
-        "invoice_status_filter": invoice_status or "",
+        # "invoice_status_filter": invoice_status or "",
+        "invoice_status_filter": pending_hmo_payment,
     }
     
     return render(request, "billing/insurance/detail.html", context)

@@ -7,7 +7,17 @@ from .models import (
     BillingInformation, Payment, Invoice, InvoicePayment
 )
 
+class InvoiceGenerationForm(forms.Form):
+    insurance_provider = forms.ModelChoiceField(queryset=InsuranceProvider.objects.none())
+    start_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}))
+    end_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}))
 
+    def __init__(self, *args, **kwargs):
+        vendor = kwargs.pop('vendor')
+        super().__init__(*args, **kwargs)
+        self.fields['insurance_provider'].queryset = InsuranceProvider.objects.filter(vendor=vendor, is_active=True)
+
+        
 # ==========================================
 # PRICE LIST FORMS
 # ==========================================
@@ -122,13 +132,23 @@ class TestPriceForm(forms.ModelForm):
 class InsuranceProviderForm(forms.ModelForm):
     """Form for managing insurance/HMO providers"""
     
+    def __init__(self, *args, **kwargs):
+        # 1. Capture the vendor passed from the view
+        self.vendor = kwargs.pop('vendor', None)
+        super().__init__(*args, **kwargs)
+        
+        # 2. If vendor exists, filter the price_list queryset
+        if self.vendor:
+            self.fields['price_list'].queryset = PriceList.objects.filter(vendor=self.vendor)
+
     class Meta:
         model = InsuranceProvider
         fields = [
             'name', 'code', 'contact_person', 'phone', 'email', 'address',
-            'payment_terms_days', 'credit_limit', 'default_copay_percentage',
+            'payment_terms_days', 'credit_limit', 'patient_copay_percentage',
             'is_active', 'requires_preauth', 'price_list'
         ]
+
         widgets = {
             'name': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -154,12 +174,12 @@ class InsuranceProviderForm(forms.ModelForm):
                 'step': '0.01',
                 'min': '0'
             }),
-            'default_copay_percentage': forms.NumberInput(attrs={
+            'patient_copay_percentage': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.0001',
                 'min': '0',
                 'max': '1',
-                'placeholder': '0.10 for 10%'
+                'placeholder': '0.60 for 60%'
             }),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'requires_preauth': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
@@ -361,6 +381,102 @@ class PaymentForm(forms.ModelForm):
 # INVOICE FORMS
 # ==========================================
 
+# class InvoiceForm(forms.ModelForm):
+#     """Form for creating invoices"""
+    
+#     class Meta:
+#         model = Invoice
+#         fields = [
+#             'invoice_date', 'due_date', 'insurance_provider',
+#             'corporate_client', 'period_start', 'period_end', 'notes'
+#         ]
+#         widgets = {
+#             'invoice_date': forms.DateInput(attrs={
+#                 'class': 'form-control',
+#                 'type': 'date'
+#             }),
+#             'due_date': forms.DateInput(attrs={
+#                 'class': 'form-control',
+#                 'type': 'date'
+#             }),
+#             'insurance_provider': forms.Select(attrs={'class': 'form-select'}),
+#             'corporate_client': forms.Select(attrs={'class': 'form-select'}),
+#             'period_start': forms.DateInput(attrs={
+#                 'class': 'form-control',
+#                 'type': 'date'
+#             }),
+#             'period_end': forms.DateInput(attrs={
+#                 'class': 'form-control',
+#                 'type': 'date'
+#             }),
+#             'notes': forms.Textarea(attrs={
+#                 'class': 'form-control',
+#                 'rows': 3
+#             }),
+#         }
+
+#     # def __init__(self, *args, **kwargs):
+#     #     vendor = kwargs.pop('vendor', None)
+#     #     super().__init__(*args, **kwargs)
+        
+#     #     if vendor:
+#     #         self.fields['insurance_provider'].queryset = InsuranceProvider.objects.filter(
+#     #             vendor=vendor, is_active=True
+#     #         )
+#     #         self.fields['corporate_client'].queryset = CorporateClient.objects.filter(
+#     #             vendor=vendor, is_active=True
+#     #         )
+    
+#     def __init__(self, *args, **kwargs):
+#         vendor = kwargs.pop('vendor', None)
+#         super().__init__(*args, **kwargs)
+        
+#         if vendor:
+#             # Only show HMOs that actually have un-invoiced billing records
+#             self.fields['insurance_provider'].queryset = InsuranceProvider.objects.filter(
+#                 vendor=vendor, 
+#                 is_active=True,
+#                 billinginformation__invoices__isnull=True,
+#                 billinginformation__insurance_portion__gt=0
+#             ).distinct()
+
+#             # Same logic for Corporate
+#             self.fields['corporate_client'].queryset = CorporateClient.objects.filter(
+#                 vendor=vendor, 
+#                 is_active=True,
+#                 billinginformation__invoices__isnull=True,
+#                 billinginformation__insurance_portion__gt=0
+#             ).distinct()
+
+#     def clean(self):
+#         cleaned_data = super().clean()
+#         insurance_provider = cleaned_data.get('insurance_provider')
+#         corporate_client = cleaned_data.get('corporate_client')
+#         period_start = cleaned_data.get('period_start')
+#         period_end = cleaned_data.get('period_end')
+#         invoice_date = cleaned_data.get('invoice_date')
+#         due_date = cleaned_data.get('due_date')
+
+#         # Must have either insurance or corporate client
+#         if not insurance_provider and not corporate_client:
+#             raise ValidationError('Please select either an insurance provider or corporate client.')
+        
+#         if insurance_provider and corporate_client:
+#             raise ValidationError('Please select only one: insurance provider OR corporate client.')
+
+#         # Period validation
+#         if period_start and period_end:
+#             if period_end <= period_start:
+#                 raise ValidationError('Period end date must be after period start date.')
+
+#         # Due date validation
+#         if invoice_date and due_date:
+#             if due_date < invoice_date:
+#                 raise ValidationError('Due date cannot be before invoice date.')
+
+#         return cleaned_data
+
+
 class InvoiceForm(forms.ModelForm):
     """Form for creating invoices"""
     
@@ -398,14 +514,28 @@ class InvoiceForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         vendor = kwargs.pop('vendor', None)
         super().__init__(*args, **kwargs)
+
+        # Default invoice date = today
+        if not self.instance.pk:
+            self.fields['invoice_date'].initial = timezone.now().date()
         
         if vendor:
+            # HMO providers with eligible billing
             self.fields['insurance_provider'].queryset = InsuranceProvider.objects.filter(
-                vendor=vendor, is_active=True
-            )
+                vendor=vendor,
+                is_active=True,
+                billinginformation__billing_type='HMO',
+                billinginformation__invoices__isnull=True,
+                billinginformation__insurance_portion__gt=0
+            ).distinct()
+
+            # Corporate clients with eligible billing
             self.fields['corporate_client'].queryset = CorporateClient.objects.filter(
-                vendor=vendor, is_active=True
-            )
+                vendor=vendor,
+                is_active=True,
+                billinginformation__billing_type='CORPORATE',
+                billinginformation__invoices__isnull=True
+            ).distinct()
 
     def clean(self):
         cleaned_data = super().clean()
@@ -418,22 +548,31 @@ class InvoiceForm(forms.ModelForm):
 
         # Must have either insurance or corporate client
         if not insurance_provider and not corporate_client:
-            raise ValidationError('Please select either an insurance provider or corporate client.')
+            raise ValidationError(
+                'Please select either an insurance provider or corporate client.'
+            )
         
         if insurance_provider and corporate_client:
-            raise ValidationError('Please select only one: insurance provider OR corporate client.')
+            raise ValidationError(
+                'Please select only one: insurance provider OR corporate client.'
+            )
 
         # Period validation
         if period_start and period_end:
             if period_end <= period_start:
-                raise ValidationError('Period end date must be after period start date.')
+                raise ValidationError(
+                    'Period end date must be after period start date.'
+                )
 
         # Due date validation
         if invoice_date and due_date:
             if due_date < invoice_date:
-                raise ValidationError('Due date cannot be before invoice date.')
+                raise ValidationError(
+                    'Due date cannot be before invoice date.'
+                )
 
         return cleaned_data
+
 
 
 class InvoicePaymentForm(forms.ModelForm):

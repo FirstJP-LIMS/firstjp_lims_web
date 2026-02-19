@@ -13,22 +13,63 @@ urlpatterns = [
     # REGISTRATION ROUTES
      # laboratory roles
     path('register/staff/', auth.tenant_register_by_role, {'role_name': 'lab_staff'}, name='staff_register'),
+
     path('register/clinician/', auth.tenant_register_by_role, {'role_name': 'clinician'}, name='clinician_register'),    
+    
     path('register/patient/', auth.tenant_register_by_role, {'role_name': 'patient'}, name='patient_register'),
 
      # learning platform roles 
-     path('register/learner/', auth.learn_register, {'role_name':'learner'}, name='learner_register'),
-     path('register/facilitator/', auth.learn_register, {'role_name':'facilitator'}, name='facilitator_register'),
+    path('register/learner/', auth.learn_register, {'role_name':'learner'}, name='learner_register'),
+     
+    path('register/facilitator/', auth.learn_register, {'role_name':'facilitator'}, name='facilitator_register'),
 
     # AUTHENTICATION
     path('login/', auth.tenant_login, name='login'),
     path('logout/', auth.tenant_logout, name='logout'),
 
     # PASSWORD RESET (Tenant-scoped)
-    path('password-reset/', auth.TenantPasswordResetView, name='password_reset'),
-    path('password-reset/done/', auth_views.PasswordResetDoneView.as_view(template_name='registration/password_reset_done.html'), name='password_reset_done'),
-    path('reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(template_name='registration/password_reset_confirm.html'), name='password_reset_confirm'),
-    path('reset/done/', auth_views.PasswordResetCompleteView.as_view(template_name='registration/password_reset_complete.html'), name='password_reset_complete'),
+    # Step 1: Request password reset
+    path('password-reset/', 
+         auth.TenantPasswordResetView.as_view(), name='password_reset'
+         ),
+
+    # path('password-reset/done/', auth_views.PasswordResetDoneView.as_view(template_name='registration/password_reset_done.html'), name='password_reset_done'),
+
+    # path('reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(template_name='registration/password_reset_confirm.html'), name='password_reset_confirm'),
+
+    # path('reset/done/', auth_views.PasswordResetCompleteView.as_view(template_name='registration/password_reset_complete.html'), name='password_reset_complete'),
+
+    # Step 2: Email sent confirmation
+    path(
+        'password-reset/done/',
+        auth.TenantPasswordResetDoneView.as_view(),
+        name='password_reset_done'
+    ),
+    
+    # Step 3: Set new password (from email link)
+    path(
+        'password-reset/confirm/<uidb64>/<token>/',
+        auth.TenantPasswordResetConfirmView.as_view(),
+        name='password_reset_confirm'
+    ),
+    
+    # Step 4: Reset complete
+    path(
+        'password-reset/complete/',
+        auth.TenantPasswordResetCompleteView.as_view(),
+        name='password_reset_complete'
+    ),
+    
+    # ==============================================
+    # PASSWORD RESET (Learning Portal)
+    # ==============================================
+    path(
+        'learn/password-reset/',
+        auth.LearnPasswordResetView.as_view(),
+        name='learn_password_reset'
+    ),
+    # Reuse done/confirm/complete views (they check is_learning_portal flag)
+
 
     # Laboratory profile 
     path("profile/", profile.vendor_profile, name="laboratory_profile"),

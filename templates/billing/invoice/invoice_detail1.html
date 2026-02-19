@@ -1,0 +1,589 @@
+{% extends "laboratory/assets/base.html" %}
+{% load static %}
+
+{% block title %}Invoice {{ invoice.invoice_number }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+
+  {# ── Breadcrumb & Header ── #}
+  <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1 small">
+          <li class="breadcrumb-item">
+            <a href="{% url 'billing:invoice_list' %}" class="text-decoration-none">Invoices</a>
+          </li>
+          <li class="breadcrumb-item active">{{ invoice.invoice_number }}</li>
+        </ol>
+      </nav>
+      <div class="d-flex align-items-center gap-3">
+        <h4 class="fw-semibold mb-0">{{ invoice.invoice_number }}</h4>
+        {% if invoice.status == 'DRAFT' %}
+          <span class="badge bg-secondary fs-6" data-invoice-status>Draft</span>
+        {% elif invoice.status == 'SENT' %}
+          <span class="badge bg-info text-dark fs-6" data-invoice-status>Sent</span>
+        {% elif invoice.status == 'PARTIAL' %}
+          <span class="badge bg-warning text-dark fs-6" data-invoice-status>Partially Paid</span>
+        {% elif invoice.status == 'PAID' %}
+          <span class="badge bg-success fs-6" data-invoice-status>Paid</span>
+        {% elif invoice.status == 'OVERDUE' %}
+          <span class="badge bg-danger fs-6" data-invoice-status>Overdue</span>
+        {% elif invoice.status == 'CANCELLED' %}
+          <span class="badge bg-dark fs-6" data-invoice-status>Cancelled</span>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Action Buttons #}
+    <div class="d-flex gap-2 flex-wrap">
+      <a href="{% url 'billing:invoice_pdf_preview' invoice_pk=invoice.pk %}"
+         class="btn btn-outline-secondary btn-sm" target="_blank">
+        <i class="fas fa-eye me-1"></i> Preview PDF
+      </a>
+      <a href="{% url 'billing:invoice_pdf_download' invoice_pk=invoice.pk %}"
+         class="btn btn-outline-primary btn-sm">
+        <i class="fas fa-download me-1"></i> Download PDF
+      </a>
+      <a href="{% url 'billing:invoice_print' invoice_pk=invoice.pk %}"
+         class="btn btn-outline-secondary btn-sm" target="_blank">
+        <i class="fas fa-print me-1"></i> Print
+      </a>
+      <a href="{% url 'billing:email_invoice' invoice_pk=invoice.pk %}"
+         class="btn btn-outline-info btn-sm">
+        <i class="fas fa-envelope me-1"></i> Send Email
+      </a>
+    </div>
+  </div>
+
+  {# ── Messages ── #}
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} alert-dismissible fade show py-2 small" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <div class="row g-4">
+
+    {# ══════════════════════════════════════
+       LEFT COLUMN — Invoice Details
+    ══════════════════════════════════════ #}
+    <div class="col-lg-8">
+
+      {# ── Invoice Card ── #}
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
+          <h6 class="fw-semibold mb-0">Invoice Details</h6>
+          <span class="text-muted small">Created {{ invoice.created_at|date:"d M Y" }}</span>
+        </div>
+        <div class="card-body px-4 py-3">
+          <div class="row g-3">
+            <div class="col-sm-6">
+              <div class="small text-muted mb-1 fw-medium">Client</div>
+              <div class="fw-semibold">
+                {% if invoice.insurance_provider %}
+                  {{ invoice.insurance_provider.name }}
+                  <span class="badge bg-info bg-opacity-15 text-info ms-1 fw-normal small">HMO</span>
+                {% elif invoice.corporate_client %}
+                  {{ invoice.corporate_client.name }}
+                  <span class="badge ms-1 fw-normal small" style="background-color:#e8e0f7;color:#7c3aed;">Corporate</span>
+                {% endif %}
+              </div>
+            </div>
+            <div class="col-sm-6">
+              <div class="small text-muted mb-1 fw-medium">Invoice Date</div>
+              <div class="fw-medium">{{ invoice.invoice_date|date:"d F Y" }}</div>
+            </div>
+            <div class="col-sm-6">
+              <div class="small text-muted mb-1 fw-medium">Due Date</div>
+              <div class="fw-medium {% if invoice.is_overdue %}text-danger{% endif %}">
+                {{ invoice.due_date|date:"d F Y" }}
+                {% if invoice.is_overdue %}
+                  <span class="badge bg-danger ms-1">Overdue</span>
+                {% endif %}
+              </div>
+            </div>
+            <div class="col-sm-6">
+              <div class="small text-muted mb-1 fw-medium">Billing Period</div>
+              <div class="fw-medium">
+                {% if invoice.period_start and invoice.period_end %}
+                  {{ invoice.period_start|date:"d M Y" }} – {{ invoice.period_end|date:"d M Y" }}
+                {% else %}
+                  <span class="text-muted">Not specified</span>
+                {% endif %}
+              </div>
+            </div>
+            {% if invoice.notes %}
+            <div class="col-12">
+              <div class="small text-muted mb-1 fw-medium">Notes</div>
+              <div class="small bg-light rounded p-2">{{ invoice.notes }}</div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      {# ── Billing Records Table ── #}
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom py-3 px-4">
+          <h6 class="fw-semibold mb-0">
+            Billing Records
+            <span class="badge bg-secondary ms-2 fw-normal">{{ invoice.billing_records.count }}</span>
+          </h6>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 small">
+              <thead class="table-light">
+                <tr>
+                  <th class="ps-4 py-2 text-muted fw-semibold">Patient</th>
+                  <th class="py-2 text-muted fw-semibold">Service</th>
+                  <th class="py-2 text-muted fw-semibold">Date</th>
+                  <th class="py-2 text-muted fw-semibold text-end">Total</th>
+                  <th class="py-2 text-muted fw-semibold text-end">Co-pay</th>
+                  <th class="pe-4 py-2 text-muted fw-semibold text-end">Insurance Portion</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for record in invoice.billing_records.all %}
+                <tr>
+                  <td class="ps-4">
+                    {% if record.appointment.patient %}
+                      {{ record.appointment.patient.get_full_name }}
+                    {% else %}
+                      <span class="text-muted">—</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if record.service %}
+                      {{ record.service.name }}
+                    {% else %}
+                      <span class="text-muted">—</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-muted">{{ record.billing_date|date:"d M Y" }}</td>
+                  <td class="text-end fw-medium">₦{{ record.total_amount|floatformat:2 }}</td>
+                  <td class="text-end text-muted">₦{{ record.patient_portion|floatformat:2 }}</td>
+                  <td class="pe-4 text-end text-primary fw-semibold">₦{{ record.insurance_portion|floatformat:2 }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="6" class="text-center py-4 text-muted">
+                    No billing records linked to this invoice.
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {# ── Payment History ── #}
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom py-3 px-4">
+          <h6 class="fw-semibold mb-0">
+            Payment History
+            <span class="badge bg-secondary ms-2 fw-normal">{{ invoice.payments.count }}</span>
+          </h6>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 small">
+              <thead class="table-light">
+                <tr>
+                  <th class="ps-4 py-2 text-muted fw-semibold">Date</th>
+                  <th class="py-2 text-muted fw-semibold text-end">Amount</th>
+                  <th class="py-2 text-muted fw-semibold">Method</th>
+                  <th class="py-2 text-muted fw-semibold">Reference</th>
+                  <th class="py-2 text-muted fw-semibold">Recorded By</th>
+                  <th class="pe-4 py-2 text-muted fw-semibold text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="payment-history-tbody">
+                {% for payment in invoice.payments.all %}
+                <tr>
+                  <td class="ps-4">{{ payment.payment_date|date:"d M Y" }}</td>
+                  <td class="text-end fw-semibold text-success">₦{{ payment.amount|floatformat:2 }}</td>
+                  <td>
+                    {% if payment.payment_method == 'TRANSFER' %}
+                      <span class="badge bg-primary bg-opacity-15 text-primary fw-normal">Bank Transfer</span>
+                    {% elif payment.payment_method == 'CHEQUE' %}
+                      <span class="badge bg-secondary bg-opacity-15 text-secondary fw-normal">Cheque</span>
+                    {% elif payment.payment_method == 'CASH' %}
+                      <span class="badge bg-success bg-opacity-15 text-success fw-normal">Cash</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-muted">{{ payment.reference_number|default:"—" }}</td>
+                  <td class="text-muted">
+                    {% if payment.recorded_by %}
+                      {{ payment.recorded_by.get_full_name|default:payment.recorded_by.username }}
+                    {% else %}—{% endif %}
+                  </td>
+                  <td class="pe-4 text-end">
+                    <div class="btn-group btn-group-sm">
+                      <a href="{% url 'billing:receipt_pdf_preview' payment_pk=payment.pk %}"
+                         class="btn btn-outline-secondary btn-xs" title="Preview Receipt" target="_blank">
+                        <i class="fas fa-eye small"></i>
+                      </a>
+                      <a href="{% url 'billing:receipt_pdf_download' payment_pk=payment.pk %}"
+                         class="btn btn-outline-secondary btn-xs" title="Download Receipt">
+                        <i class="fas fa-download small"></i>
+                      </a>
+                      <a href="{% url 'billing:email_receipt' payment_pk=payment.pk %}"
+                         class="btn btn-outline-secondary btn-xs" title="Email Receipt">
+                        <i class="fas fa-envelope small"></i>
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="6" class="text-center py-4 text-muted small" data-empty-row>
+                    <i class="fas fa-receipt d-block mb-2 opacity-25 fa-lg"></i>
+                    No payments recorded yet.
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    {# ══════════════════════════════════════
+       RIGHT COLUMN — Summary & Payment Form
+    ══════════════════════════════════════ #}
+    <div class="col-lg-4">
+
+      {# ── Financial Summary ── #}
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom py-3 px-4">
+          <h6 class="fw-semibold mb-0">Summary</h6>
+        </div>
+        <div class="card-body px-4 py-3">
+          <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+            <span class="small text-muted">Subtotal</span>
+            <span class="fw-medium">₦{{ invoice.subtotal|floatformat:2 }}</span>
+          </div>
+          <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+            <span class="small text-muted">Tax</span>
+            <span class="fw-medium">₦{{ invoice.tax|floatformat:2 }}</span>
+          </div>
+          <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+            <span class="small fw-semibold">Total Amount</span>
+            <span class="fw-bold fs-6">₦{{ invoice.total_amount|floatformat:2 }}</span>
+          </div>
+          <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+            <span class="small text-success fw-medium">Amount Paid</span>
+            <span class="fw-semibold text-success" data-invoice-amount-paid>₦{{ invoice.amount_paid|floatformat:2 }}</span>
+          </div>
+          <div class="d-flex justify-content-between align-items-center py-2 mt-1">
+            <span class="fw-bold">Balance Due</span>
+            <span class="fw-bold fs-5 {% if balance_due > 0 %}text-danger{% else %}text-success{% endif %}"
+                  data-invoice-balance-due>
+              ₦{{ balance_due|floatformat:2 }}
+            </span>
+          </div>
+
+          {# Progress bar #}
+          {% if invoice.total_amount > 0 %}
+          <div class="mt-3">
+            <div class="d-flex justify-content-between small text-muted mb-1">
+              <span>Payment Progress</span>
+              <span>{% widthratio invoice.amount_paid invoice.total_amount 100 %}%</span>
+            </div>
+            <div class="progress" style="height: 6px;">
+              <div class="progress-bar bg-success"
+                   role="progressbar"
+                   data-payment-progress
+                   style="width: {% widthratio invoice.amount_paid invoice.total_amount 100 %}%">
+              </div>
+            </div>
+          </div>
+          {% endif %}
+
+          {# Record Payment trigger #}
+          <div class="mt-4" id="record-payment-section">
+            {% if invoice.status not in 'PAID,CANCELLED' and balance_due > 0 %}
+            <button type="button"
+                    class="btn btn-success w-100 btn-sm"
+                    data-bs-toggle="modal"
+                    data-bs-target="#paymentModal">
+              <i class="fas fa-plus me-1"></i> Record Payment
+            </button>
+            {% else %}
+            <div class="text-center small text-muted py-1">
+              <i class="fas fa-check-circle text-success me-1"></i>
+              {% if invoice.status == 'PAID' %}Invoice fully paid{% else %}Invoice cancelled{% endif %}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      {# ── Meta Info ── #}
+      <div class="card border-0 shadow-sm">
+        <div class="card-body px-4 py-3">
+          <div class="small text-muted mb-2 fw-semibold text-uppercase" style="font-size:0.7rem;letter-spacing:.05em;">Invoice Info</div>
+          <div class="d-flex justify-content-between py-1 small">
+            <span class="text-muted">Created by</span>
+            <span>{{ invoice.created_by.get_full_name|default:"—" }}</span>
+          </div>
+          <div class="d-flex justify-content-between py-1 small">
+            <span class="text-muted">Created</span>
+            <span>{{ invoice.created_at|date:"d M Y, H:i" }}</span>
+          </div>
+          <div class="d-flex justify-content-between py-1 small">
+            <span class="text-muted">Last updated</span>
+            <span>{{ invoice.updated_at|date:"d M Y, H:i" }}</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+{# ═══════════════════════════════════════════════
+   PAYMENT MODAL
+═══════════════════════════════════════════════ #}
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+
+      <div class="modal-header border-bottom py-3">
+        <h6 class="modal-title fw-semibold" id="paymentModalLabel">
+          <i class="fas fa-money-bill-wave me-2 text-success"></i>Record Payment
+        </h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body px-4 py-3">
+        <div id="payment-form-errors" class="alert alert-danger py-2 small d-none"></div>
+
+        <form id="payment-modal-form" novalidate>
+          {% csrf_token %}
+
+          <div class="mb-3">
+            <label class="form-label small fw-medium">Amount <span class="text-danger">*</span></label>
+            {{ payment_form.amount }}
+            <div class="form-text small text-muted" id="balance-hint">
+              Balance due: ₦{{ balance_due|floatformat:2 }}
+            </div>
+            <div class="invalid-feedback" id="error-amount"></div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-medium">Payment Date <span class="text-danger">*</span></label>
+            {{ payment_form.payment_date }}
+            <div class="invalid-feedback" id="error-payment_date"></div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-medium">Method <span class="text-danger">*</span></label>
+            {{ payment_form.payment_method }}
+            <div class="invalid-feedback" id="error-payment_method"></div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-medium">Reference Number</label>
+            {{ payment_form.reference_number }}
+          </div>
+
+          <div class="mb-1">
+            <label class="form-label small fw-medium">Notes</label>
+            {{ payment_form.notes }}
+          </div>
+        </form>
+      </div>
+
+      <div class="modal-footer border-top py-3">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-success btn-sm px-4" id="submit-payment-btn">
+          <span class="spinner-border spinner-border-sm d-none me-1" id="payment-spinner"></span>
+          <i class="fas fa-check me-1" id="payment-check-icon"></i>
+          Record Payment
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  'use strict';
+
+  const form      = document.getElementById('payment-modal-form');
+  const submitBtn = document.getElementById('submit-payment-btn');
+  const spinner   = document.getElementById('payment-spinner');
+  const checkIcon = document.getElementById('payment-check-icon');
+  const errBox    = document.getElementById('payment-form-errors');
+  const modal     = document.getElementById('paymentModal');
+  const bsModal   = bootstrap.Modal.getOrCreateInstance(modal);
+
+  const FIELDS = ['amount', 'payment_date', 'payment_method', 'reference_number', 'notes'];
+
+  function clearErrors() {
+    errBox.classList.add('d-none');
+    errBox.textContent = '';
+    FIELDS.forEach(name => {
+      const input = form.querySelector(`[name="${name}"]`);
+      const errEl = document.getElementById(`error-${name}`);
+      if (input) input.classList.remove('is-invalid');
+      if (errEl) errEl.textContent = '';
+    });
+  }
+
+  function showErrors(errors) {
+    Object.entries(errors).forEach(([field, messages]) => {
+      const msg = Array.isArray(messages) ? messages.join(' ') : messages;
+      if (field === '__all__') {
+        errBox.textContent = msg;
+        errBox.classList.remove('d-none');
+        return;
+      }
+      const input = form.querySelector(`[name="${field}"]`);
+      const errEl = document.getElementById(`error-${field}`);
+      if (input) input.classList.add('is-invalid');
+      if (errEl) errEl.textContent = msg;
+    });
+  }
+
+  function setLoading(loading) {
+    submitBtn.disabled = loading;
+    spinner.classList.toggle('d-none', !loading);
+    checkIcon.classList.toggle('d-none', loading);
+  }
+
+  function fmt(value) {
+    return '\u20a6' + parseFloat(value).toLocaleString('en-NG', {
+      minimumFractionDigits: 2, maximumFractionDigits: 2,
+    });
+  }
+
+  function updateStatusBadge(status, statusDisplay) {
+    const BADGE_MAP = {
+      DRAFT:     ['bg-secondary'],
+      SENT:      ['bg-info', 'text-dark'],
+      PARTIAL:   ['bg-warning', 'text-dark'],
+      PAID:      ['bg-success'],
+      OVERDUE:   ['bg-danger'],
+      CANCELLED: ['bg-dark'],
+    };
+    document.querySelectorAll('[data-invoice-status]').forEach(el => {
+      el.className = 'badge fs-6 ' + (BADGE_MAP[status] || []).join(' ');
+      el.textContent = statusDisplay;
+    });
+  }
+
+  function updateFinancials(inv) {
+    const paid    = parseFloat(inv.amount_paid);
+    const total   = parseFloat(inv.total_amount);
+    const balance = parseFloat(inv.balance_due);
+    const pct     = total > 0 ? Math.min((paid / total) * 100, 100) : 0;
+
+    const el = sel => document.querySelector(sel);
+    if (el('[data-invoice-amount-paid]')) el('[data-invoice-amount-paid]').textContent = fmt(paid);
+    if (el('[data-invoice-balance-due]')) el('[data-invoice-balance-due]').textContent = fmt(balance);
+    if (el('[data-payment-progress]'))   el('[data-payment-progress]').style.width = pct + '%';
+    const hint = document.getElementById('balance-hint');
+    if (hint) hint.textContent = 'Balance due: ' + fmt(balance);
+
+    if (balance <= 0) {
+      document.getElementById('record-payment-section')?.classList.add('d-none');
+    }
+  }
+
+  function prependPaymentRow(payment) {
+    const tbody = document.getElementById('payment-history-tbody');
+    if (!tbody) return;
+    tbody.querySelector('[data-empty-row]')?.remove();
+
+    const BADGE = {
+      'Bank Transfer': 'bg-primary bg-opacity-15 text-primary',
+      'Cheque':        'bg-secondary bg-opacity-15 text-secondary',
+      'Cash':          'bg-success bg-opacity-15 text-success',
+    };
+    const cls = BADGE[payment.payment_method] || 'bg-secondary';
+    const amtFmt = '\u20a6' + parseFloat(payment.amount).toLocaleString('en-NG', {minimumFractionDigits:2});
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="ps-4">${payment.payment_date}</td>
+      <td class="text-end fw-semibold text-success">${amtFmt}</td>
+      <td><span class="badge ${cls} fw-normal">${payment.payment_method}</span></td>
+      <td class="text-muted">${payment.reference_number}</td>
+      <td class="text-muted">${payment.recorded_by}</td>
+      <td class="pe-4 text-end">
+        <div class="btn-group btn-group-sm">
+          <a href="/billing/payments/${payment.pk}/receipt/pdf/preview/" class="btn btn-outline-secondary btn-xs" target="_blank" title="Preview">
+            <i class="fas fa-eye small"></i>
+          </a>
+          <a href="/billing/payments/${payment.pk}/receipt/pdf/" class="btn btn-outline-secondary btn-xs" title="Download">
+            <i class="fas fa-download small"></i>
+          </a>
+          <a href="/billing/payments/${payment.pk}/receipt/email/" class="btn btn-outline-secondary btn-xs" title="Email">
+            <i class="fas fa-envelope small"></i>
+          </a>
+        </div>
+      </td>`;
+    tbody.prepend(tr);
+  }
+
+  submitBtn.addEventListener('click', async function () {
+    clearErrors();
+    setLoading(true);
+
+    try {
+      const response = await fetch(
+        "{% url 'billing:invoice_payment_create' invoice_pk=invoice.pk %}",
+        {
+          method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+          body: new FormData(form),
+        }
+      );
+
+      const json = await response.json();
+
+      if (json.success) {
+        bsModal.hide();
+        form.reset();
+        prependPaymentRow(json.payment);
+        updateFinancials(json.invoice);
+        updateStatusBadge(json.invoice.status, json.invoice.status_display);
+
+        const banner = document.createElement('div');
+        banner.className = 'alert alert-success alert-dismissible fade show py-2 small';
+        banner.innerHTML = `<i class="fas fa-check-circle me-1"></i>${json.message}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+        document.querySelector('.container-fluid').prepend(banner);
+        setTimeout(() => banner.remove(), 5000);
+
+      } else {
+        showErrors(json.errors);
+      }
+
+    } catch (err) {
+      errBox.textContent = 'An unexpected error occurred. Please try again.';
+      errBox.classList.remove('d-none');
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  modal.addEventListener('hidden.bs.modal', clearErrors);
+
+})();
+</script>
+
+{% endblock %}

@@ -81,101 +81,248 @@ def test_request_list(request):
     return render(request, "laboratory/requests/list.html", context)
 
 
+# @login_required
+# @require_capability('can_manage_request')
+# def test_request_create(request):
+#     """
+#     Create a new Test Request and its associated Billing record.
+#     Sample collection and lab assignment happen ONLY after
+#     payment or admin authorization.
+#     """
+
+#     vendor = getattr(request.user, 'vendor', None) or getattr(request, 'tenant', None)
+#     if not vendor:
+#         messages.error(request, "Vendor not found for this user.")
+#         return redirect('dashboard')
+
+#     if not ensure_lab_pricing_ready(vendor):
+#         messages.warning(request, "Setup Required: Please create a RETAIL price list before accepting requests.")
+#             # Pass 'next' so you can come back here after creation
+#         return redirect(f"{reverse('billing:pricelist_create')}?next={request.path}")
+
+#     if request.method == 'POST':
+#         request_form = TestRequestForm(
+#             request.POST,
+#             vendor=vendor,
+#             user=request.user
+#         )
+
+#         if request_form.is_valid():
+#             try:
+#                 with transaction.atomic():
+
+#                     # =========================
+#                     # STEP 1: Get or Create Patient
+#                     # =========================
+#                     patient = request_form.get_or_create_patient()
+
+#                     # =========================
+#                     # STEP 2: Create Test Request
+#                     # =========================
+#                     test_request = request_form.save(commit=False)
+#                     test_request.vendor = vendor
+#                     test_request.patient = patient
+#                     test_request.requested_by = request.user
+
+#                     if request.user.role == 'clinician':
+#                         test_request.ordering_clinician = request.user
+
+#                     test_request.save()
+
+#                     # Set requested tests (M2M)
+#                     tests_to_order = request_form.cleaned_data['tests_to_order']
+#                     test_request.requested_tests.set(tests_to_order)
+
+#                     # =========================
+#                     # STEP 3: Resolve Pricing Context
+#                     # =========================
+#                     billing_type = request_form.cleaned_data.get('billing_type', 'CASH')
+#                     price_list = None
+#                     insurance_provider = None
+#                     corporate_client = None
+
+#                     insurance_providers = ['HMO', 'NHIS']
+#                     if billing_type in insurance_providers:
+#                         insurance_provider = request_form.cleaned_data.get('insurance_provider')
+#                         price_list = getattr(insurance_provider, 'price_list', None)
+
+#                     elif billing_type == 'CORPORATE':
+#                         corporate_client = request_form.cleaned_data.get('corporate_client')
+#                         price_list = getattr(corporate_client, 'price_list', None)
+
+#                     # =========================
+#                     # STEP 4: Create Billing Record
+#                     # =========================
+#                     billing = BillingInformation.objects.create(
+#                         vendor=vendor,
+#                         request=test_request,
+#                         billing_type=billing_type,
+#                         price_list=price_list,
+#                         insurance_provider=insurance_provider,
+#                         corporate_client=corporate_client,
+#                         payment_status='UNPAID'
+#                     )
+
+#                     # =========================
+#                     # SUCCESS → Billing Page
+#                     # =========================
+#                     messages.success(
+#                         request,
+#                         (
+#                             f"✅ Test request {test_request.request_id} created for "
+#                             f"{patient.first_name} {patient.last_name}. "
+#                             f"Total: ₦{billing.total_amount:,.2f}. "
+#                             "Proceed to billing."
+#                         )
+#                     )
+
+#                     return redirect(
+#                         'billing:billing_detail',
+#                         pk=billing.pk
+#                     )
+
+#             except Exception as e:
+#                 logger = logging.getLogger(__name__)
+#                 logger.exception("Error creating test request")
+
+#                 messages.error(
+#                     request,
+#                     "❌ An unexpected error occurred while creating the test request."
+#                 )
+
+#         else:
+#             messages.error(request, "❌ Please correct the errors below.")
+
+#     else:
+#         request_form = TestRequestForm(
+#             vendor=vendor,
+#             user=request.user
+#         )
+
+#     context = {
+#         'form': request_form,
+#     }
+
+#     return render(
+#         request,
+#         'laboratory/requests/request_form.html',
+#         context
+#     )
+
+
+# import logging
+
+# from django.contrib import messages
+# from django.contrib.auth.decorators import login_required
+# from django.db import transaction
+# from django.shortcuts import redirect, render
+# from django.urls import reverse
+
+# from billing.models import BillingInformation
+# from labs.forms import TestRequestForm           # adjust import path as needed
+# from labs.utils import ensure_lab_pricing_ready  # adjust import path as needed
+# from tenants.decorators import require_capability
+
+# logger = logging.getLogger(__name__)
+
+# Insurance billing types that require an InsuranceProvider FK.
+# Kept in one place so the view and form always agree.
+INSURANCE_BILLING_TYPES = ['HMO', 'NHIS']
+
+
 @login_required
 @require_capability('can_manage_request')
 def test_request_create(request):
     """
-    Create a new Test Request and its associated Billing record.
-    Sample collection and lab assignment happen ONLY after
-    payment or admin authorization.
+    Create a new TestRequest and its associated BillingInformation record.
+
+    Workflow
+    ────────
+    1.  Resolve vendor from the authenticated user.
+    2.  Gate: ensure at least one RETAIL price list exists (billing engine requirement).
+    3.  POST → validate form → atomic block:
+          a. Get or create Patient
+          b. Save TestRequest (vendor / patient / requested_by assigned here)
+          c. Set requested_tests M2M
+          d. Resolve pricing context (price list, insurance provider, corporate client)
+          e. Create BillingInformation — the model's save() triggers _calculate_totals_internal()
+    4.  Redirect to the billing detail page so staff can confirm / collect payment.
+
+    Design notes
+    ────────────
+    - Sample collection and lab assignment happen ONLY after payment or admin authorisation.
+    - requested_by is set explicitly in the view (not the form) because the form should not
+      have access to request.user directly — it receives it via the `user` kwarg.
+    - M2M is set here (not in form.save) because it must happen after test_request.save()
+      and after the vendor / patient are already attached.
     """
 
-    # vendor = getattr(request.user, 'vendor', None) or getattr(request, 'tenant', None)
-
+    # ── Vendor resolution ────────────────────────────────────────────────────
     vendor = getattr(request.user, 'vendor', None) or getattr(request, 'tenant', None)
     if not vendor:
-        messages.error(request, "Vendor not found for this user.")
+        messages.error(request, "Your account is not associated with a vendor.")
         return redirect('dashboard')
 
-    # if not ensure_lab_pricing_ready(vendor):
-    #     messages.error(
-    #         request,
-    #         (
-    #             "⚠️ Lab setup incomplete. "
-    #             "Please create and activate a RETAIL price list "
-    #             "before creating test requests."
-    #         )
-    #     )
-    #     return redirect('billing:pricelist_create')
-
+    # ── Pricing gate ─────────────────────────────────────────────────────────
     if not ensure_lab_pricing_ready(vendor):
-        messages.warning(request, "Setup Required: Please create a RETAIL price list before accepting requests.")
-            # Pass 'next' so you can come back here after creation
-        return redirect(f"{reverse('billing:pricelist_create')}?next={request.path}")
+        messages.warning(
+            request,
+            "Setup required: please create a RETAIL price list before accepting requests."
+        )
+        return redirect(
+            f"{reverse('billing:pricelist_create')}?next={request.path}"
+        )
+
+    # ── Build the form ───────────────────────────────────────────────────────
+    form_kwargs = dict(vendor=vendor, user=request.user)
 
     if request.method == 'POST':
-        request_form = TestRequestForm(
-            request.POST,
-            vendor=vendor,
-            user=request.user
-        )
+        request_form = TestRequestForm(request.POST, **form_kwargs)
 
         if request_form.is_valid():
             try:
                 with transaction.atomic():
 
-                    # =========================
-                    # STEP 1: Get or Create Patient
-                    # =========================
+                    # ── STEP 1: Patient ──────────────────────────────────────
                     patient = request_form.get_or_create_patient()
 
-                    # =========================
-                    # STEP 2: Create Test Request
-                    # =========================
+                    # ── STEP 2: TestRequest ──────────────────────────────────
                     test_request = request_form.save(commit=False)
                     test_request.vendor = vendor
                     test_request.patient = patient
+                    # requested_by is always the logged-in user; the form sets
+                    # ordering_clinician when the user is a clinician.
                     test_request.requested_by = request.user
-
-                    if request.user.role == 'clinician':
-                        test_request.ordering_clinician = request.user
-
                     test_request.save()
 
-                    # Set requested tests (M2M)
-                    tests_to_order = request_form.cleaned_data['tests_to_order']
-                    test_request.requested_tests.set(tests_to_order)
+                    # ── STEP 3: M2M tests ────────────────────────────────────
+                    test_request.requested_tests.set(
+                        request_form.cleaned_data['tests_to_order']
+                    )
 
-                    # =========================
-                    # STEP 3: Resolve Pricing Context
-                    # =========================
-                    billing_type = request_form.cleaned_data.get('billing_type', 'CASH')
+                    # ── STEP 4: Resolve billing context ──────────────────────
+                    billing_type = request_form.cleaned_data['billing_type']  # always present after is_valid()
                     price_list = None
                     insurance_provider = None
                     corporate_client = None
 
-                    if billing_type == 'HMO':
+                    if billing_type in INSURANCE_BILLING_TYPES:
                         insurance_provider = request_form.cleaned_data.get('insurance_provider')
+                        # Insurance provider's price list takes precedence
                         price_list = getattr(insurance_provider, 'price_list', None)
 
                     elif billing_type == 'CORPORATE':
                         corporate_client = request_form.cleaned_data.get('corporate_client')
                         price_list = getattr(corporate_client, 'price_list', None)
 
-                    # if not ensure_lab_pricing_ready(vendor):
-                    #     messages.error(
-                    #         request,
-                    #         (
-                    #             "⚠️ Lab setup incomplete. "
-                    #             "Please create and activate a RETAIL price list "
-                    #             "before creating test requests."
-                    #         )
-                    #     )
-                    #     return redirect('billing:pricelist_create')
+                    # CASH / STAFF / NHIS (no provider) → price_list stays None,
+                    # which makes BillingInformation use each test's retail price.
 
-                    # =========================
-                    # STEP 4: Create Billing Record
-                    # =========================
+                    # ── STEP 5: BillingInformation ───────────────────────────
+                    # The model's save() calls _calculate_totals_internal(), which:
+                    #   • Sums test prices from the correct price list
+                    #   • Applies discounts (price list, corporate, manual)
+                    #   • Splits total into patient_portion / insurance_portion
                     billing = BillingInformation.objects.create(
                         vendor=vendor,
                         request=test_request,
@@ -183,12 +330,10 @@ def test_request_create(request):
                         price_list=price_list,
                         insurance_provider=insurance_provider,
                         corporate_client=corporate_client,
-                        payment_status='UNPAID'
+                        payment_status='UNPAID',
                     )
 
-                    # =========================
-                    # SUCCESS → Billing Page
-                    # =========================
+                    # ── Success ──────────────────────────────────────────────
                     messages.success(
                         request,
                         (
@@ -198,84 +343,33 @@ def test_request_create(request):
                             "Proceed to billing."
                         )
                     )
+                    return redirect('billing:billing_detail', pk=billing.pk)
 
-                    return redirect(
-                        'billing:billing_detail',
-                        pk=billing.pk
-                    )
-
-            except Exception as e:
-                logger = logging.getLogger(__name__)
-                logger.exception("Error creating test request")
-
+            except Exception:
+                # Log the full traceback; show a safe message to the user.
+                logger.exception(
+                    "Unhandled error in test_request_create for vendor=%s user=%s",
+                    vendor.pk,
+                    request.user.pk,
+                )
                 messages.error(
                     request,
-                    "❌ An unexpected error occurred while creating the test request."
+                    "❌ An unexpected error occurred while creating the test request. "
+                    "Our team has been notified."
                 )
 
         else:
-            messages.error(request, "❌ Please correct the errors below.")
+            # Form errors are rendered by the template; add a banner for visibility.
+            messages.error(request, "❌ Please correct the errors highlighted below.")
 
     else:
-        request_form = TestRequestForm(
-            vendor=vendor,
-            user=request.user
-        )
-
-    context = {
-        'form': request_form,
-    }
+        request_form = TestRequestForm(**form_kwargs)
 
     return render(
         request,
         'laboratory/requests/request_form.html',
-        context
+        {'form': request_form},
     )
-
-
-# @login_required
-# @require_capability("can_manage_request")
-# def test_request_update(request, pk):
-#     vendor = getattr(request.user, "vendor", None)
-#     request_instance = get_object_or_404(TestRequest, pk=pk, vendor=vendor)
-
-#     # Get sample if it exists
-#     sample = Sample.objects.filter(test_request=request_instance).first()
-
-#     if request.method == "POST":
-#         form = TestRequestForm(request.POST, instance=request_instance, vendor=vendor)
-#         sample_form = SampleForm(request.POST, instance=sample)
-
-#         if form.is_valid() and sample_form.is_valid():
-#             try:
-#                 with transaction.atomic():
-#                     updated_request = form.save(commit=False)
-#                     updated_request.vendor = vendor
-#                     updated_request.save()
-
-#                     # Update M2M ordered tests
-#                     updated_request.requested_tests.set(form.cleaned_data["tests_to_order"])
-
-#                     # Save sample info
-#                     sample_form.instance.test_request = updated_request
-#                     sample_form.save()
-
-#                     messages.success(request, f"{updated_request.request_id} updated successfully.")
-#                     return redirect("labs:test_request_list")
-
-#             except Exception as e:
-#                 messages.error(request, f"Error updating request: {e}")
-
-#     else:
-#         # GET — instantiate both forms
-#         form = TestRequestForm(instance=request_instance, vendor=vendor)
-#         sample_form = SampleForm(instance=sample)
-
-#     return render(request,'laboratory/requests/request_form.html', {
-#         "form": form,
-#         "sample_form": sample_form,
-#         "update_mode": True,
-#     })
 
 
 @login_required

@@ -100,7 +100,10 @@ sd.html
 sdd.html
 
 /templates/dump/
+/templates copy
 
 /github/
 /.gitignore/
 d_steps.md
+
+/scaling

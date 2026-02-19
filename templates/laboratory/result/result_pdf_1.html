@@ -162,7 +162,7 @@
     <table class="info-grid">
         <tr>
             <td class="label">Patient Name</td>
-            <td class="value">{{ result.assignment.request.patient.full_name }}</td>
+            <td class="value">{{ result.assignment.request.patient.first_name }} {{ result.assignment.request.patient.last_name }}</td>
             <td class="label">Request ID</td>
             <td class="value">{{ result.assignment.request.request_id }}</td>
         </tr>
@@ -249,7 +249,7 @@
             </div>
             <div class="sig-line">
                 <strong>{{ result.verified_by.get_full_name|upper }}</strong><br>
-                Consultant Pathologist
+                Laboratory Director or Pathologist
             </div>
         </div>
 

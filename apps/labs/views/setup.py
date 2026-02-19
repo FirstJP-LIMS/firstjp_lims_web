@@ -41,7 +41,7 @@ from ..models import (
     TestResult,
     VendorTest
 )
-from ..services import (
+from ..services.instruments import (
     InstrumentAPIError,
     InstrumentService,
     fetch_assignment_result,
@@ -103,6 +103,9 @@ def department_create(request):
     tenant = getattr(request, "tenant", None)
     is_platform_admin = getattr(request, "is_platform_admin", False)
 
+    departments = Department.objects.filter(vendor=tenant)
+    departments_count = departments.count()
+
     if request.method == "POST":
         form = DepartmentForm(request.POST)
         if form.is_valid():
@@ -119,7 +122,7 @@ def department_create(request):
             return redirect("labs:department_list")
     else:
         form = DepartmentForm()
-    return render(request, "laboratory/departments/form.html", {"form": form, "action": "Create"})
+    return render(request, "laboratory/departments/form.html", {"form": form, "action": "Create", "departments_count": departments_count})
 
 
 @login_required

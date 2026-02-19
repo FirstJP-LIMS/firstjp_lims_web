@@ -1,0 +1,309 @@
+{% extends "laboratory/assets/base.html" %}
+{% load static %}
+
+{% block title %}Invoices{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+
+  {# ── Page Header ── #}
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h4 class="fw-semibold mb-0 text-dark">Invoices</h4>
+      <p class="text-muted small mb-0">Manage HMO &amp; corporate billing invoices</p>
+    </div>
+    <a href="{% url 'billing:invoice_create' %}" class="btn btn-primary btn-sm px-3">
+      <i class="fas fa-plus me-1"></i> New Invoice
+    </a>
+  </div>
+
+  {# ── Messages ── #}
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} alert-dismissible fade show py-2 small" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  {# ── Summary Cards ── #}
+  <div class="row g-3 mb-4">
+    {% with invoices.paginator.object_list as all_invoices %}
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body py-3">
+          <div class="d-flex align-items-center gap-3">
+            <div class="rounded-3 bg-primary bg-opacity-10 p-2 d-flex align-items-center justify-content-center" style="width:42px;height:42px;">
+              <i class="fas fa-file-invoice text-primary"></i>
+            </div>
+            <div>
+              <div class="text-muted small">Total Invoices</div>
+              <div class="fw-bold fs-5">{{ invoices.paginator.count }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body py-3">
+          <div class="d-flex align-items-center gap-3">
+            <div class="rounded-3 bg-warning bg-opacity-10 p-2 d-flex align-items-center justify-content-center" style="width:42px;height:42px;">
+              <i class="fas fa-clock text-warning"></i>
+            </div>
+            <div>
+              <div class="text-muted small">Pending / Sent</div>
+              <div class="fw-bold fs-5">
+                {{ all_invoices|length }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body py-3">
+          <div class="d-flex align-items-center gap-3">
+            <div class="rounded-3 bg-danger bg-opacity-10 p-2 d-flex align-items-center justify-content-center" style="width:42px;height:42px;">
+              <i class="fas fa-exclamation-circle text-danger"></i>
+            </div>
+            <div>
+              <div class="text-muted small">Overdue</div>
+              <div class="fw-bold fs-5 text-danger">
+                {% for inv in all_invoices %}{% if inv.status == 'OVERDUE' %}{% with 1 as x %}{% endwith %}{% endif %}{% endfor %}
+                {{ all_invoices|length }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body py-3">
+          <div class="d-flex align-items-center gap-3">
+            <div class="rounded-3 bg-success bg-opacity-10 p-2 d-flex align-items-center justify-content-center" style="width:42px;height:42px;">
+              <i class="fas fa-check-circle text-success"></i>
+            </div>
+            <div>
+              <div class="text-muted small">Paid</div>
+              <div class="fw-bold fs-5 text-success">
+                {{ all_invoices|length }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endwith %}
+  </div>
+
+  {# ── Filter Bar ── #}
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body py-3">
+      <form method="get" class="row g-2 align-items-end">
+        <div class="col-12 col-sm-6 col-md-3">
+          <label class="form-label small fw-medium text-muted mb-1">Status</label>
+          {{ filter_form.status }}
+        </div>
+        <div class="col-12 col-sm-6 col-md-3">
+          <label class="form-label small fw-medium text-muted mb-1">Client Type</label>
+          {{ filter_form.client_type }}
+        </div>
+        <div class="col-12 col-sm-6 col-md-2">
+          <label class="form-label small fw-medium text-muted mb-1">From</label>
+          {{ filter_form.date_from }}
+        </div>
+        <div class="col-12 col-sm-6 col-md-2">
+          <label class="form-label small fw-medium text-muted mb-1">To</label>
+          {{ filter_form.date_to }}
+        </div>
+        <div class="col-12 col-md-2 d-flex gap-2">
+          <button type="submit" class="btn btn-primary btn-sm flex-fill">
+            <i class="fas fa-filter me-1"></i>Filter
+          </button>
+          <a href="{% url 'billing:invoice_list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-times"></i>
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {# ── Invoice Table ── #}
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th class="ps-4 py-3 small fw-semibold text-muted text-uppercase">Invoice #</th>
+              <th class="py-3 small fw-semibold text-muted text-uppercase">Client</th>
+              <th class="py-3 small fw-semibold text-muted text-uppercase">Type</th>
+              <th class="py-3 small fw-semibold text-muted text-uppercase">Period</th>
+              <th class="py-3 small fw-semibold text-muted text-uppercase">Invoice Date</th>
+              <th class="py-3 small fw-semibold text-muted text-uppercase">Due Date</th>
+              <th class="py-3 small fw-semibold text-muted text-uppercase text-end">Amount</th>
+              <th class="py-3 small fw-semibold text-muted text-uppercase text-end">Paid</th>
+              <th class="py-3 small fw-semibold text-muted text-uppercase">Status</th>
+              <th class="pe-4 py-3 small fw-semibold text-muted text-uppercase text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for invoice in invoices %}
+            <tr>
+              <td class="ps-4">
+                <a href="{% url 'billing:invoice_detail' pk=invoice.pk %}"
+                   class="fw-semibold text-primary text-decoration-none">
+                  {{ invoice.invoice_number }}
+                </a>
+              </td>
+
+              <td>
+                {% if invoice.insurance_provider %}
+                  <span class="d-block fw-medium small">{{ invoice.insurance_provider.name }}</span>
+                {% elif invoice.corporate_client %}
+                  <span class="d-block fw-medium small">{{ invoice.corporate_client.name }}</span>
+                {% else %}
+                  <span class="text-muted small">—</span>
+                {% endif %}
+              </td>
+
+              <td>
+                {% if invoice.insurance_provider %}
+                  <span class="badge bg-info bg-opacity-15 text-info fw-medium">HMO</span>
+                {% elif invoice.corporate_client %}
+                  <span class="badge bg-purple bg-opacity-15 fw-medium" style="background-color:#e8e0f7;color:#7c3aed;">Corporate</span>
+                {% endif %}
+              </td>
+
+              <td class="small text-muted">
+                {% if invoice.period_start and invoice.period_end %}
+                  {{ invoice.period_start|date:"d M" }} – {{ invoice.period_end|date:"d M Y" }}
+                {% else %}—{% endif %}
+              </td>
+
+              <td class="small">{{ invoice.invoice_date|date:"d M Y" }}</td>
+
+              <td class="small {% if invoice.is_overdue %}text-danger fw-medium{% endif %}">
+                {{ invoice.due_date|date:"d M Y" }}
+                {% if invoice.is_overdue %}
+                  <i class="fas fa-exclamation-circle ms-1" title="Overdue"></i>
+                {% endif %}
+              </td>
+
+              <td class="text-end small fw-semibold">₦{{ invoice.total_amount|floatformat:2 }}</td>
+
+              <td class="text-end small text-success">₦{{ invoice.amount_paid|floatformat:2 }}</td>
+
+              <td>
+                {% if invoice.status == 'DRAFT' %}
+                  <span class="badge bg-secondary">Draft</span>
+                {% elif invoice.status == 'SENT' %}
+                  <span class="badge bg-info text-dark">Sent</span>
+                {% elif invoice.status == 'PARTIAL' %}
+                  <span class="badge bg-warning text-dark">Partial</span>
+                {% elif invoice.status == 'PAID' %}
+                  <span class="badge bg-success">Paid</span>
+                {% elif invoice.status == 'OVERDUE' %}
+                  <span class="badge bg-danger">Overdue</span>
+                {% elif invoice.status == 'CANCELLED' %}
+                  <span class="badge bg-dark">Cancelled</span>
+                {% endif %}
+              </td>
+
+              <td class="pe-4 text-end">
+                <div class="btn-group btn-group-sm">
+                  <a href="{% url 'billing:invoice_detail' pk=invoice.pk %}"
+                     class="btn btn-outline-secondary" title="View">
+                    <i class="fas fa-eye"></i>
+                  </a>
+                  <a href="{% url 'billing:invoice_pdf_preview' invoice_pk=invoice.pk %}"
+                     class="btn btn-outline-secondary" title="Preview PDF" target="_blank">
+                    <i class="fas fa-file-pdf"></i>
+                  </a>
+                  <button class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split"
+                          data-bs-toggle="dropdown" aria-expanded="false">
+                    <span class="visually-hidden">Toggle Dropdown</span>
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                    <li>
+                      <a class="dropdown-item small" href="{% url 'billing:invoice_pdf_download' invoice_pk=invoice.pk %}">
+                        <i class="fas fa-download me-2 text-muted"></i>Download PDF
+                      </a>
+                    </li>
+                    <li>
+                      <a class="dropdown-item small" href="{% url 'billing:email_invoice' invoice_pk=invoice.pk %}">
+                        <i class="fas fa-envelope me-2 text-muted"></i>Send by Email
+                      </a>
+                    </li>
+                    <li>
+                      <a class="dropdown-item small" href="{% url 'billing:invoice_print' invoice_pk=invoice.pk %}" target="_blank">
+                        <i class="fas fa-print me-2 text-muted"></i>Print
+                      </a>
+                    </li>
+                  </ul>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="10" class="text-center py-5">
+                <div class="text-muted">
+                  <i class="fas fa-file-invoice fa-2x mb-3 d-block opacity-25"></i>
+                  No invoices found.
+                  <a href="{% url 'billing:invoice_create' %}" class="d-block mt-2 small">
+                    Create your first invoice →
+                  </a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {# ── Pagination ── #}
+    {% if page_obj.has_other_pages %}
+    <div class="card-footer bg-transparent border-top-0 d-flex justify-content-between align-items-center py-3 px-4">
+      <small class="text-muted">
+        Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }} invoices
+      </small>
+      <nav>
+        <ul class="pagination pagination-sm mb-0 gap-1">
+          {% if page_obj.has_previous %}
+            <li class="page-item">
+              <a class="page-link rounded" href="?page={{ page_obj.previous_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.client_type %}&client_type={{ request.GET.client_type }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}">
+                <i class="fas fa-chevron-left small"></i>
+              </a>
+            </li>
+          {% endif %}
+          {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+              <li class="page-item active">
+                <span class="page-link rounded">{{ num }}</span>
+              </li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+              <li class="page-item">
+                <a class="page-link rounded" href="?page={{ num }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.client_type %}&client_type={{ request.GET.client_type }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}">{{ num }}</a>
+              </li>
+            {% endif %}
+          {% endfor %}
+          {% if page_obj.has_next %}
+            <li class="page-item">
+              <a class="page-link rounded" href="?page={{ page_obj.next_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.client_type %}&client_type={{ request.GET.client_type }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}">
+                <i class="fas fa-chevron-right small"></i>
+              </a>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

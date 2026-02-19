@@ -24,6 +24,15 @@ from ..models import (
 
 from ..decorators import require_capability
 
+from django.conf import settings
+from django.template.loader import render_to_string
+from django.http import HttpResponse
+from weasyprint import HTML
+import tempfile
+
+from django.core.mail import EmailMessage
+
+
 # Logger Setup
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -137,53 +146,6 @@ def enter_manual_result(request, assignment_id):
         result=None,
     )
 
-
-# @login_required
-# @require_capability("can_enter_results")
-# def update_manual_result(request, result_id):
-#     """
-#         To be used for manual and instruments generated results
-#     """
-#     result = get_object_or_404(
-#         TestResult.objects.select_related("assignment__lab_test", "assignment__vendor"),
-#         id=result_id,
-#         assignment__vendor=request.user.vendor,
-#     )
-
-#     # ❌ Logic Guard: Only DRAFT results can be updated here
-#     if result.status != "draft":
-#         messages.error(request, "This result is already verified/released. Please use the Amendment process.")
-#         return redirect('labs:result_detail', result_id=result.id)
-
-#     if request.method == "POST":
-#         raw_value = request.POST.get("result_value", "").strip()
-        
-#         if not raw_value:
-#             messages.error(request, "Result value is required.")
-#         else:
-#             try:
-#                 with transaction.atomic():
-#                     # Update fields
-#                     result.result_value = raw_value
-#                     result.units = request.POST.get("unit", "").strip()
-#                     result.remarks = request.POST.get("remarks", "").strip()
-#                     result.interpretation = request.POST.get("interpretation", "").strip()
-                    
-#                     # Scientific Logic
-#                     result.auto_flag_result()
-#                     result.save()
-                    
-#                     # Update Assignment status if it was just 'pending'
-#                     if result.assignment.status == 'pending':
-#                         result.assignment.status = 'entered'
-#                         result.assignment.save()
-
-#                     messages.success(request, "Result updated successfully.")
-#                     return redirect("labs:result_detail", result_id=result.id)
-#             except Exception as e:
-#                 messages.error(request, f"System Error: {str(e)}")
-
-#     return _render_manual_result_form(request, result.assignment, result)
 
 @login_required
 @require_capability("can_enter_results")
@@ -339,8 +301,6 @@ def result_detail(request, result_id):
         assignment__vendor=user.vendor,
     )
 
-    # result_amendments = ResultAmendment.objects.filter(result=result).order_by('-amended_at')
-    # result_amendments = get_object_or_404(ResultAmendment.objects.filter(result=result).order_by('-amended_at'))
     # ✅ FIX: Use filter directly. It returns an empty list [] if no amendments exist.
     result_amendments = ResultAmendment.objects.filter(result=result).order_by('-amended_at')
 
@@ -593,59 +553,52 @@ def _get_user_role_display(user):
         return "Laboratory Staff"
 
 
-
-# Download Result
-from django.conf import settings
-from django.template.loader import render_to_string
-from django.http import HttpResponse
-from weasyprint import HTML
-import tempfile
-
-from django.core.mail import EmailMessage
-
+# ===== DOWNLOAD RESULT =====
 
 @login_required
 def download_result_pdf(request, result_id):
-    # Use the same select_related for speed and data access
+    # We use select_related to pull the Vendor and its Profile in one go
+    # We use 'ai_insight' to get the AI data if it exists
     result = get_object_or_404(
         TestResult.objects.select_related(
             'assignment__lab_test',
             'assignment__request__patient',
             'assignment__request__ordering_clinician',
+            'assignment__vendor__profile',  # Link to VendorProfile
             'assignment__sample',
             'verified_by',
+            'ai_insight',  # Link to AIInterpretation
         ),
         id=result_id,
         assignment__vendor=request.user.vendor
     )
 
-    # # Fetch history just like your detail view does
-    # previous_results = TestResult.objects.filter(
-    #     assignment__request__patient=result.assignment.request.patient,
-    #     assignment__lab_test=result.assignment.lab_test,
-    #     released=True
-    # ).exclude(id=result.id).order_by('-entered_at')[:3] # Show last 3 for trend
-   
+    # Fetch history
     previous_results = TestResult.objects.filter(
         assignment__request__patient=result.assignment.request.patient,
         assignment__lab_test=result.assignment.lab_test,
         status='released'
     ).exclude(id=result.id).order_by('-entered_at')[:3]
 
+    # Check if AI insight exists and is approved
+    ai_insight = None
+    if hasattr(result, 'ai_insight') and result.ai_insight.is_approved:
+        ai_insight = result.ai_insight
 
     context = {
         'result': result,
+        'vendor_profile': result.assignment.vendor.profile, # Logo, Address, Seal
         'previous_results': previous_results,
         'clinician': result.assignment.request.ordering_clinician,
-        # If you have an Amendment model, fetch the latest one
+        'ai_insight': ai_insight,
         'amendment': getattr(result, 'amendments', None),
+        'generated_at': timezone.now(),
     }
 
-    # Render HTML to string
-    html_string = render_to_string('laboratory/result/result_pdf1.html', context)
-    html = HTML(string=html_string, base_url=request.build_absolute_uri())
+    html_string = render_to_string('laboratory/result/result_pdf.html', context)
     
-    # Generate PDF
+    # PDF Generation
+    html = HTML(string=html_string, base_url=request.build_absolute_uri())
     pdf = html.write_pdf()
 
     response = HttpResponse(pdf, content_type='application/pdf')
@@ -655,28 +608,81 @@ def download_result_pdf(request, result_id):
     return response
 
 
-def send_result_email(result):
-    patient = result.assignment.request.patient
-    if not patient.email:
-        return False
+def send_result_email(result_id, request=None):
+    """
+    Unified function to send the same PDF that is downloaded.
+    Pass 'request' to ensure absolute URLs for images.
+    """
+    try:
+        # 1. Fetch data with all relationships (same as your download view)
+        result = TestResult.objects.select_related(
+            'assignment__lab_test',
+            'assignment__request__patient',
+            'assignment__request__ordering_clinician',
+            'assignment__vendor__profile',
+            'assignment__sample',
+            'verified_by',
+            'ai_insight',
+        ).get(id=result_id)
 
-    subject = f"Laboratory Report - {result.assignment.lab_test.name}"
-    body = f"Dear {patient.first_name},\n\nYour test result is ready. Please find the attached report."
-    
-    # Generate the PDF content
-    html_string = render_to_string('laboratory/result/pdf_template.html', {'result': result})
-    pdf_content = HTML(string=html_string).write_pdf()
+        patient = result.assignment.request.patient
+        if not patient.email:
+            return False, "Patient has no email address."
 
-    email = EmailMessage(
-        subject,
-        body,
-        settings.DEFAULT_FROM_EMAIL,
-        [patient.email],
-    )
-    
-    # Attach the PDF
-    filename = f"Report_{result.assignment.request.request_id}.pdf"
-    email.attach(filename, pdf_content, 'application/pdf')
-    
-    return email.send()
+        # 2. Fetch history & AI logic
+        previous_results = TestResult.objects.filter(
+            assignment__request__patient=patient,
+            assignment__lab_test=result.assignment.lab_test,
+            status='released'
+        ).exclude(id=result.id).order_by('-entered_at')[:3]
 
+        ai_insight = None
+        if hasattr(result, 'ai_insight') and result.ai_insight.is_approved:
+            ai_insight = result.ai_insight
+
+        # 3. Build the context for the PDF
+        context = {
+            'result': result,
+            'vendor_profile': getattr(result.assignment.vendor, 'profile', None),
+            'previous_results': previous_results,
+            'clinician': result.assignment.request.ordering_clinician,
+            'ai_insight': ai_insight,
+            'generated_at': timezone.now(),
+        }
+
+        # 4. Generate PDF content
+        html_string = render_to_string('laboratory/result/result_pdf.html', context)
+        
+        # Determine base_url for images (handles logo/signatures)
+        base_url = request.build_absolute_uri('/') if request else None
+        pdf_content = HTML(string=html_string, base_url=base_url).write_pdf()
+
+        # 5. Create Email
+        subject = f"Medical Report: {result.assignment.lab_test.name} - {result.assignment.request.request_id}"
+        
+        # Use an HTML body for a more professional look
+        email_body = render_to_string('laboratory/emails/result_notification.html', {
+            'patient': patient,
+            'test_name': result.assignment.lab_test.name,
+            'vendor': result.assignment.vendor
+        })
+
+        email = EmailMessage(
+            subject,
+            email_body,
+            settings.DEFAULT_FROM_EMAIL,
+            [patient.email],
+        )
+        email.content_subtype = "html"  # Set the body to HTML
+
+        # 6. Attach the PDF
+        filename = f"Report_{result.assignment.request.request_id}.pdf"
+        email.attach(filename, pdf_content, 'application/pdf')
+        
+        email.send()
+        return True, "Email sent successfully."
+
+    except Exception as e:
+        logger.error(f"Failed to send result email: {str(e)}")
+        return False, str(e)
+    

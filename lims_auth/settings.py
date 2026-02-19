@@ -157,6 +157,7 @@ SERVER_EMAIL = DEFAULT_FROM_EMAIL
 
 
 SITE_NAME = "medvuno.com"
+SITE_URL = "medvuno.com"
 
 PLATFORM_ADMIN_EMAIL = "medvuno@gmail.com"
 
@@ -168,6 +169,10 @@ PHONENUMBER_DEFAULT_REGION = "NG"
 # ========================================
 # ENVIRONMENT-SPECIFIC SETTINGS
 # ========================================
+
+
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 if ENVIRONMENT == "production":
     # Production settings

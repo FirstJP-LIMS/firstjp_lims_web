@@ -1,4 +1,3 @@
-from decimal import Decimal
 from datetime import datetime, timedelta, date
 from django.utils import timezone
 from datetime import datetime
@@ -8,14 +7,11 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
-from django.db import models, transaction
-from django.db.models import Q, Sum, Count, Avg, Case, When, DecimalField, F, Value
-from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy, reverse
 from django.utils import timezone
 from django.views.generic import (
-    ListView, DetailView, CreateView, UpdateView, DeleteView, View
+ View
 )
 
 from decimal import Decimal
@@ -23,8 +19,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
-from django.db import models, transaction
-from django.db.models import Q, Sum, Count, Avg, F, Case, When, DecimalField, Value
+from django.db import transaction
+from django.db.models import Q, Sum, Count, Avg, Case, When, DecimalField, F, Value
     
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
@@ -34,8 +30,6 @@ from ..forms import BillingInformationForm, BillingFilterForm, PaymentForm
 from apps.accounts.decorators import require_capability
 
 from django.utils import timezone
-from django.db import transaction
-from django.db.models import Sum
 from decimal import Decimal as D
 
 
@@ -143,7 +137,6 @@ class BillingDashboardView(LoginRequiredMixin, View):
         }
 
         return render(request, self.template_name, context)
-
 
 
 @login_required
@@ -292,39 +285,68 @@ def billing_list_view(request):
     return render(request, "billing/billing/list.html", context)
 
 
+# @login_required
+# def billing_create_view(request, request_id):
+#     """
+#     Create billing information for a TestRequest.
+#     Ensures:
+#     - One billing record per request (OneToOneField)
+#     - Auto-calculation from model.save()
+#     - Vendor scoping for multi-tenancy
+#     """
+#     test_request = get_object_or_404(
+#         'labs.TestRequest',
+#         pk=request_id,
+#         vendor=request.user.vendor  # vendor scoping
+#     )
+
+#     # If a billing record already exists → redirect to update
+#     if hasattr(test_request, "billing_info"):
+#         return redirect("billing:billing_update", billing_id=test_request.billing_info.pk)
+
+#     if request.method == "POST":
+#         form = BillingInformationForm(request.POST)
+#         if form.is_valid():
+#             with transaction.atomic():
+#                 billing = form.save(commit=False)
+#                 billing.vendor = request.user.vendor
+#                 billing.request = test_request
+#                 billing.save()  # auto-calculation occurs here
+#                 messages.success(request, "Billing has been created successfully.")
+#                 return redirect("billing:billing_detail", billing_id=billing.pk)
+#     else:
+#         # Pre-fill price list based on billing type
+#         initial = {}
+#         form = BillingInformationForm(initial=initial)
+
+#     ctx = {
+#         "request_obj": test_request,
+#         "form": form,
+#     }
+#     return render(request, "billing/billing_create.html", ctx)
+
 @login_required
 def billing_create_view(request, request_id):
-    """
-    Create billing information for a TestRequest.
-    Ensures:
-    - One billing record per request (OneToOneField)
-    - Auto-calculation from model.save()
-    - Vendor scoping for multi-tenancy
-    """
     test_request = get_object_or_404(
         'labs.TestRequest',
         pk=request_id,
-        vendor=request.user.vendor  # vendor scoping
+        vendor=request.user.vendor
     )
 
-    # If a billing record already exists → redirect to update
-    if hasattr(test_request, "billing_info"):
-        return redirect("billing:billing_update", billing_id=test_request.billing_info.pk)
+    # Billing must already exist
+    billing = getattr(test_request, "billing_info", None)
+    if not billing:
+        messages.error(request, "Billing record not found.")
+        return redirect('dashboard')
 
     if request.method == "POST":
-        form = BillingInformationForm(request.POST)
+        form = BillingInformationForm(request.POST, instance=billing)
         if form.is_valid():
-            with transaction.atomic():
-                billing = form.save(commit=False)
-                billing.vendor = request.user.vendor
-                billing.request = test_request
-                billing.save()  # auto-calculation occurs here
-                messages.success(request, "Billing has been created successfully.")
-                return redirect("billing:billing_detail", billing_id=billing.pk)
+            form.save()
+            messages.success(request, "Billing updated successfully.")
+            return redirect("billing:billing_detail", pk=billing.pk)
     else:
-        # Pre-fill price list based on billing type
-        initial = {}
-        form = BillingInformationForm(initial=initial)
+        form = BillingInformationForm(instance=billing)
 
     ctx = {
         "request_obj": test_request,
@@ -1074,14 +1096,6 @@ class BillingReportView(LoginRequiredMixin, View):
         return render(request, self.template_name, context)
      
      
-
-
-
-
-
-
-
-
 
 
 # # ========================================

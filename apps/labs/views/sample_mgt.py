@@ -107,7 +107,7 @@ def collect_sample_view(request, billing_pk):
         # Pre-fill with technician name
         form = SampleForm(initial={'collected_by': request.user.get_full_name()})
 
-    return render(request, 'laboratory/sample/collect_sample1.html', {
+    return render(request, 'laboratory/sample/collect_sample.html', {
         'form': form,
         'billing': billing,
         'test_request': test_request

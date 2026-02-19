@@ -15,7 +15,7 @@ from ..models import (
     Equipment,
     TestAssignment,
 )
-from ..services import (
+from ..services.instruments import (
     InstrumentAPIError,
     InstrumentService,
     fetch_assignment_result,

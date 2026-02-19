@@ -67,7 +67,7 @@
             <a href="{% url 'billing:insurance_update' provider.pk %}" class="btn btn-primary">
                 <i class="fas fa-edit"></i> Edit
             </a>
-            <a href="{% url 'billing:invoice_create' %}?provider={{ provider.pk }}" class="btn btn-success">
+            <a href="{% url 'billing:create_invoice' %}?provider={{ provider.pk }}" class="btn btn-success">
                 <i class="fas fa-file-invoice"></i> Create Invoice
             </a>
             <button type="button" class="btn btn-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
@@ -122,7 +122,7 @@
         <div class="col-md-3">
             <div class="stat-box" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">
                 <div class="mb-2 opacity-75">Co-pay Rate</div>
-                <h3 class="mb-0">{{ provider.default_copay_percentage|floatformat:2 }}%</h3>
+                <h3 class="mb-0">{{ provider.patient_copay_percentage|floatformat:2 }}%</h3>
             </div>
         </div>
     </div>
@@ -197,7 +197,7 @@
                     </div>
                     <div class="mb-0">
                         <label class="small text-muted">Default Co-pay</label>
-                        <p class="mb-0">{{ provider.default_copay_percentage|floatformat:2 }}%</p>
+                        <p class="mb-0">{{ provider.patient_copay_percentage|floatformat:2 }}%</p>
                     </div>
                 </div>
             </div>
@@ -339,7 +339,7 @@
                         <div class="text-center py-5">
                             <i class="fas fa-file-invoice fa-3x text-muted mb-3"></i>
                             <p class="text-muted">No invoices found</p>
-                            <a href="{% url 'billing:invoice_create' %}?provider={{ provider.pk }}" class="btn btn-primary">
+                            <a href="{% url 'billing:create_invoice' %}?provider={{ provider.pk }}" class="btn btn-primary">
                                 <i class="fas fa-plus"></i> Create First Invoice
                             </a>
                         </div>

@@ -82,6 +82,9 @@
                             <li><a class="dropdown-item" href="{% url 'labs:test_list' %}">
                                 <i class="bi bi-clipboard2-pulse me-2"></i>Test Catalog
                             </a></li>
+                            <li><a class="dropdown-item" href="{% url 'billing:dashboard' %}">
+                                <i class="bi bi-clipboard2-pulse me-2"></i>Billing
+                            </a></li>
                             <li><a class="dropdown-item" href="{% url 'labs:department_list' %}">
                                 <i class="bi bi-building me-2"></i>Departments
                             </a></li>
@@ -220,6 +223,10 @@
     
     /* Animation for Toasts */
     .toast { border-radius: 8px; overflow: hidden; border: none; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+
+    .header-logo{
+        width:50px;
+    }
 </style>
 
 

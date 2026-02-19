@@ -21,7 +21,7 @@ from .views import (
     test_assignments,
     
     # Post-Analytical (Entry, Verification, Release)
-    test_results,
+    test_results, ai_engine,
     
     # Clinical Governance (QC Lots, Charts, LJ-Graphs)
     qty_control,
@@ -127,6 +127,10 @@ urlpatterns = [
 
     path('result/<uuid:result_id>/download/', test_results.download_result_pdf, name='download_result_pdf'),
 
+    # AI - Result interpretation 
+    path('result/<uuid:result_id>/generate-ai-insight/', ai_engine.generate_ai_insight, name='generate_ai_insight'),
+    
+    path('ai-insight/<uuid:insight_id>/approve/', ai_engine.approve_ai_insight, name='approve_ai_insight'),
 
     # ===== Quick Instrument Assignment =====
     # ===== Bulk Actions =====

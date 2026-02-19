@@ -1,0 +1,883 @@
+{% extends "laboratory/assets/base.html" %}
+{% load static %}
+
+{% block title %}Create Invoice - {{ vendor.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+  <!-- Header with breadcrumb and page title -->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
+    <div>
+      <nav aria-label="breadcrumb" class="mb-2">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item">
+            <a href="{% url 'billing:invoice_list' %}" class="text-decoration-none text-muted hover-primary">
+              <i class="bi bi-receipt me-1"></i>Invoices
+            </a>
+          </li>
+          <li class="breadcrumb-item active fw-semibold text-dark">Create New Invoice</li>
+        </ol>
+      </nav>
+      <h2 class="fw-bold text-dark mb-1">
+        <span class="bg-primary bg-opacity-10 rounded-3 p-2 me-2">
+          <i class="bi bi-plus-circle text-primary"></i>
+        </span>
+        Create Invoice
+      </h2>
+      <p class="text-muted mb-0">Generate a new invoice for HMO or corporate clients from pending billing records</p>
+    </div>
+    <div>
+      <a href="{% url 'billing:invoice_list' %}" class="btn btn-outline-secondary rounded-3 px-4">
+        <i class="bi bi-arrow-left me-2"></i>Back to List
+      </a>
+    </div>
+  </div>
+
+  <!-- Alert Messages -->
+  {% if messages %}
+    <div class="row mb-4">
+      <div class="col-12">
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm border-0 py-3" role="alert">
+            <div class="d-flex align-items-center">
+              {% if message.tags == 'success' %}
+                <i class="bi bi-check-circle-fill text-success me-3 fs-4"></i>
+              {% elif message.tags == 'error' %}
+                <i class="bi bi-exclamation-triangle-fill text-danger me-3 fs-4"></i>
+              {% elif message.tags == 'warning' %}
+                <i class="bi bi-exclamation-circle-fill text-warning me-3 fs-4"></i>
+              {% else %}
+                <i class="bi bi-info-circle-fill text-info me-3 fs-4"></i>
+              {% endif %}
+              <div class="flex-grow-1">{{ message }}</div>
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  <form method="post" id="invoice-form" class="needs-validation" novalidate>
+    {% csrf_token %}
+
+    <div class="row g-4">
+      <!-- Left Column - Invoice Information -->
+      <div class="col-xl-7">
+        <!-- Client & Dates Card -->
+        <div class="card border-0 shadow-sm mb-4 animate-card">
+          <div class="card-header bg-white border-bottom-0 py-3 px-4">
+            <div class="d-flex align-items-center">
+              <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-3">
+                <i class="bi bi-info-circle text-primary"></i>
+              </div>
+              <div>
+                <h6 class="fw-semibold text-dark mb-0">Invoice Information</h6>
+                <p class="text-muted small mb-0">Enter invoice details and select client type</p>
+              </div>
+            </div>
+          </div>
+          <div class="card-body px-4 py-3">
+
+            <!-- Non-field errors -->
+            {% if form.non_field_errors %}
+              <div class="alert alert-danger py-2 small border-0">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                {% for error in form.non_field_errors %}
+                  <span>{{ error }}</span>
+                {% endfor %}
+              </div>
+            {% endif %}
+
+            <!-- Client Type Switcher -->
+            <div class="mb-4">
+              <label class="form-label fw-semibold text-muted small mb-2">Client Type <span class="text-danger">*</span></label>
+              <div class="d-flex flex-wrap gap-2">
+                <input type="radio" class="btn-check" name="client_type_toggle" id="toggleHMO" value="hmo" checked>
+                <label class="btn btn-outline-info rounded-3 px-4 py-2 fw-medium" for="toggleHMO">
+                  <i class="bi bi-shield me-2"></i>HMO / Insurance
+                </label>
+                <input type="radio" class="btn-check" name="client_type_toggle" id="toggleCorporate" value="corporate">
+                <label class="btn btn-outline-secondary rounded-3 px-4 py-2 fw-medium" for="toggleCorporate">
+                  <i class="bi bi-building me-2"></i>Corporate Client
+                </label>
+              </div>
+            </div>
+
+            <!-- Client Selection Cards -->
+            <div id="hmo-field" class="mb-4">
+              <label class="form-label fw-semibold text-muted small mb-2">
+                Insurance Provider <span class="text-danger">*</span>
+              </label>
+              <div class="position-relative">
+                {{ form.insurance_provider }}
+                <i class="bi bi-chevron-down position-absolute end-0 top-50 translate-middle-y me-3 text-muted"></i>
+              </div>
+              {% for error in form.insurance_provider.errors %}
+                <div class="text-danger small mt-1">
+                  <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                </div>
+              {% endfor %}
+            </div>
+
+            <div id="corporate-field" class="mb-4 d-none">
+              <label class="form-label fw-semibold text-muted small mb-2">
+                Corporate Client <span class="text-danger">*</span>
+              </label>
+              <div class="position-relative">
+                {{ form.corporate_client }}
+                <i class="bi bi-chevron-down position-absolute end-0 top-50 translate-middle-y me-3 text-muted"></i>
+              </div>
+              {% for error in form.corporate_client.errors %}
+                <div class="text-danger small mt-1">
+                  <i class="bi bi-exclamation-circle me-1"></i>{{ error }}
+                </div>
+              {% endfor %}
+            </div>
+
+            <!-- Date Fields -->
+            <div class="row g-3 mb-4">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold text-muted small mb-2">
+                  <i class="bi bi-calendar me-2"></i>Invoice Date <span class="text-danger">*</span>
+                </label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light border-end-0">
+                    <i class="bi bi-calendar3 text-primary"></i>
+                  </span>
+                  {{ form.invoice_date }}
+                </div>
+                {% for error in form.invoice_date.errors %}
+                  <div class="text-danger small mt-1">{{ error }}</div>
+                {% endfor %}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold text-muted small mb-2">
+                  <i class="bi bi-calendar-check me-2"></i>Due Date <span class="text-danger">*</span>
+                </label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light border-end-0">
+                    <i class="bi bi-calendar-check text-warning"></i>
+                  </span>
+                  {{ form.due_date }}
+                </div>
+                {% for error in form.due_date.errors %}
+                  <div class="text-danger small mt-1">{{ error }}</div>
+                {% endfor %}
+              </div>
+            </div>
+
+            <!-- Period Fields -->
+            <div class="row g-3 mb-4">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold text-muted small mb-2">
+                  <i class="bi bi-calendar-range me-2"></i>Period Start <span class="text-danger">*</span>
+                </label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light border-end-0">
+                    <i class="bi bi-arrow-right-circle text-success"></i>
+                  </span>
+                  {{ form.period_start }}
+                </div>
+                {% for error in form.period_start.errors %}
+                  <div class="text-danger small mt-1">{{ error }}</div>
+                {% endfor %}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold text-muted small mb-2">
+                  <i class="bi bi-calendar-range me-2"></i>Period End <span class="text-danger">*</span>
+                </label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light border-end-0">
+                    <i class="bi bi-arrow-left-circle text-success"></i>
+                  </span>
+                  {{ form.period_end }}
+                </div>
+                {% for error in form.period_end.errors %}
+                  <div class="text-danger small mt-1">{{ error }}</div>
+                {% endfor %}
+              </div>
+            </div>
+
+            <!-- Notes Field -->
+            <div>
+              <label class="form-label fw-semibold text-muted small mb-2">
+                <i class="bi bi-chat-text me-2"></i>Notes
+              </label>
+              {{ form.notes }}
+            </div>
+          </div>
+        </div>
+
+        <!-- HMO Billing Records Card -->
+        <div id="hmo-records" class="card border-0 shadow-sm mb-4 animate-card">
+          <div class="card-header bg-white border-bottom-0 py-3 px-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+              <div class="d-flex align-items-center">
+                <div class="bg-info bg-opacity-10 rounded-circle p-2 me-3">
+                  <i class="bi bi-shield text-info"></i>
+                </div>
+                <div>
+                  <h6 class="fw-semibold text-dark mb-0">HMO Billing Records</h6>
+                  <p class="text-muted small mb-0">Select billing records to include in this invoice</p>
+                </div>
+              </div>
+              <div class="d-flex gap-2">
+                <span class="badge bg-info bg-opacity-15 text-info border-0 px-3 py-2" id="hmo-selected-count">
+                  <i class="bi bi-check-circle me-1"></i>0 selected
+                </span>
+                <div class="btn-group btn-group-sm">
+                  <button type="button" class="btn btn-outline-secondary" id="hmo-select-all" title="Select All">
+                    <i class="bi bi-check-all"></i>
+                  </button>
+                  <button type="button" class="btn btn-outline-secondary" id="hmo-deselect-all" title="Clear All">
+                    <i class="bi bi-x"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light sticky-top">
+                  <tr>
+                    <th class="ps-4 py-3" style="width: 50px;"></th>
+                    <th class="py-3 text-muted fw-semibold small">PATIENT</th>
+                    <th class="py-3 text-muted fw-semibold small">SERVICE</th>
+                    <th class="py-3 text-muted fw-semibold small">PROVIDER</th>
+                    <th class="py-3 text-muted fw-semibold small">DATE</th>
+                    <th class="pe-4 py-3 text-muted fw-semibold small text-end">AMOUNT</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for record in pending_hmo %}
+                  <tr class="hmo-row billing-row" data-amount="{{ record.insurance_portion }}" data-client="{{ record.insurance_provider.name }}" data-client-id="{{ record.insurance_provider.id }}">
+                    <td class="ps-4">
+                      <div class="form-check">
+                        <input type="checkbox"
+                               class="form-check-input billing-checkbox hmo-checkbox"
+                               name="billing_records"
+                               value="{{ record.pk }}"
+                               id="hmo_{{ record.pk }}">
+                      </div>
+                    </td>
+                    <td>
+                      <label for="hmo_{{ record.pk }}" class="mb-0 cursor-pointer d-block">
+                        <span class="fw-medium text-dark">
+                          {% if record.request.patient %}
+                            {{ record.request.patient.first_name }} {{ record.request.patient.last_name }}
+                          {% else %}
+                            <span class="text-muted">—</span>
+                          {% endif %}
+                        </span>
+                        <small class="text-muted d-block">{{ record.request.request_id|default:"—" }}</small>
+                      </label>
+                    </td>
+                    <td>
+                      <span class="badge bg-light text-dark border">
+                        {{ record.request.requested_tests.count }} tests
+                      </span>
+                    </td>
+                    <td>
+                      <span class="text-info fw-medium">{{ record.insurance_provider.name|default:"—" }}</span>
+                    </td>
+                    <td>
+                      <span class="text-muted small">{{ record.created_at|date:"d M Y" }}</span>
+                    </td>
+                    <td class="pe-4 text-end">
+                      <span class="fw-bold text-info">₦{{ record.insurance_portion|floatformat:2 }}</span>
+                    </td>
+                  </tr>
+                  {% empty %}
+                  <tr>
+                    <td colspan="6" class="text-center py-5">
+                      <div class="py-4">
+                        <i class="bi bi-inbox text-muted opacity-25" style="font-size: 3rem;"></i>
+                        <h6 class="text-muted mt-3 mb-1">No pending HMO records</h6>
+                        <p class="text-muted small mb-0">All invoiced HMO records have been processed</p>
+                      </div>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Corporate Billing Records Card -->
+        <div id="corporate-records" class="card border-0 shadow-sm mb-4 d-none animate-card">
+          <div class="card-header bg-white border-bottom-0 py-3 px-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+              <div class="d-flex align-items-center">
+                <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-3">
+                  <i class="bi bi-building text-primary"></i>
+                </div>
+                <div>
+                  <h6 class="fw-semibold text-dark mb-0">Corporate Billing Records</h6>
+                  <p class="text-muted small mb-0">Select billing records to include in this invoice</p>
+                </div>
+              </div>
+              <div class="d-flex gap-2">
+                <span class="badge bg-primary bg-opacity-15 text-primary border-0 px-3 py-2" id="corp-selected-count">
+                  <i class="bi bi-check-circle me-1"></i>0 selected
+                </span>
+                <div class="btn-group btn-group-sm">
+                  <button type="button" class="btn btn-outline-secondary" id="corp-select-all" title="Select All">
+                    <i class="bi bi-check-all"></i>
+                  </button>
+                  <button type="button" class="btn btn-outline-secondary" id="corp-deselect-all" title="Clear All">
+                    <i class="bi bi-x"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light sticky-top">
+                  <tr>
+                    <th class="ps-4 py-3" style="width: 50px;"></th>
+                    <th class="py-3 text-muted fw-semibold small">PATIENT</th>
+                    <th class="py-3 text-muted fw-semibold small">SERVICE</th>
+                    <th class="py-3 text-muted fw-semibold small">COMPANY</th>
+                    <th class="py-3 text-muted fw-semibold small">DATE</th>
+                    <th class="pe-4 py-3 text-muted fw-semibold small text-end">AMOUNT</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for record in pending_corporate %}
+                  <tr class="corp-row billing-row" data-amount="{{ record.insurance_portion }}" data-client="{{ record.corporate_client.name }}" data-client-id="{{ record.corporate_client.id }}">
+                    <td class="ps-4">
+                      <div class="form-check">
+                        <input type="checkbox"
+                               class="form-check-input billing-checkbox corp-checkbox"
+                               name="billing_records"
+                               value="{{ record.pk }}"
+                               id="corp_{{ record.pk }}">
+                      </div>
+                    </td>
+                    <td>
+                      <label for="corp_{{ record.pk }}" class="mb-0 cursor-pointer d-block">
+                        <span class="fw-medium text-dark">
+                          {% if record.request.patient %}
+                            {{ record.request.patient.first_name }} {{ record.request.patient.last_name }}
+                          {% else %}
+                            <span class="text-muted">—</span>
+                          {% endif %}
+                        </span>
+                        <small class="text-muted d-block">{{ record.request.request_id|default:"—" }}</small>
+                      </label>
+                    </td>
+                    <td>
+                      <span class="badge bg-light text-dark border">
+                        {{ record.request.requested_tests.count }} tests
+                      </span>
+                    </td>
+                    <td>
+                      <span class="text-primary fw-medium">{{ record.corporate_client.name|default:"—" }}</span>
+                    </td>
+                    <td>
+                      <span class="text-muted small">{{ record.created_at|date:"d M Y" }}</span>
+                    </td>
+                    <td class="pe-4 text-end">
+                      <span class="fw-bold text-primary">₦{{ record.insurance_portion|floatformat:2 }}</span>
+                    </td>
+                  </tr>
+                  {% empty %}
+                  <tr>
+                    <td colspan="6" class="text-center py-5">
+                      <div class="py-4">
+                        <i class="bi bi-inbox text-muted opacity-25" style="font-size: 3rem;"></i>
+                        <h6 class="text-muted mt-3 mb-1">No pending corporate records</h6>
+                        <p class="text-muted small mb-0">All invoiced corporate records have been processed</p>
+                      </div>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column - Preview & Submit -->
+      <div class="col-xl-5">
+        <!-- Invoice Preview Card -->
+        <div class="card border-0 shadow-sm mb-4 sticky-top" style="top: 2rem;">
+          <div class="card-header bg-white border-bottom-0 py-3 px-4">
+            <div class="d-flex align-items-center">
+              <div class="bg-warning bg-opacity-10 rounded-circle p-2 me-3">
+                <i class="bi bi-eye text-warning"></i>
+              </div>
+              <div>
+                <h6 class="fw-semibold text-dark mb-0">Invoice Preview</h6>
+                <p class="text-muted small mb-0">Real-time summary of your selections</p>
+              </div>
+            </div>
+          </div>
+          <div class="card-body px-4 py-4">
+            <!-- Selected Records Summary -->
+            <div class="d-flex justify-content-between align-items-center py-3 border-bottom">
+              <div class="d-flex align-items-center">
+                <div class="bg-light rounded-circle p-2 me-3">
+                  <i class="bi bi-check2-square text-success"></i>
+                </div>
+                <span class="text-muted">Selected Records</span>
+              </div>
+              <span class="fw-bold text-dark fs-5" id="preview-count">0</span>
+            </div>
+
+            <!-- Subtotal -->
+            <div class="d-flex justify-content-between align-items-center py-3 border-bottom">
+              <div class="d-flex align-items-center">
+                <div class="bg-light rounded-circle p-2 me-3">
+                  <i class="bi bi-calculator text-primary"></i>
+                </div>
+                <span class="text-muted">Subtotal</span>
+              </div>
+              <span class="fw-bold text-dark" id="preview-subtotal">₦0.00</span>
+            </div>
+
+            <!-- Tax (placeholder) -->
+            <div class="d-flex justify-content-between align-items-center py-3 border-bottom">
+              <div class="d-flex align-items-center">
+                <div class="bg-light rounded-circle p-2 me-3">
+                  <i class="bi bi-percent text-info"></i>
+                </div>
+                <span class="text-muted">Tax</span>
+              </div>
+              <span class="text-info fw-medium">Calculated on save</span>
+            </div>
+
+            <!-- Total Amount -->
+            <div class="d-flex justify-content-between align-items-center py-4">
+              <div class="d-flex align-items-center">
+                <div class="bg-success bg-opacity-10 rounded-circle p-2 me-3">
+                  <i class="bi bi-currency-dollar text-success"></i>
+                </div>
+                <span class="fw-semibold text-dark fs-5">Total Amount</span>
+              </div>
+              <span class="fw-bold text-primary fs-3" id="preview-total">₦0.00</span>
+            </div>
+
+            <!-- Info Alert -->
+            <div class="alert alert-info bg-info bg-opacity-10 border-0 rounded-3 py-3 mt-2">
+              <div class="d-flex align-items-start">
+                <i class="bi bi-info-circle-fill text-info me-3 fs-5 mt-1"></i>
+                <div class="small">
+                  <p class="mb-1 fw-medium">About this invoice:</p>
+                  <ul class="text-muted ps-3 mb-0">
+                    <li>Final totals are calculated from selected billing records</li>
+                    <li>Invoice number will be auto-generated upon creation</li>
+                    <li>Tax is automatically applied based on billing records</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Submit Actions -->
+          <div class="card-footer bg-white border-top-0 px-4 py-4">
+            <p class="small text-muted mb-3">
+              <i class="bi bi-info-circle me-2"></i>
+              Review your selections above before creating the invoice.
+            </p>
+            <div class="d-grid gap-2">
+              <button type="submit" class="btn btn-primary btn-lg rounded-3 py-3" id="submit-btn">
+                <i class="bi bi-file-earmark-check me-2"></i>
+                Create Invoice
+              </button>
+              <a href="{% url 'billing:invoice_list' %}" class="btn btn-outline-secondary rounded-3 py-2">
+                Cancel
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+
+<style>
+  /* Breadcrumb styling */
+  .breadcrumb {
+    background: transparent;
+    padding: 0;
+  }
+  .breadcrumb-item a {
+    transition: color 0.2s ease;
+  }
+  .breadcrumb-item a:hover {
+    color: #0d6efd !important;
+  }
+
+  /* Card animations */
+  .animate-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .animate-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.1) !important;
+  }
+
+  /* Form styling */
+  .form-control, .form-select {
+    border-radius: 8px;
+    padding: 0.6rem 1rem;
+    border-color: #e2e8f0;
+    background-color: #fff;
+    transition: all 0.2s ease;
+  }
+  .form-control:focus, .form-select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.1);
+  }
+  .input-group-text {
+    background-color: #f8fafc;
+    border-color: #e2e8f0;
+    border-radius: 8px 0 0 8px;
+  }
+
+  /* Client type buttons */
+  .btn-outline-info, .btn-outline-secondary {
+    border-width: 1.5px;
+    transition: all 0.3s ease;
+  }
+  .btn-check:checked + .btn-outline-info {
+    background: linear-gradient(135deg, #0dcaf0 0%, #0bb2d4 100%);
+    color: white;
+    border-color: #0dcaf0;
+    transform: scale(1.02);
+  }
+  .btn-check:checked + .btn-outline-secondary {
+    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+    color: white;
+    border-color: #6c757d;
+    transform: scale(1.02);
+  }
+
+  /* Table styling */
+  .table thead th {
+    background-color: #f8fafc;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #e2e8f0;
+  }
+  .table tbody tr {
+    transition: background-color 0.2s ease;
+  }
+  .table tbody tr:hover {
+    background-color: rgba(13, 110, 253, 0.02);
+  }
+  .billing-row {
+    cursor: pointer;
+  }
+  .billing-row.selected {
+    background-color: rgba(13, 110, 253, 0.05);
+  }
+
+  /* Form check styling */
+  .form-check-input {
+    cursor: pointer;
+    width: 1.2em;
+    height: 1.2em;
+    margin-top: 0.2em;
+  }
+  .form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+  }
+
+  /* Badge styling */
+  .badge {
+    font-weight: 500;
+    letter-spacing: 0.3px;
+  }
+
+  /* Sticky positioning */
+  .sticky-top {
+    position: sticky;
+    top: 2rem;
+    z-index: 1020;
+  }
+
+  /* Custom scrollbar for tables */
+  .table-responsive::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .table-responsive::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+  }
+  .table-responsive::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 10px;
+  }
+  .table-responsive::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .container-fluid {
+      padding-left: 1rem !important;
+      padding-right: 1rem !important;
+    }
+    .btn-group {
+      flex-wrap: wrap;
+    }
+    .sticky-top {
+      position: relative;
+      top: 0;
+    }
+  }
+
+  /* Loading state for submit button */
+  .btn-loading {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.7;
+  }
+  .btn-loading::after {
+    content: '';
+    position: absolute;
+    width: 1rem;
+    height: 1rem;
+    top: calc(50% - 0.5rem);
+    right: 1rem;
+    border: 2px solid transparent;
+    border-top-color: currentColor;
+    border-right-color: currentColor;
+    border-radius: 50%;
+    animation: button-spin 0.6s linear infinite;
+  }
+  @keyframes button-spin {
+    to { transform: rotate(360deg); }
+  }
+</style>
+
+<script>
+(function () {
+  'use strict';
+
+  // DOM Elements
+  const toggleHMO = document.getElementById('toggleHMO');
+  const toggleCorp = document.getElementById('toggleCorporate');
+  const hmoField = document.getElementById('hmo-field');
+  const corpField = document.getElementById('corporate-field');
+  const hmoRecords = document.getElementById('hmo-records');
+  const corpRecords = document.getElementById('corporate-records');
+  const hmoSelect = document.getElementById('id_insurance_provider');
+  const corpSelect = document.getElementById('id_corporate_client');
+  const invoiceForm = document.getElementById('invoice-form');
+  const submitBtn = document.getElementById('submit-btn');
+
+  // Helper functions
+  function showHMO() {
+    hmoField.classList.remove('d-none');
+    corpField.classList.add('d-none');
+    hmoRecords.classList.remove('d-none');
+    corpRecords.classList.add('d-none');
+    if (corpSelect) corpSelect.value = '';
+    document.querySelectorAll('.corp-checkbox').forEach(cb => {
+      cb.checked = false;
+      cb.closest('tr')?.classList.remove('selected');
+    });
+    updatePreview();
+  }
+
+  function showCorporate() {
+    corpField.classList.remove('d-none');
+    hmoField.classList.add('d-none');
+    corpRecords.classList.remove('d-none');
+    hmoRecords.classList.add('d-none');
+    if (hmoSelect) hmoSelect.value = '';
+    document.querySelectorAll('.hmo-checkbox').forEach(cb => {
+      cb.checked = false;
+      cb.closest('tr')?.classList.remove('selected');
+    });
+    updatePreview();
+  }
+
+  // Update preview totals
+  function updatePreview() {
+    const checked = document.querySelectorAll('.billing-checkbox:checked');
+    let total = 0;
+    
+    checked.forEach(cb => {
+      const row = cb.closest('tr');
+      const amount = parseFloat(row?.dataset.amount) || 0;
+      total += amount;
+      
+      // Highlight selected row
+      row?.classList.add('selected');
+    });
+
+    // Remove highlight from unchecked rows
+    document.querySelectorAll('.billing-checkbox:not(:checked)').forEach(cb => {
+      cb.closest('tr')?.classList.remove('selected');
+    });
+
+    // Update display
+    document.getElementById('preview-count').textContent = checked.length;
+    document.getElementById('preview-subtotal').textContent = '₦' + total.toLocaleString('en-NG', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+    document.getElementById('preview-total').textContent = '₦' + total.toLocaleString('en-NG', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+
+    // Update badge counts
+    const hmoChecked = document.querySelectorAll('.hmo-checkbox:checked').length;
+    const corpChecked = document.querySelectorAll('.corp-checkbox:checked').length;
+    document.getElementById('hmo-selected-count').innerHTML = `<i class="bi bi-check-circle me-1"></i>${hmoChecked} selected`;
+    document.getElementById('corp-selected-count').innerHTML = `<i class="bi bi-check-circle me-1"></i>${corpChecked} selected`;
+  }
+
+  // Event Listeners
+  toggleHMO.addEventListener('change', showHMO);
+  toggleCorp.addEventListener('change', showCorporate);
+
+  // Checkbox changes
+  document.querySelectorAll('.billing-checkbox').forEach(cb => {
+    cb.addEventListener('change', updatePreview);
+  });
+
+  // Select/Deselect All
+  document.getElementById('hmo-select-all')?.addEventListener('click', () => {
+    document.querySelectorAll('.hmo-checkbox').forEach(cb => {
+      cb.checked = true;
+      cb.closest('tr')?.classList.add('selected');
+    });
+    updatePreview();
+  });
+  
+  document.getElementById('hmo-deselect-all')?.addEventListener('click', () => {
+    document.querySelectorAll('.hmo-checkbox').forEach(cb => {
+      cb.checked = false;
+      cb.closest('tr')?.classList.remove('selected');
+    });
+    updatePreview();
+  });
+  
+  document.getElementById('corp-select-all')?.addEventListener('click', () => {
+    document.querySelectorAll('.corp-checkbox').forEach(cb => {
+      cb.checked = true;
+      cb.closest('tr')?.classList.add('selected');
+    });
+    updatePreview();
+  });
+  
+  document.getElementById('corp-deselect-all')?.addEventListener('click', () => {
+    document.querySelectorAll('.corp-checkbox').forEach(cb => {
+      cb.checked = false;
+      cb.closest('tr')?.classList.remove('selected');
+    });
+    updatePreview();
+  });
+
+  // Row click handler
+  document.querySelectorAll('.billing-row').forEach(row => {
+    row.addEventListener('click', function(e) {
+      if (e.target.closest('.form-check-input')) return;
+      const cb = this.querySelector('.billing-checkbox');
+      if (cb) {
+        cb.checked = !cb.checked;
+        if (cb.checked) {
+          this.classList.add('selected');
+        } else {
+          this.classList.remove('selected');
+        }
+        updatePreview();
+      }
+    });
+  });
+
+  // Set default dates
+  const today = new Date().toISOString().split('T')[0];
+  const invoiceDateInput = document.getElementById('id_invoice_date');
+  const dueDateInput = document.getElementById('id_due_date');
+  
+  if (invoiceDateInput && !invoiceDateInput.value) {
+    invoiceDateInput.value = today;
+  }
+  
+  if (dueDateInput && !dueDateInput.value) {
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + 30);
+    dueDateInput.value = dueDate.toISOString().split('T')[0];
+  }
+
+  // Form validation
+  invoiceForm.addEventListener('submit', function(e) {
+    const checked = document.querySelectorAll('.billing-checkbox:checked');
+    
+    if (checked.length === 0) {
+      e.preventDefault();
+      
+      // Show alert
+      const alertDiv = document.createElement('div');
+      alertDiv.className = 'alert alert-warning alert-dismissible fade show border-0 shadow-sm';
+      alertDiv.innerHTML = `
+        <div class="d-flex align-items-center">
+          <i class="bi bi-exclamation-triangle-fill text-warning me-3 fs-4"></i>
+          <div class="flex-grow-1">Please select at least one billing record to include in this invoice.</div>
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      `;
+      
+      document.querySelector('.page-header').after(alertDiv);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    // Show loading state
+    submitBtn.classList.add('btn-loading');
+    submitBtn.disabled = true;
+  });
+
+  // Auto-select client based on selected records
+  function updateClientFromSelection() {
+    const checked = document.querySelectorAll('.billing-checkbox:checked');
+    if (checked.length > 0) {
+      const firstChecked = checked[0];
+      const row = firstChecked.closest('tr');
+      const clientId = row?.dataset.clientId;
+      const clientName = row?.dataset.client;
+      
+      if (firstChecked.classList.contains('hmo-checkbox') && clientId) {
+        toggleHMO.checked = true;
+        showHMO();
+        if (hmoSelect) {
+          hmoSelect.value = clientId;
+        }
+      } else if (firstChecked.classList.contains('corp-checkbox') && clientId) {
+        toggleCorp.checked = true;
+        showCorporate();
+        if (corpSelect) {
+          corpSelect.value = clientId;
+        }
+      }
+    }
+  }
+
+  // Watch for selection changes
+  document.querySelectorAll('.billing-checkbox').forEach(cb => {
+    cb.addEventListener('change', updateClientFromSelection);
+  });
+
+  // Initialize
+  showHMO();
+  updatePreview();
+
+})();
+</script>
+{% endblock %}

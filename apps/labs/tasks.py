@@ -9,7 +9,7 @@ from datetime import timedelta
 import logging
 
 from .models import Equipment, TestAssignment
-from .services import bulk_fetch_pending_results, InstrumentAPIError
+from .services.services import bulk_fetch_pending_results, InstrumentAPIError
 
 logger = logging.getLogger(__name__)
 
@@ -73,8 +73,8 @@ def retry_failed_submissions():
     Retry sending assignments that failed to queue.
     Run this periodically (e.g., every 30 minutes).
     """
-    from .services import send_assignment_to_instrument
-    
+    from services.instruments import send_assignment_to_instrument
+
     # Get assignments that failed to queue (retry_count > 0, status still Pending)
     failed_assignments = TestAssignment.objects.filter(
         status='P',

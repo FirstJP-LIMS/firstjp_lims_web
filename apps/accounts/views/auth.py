@@ -20,7 +20,6 @@ logger.setLevel(logging.INFO)
 User = get_user_model()
 
 # role groups
-
 LEARN_ALLOWED = ['learner', 'facilitator']
 TENANT_ALLOWED = ['vendor_admin', 'lab_staff', 'patient', 'clinician']
 
@@ -109,7 +108,6 @@ def learn_register(request, role_name):
         'role_name': role_name.title(),
     })
 
-
 # @ratelimit(key='ip', rate='5/m', method='POST')
 def tenant_login(request):
 
@@ -182,6 +180,224 @@ def tenant_login(request):
     return render(request, 'authentication/login.html', context)
 
 
+def tenant_logout(request):
+    logout(request)
+    messages.info(request, "You have been logged out successfully.")
+    return redirect(reverse_lazy('account:login'))
+
+
+"""
+    Tasks to complete:
+    Password Resetting...
+"""
+
+# apps/accounts/views.py (Password Reset Views)
+from django.shortcuts import render, redirect
+from django.contrib.auth.views import (
+    PasswordResetView, 
+    PasswordResetDoneView,
+    PasswordResetConfirmView, 
+    PasswordResetCompleteView
+)
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.urls import reverse_lazy, reverse
+from django.contrib import messages
+from django.conf import settings
+from ..forms import TenantPasswordResetForm, TenantSetPasswordForm
+
+
+class TenantPasswordResetView(PasswordResetView):
+    """
+    ARCHITECTURE NOTES:
+    - Django: Form submission → Email sent → Redirect to done page
+    - Future REST: POST /api/v1/auth/password-reset/ → JSON response with status
+    """
+    template_name = 'authentication/password_reset/password_reset_form.html'
+    form_class = TenantPasswordResetForm
+    success_url = reverse_lazy('account:password_reset_done')
+    email_template_name = 'authentication/password_reset/password_reset_email.html'
+    subject_template_name = 'authentication/password_reset/password_reset_subject.txt'
+    
+    def get_form_kwargs(self):
+        """Pass tenant context to form."""
+        kwargs = super().get_form_kwargs()
+        kwargs['tenant'] = getattr(self.request, 'tenant', None)
+        return kwargs
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['tenant'] = getattr(self.request, 'tenant', None)
+        context['is_learning_portal'] = getattr(self.request, 'is_learning_portal', False)
+        return context
+    
+    def form_valid(self, form):
+        """
+        Send password reset email.
+        
+        SCALABILITY NOTE:
+        - Current: Synchronous email sending (blocks request)
+        - Future: Use Celery/RQ for async email dispatch
+        - REST API: Return 202 Accepted immediately, send email in background
+        """
+        tenant = getattr(self.request, 'tenant', None)
+        
+        # Get users matching email + tenant
+        email = form.cleaned_data['email']
+        users = form.get_users(email)
+        
+        for user in users:
+            # Generate token and uid
+            token = default_token_generator.make_token(user)
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            
+            # Build reset URL
+            reset_url = self.request.build_absolute_uri(
+                reverse('account:password_reset_confirm', kwargs={
+                    'uidb64': uid,
+                    'token': token
+                })
+            )
+            
+            # Prepare email context
+            context = {
+                'user': user,
+                'reset_url': reset_url,
+                'tenant': tenant,
+                'vendor_name': tenant.name if tenant else 'MedVuno Platform',
+                'valid_hours': 24,  # Token validity period
+            }
+            
+            # Render email
+            email_body = render_to_string(self.email_template_name, context)
+            email_subject = render_to_string(self.subject_template_name, context).strip()
+            
+            try:
+                send_mail(
+                    subject=email_subject,
+                    message=email_body,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[user.email],
+                    fail_silently=False,
+                )
+                logger.info(f"Password reset email sent to {user.email} (Tenant: {tenant})")
+            except Exception as e:
+                logger.error(f"Failed to send password reset email to {user.email}: {str(e)}")
+                # Don't reveal error to user for security
+        
+        # Always show success message (even if email doesn't exist)
+        # This prevents email enumeration attacks
+        return super().form_valid(form)
+
+
+class TenantPasswordResetDoneView(PasswordResetDoneView):
+    """
+    Step 2: Confirmation that reset email was sent.
+    
+    ARCHITECTURE NOTES:
+    - Django: Static template with message
+    - Future REST: Not needed (API returns JSON immediately)
+    """
+    template_name = 'authentication/password_reset/password_reset_done.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['tenant'] = getattr(self.request, 'tenant', None)
+        context['is_learning_portal'] = getattr(self.request, 'is_learning_portal', False)
+        return context
+
+
+class TenantPasswordResetConfirmView(PasswordResetConfirmView):
+    """
+    Step 3: User clicks email link and sets new password.
+    
+    ARCHITECTURE NOTES:
+    - Django: GET shows form, POST processes new password
+    - Future REST: 
+        - GET /api/v1/auth/password-reset/verify/{uid}/{token}/ → Validate token
+        - POST /api/v1/auth/password-reset/confirm/ → Set new password
+    """
+    template_name = 'authentication/password_reset/password_reset_confirm.html'
+    form_class = TenantSetPasswordForm
+    success_url = reverse_lazy('account:password_reset_complete')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['tenant'] = getattr(self.request, 'tenant', None)
+        context['is_learning_portal'] = getattr(self.request, 'is_learning_portal', False)
+        
+        # Check if token is valid
+        if self.validlink:
+            context['validlink'] = True
+        else:
+            context['validlink'] = False
+            
+        return context
+    
+    def form_valid(self, form):
+        """Log password reset success."""
+        user = form.save()
+        logger.info(f"Password successfully reset for user: {user.email}")
+        messages.success(
+            self.request, 
+            "Your password has been reset successfully. You can now log in with your new password."
+        )
+        return super().form_valid(form)
+
+
+class TenantPasswordResetCompleteView(PasswordResetCompleteView):
+    """
+    Step 4: Success page with link to login.
+    
+    ARCHITECTURE NOTES:
+    - Django: Static success template
+    - Future REST: Not needed (handled client-side after confirmation)
+    """
+    template_name = 'authentication/password_reset/password_reset_complete.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['tenant'] = getattr(self.request, 'tenant', None)
+        context['is_learning_portal'] = getattr(self.request, 'is_learning_portal', False)
+        context['login_url'] = reverse('account:login')
+        return context
+
+
+# =====================================
+# LEARNING PORTAL PASSWORD RESET (For learners/facilitators)
+# =======================================
+
+class LearnPasswordResetView(PasswordResetView):
+    """
+    Password reset for learning portal users (vendor=None).
+    
+    DIFFERENCE FROM TENANT RESET:
+    - No tenant filtering
+    - Only allows learner/facilitator roles
+    """
+    template_name = 'authentication/password_reset/password_reset_form.html'
+    form_class = TenantPasswordResetForm
+    success_url = reverse_lazy('account:password_reset_done')
+    email_template_name = 'authentication/password_reset/password_reset_email.html'
+    
+    def dispatch(self, request, *args, **kwargs):
+        """Ensure this is only accessible from learning portal."""
+        if not getattr(request, 'is_learning_portal', False):
+            messages.error(request, "This page is only accessible from the learning portal.")
+            return redirect('account:login')
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_form_kwargs(self):
+        """Pass tenant=None for learning portal."""
+        kwargs = super().get_form_kwargs()
+        kwargs['tenant'] = None
+        kwargs['is_learning_portal'] = True
+        return kwargs
+
+
 # Admin-only vendor-admin creation
 def is_platform_admin(user):
     return user.is_authenticated and user.is_platform_admin
@@ -199,115 +415,104 @@ def create_vendor_admin(request, vendor_id):
     return render(request, 'registration/create_vendor_admin.html', {'form': form, 'vendor': vendor})
 
 
-def tenant_logout(request):
-    logout(request)
-    messages.info(request, "You have been logged out successfully.")
-    return redirect(reverse_lazy('account:login'))
 
 
+# # apps/accounts/views.py
+# from django.contrib.auth import views as auth_views
 
-
-"""
-    Tasks to complete:
-    Password Resetting...
-"""
-
-# apps/accounts/views.py
-from django.contrib.auth import views as auth_views
-
-@ratelimit(key='ip', rate='3/h', method='POST')  # 3 password resets per hour
-class TenantPasswordResetView(auth_views.PasswordResetView):
-    """
-    Custom password reset view that injects tenant into the form.
-    """
-    template_name = 'registration/password_reset_form.html'
-    email_template_name = 'registration/password_reset_email.html'
-    subject_template_name = 'registration/password_reset_subject.txt'
-    form_class = TenantPasswordResetForm
+# @ratelimit(key='ip', rate='3/h', method='POST')  # 3 password resets per hour
+# class TenantPasswordResetView(auth_views.PasswordResetView):
+#     """
+#     Custom password reset view that injects tenant into the form.
+#     """
+#     template_name = 'registration/password_reset_form.html'
+#     email_template_name = 'registration/password_reset_email.html'
+#     subject_template_name = 'registration/password_reset_subject.txt'
+#     form_class = TenantPasswordResetForm
     
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['tenant'] = getattr(self.request, 'tenant', None)
-        return kwargs
+#     def get_form_kwargs(self):
+#         kwargs = super().get_form_kwargs()
+#         kwargs['tenant'] = getattr(self.request, 'tenant', None)
+#         return kwargs
     
-    def form_valid(self, form):
-        """
-        Add extra context for better user experience.
-        """
-        tenant = getattr(self.request, 'tenant', None)
-        if tenant:
-            messages.info(
-                self.request,
-                f"If your email is registered with {tenant.name}, you'll receive reset instructions."
-            )
-        return super().form_valid(form)
+#     def form_valid(self, form):
+#         """
+#         Add extra context for better user experience.
+#         """
+#         tenant = getattr(self.request, 'tenant', None)
+#         if tenant:
+#             messages.info(
+#                 self.request,
+#                 f"If your email is registered with {tenant.name}, you'll receive reset instructions."
+#             )
+#         return super().form_valid(form)
 
 
-# ------------------------------
-# Tenant-Aware Auth. ends here
-# ------------------------------
+# # ------------------------------
+# # Tenant-Aware Auth. ends here
+# # ------------------------------
 
-# ===== RESET PASSWORD =====
-@login_required
-# @vendor_admin_required
-# @require_http_methods(["GET", "POST"])
-def user_reset_password(request, user_id):
-    """
-    Reset a user's password (admin function).
-    """
-    vendor = request.user.vendor
-    user = get_object_or_404(
-        User.objects.select_related('vendor'),
-        id=user_id,
-        vendor=vendor
-    )
+# # ===== RESET PASSWORD =====
+# @login_required
+# # @vendor_admin_required
+# # @require_http_methods(["GET", "POST"])
+# def user_reset_password(request, user_id):
+#     """
+#     Reset a user's password (admin function).
+#     """
+#     vendor = request.user.vendor
+#     user = get_object_or_404(
+#         User.objects.select_related('vendor'),
+#         id=user_id,
+#         vendor=vendor
+#     )
     
-    # Prevent resetting own password here
-    if user.id == request.user.id:
-        messages.error(request, "Use the profile settings to change your own password.")
-        return redirect('users:user_detail', user_id=user.id)
+#     # Prevent resetting own password here
+#     if user.id == request.user.id:
+#         messages.error(request, "Use the profile settings to change your own password.")
+#         return redirect('users:user_detail', user_id=user.id)
     
-    if request.method == "POST":
-        new_password = request.POST.get('new_password', '').strip()
-        confirm_password = request.POST.get('confirm_password', '').strip()
+#     if request.method == "POST":
+#         new_password = request.POST.get('new_password', '').strip()
+#         confirm_password = request.POST.get('confirm_password', '').strip()
         
-        if not new_password:
-            messages.error(request, "Password is required.")
-        elif len(new_password) < 8:
-            messages.error(request, "Password must be at least 8 characters long.")
-        elif new_password != confirm_password:
-            messages.error(request, "Passwords do not match.")
-        else:
-            try:
-                user.set_password(new_password)
-                user.save(update_fields=['password'])
+#         if not new_password:
+#             messages.error(request, "Password is required.")
+#         elif len(new_password) < 8:
+#             messages.error(request, "Password must be at least 8 characters long.")
+#         elif new_password != confirm_password:
+#             messages.error(request, "Passwords do not match.")
+#         else:
+#             try:
+#                 user.set_password(new_password)
+#                 user.save(update_fields=['password'])
                 
-                # Audit log
-                try:
-                    from apps.labs.models import AuditLog
-                    AuditLog.objects.create(
-                        vendor=vendor,
-                        user=request.user,
-                        action=f"Reset password for user: {user.get_full_name()}",
-                        ip_address=request.META.get('REMOTE_ADDR')
-                    )
-                except ImportError:
-                    pass
+#                 # Audit log
+#                 try:
+#                     from apps.labs.models import AuditLog
+#                     AuditLog.objects.create(
+#                         vendor=vendor,
+#                         user=request.user,
+#                         action=f"Reset password for user: {user.get_full_name()}",
+#                         ip_address=request.META.get('REMOTE_ADDR')
+#                     )
+#                 except ImportError:
+#                     pass
                 
-                messages.success(
-                    request, 
-                    f"Password reset successfully for {user.get_full_name()}. "
-                    "The user can now log in with the new password."
-                )
-                return redirect('users:user_detail', user_id=user.id)
+#                 messages.success(
+#                     request, 
+#                     f"Password reset successfully for {user.get_full_name()}. "
+#                     "The user can now log in with the new password."
+#                 )
+#                 return redirect('users:user_detail', user_id=user.id)
                 
-            except Exception as e:
-                logger.exception(f"Error resetting password: {e}")
-                messages.error(request, f"Error: {str(e)}")
+#             except Exception as e:
+#                 logger.exception(f"Error resetting password: {e}")
+#                 messages.error(request, f"Error: {str(e)}")
     
-    context = {
-        'profile_user': user,
-    }
+#     context = {
+#         'profile_user': user,
+#     }
     
-    return render(request, 'users/user_reset_password.html', context)
+#     return render(request, 'users/user_reset_password.html', context)
 

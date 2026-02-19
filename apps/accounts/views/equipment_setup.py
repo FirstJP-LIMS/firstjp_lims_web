@@ -15,7 +15,7 @@ from django.contrib import messages
 from django.db import transaction
 # from .models import Equipment, Department, AuditLog
 from ..forms import EquipmentForm
-from apps.labs.services import InstrumentService
+from apps.labs.services.instruments import InstrumentService
 
 
 @login_required
