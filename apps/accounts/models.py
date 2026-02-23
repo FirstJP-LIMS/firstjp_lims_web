@@ -40,16 +40,16 @@ class CustomUserManager(BaseUserManager):
         
         return self._create_user(email, password, **extra_fields)
     
-    def get_by_natural_key(self, username):
-        """
-        Override to prevent uniqueness assumption.
-        This is called by Django's authentication system.
-        """
-        # We can't lookup by email alone since it's not unique
-        # This method won't be used with our custom backend
-        raise NotImplementedError(
-            "Use VendorEmailBackend for authentication, not get_by_natural_key"
-        )
+    # def get_by_natural_key(self, username):
+    #     """
+    #     Override to prevent uniqueness assumption.
+    #     This is called by Django's authentication system.
+    #     """
+    #     # We can't lookup by email alone since it's not unique
+    #     # This method won't be used with our custom backend
+    #     raise NotImplementedError(
+    #         "Use VendorEmailBackend for authentication, not get_by_natural_key"
+    #     )
 
 
 class User(AbstractBaseUser, PermissionsMixin):

@@ -350,10 +350,6 @@
                         {{ form.insurance_provider|as_crispy_field }}
                     </div>
 
-                    <!-- Corporate Section -->
-                    <div id="corporateSection" class="mb-3" style="display: none;">
-                        {{ form.corporate_client|as_crispy_field }}
-                    </div>
 
                     <div class="alert alert-info border-0 small">
                         <i class="bi bi-info-circle me-2"></i>
@@ -408,7 +404,7 @@
         </div>
     </form>
 </div>
-
+<!-- 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Patient search functionality
@@ -633,7 +629,6 @@ const billingTypeSelect = document.getElementById('id_billing_type');
 const hmoSection = document.getElementById('hmoSection');
 const corporateSection = document.getElementById('corporateSection');
 const insuranceProviderField = document.getElementById('id_insurance_provider');
-const corporateClientField = document.getElementById('id_corporate_client');
 
 function handleBillingTypeChange() {
     const billingType = billingTypeSelect.value;
@@ -667,6 +662,354 @@ if (billingTypeSelect) {
     // Initialize on page load
     handleBillingTypeChange();
 }
+</script>
+ -->
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    // ══════════════════════════════════════════════════════════════════════
+    // ELEMENT REFERENCES
+    // ══════════════════════════════════════════════════════════════════════
+
+    // Patient
+    const patientSearch         = document.getElementById('patientSearch');
+    const clearPatientSearch    = document.getElementById('clearPatientSearch');
+    const existingPatientSelect = document.getElementById('id_existing_patient');
+    const newPatientSection     = document.getElementById('newPatientSection');
+
+    // Tests
+    const testSearch        = document.getElementById('testSearch');
+    const clearTestSearch   = document.getElementById('clearTestSearch');
+    const testCheckboxes    = document.querySelectorAll('.test-checkbox');
+    const testItems         = document.querySelectorAll('.test-item');
+    const selectAllVisible  = document.getElementById('selectAllVisible');
+    const deselectAll       = document.getElementById('deselectAll');
+    const noTestsFound      = document.getElementById('noTestsFound');
+
+    // Summary
+    const selectedTestsSummary = document.getElementById('selectedTestsSummary');
+    const selectedTestsList    = document.getElementById('selectedTestsList');
+    const selectedCount        = document.getElementById('selectedCount');
+    const totalPriceElement    = document.getElementById('totalPrice');
+    const testSelectionAlert   = document.getElementById('testSelectionAlert');
+
+    // Billing — single provider field now covers all insurance types
+    const billingTypeSelect    = document.getElementById('id_billing_type');
+    const providerSection      = document.getElementById('providerSection');
+    const providerSelect       = document.getElementById('id_insurance_provider');
+    const providerLabel        = document.getElementById('providerLabel');
+    const providerHelp         = document.getElementById('providerHelp');
+    const noProvidersWarning   = document.getElementById('noProvidersWarning');
+    const noProvidersType      = document.getElementById('noProvidersType');
+    const policySection        = document.getElementById('policySection');
+    const employeeSection      = document.getElementById('employeeSection');
+    const preauthSection       = document.getElementById('preauthSection');
+
+
+    // ══════════════════════════════════════════════════════════════════════
+    // BILLING TYPE CONFIG
+    // Maps billing_type → which InsuranceProvider.provider_type values to show
+    // ══════════════════════════════════════════════════════════════════════
+
+    const BILLING_TO_PROVIDER_TYPE = {
+        'HMO':       ['HMO', 'NHIS'],
+        'NHIS':      ['NHIS', 'HMO'],
+        'CORPORATE': ['CORPORATE'],
+        'STAFF':     ['STAFF'],
+    };
+
+    const PROVIDER_LABELS = {
+        'HMO':       'HMO / Insurance Provider',
+        'NHIS':      'NHIS Provider',
+        'CORPORATE': 'Corporate / Wellness Provider',
+        'STAFF':     'Staff Billing Account',
+    };
+
+    const PROVIDER_HELP = {
+        'HMO':       "Select the patient's HMO. Co-pay will be calculated automatically.",
+        'NHIS':      "Select the NHIS scheme. The government portion will be invoiced separately.",
+        'CORPORATE': "Select the company. The full amount will be invoiced to the company.",
+        'STAFF':     "Select the staff billing account.",
+    };
+
+    // Cache all real provider options (exclude the placeholder "— Select —")
+    const allProviderOptions = providerSelect
+        ? Array.from(providerSelect.options).filter(o => o.value !== '')
+        : [];
+
+
+    // ══════════════════════════════════════════════════════════════════════
+    // PATIENT SEARCH
+    // ══════════════════════════════════════════════════════════════════════
+
+    function filterPatients() {
+        if (!patientSearch || !existingPatientSelect) return;
+        const term = patientSearch.value.toLowerCase().trim();
+        existingPatientSelect.querySelectorAll('option').forEach(opt => {
+            if (opt.value === '') { opt.style.display = ''; return; }
+            const match = (opt.dataset.search || '').toLowerCase().includes(term);
+            opt.style.display = match ? '' : 'none';
+        });
+    }
+
+    function toggleNewPatientSection() {
+        if (!existingPatientSelect || !newPatientSection) return;
+        if (existingPatientSelect.value) {
+            newPatientSection.style.display = 'none';
+            const fn = document.getElementById('id_first_name');
+            const ln = document.getElementById('id_last_name');
+            if (fn) fn.value = '';
+            if (ln) ln.value = '';
+        } else {
+            newPatientSection.style.display = '';
+        }
+    }
+
+    if (patientSearch)      patientSearch.addEventListener('input', filterPatients);
+    if (clearPatientSearch) clearPatientSearch.addEventListener('click', () => {
+        patientSearch.value = '';
+        filterPatients();
+    });
+    if (existingPatientSelect) existingPatientSelect.addEventListener('change', toggleNewPatientSection);
+
+    toggleNewPatientSection(); // initialise
+
+
+    // ══════════════════════════════════════════════════════════════════════
+    // TEST SEARCH
+    // ══════════════════════════════════════════════════════════════════════
+
+    function filterTests() {
+        if (!testSearch) return;
+        const term = testSearch.value.toLowerCase().trim();
+        let visible = 0;
+        testItems.forEach(item => {
+            const text = [
+                item.dataset.testName       || '',
+                item.dataset.testCode       || '',
+                item.dataset.testDepartment || '',
+            ].join(' ').toLowerCase();
+            const show = !term || text.includes(term);
+            item.style.display = show ? '' : 'none';
+            if (show) visible++;
+        });
+        if (noTestsFound) noTestsFound.style.display = (visible === 0 && term) ? '' : 'none';
+    }
+
+    if (testSearch)      testSearch.addEventListener('input', filterTests);
+    if (clearTestSearch) clearTestSearch.addEventListener('click', () => {
+        testSearch.value = '';
+        filterTests();
+    });
+
+    if (selectAllVisible) selectAllVisible.addEventListener('click', () => {
+        testItems.forEach(item => {
+            if (item.style.display !== 'none') {
+                const cb = item.querySelector('.test-checkbox');
+                if (cb) cb.checked = true;
+            }
+        });
+        updateSelectedTestsSummary();
+    });
+
+    if (deselectAll) deselectAll.addEventListener('click', () => {
+        testCheckboxes.forEach(cb => cb.checked = false);
+        updateSelectedTestsSummary();
+    });
+
+
+    // ══════════════════════════════════════════════════════════════════════
+    // SELECTED TESTS SUMMARY
+    // ══════════════════════════════════════════════════════════════════════
+
+    function updateSelectedTestsSummary() {
+        const selected = [];
+        let total = 0;
+
+        testItems.forEach(item => {
+            const cb = item.querySelector('.test-checkbox');
+            if (!cb || !cb.checked) return;
+            const price = parseFloat(item.dataset.price || 0);
+            selected.push({
+                id:    item.dataset.testId,
+                code:  (item.querySelector('label .text-primary') || {}).textContent || '',
+                name:  (item.querySelector('label .text-dark')    || {}).textContent || '',
+                price,
+            });
+            total += price;
+        });
+
+        if (selectedCount)      selectedCount.textContent   = selected.length;
+        if (totalPriceElement)  totalPriceElement.textContent = total.toFixed(2);
+
+        if (!selectedTestsSummary) return;
+
+        if (selected.length > 0) {
+            selectedTestsSummary.style.display = '';
+            if (testSelectionAlert) testSelectionAlert.style.display = 'none';
+
+            if (selectedTestsList) {
+                selectedTestsList.innerHTML = selected.map(t =>
+                    `<div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                        <div>
+                            <strong class="text-primary">${t.code}</strong>
+                            <div class="text-muted small">${t.name}</div>
+                        </div>
+                        <div class="text-end">
+                            <strong class="text-success">₦${t.price.toFixed(2)}</strong>
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-danger ms-2 remove-test"
+                                    data-test-id="${t.id}"
+                                    title="Remove">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </div>
+                    </div>`
+                ).join('');
+
+                selectedTestsList.querySelectorAll('.remove-test').forEach(btn => {
+                    btn.addEventListener('click', function () {
+                        const item = document.querySelector(`.test-item[data-test-id="${this.dataset.testId}"]`);
+                        if (item) {
+                            const cb = item.querySelector('.test-checkbox');
+                            if (cb) { cb.checked = false; updateSelectedTestsSummary(); }
+                        }
+                    });
+                });
+            }
+        } else {
+            selectedTestsSummary.style.display = 'none';
+        }
+    }
+
+    testCheckboxes.forEach(cb => cb.addEventListener('change', updateSelectedTestsSummary));
+    updateSelectedTestsSummary(); // initialise
+
+
+    // ══════════════════════════════════════════════════════════════════════
+    // BILLING TYPE HANDLER
+    // ══════════════════════════════════════════════════════════════════════
+    //
+    // Architecture after Corporate removal:
+    //   CASH              → hide provider section, no extra fields
+    //   HMO / NHIS        → show provider section (filter to HMO+NHIS types)
+    //                        + show policy number field
+    //   CORPORATE         → show provider section (filter to CORPORATE type)
+    //                        + show employee ID field
+    //   STAFF             → show provider section (filter to STAFF type)
+    //                        + show employee ID field
+    //
+    // There is NO corporateClientField anymore — corporate wellness programs
+    // are registered as InsuranceProvider with provider_type='CORPORATE'.
+    // ══════════════════════════════════════════════════════════════════════
+
+    function updatePreauthVisibility() {
+        if (!providerSelect || !preauthSection) return;
+        const opt = providerSelect.options[providerSelect.selectedIndex];
+        // We detect pre-auth requirement from the ⚠ marker in the option text
+        const needsPreauth = opt && opt.textContent.includes('⚠');
+        preauthSection.style.display = needsPreauth ? '' : 'none';
+    }
+
+    function handleBillingTypeChange() {
+        if (!billingTypeSelect) return;
+        const billing = billingTypeSelect.value;
+        const needsProvider = billing in BILLING_TO_PROVIDER_TYPE;
+
+        // ── Provider section visibility ──────────────────────────────────
+        if (providerSection) providerSection.style.display = needsProvider ? '' : 'none';
+
+        if (!needsProvider) {
+            // CASH — reset everything
+            if (providerSelect)   providerSelect.value = '';
+            if (policySection)    policySection.style.display   = 'none';
+            if (employeeSection)  employeeSection.style.display  = 'none';
+            if (preauthSection)   preauthSection.style.display   = 'none';
+            if (noProvidersWarning) noProvidersWarning.style.display = 'none';
+            return;
+        }
+
+        // ── Update label & help text ─────────────────────────────────────
+        if (providerLabel) providerLabel.textContent = PROVIDER_LABELS[billing] || 'Provider';
+        if (providerHelp)  providerHelp.textContent  = PROVIDER_HELP[billing]   || '';
+
+        // ── Filter provider options by type ──────────────────────────────
+        const allowed = BILLING_TO_PROVIDER_TYPE[billing];
+        let visibleCount = 0;
+
+        allProviderOptions.forEach(opt => {
+            const show = allowed.includes(opt.dataset.type);
+            opt.style.display = show ? '' : 'none';
+            if (show) visibleCount++;
+        });
+
+        // If currently selected option is now hidden, clear the select
+        if (providerSelect) {
+            const current = providerSelect.options[providerSelect.selectedIndex];
+            if (current && current.value && !allowed.includes(current.dataset.type)) {
+                providerSelect.value = '';
+            }
+        }
+
+        // ── No-providers warning ─────────────────────────────────────────
+        if (noProvidersWarning) {
+            noProvidersWarning.style.display = visibleCount === 0 ? '' : 'none';
+        }
+        if (noProvidersType) {
+            noProvidersType.textContent = PROVIDER_LABELS[billing] || billing;
+        }
+
+        // ── Sub-fields ───────────────────────────────────────────────────
+        // Policy number → HMO / NHIS only
+        if (policySection) {
+            policySection.style.display = ['HMO', 'NHIS'].includes(billing) ? '' : 'none';
+        }
+        // Employee ID → CORPORATE / STAFF only
+        if (employeeSection) {
+            employeeSection.style.display = ['CORPORATE', 'STAFF'].includes(billing) ? '' : 'none';
+        }
+
+        // Pre-auth based on selected provider
+        updatePreauthVisibility();
+    }
+
+    if (billingTypeSelect) {
+        billingTypeSelect.addEventListener('change', handleBillingTypeChange);
+    }
+    if (providerSelect) {
+        providerSelect.addEventListener('change', updatePreauthVisibility);
+    }
+
+    // Initialise — critical for form re-render after validation errors,
+    // where Django re-populates billing_type with the previously submitted value
+    handleBillingTypeChange();
+
+
+    // ══════════════════════════════════════════════════════════════════════
+    // FORM VALIDATION
+    // ══════════════════════════════════════════════════════════════════════
+
+    const testRequestForm = document.getElementById('testRequestForm');
+    if (testRequestForm) {
+        testRequestForm.addEventListener('submit', function (e) {
+            const anyChecked = Array.from(testCheckboxes).some(cb => cb.checked);
+            if (!anyChecked) {
+                e.preventDefault();
+                if (testSelectionAlert) {
+                    testSelectionAlert.style.display = '';
+                    testSelectionAlert.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                const card = testSelectionAlert && testSelectionAlert.closest('.card');
+                if (card) {
+                    card.classList.add('border-danger');
+                    setTimeout(() => card.classList.remove('border-danger'), 2000);
+                }
+            }
+        });
+    }
+
+});
 </script>
 
 <style>

@@ -1,0 +1,1151 @@
+{% extends 'laboratory/assets/base.html' %}
+{% load humanize %}
+{% load static %}
+
+{% block title %}Invoice Management{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Modern Invoice Management Styling */
+    :root {
+        --primary: #2c5aa0;
+        --primary-dark: #1e3a6b;
+        --primary-light: #e8f0fe;
+        --secondary: #6c757d;
+        --success: #28a745;
+        --success-light: #d4edda;
+        --warning: #ffc107;
+        --warning-light: #fff3cd;
+        --danger: #dc3545;
+        --danger-light: #f8d7da;
+        --info: #17a2b8;
+        --info-light: #d1ecf1;
+        --dark: #343a40;
+        --light: #f8f9fa;
+        --border-color: #e9ecef;
+        --border-radius: 16px;
+        --box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        --transition: all 0.3s ease;
+    }
+
+    /* Page Header */
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 2rem;
+        border-radius: var(--border-radius);
+        margin-bottom: 2rem;
+        color: white;
+        box-shadow: var(--box-shadow);
+    }
+
+    /* Metric Cards */
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1.25rem;
+        margin-bottom: 2rem;
+    }
+
+    .metric-card {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        box-shadow: var(--box-shadow);
+        border: 1px solid rgba(0,0,0,0.03);
+        transition: var(--transition);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .metric-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--primary), #764ba2);
+    }
+
+    .metric-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+    }
+
+    .metric-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+
+    .metric-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        background: var(--primary-light);
+        color: var(--primary);
+    }
+
+    .metric-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--dark);
+        line-height: 1.2;
+        margin-bottom: 0.25rem;
+    }
+
+    .metric-label {
+        font-size: 0.875rem;
+        color: var(--secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .metric-trend {
+        font-size: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .metric-trend.positive {
+        color: var(--success);
+    }
+
+    .metric-trend.negative {
+        color: var(--danger);
+    }
+
+    /* Filter Section */
+    .filter-section {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: var(--box-shadow);
+        border: 1px solid rgba(0,0,0,0.03);
+    }
+
+    .filter-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--dark);
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .filter-title i {
+        color: var(--primary);
+    }
+
+    .filter-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+
+    .filter-group {
+        position: relative;
+    }
+
+    .filter-group label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--secondary);
+        margin-bottom: 0.25rem;
+        display: block;
+    }
+
+    .filter-control {
+        width: 100%;
+        padding: 0.6rem 1rem;
+        border: 2px solid var(--border-color);
+        border-radius: 10px;
+        transition: var(--transition);
+        font-size: 0.95rem;
+    }
+
+    .filter-control:focus {
+        border-color: var(--primary);
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(44, 90, 160, 0.1);
+    }
+
+    .filter-actions {
+        display: flex;
+        gap: 0.5rem;
+        align-items: flex-end;
+    }
+
+    /* Invoice Table */
+    .invoice-table-container {
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        border: 1px solid rgba(0,0,0,0.03);
+        overflow: hidden;
+    }
+
+    .invoice-table {
+        margin-bottom: 0;
+    }
+
+    .invoice-table thead th {
+        background: var(--light);
+        color: var(--secondary);
+        font-weight: 600;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 1.25rem 1rem;
+        border-bottom: 2px solid var(--border-color);
+    }
+
+    .invoice-table tbody td {
+        padding: 1.25rem 1rem;
+        vertical-align: middle;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .invoice-table tbody tr {
+        transition: var(--transition);
+        cursor: pointer;
+    }
+
+    .invoice-table tbody tr:hover {
+        background: var(--primary-light);
+    }
+
+    .invoice-number {
+        font-weight: 600;
+        color: var(--primary);
+        font-family: monospace;
+        font-size: 0.95rem;
+    }
+
+    .provider-info {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .provider-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 1rem;
+        color: white;
+    }
+
+    .provider-avatar.hmo { background: linear-gradient(135deg, #667eea, #764ba2); }
+    .provider-avatar.nhis { background: linear-gradient(135deg, #f093fb, #f5576c); }
+    .provider-avatar.corporate { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+    .provider-avatar.staff { background: linear-gradient(135deg, #43e97b, #38f9d7); }
+
+    .provider-details {
+        flex: 1;
+    }
+
+    .provider-name {
+        font-weight: 600;
+        color: var(--dark);
+        margin-bottom: 0.1rem;
+    }
+
+    .provider-type {
+        font-size: 0.7rem;
+        color: var(--secondary);
+    }
+
+    /* Status Badges */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.5rem 1rem;
+        border-radius: 50px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+    }
+
+    .status-badge i {
+        font-size: 0.5rem;
+    }
+
+    .status-draft {
+        background: var(--light);
+        color: var(--secondary);
+        border: 1px solid var(--border-color);
+    }
+
+    .status-sent {
+        background: var(--info-light);
+        color: #0c5460;
+    }
+
+    .status-partial {
+        background: var(--warning-light);
+        color: #856404;
+    }
+
+    .status-paid {
+        background: var(--success-light);
+        color: #155724;
+    }
+
+    .status-overdue {
+        background: var(--danger-light);
+        color: #721c24;
+    }
+
+    .status-cancelled {
+        background: #e2e3e5;
+        color: #383d41;
+    }
+
+    /* Amount Display */
+    .amount-display {
+        font-weight: 600;
+        font-size: 1rem;
+    }
+
+    .amount-display.paid {
+        color: var(--success);
+    }
+
+    .amount-display.due {
+        color: var(--danger);
+    }
+
+    .amount-display.total {
+        color: var(--primary);
+    }
+
+    /* Action Buttons */
+    .action-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--light);
+        color: var(--secondary);
+        transition: var(--transition);
+        border: none;
+        cursor: pointer;
+    }
+
+    .action-btn:hover {
+        background: var(--primary);
+        color: white;
+        transform: translateY(-2px);
+    }
+
+    .action-btn.danger:hover {
+        background: var(--danger);
+    }
+
+    .action-dropdown {
+        position: relative;
+    }
+
+    .action-dropdown-menu {
+        position: absolute;
+        right: 0;
+        top: 100%;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        min-width: 200px;
+        z-index: 1000;
+        opacity: 0;
+        visibility: hidden;
+        transition: var(--transition);
+        border: 1px solid var(--border-color);
+    }
+
+    .action-dropdown:hover .action-dropdown-menu {
+        opacity: 1;
+        visibility: visible;
+        top: calc(100% + 5px);
+    }
+
+    .action-dropdown-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        color: var(--dark);
+        text-decoration: none;
+        transition: var(--transition);
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .action-dropdown-item:last-child {
+        border-bottom: none;
+    }
+
+    .action-dropdown-item:hover {
+        background: var(--primary-light);
+        color: var(--primary);
+    }
+
+    .action-dropdown-item i {
+        width: 20px;
+        color: var(--secondary);
+    }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        color: var(--secondary);
+        opacity: 0.3;
+        margin-bottom: 1.5rem;
+    }
+
+    .empty-state h4 {
+        font-weight: 600;
+        color: var(--dark);
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-state p {
+        color: var(--secondary);
+        margin-bottom: 2rem;
+    }
+
+    /* Pagination */
+    .pagination-container {
+        padding: 1.25rem;
+        border-top: 1px solid var(--border-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .pagination-info {
+        color: var(--secondary);
+        font-size: 0.875rem;
+    }
+
+    .pagination {
+        margin: 0;
+        gap: 0.25rem;
+    }
+
+    .page-link {
+        border: none;
+        border-radius: 8px !important;
+        padding: 0.5rem 1rem;
+        color: var(--secondary);
+        transition: var(--transition);
+    }
+
+    .page-link:hover {
+        background: var(--primary-light);
+        color: var(--primary);
+    }
+
+    .page-item.active .page-link {
+        background: var(--primary);
+        color: white;
+    }
+
+    /* Loading Spinner */
+    .spinner-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255,255,255,0.8);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+    }
+
+    .spinner-overlay.active {
+        display: flex;
+    }
+
+    /* Responsive */
+    @media (max-width: 992px) {
+        .metrics-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .metrics-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .filter-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .invoice-table thead {
+            display: none;
+        }
+
+        .invoice-table tbody tr {
+            display: block;
+            padding: 1rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .invoice-table tbody td {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px dashed var(--border-color);
+        }
+
+        .invoice-table tbody td:last-child {
+            border-bottom: none;
+        }
+
+        .invoice-table tbody td::before {
+            content: attr(data-label);
+            font-weight: 600;
+            color: var(--secondary);
+            font-size: 0.85rem;
+        }
+
+        .pagination-container {
+            flex-direction: column;
+            text-align: center;
+        }
+    }
+
+    /* Animations */
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .invoice-row {
+        animation: slideIn 0.3s ease;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h1 class="h2 fw-bold mb-2">Invoice Management</h1>
+                <p class="mb-0 opacity-75">
+                    <i class="bi bi-file-earmark-text me-2"></i>
+                    Track and manage invoices for HMO, NHIS, Corporate, and Staff accounts
+                </p>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-light rounded-pill px-4" onclick="exportInvoices()">
+                    <i class="bi bi-download me-2"></i>Export
+                </button>
+                <a href="{% url 'billing:generate_invoice' %}" class="btn btn-white rounded-pill px-4">
+                    <i class="bi bi-plus-circle me-2"></i>Generate Invoice
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Metrics Cards -->
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <i class="bi bi-file-text"></i>
+                </div>
+                <span class="metric-trend positive">
+                    <i class="bi bi-arrow-up"></i>+5
+                </span>
+            </div>
+            <div class="metric-value">{{ metrics.draft|default:"0" }}</div>
+            <div class="metric-label">Draft Invoices</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <i class="bi bi-send"></i>
+                </div>
+            </div>
+            <div class="metric-value">{{ metrics.sent|default:"0" }}</div>
+            <div class="metric-label">Sent</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <i class="bi bi-hourglass-split"></i>
+                </div>
+            </div>
+            <div class="metric-value">{{ metrics.partial|default:"0" }}</div>
+            <div class="metric-label">Partially Paid</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <i class="bi bi-check-circle"></i>
+                </div>
+            </div>
+            <div class="metric-value">{{ metrics.paid|default:"0" }}</div>
+            <div class="metric-label">Paid</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <i class="bi bi-exclamation-triangle"></i>
+                </div>
+            </div>
+            <div class="metric-value text-danger">{{ metrics.overdue|default:"0" }}</div>
+            <div class="metric-label">Overdue</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <i class="bi bi-cash-stack"></i>
+                </div>
+            </div>
+            <div class="metric-value">₦{{ metrics.total_outstanding|floatformat:2|intcomma }}</div>
+            <div class="metric-label">Outstanding</div>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="filter-section">
+        <div class="filter-title">
+            <i class="bi bi-funnel"></i>
+            Filter Invoices
+        </div>
+        <form method="GET" id="filterForm">
+            <div class="filter-grid">
+                <div class="filter-group">
+                    <label>Status</label>
+                    <select name="status" class="filter-control">
+                        <option value="">All Statuses</option>
+                        {% for code, label in status_choices %}
+                        <option value="{{ code }}" {% if status_filter == code %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label>Provider</label>
+                    <select name="provider" class="filter-control">
+                        <option value="">All Providers</option>
+                        {% for provider in providers %}
+                        <option value="{{ provider.id }}" {% if provider_filter == provider.id|stringformat:"s" %}selected{% endif %}>
+                            {{ provider.name }} ({{ provider.get_provider_type_display }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label>From Date</label>
+                    <input type="date" name="start" class="filter-control" value="{{ start }}">
+                </div>
+
+                <div class="filter-group">
+                    <label>To Date</label>
+                    <input type="date" name="end" class="filter-control" value="{{ end }}">
+                </div>
+
+                <div class="filter-actions">
+                    <button type="submit" class="btn btn-primary rounded-pill px-4">
+                        <i class="bi bi-search me-2"></i>Apply Filters
+                    </button>
+                    <a href="{% url 'billing:invoice_list' %}" class="btn btn-outline-secondary rounded-pill px-4">
+                        <i class="bi bi-arrow-clockwise me-2"></i>Reset
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Invoices Table -->
+    <div class="invoice-table-container">
+        <div class="table-responsive">
+            <table class="table invoice-table">
+                <thead>
+                    <tr>
+                        <th>Invoice #</th>
+                        <th>Provider</th>
+                        <th>Period</th>
+                        <th>Issue Date</th>
+                        <th>Due Date</th>
+                        <th class="text-end">Total</th>
+                        <th class="text-end">Paid</th>
+                        <th class="text-end">Balance</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for invoice in invoices %}
+                    <tr class="invoice-row" onclick="viewInvoice('{{ invoice.id }}')">
+                        <td data-label="Invoice #">
+                            <span class="invoice-number">{{ invoice.invoice_number }}</span>
+                        </td>
+                        <td data-label="Provider">
+                            <div class="provider-info">
+                                {% if invoice.insurance_provider %}
+                                <div class="provider-avatar {{ invoice.insurance_provider.provider_type|lower }}">
+                                    {{ invoice.insurance_provider.name|slice:":2"|upper }}
+                                </div>
+                                <div class="provider-details">
+                                    <div class="provider-name">{{ invoice.insurance_provider.name }}</div>
+                                    <div class="provider-type">
+                                        {{ invoice.insurance_provider.get_provider_type_display }}
+                                    </div>
+                                </div>
+                                {% else %}
+                                <span class="text-muted">Unknown Provider</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td data-label="Period">
+                            {{ invoice.period_start|date:"M d" }} - {{ invoice.period_end|date:"M d, Y" }}
+                        </td>
+                        <td data-label="Issue Date">{{ invoice.invoice_date|date:"M d, Y" }}</td>
+                        <td data-label="Due Date">
+                            {{ invoice.due_date|date:"M d, Y" }}
+                            {% if invoice.is_overdue %}
+                            <i class="bi bi-exclamation-circle text-danger ms-1" title="Overdue"></i>
+                            {% endif %}
+                        </td>
+                        <td data-label="Total" class="text-end">
+                            <span class="amount-display total">₦{{ invoice.total_amount|floatformat:2|intcomma }}</span>
+                        </td>
+                        <td data-label="Paid" class="text-end">
+                            <span class="amount-display paid">₦{{ invoice.amount_paid|floatformat:2|intcomma }}</span>
+                        </td>
+                        <td data-label="Balance" class="text-end">
+                            {% with balance=invoice.balance_due %}
+                            <span class="amount-display {% if balance > 0 %}due{% else %}paid{% endif %}">
+                                ₦{{ balance|floatformat:2|intcomma }}
+                            </span>
+                            {% endwith %}
+                        </td>
+                        <td data-label="Status">
+                            <span class="status-badge status-{{ invoice.status|lower }}">
+                                <i class="bi bi-circle-fill"></i>
+                                {{ invoice.get_status_display }}
+                            </span>
+                        </td>
+                        <td data-label="Actions" class="text-end" onclick="event.stopPropagation()">
+                            <div class="action-dropdown">
+                                <button class="action-btn">
+                                    <i class="bi bi-three-dots-vertical"></i>
+                                </button>
+                                <div class="action-dropdown-menu">
+                                    <a href="{% url 'billing:invoice_detail' invoice.id %}" class="action-dropdown-item">
+                                        <i class="bi bi-eye"></i>
+                                        View Details
+                                    </a>
+                                    <a href="{% url 'billing:invoice_send' invoice.id %}" class="action-dropdown-item">
+                                        <i class="bi bi-envelope"></i>
+                                        Send by Email
+                                    </a>
+                                    <a href="{% url 'billing:invoice_payment' invoice.id %}" class="action-dropdown-item">
+                                        <i class="bi bi-cash"></i>
+                                        Record Payment
+                                    </a>
+                                    {% if invoice.status == 'DRAFT' %}
+                                    <a href="{% url 'billing:invoice_edit' invoice.id %}" class="action-dropdown-item">
+                                        <i class="bi bi-pencil"></i>
+                                        Edit
+                                    </a>
+                                    <a href="#" class="action-dropdown-item text-danger" onclick="cancelInvoice('{{ invoice.id }}')">
+                                        <i class="bi bi-x-circle"></i>
+                                        Cancel
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="10" class="text-center py-5">
+                            <div class="empty-state">
+                                <i class="bi bi-file-earmark-text"></i>
+                                <h4>No Invoices Found</h4>
+                                <p class="text-muted">No invoices match your current filters.</p>
+                                <a href="{% url 'billing:generate_invoice' %}" class="btn btn-primary rounded-pill px-4">
+                                    <i class="bi bi-plus-circle me-2"></i>Create First Invoice
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if invoices.paginator.num_pages > 1 %}
+        <div class="pagination-container">
+            <div class="pagination-info">
+                Showing {{ invoices.start_index }} to {{ invoices.end_index }} of {{ invoices.paginator.count }} invoices
+            </div>
+            <nav>
+                <ul class="pagination">
+                    {% if invoices.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ invoices.previous_page_number }}">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% for num in invoices.paginator.page_range %}
+                        {% if invoices.number == num %}
+                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% elif num > invoices.number|add:'-3' and num < invoices.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ num }}">{{ num }}</a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if invoices.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ invoices.next_page_number }}">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Loading Spinner -->
+<div class="spinner-overlay" id="loadingSpinner">
+    <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>
+</div>
+
+<!-- Cancel Invoice Modal -->
+<div class="modal fade" id="cancelInvoiceModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle text-warning me-2"></i>
+                    Cancel Invoice
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="cancelInvoiceForm" method="POST">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <p>Are you sure you want to cancel this invoice?</p>
+                    <div class="alert alert-warning">
+                        <i class="bi bi-info-circle me-2"></i>
+                        This action cannot be undone. Cancelled invoices will be marked as CANCELLED and cannot be modified.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Cancellation Reason</label>
+                        <textarea class="form-control" name="reason" rows="3" placeholder="Please provide a reason for cancellation..." required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-danger">Cancel Invoice</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Quick View Modal -->
+<div class="modal fade" id="quickViewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-file-earmark-text me-2 text-primary"></i>
+                    Invoice Quick View
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="quickViewContent">
+                <!-- Loaded via AJAX -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                <a href="#" id="quickViewFullLink" class="btn btn-primary">View Full Details</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentInvoiceId = null;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Auto-submit filters on change
+        document.querySelectorAll('.filter-control').forEach(select => {
+            select.addEventListener('change', function() {
+                document.getElementById('filterForm').submit();
+            });
+        });
+
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function(tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+
+        // Highlight overdue rows
+        highlightOverdueRows();
+    });
+
+    function highlightOverdueRows() {
+        document.querySelectorAll('.invoice-row').forEach(row => {
+            const dueDateCell = row.querySelector('td[data-label="Due Date"]');
+            if (dueDateCell && dueDateCell.textContent.includes('Overdue')) {
+                row.style.backgroundColor = 'rgba(220, 53, 69, 0.05)';
+            }
+        });
+    }
+
+    function viewInvoice(invoiceId) {
+        window.location.href = `/billing/invoices/${invoiceId}/`;
+    }
+
+    function quickView(invoiceId) {
+        currentInvoiceId = invoiceId;
+        const modal = new bootstrap.Modal(document.getElementById('quickViewModal'));
+        
+        // Show loading
+        document.getElementById('quickViewContent').innerHTML = `
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary"></div>
+                <p class="mt-3">Loading invoice details...</p>
+            </div>
+        `;
+        
+        // Fetch invoice details via AJAX
+        fetch(`/billing/invoices/${invoiceId}/quick-view/`)
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('quickViewContent').innerHTML = html;
+                document.getElementById('quickViewFullLink').href = `/billing/invoices/${invoiceId}/`;
+            })
+            .catch(error => {
+                document.getElementById('quickViewContent').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Error loading invoice details. Please try again.
+                    </div>
+                `;
+            });
+        
+        modal.show();
+    }
+
+    function cancelInvoice(invoiceId) {
+        event.preventDefault();
+        currentInvoiceId = invoiceId;
+        const form = document.getElementById('cancelInvoiceForm');
+        form.action = `/billing/invoices/${invoiceId}/cancel/`;
+        const modal = new bootstrap.Modal(document.getElementById('cancelInvoiceModal'));
+        modal.show();
+    }
+
+    function exportInvoices() {
+        const spinner = document.getElementById('loadingSpinner');
+        spinner.classList.add('active');
+        
+        // Build export URL with current filters
+        const params = new URLSearchParams(window.location.search);
+        const exportUrl = `/billing/invoices/export/?${params.toString()}`;
+        
+        // Trigger download
+        window.location.href = exportUrl;
+        
+        setTimeout(() => {
+            spinner.classList.remove('active');
+        }, 2000);
+    }
+
+    function printInvoices() {
+        window.print();
+    }
+
+    function sendReminder(invoiceId) {
+        fetch(`/billing/invoices/${invoiceId}/send-reminder/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Reminder sent successfully!');
+            } else {
+                alert('Failed to send reminder. Please try again.');
+            }
+        });
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Ctrl/Cmd + N for new invoice
+        if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+            e.preventDefault();
+            window.location.href = "{% url 'billing:generate_invoice' %}";
+        }
+        
+        // Ctrl/Cmd + F for focus filter
+        if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+            e.preventDefault();
+            document.querySelector('select[name="status"]').focus();
+        }
+        
+        // Ctrl/Cmd + E for export
+        if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
+            e.preventDefault();
+            exportInvoices();
+        }
+    });
+
+    // Real-time search
+    let searchTimeout;
+    const searchInput = document.querySelector('input[type="search"]');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                document.getElementById('filterForm').submit();
+            }, 500);
+        });
+    }
+
+    // Bulk actions
+    let selectedInvoices = new Set();
+
+    function toggleSelectAll(checkbox) {
+        const checkboxes = document.querySelectorAll('.invoice-select');
+        checkboxes.forEach(cb => {
+            cb.checked = checkbox.checked;
+            if (checkbox.checked) {
+                selectedInvoices.add(cb.value);
+            } else {
+                selectedInvoices.delete(cb.value);
+            }
+        });
+        updateBulkActions();
+    }
+
+    function toggleSelect(invoiceId, checkbox) {
+        if (checkbox.checked) {
+            selectedInvoices.add(invoiceId);
+        } else {
+            selectedInvoices.delete(invoiceId);
+        }
+        updateBulkActions();
+    }
+
+    function updateBulkActions() {
+        const bulkBar = document.getElementById('bulkActionsBar');
+        const count = selectedInvoices.size;
+        
+        if (count > 0) {
+            bulkBar.classList.add('active');
+            document.getElementById('selectedCount').textContent = count;
+        } else {
+            bulkBar.classList.remove('active');
+        }
+    }
+
+    function bulkAction(action) {
+        if (selectedInvoices.size === 0) return;
+        
+        const invoiceIds = Array.from(selectedInvoices);
+        
+        fetch(`/billing/invoices/bulk/${action}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ invoices: invoiceIds })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Failed to perform bulk action.');
+            }
+        });
+    }
+</script>
+{% endblock %}

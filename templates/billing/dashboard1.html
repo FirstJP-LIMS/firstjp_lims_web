@@ -1,0 +1,986 @@
+{% extends 'laboratory/assets/base.html' %}
+{% load humanize %}
+{% load static %}
+
+
+{% block title %}Billing Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary:       #2c5aa0;
+        --primary-dark:  #1e3a6b;
+        --secondary:     #6c757d;
+        --success:       #28a745;
+        --success-light: #d4edda;
+        --warning:       #ffc107;
+        --warning-light: #fff3cd;
+        --danger:        #dc3545;
+        --danger-light:  #f8d7da;
+        --info:          #17a2b8;
+        --info-light:    #d1ecf1;
+        --dark:          #343a40;
+        --border-color:  #e9ecef;
+        --border-radius: 16px;
+        --box-shadow:    0 10px 30px rgba(0,0,0,0.05);
+        --transition:    all 0.3s ease;
+    }
+
+    /* ── Sidebar ─────────────────────────────────────────────────── */
+    .billing-sidebar {
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        padding: 1.75rem;
+        height: fit-content;
+        position: sticky;
+        top: 1.5rem;
+        border: 1px solid rgba(0,0,0,0.03);
+        transition: var(--transition);
+    }
+    .billing-sidebar:hover { box-shadow: 0 15px 40px rgba(44,90,160,0.1); }
+
+    .sidebar-header {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        margin: -1.75rem -1.75rem 1.5rem;
+        padding: 1.75rem;
+        border-radius: var(--border-radius) var(--border-radius) 0 0;
+        color: white;
+    }
+    .sidebar-title    { font-size: 1.35rem; font-weight: 700; margin-bottom: 0.25rem; letter-spacing: -0.5px; }
+    .sidebar-subtitle { font-size: 0.875rem; opacity: 0.9; margin-bottom: 0; }
+    .nav-section      { margin-bottom: 1.75rem; }
+    .section-title {
+        font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.7px;
+        color: var(--secondary); margin-bottom: 0.75rem; padding-left: 0.75rem; font-weight: 600;
+    }
+    .nav-link-custom {
+        display: flex; align-items: center; gap: 0.75rem;
+        padding: 0.75rem 1rem; border-radius: 12px; color: #495057;
+        text-decoration: none; transition: var(--transition);
+        margin-bottom: 0.35rem; border: 1px solid transparent; font-weight: 500;
+    }
+    .nav-link-custom:hover {
+        background: rgba(44,90,160,0.05); color: var(--primary);
+        border-color: rgba(44,90,160,0.1); transform: translateX(3px);
+    }
+    .nav-link-custom.active {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: white; box-shadow: 0 5px 15px rgba(44,90,160,0.3);
+    }
+    .nav-icon {
+        width: 34px; height: 34px; border-radius: 10px;
+        display: flex; align-items: center; justify-content: center;
+        background: rgba(44,90,160,0.1); color: var(--primary);
+        font-size: 1.1rem; transition: var(--transition); flex-shrink: 0;
+    }
+    .nav-link-custom.active .nav-icon { background: rgba(255,255,255,0.2); color: white; }
+    .nav-text  { flex: 1; font-size: 0.95rem; }
+    .nav-badge { font-size: 0.7rem; padding: 0.2rem 0.5rem; border-radius: 50px; }
+
+    .sidebar-stats {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 12px; padding: 1.25rem; margin-top: 1.5rem;
+    }
+    .sidebar-stat-item {
+        display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0;
+    }
+    .sidebar-stat-item:not(:last-child) { border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .sidebar-stat-label { font-size: 0.85rem; color: var(--secondary); }
+    .sidebar-stat-value { font-weight: 700; color: var(--primary); font-size: 1.05rem; }
+
+    /* ── Date range ──────────────────────────────────────────────── */
+    .date-range-display {
+        background: rgba(44,90,160,0.04); border-radius: 50px;
+        padding: 0.5rem 1.25rem; border: 1px solid rgba(44,90,160,0.1);
+        display: inline-flex; align-items: center; flex-wrap: wrap; gap: 0.25rem;
+    }
+    .date-range-text { font-weight: 600; color: var(--primary); }
+
+    /* ── Stat cards ──────────────────────────────────────────────── */
+    .dashboard-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1.5rem; margin-bottom: 2rem; }
+    .stat-card {
+        background: white; border-radius: 20px; padding: 1.75rem;
+        box-shadow: var(--box-shadow); border: 1px solid rgba(0,0,0,0.03);
+        transition: var(--transition); position: relative; overflow: hidden;
+    }
+    .stat-card::before {
+        content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+        background: linear-gradient(90deg, var(--primary), #4a7db5);
+    }
+    .stat-card.revenue::before { background: linear-gradient(90deg, #28a745, #34ce57); }
+    .stat-card.warning::before { background: linear-gradient(90deg, #ffc107, #ffdb6d); }
+    .stat-card.danger::before  { background: linear-gradient(90deg, #dc3545, #e4606d); }
+    .stat-card:hover { transform: translateY(-5px); box-shadow: 0 20px 40px rgba(44,90,160,0.1); }
+    .stat-icon {
+        width: 56px; height: 56px; border-radius: 18px;
+        display: flex; align-items: center; justify-content: center;
+        margin-bottom: 1.25rem; background: rgba(44,90,160,0.1); color: var(--primary); font-size: 1.75rem;
+    }
+    .stat-card.revenue .stat-icon { background: rgba(40,167,69,0.1);  color: #28a745; }
+    .stat-card.warning .stat-icon { background: rgba(255,193,7,0.1);   color: #ffc107; }
+    .stat-card.danger  .stat-icon { background: rgba(220,53,69,0.1);   color: #dc3545; }
+    .stat-label { font-size: 0.875rem; color: var(--secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem; }
+    .stat-value { font-size: 2rem; font-weight: 700; color: var(--dark); line-height: 1.2; margin-bottom: 0.75rem; }
+
+    /* ── Charts ──────────────────────────────────────────────────── */
+    .chart-container {
+        background: white; border-radius: 20px; padding: 1.5rem;
+        box-shadow: var(--box-shadow); border: 1px solid rgba(0,0,0,0.03);
+        transition: var(--transition); height: 100%;
+    }
+    .chart-container:hover { box-shadow: 0 15px 40px rgba(44,90,160,0.08); }
+    .chart-title { font-size: 1.05rem; font-weight: 600; color: var(--dark); margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem; }
+    .chart-title i { color: var(--primary); }
+
+    /* ── Status indicators ───────────────────────────────────────── */
+    .status-indicator, .type-indicator {
+        width: 12px; height: 12px; border-radius: 50%;
+        display: inline-block; margin-right: 0.5rem; flex-shrink: 0;
+    }
+    .status-badge {
+        display: inline-flex; align-items: center; gap: 0.35rem;
+        padding: 0.3rem 0.7rem; border-radius: 50px;
+        font-size: 0.72rem; font-weight: 600; letter-spacing: 0.3px; white-space: nowrap;
+    }
+    .status-badge i { font-size: 0.45rem; }
+    .status-badge.status-paid       { background: var(--success-light); color: #155724; }
+    .status-badge.status-unpaid     { background: var(--danger-light);  color: #721c24; }
+    .status-badge.status-partial    { background: var(--warning-light); color: #856404; }
+    .status-badge.status-invoiced   { background: #cfe2ff;              color: #084298; }
+    .status-badge.status-overdue    { background: var(--danger-light);  color: #721c24; }
+    .status-badge.status-authorized { background: var(--info-light);    color: #0c5460; }
+    .status-badge.status-waived     { background: #e2e3e5;              color: #383d41; }
+
+    /* ── Table ───────────────────────────────────────────────────── */
+    .table-card { background: white; border-radius: 20px; box-shadow: var(--box-shadow); border: 1px solid rgba(0,0,0,0.03); overflow: hidden; }
+    .table-header {
+        padding: 1.5rem; border-bottom: 1px solid var(--border-color);
+        display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;
+    }
+    .table-title { font-size: 1.1rem; font-weight: 600; margin: 0; color: var(--dark); }
+    .billing-table { margin-bottom: 0; }
+    .billing-table thead th {
+        background: #f8f9fa; color: var(--secondary); font-weight: 600; font-size: 0.8rem;
+        text-transform: uppercase; letter-spacing: 0.5px; padding: 0.9rem 1rem;
+        border-bottom: 2px solid var(--border-color); white-space: nowrap;
+    }
+    .billing-table tbody td { padding: 1rem; vertical-align: middle; border-bottom: 1px solid var(--border-color); }
+    .billing-table tbody tr { transition: var(--transition); cursor: pointer; }
+    .billing-table tbody tr:hover { background: rgba(44,90,160,0.02); }
+    .avatar-placeholder {
+        width: 38px; height: 38px; background: linear-gradient(135deg, #e9ecef, #dee2e6);
+        border-radius: 10px; display: flex; align-items: center; justify-content: center;
+        color: var(--secondary); font-size: 1.1rem; flex-shrink: 0;
+    }
+    .no-data { text-align: center; padding: 3rem 2rem; color: var(--secondary); }
+    .no-data i { font-size: 2.5rem; margin-bottom: 0.75rem; opacity: 0.3; display: block; }
+    .activity-item {
+        background: #f8f9fa; border-radius: 12px; padding: 0.9rem;
+        margin-bottom: 0.6rem; cursor: pointer; transition: var(--transition); border: 1px solid transparent;
+    }
+    .activity-item:hover { background: #eef2ff; border-color: rgba(44,90,160,0.15); }
+
+    /* ── Responsive ──────────────────────────────────────────────── */
+    @media (max-width: 1200px) { .dashboard-grid { grid-template-columns: repeat(2,1fr); } }
+    @media (max-width: 768px)  { .dashboard-grid { grid-template-columns: 1fr; } .stat-value { font-size: 1.6rem; } }
+    @media (max-width: 992px)  { .billing-sidebar { position: static; margin-bottom: 1.5rem; } }
+</style>
+{% endblock %}
+
+
+{% block content %}
+<div class="billing-dashboard">
+<div class="row g-4">
+
+
+<div class="col-lg-3">
+<div class="billing-sidebar">
+
+    <div class="sidebar-header">
+        <h3 class="sidebar-title">Billing</h3>
+        <p class="sidebar-subtitle">Financial Management</p>
+    </div>
+
+    <div class="nav-section">
+        <h6 class="section-title">Dashboard</h6>
+        <a href="{% url 'billing:dashboard' %}" class="nav-link-custom active">
+            <div class="nav-icon"><i class="bi bi-speedometer2"></i></div>
+            <span class="nav-text">Overview</span>
+            <span class="nav-badge badge bg-white bg-opacity-20 rounded-pill text-white">
+                {{ recent_billings|length }}
+            </span>
+        </a>
+    </div>
+
+    <div class="nav-section">
+        <h6 class="section-title">Transactions</h6>
+        <a href="{% url 'billing:billing_list' %}" class="nav-link-custom">
+            <div class="nav-icon"><i class="bi bi-receipt"></i></div>
+            <span class="nav-text">All Billing</span>
+        </a>
+        <a href="#" class="nav-link-custom" data-bs-toggle="modal" data-bs-target="#quickPaymentModal">
+            <div class="nav-icon"><i class="bi bi-cash-stack"></i></div>
+            <span class="nav-text">Quick Payment</span>
+        </a>
+        <a href="{% url 'billing:generate_invoice' %}" class="nav-link-custom">
+            <div class="nav-icon"><i class="bi bi-plus-circle"></i></div>
+            <span class="nav-text">Generate Invoice</span>
+        </a>
+    </div>
+
+    <div class="nav-section">
+        <h6 class="section-title">Invoices</h6>
+        <a href="{% url 'billing:invoice_list' %}" class="nav-link-custom">
+            <div class="nav-icon"><i class="bi bi-file-earmark-text"></i></div>
+            <span class="nav-text">View Invoices</span>
+            {# Badge only when there is real unpaid data — no hardcoded counts #}
+            {% if unpaid_invoices > 0 %}
+            <span class="nav-badge badge bg-danger rounded-pill">!</span>
+            {% endif %}
+        </a>
+        <a href="{% url 'billing:invoice_list' %}?status=draft" class="nav-link-custom">
+            <div class="nav-icon"><i class="bi bi-pencil-square"></i></div>
+            <span class="nav-text">Drafts</span>
+        </a>
+        <a href="{% url 'billing:invoice_list' %}?status=overdue" class="nav-link-custom">
+            <div class="nav-icon"><i class="bi bi-exclamation-triangle"></i></div>
+            <span class="nav-text">Overdue</span>
+        </a>
+    </div>
+
+    <div class="nav-section">
+        <h6 class="section-title">Reports</h6>
+        <a href="#" class="nav-link-custom"><div class="nav-icon"><i class="bi bi-graph-up"></i></div><span class="nav-text">Revenue Report</span></a>
+        <a href="#" class="nav-link-custom"><div class="nav-icon"><i class="bi bi-clock-history"></i></div><span class="nav-text">Aging Report</span></a>
+        <a href="#" class="nav-link-custom"><div class="nav-icon"><i class="bi bi-percent"></i></div><span class="nav-text">Tax Reports</span></a>
+    </div>
+
+    <div class="nav-section">
+        <h6 class="section-title">Management</h6>
+        <a href="{% url 'billing:pricelist_list' %}" class="nav-link-custom">
+            <div class="nav-icon"><i class="bi bi-tag"></i></div>
+            <span class="nav-text">Price Lists</span>
+        </a>
+        <a href="{% url 'billing:insurance_list' %}" class="nav-link-custom">
+            <div class="nav-icon"><i class="bi bi-shield-check"></i></div>
+            <span class="nav-text">Insurance / Corporate</span>
+        </a>
+    </div>
+
+    <div class="nav-section">
+        <h6 class="section-title">Settings</h6>
+        <a href="#" class="nav-link-custom"><div class="nav-icon"><i class="bi bi-gear"></i></div><span class="nav-text">Billing Settings</span></a>
+        <a href="#" class="nav-link-custom"><div class="nav-icon"><i class="bi bi-download"></i></div><span class="nav-text">Data Export</span></a>
+    </div>
+
+    
+    <!-- Sidebar quick stats — all four values are pre-calculated in the view. -->
+      
+    <div class="sidebar-stats">
+        <div class="sidebar-stat-item">
+            <span class="sidebar-stat-label">Collection Rate</span>
+            <span class="sidebar-stat-value">{{ collection_rate_pct }}%</span>
+        </div>
+        <div class="sidebar-stat-item">
+            <span class="sidebar-stat-label">Avg. Transaction</span>
+            <span class="sidebar-stat-value">₦{{ avg_billing|floatformat:0|intcomma }}</span>
+        </div>
+        <div class="sidebar-stat-item">
+            <span class="sidebar-stat-label">Patient Collection</span>
+            <span class="sidebar-stat-value">{{ patient_collection_pct }}%</span>
+        </div>
+        <div class="sidebar-stat-item">
+            <span class="sidebar-stat-label">HMO Collection</span>
+            <span class="sidebar-stat-value">{{ insurance_collection_pct }}%</span>
+        </div>
+    </div>
+
+</div>
+</div>{# /col-lg-3 #}
+
+
+{# ════════════════════════════════════════════════════════ MAIN CONTENT #}
+<div class="col-lg-9">
+<div class="dashboard-content">
+
+    {# Page header #}
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            <h1 class="h2 fw-bold mb-2" style="color:var(--dark);">Billing Dashboard</h1>
+            <div class="date-range-display">
+                <i class="bi bi-calendar3 text-primary me-2"></i>
+                <span class="date-range-text">{{ start_date|date:"M d, Y" }}</span>
+                <i class="bi bi-arrow-right mx-2 text-muted"></i>
+                <span class="date-range-text">{{ end_date|date:"M d, Y" }}</span>
+                {# FIX: 'replace' is not a Django filter — explicit mapping instead #}
+                <span class="badge bg-primary bg-opacity-10 text-primary ms-2 px-3 py-1">
+                    {% if range == 'today' %}Today
+                    {% elif range == 'this_week' %}This Week
+                    {% elif range == 'this_month' %}This Month
+                    {% elif range == 'last_month' %}Last Month
+                    {% elif range == 'this_quarter' %}This Quarter
+                    {% elif range == 'this_year' %}This Year
+                    {% else %}{{ range|title }}{% endif %}
+                </span>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 flex-wrap">
+            <div class="dropdown">
+                <button class="btn btn-outline-primary rounded-pill px-4" type="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-calendar-range me-2"></i>Date Range
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 py-2">
+                    <li><a class="dropdown-item {% if range == 'today' %}active{% endif %}"        href="?range=today"><i class="bi bi-calendar-day me-2"></i>Today</a></li>
+                    <li><a class="dropdown-item {% if range == 'this_week' %}active{% endif %}"    href="?range=this_week"><i class="bi bi-calendar-week me-2"></i>This Week</a></li>
+                    <li><a class="dropdown-item {% if range == 'this_month' %}active{% endif %}"   href="?range=this_month"><i class="bi bi-calendar-month me-2"></i>This Month</a></li>
+                    <li><a class="dropdown-item {% if range == 'last_month' %}active{% endif %}"   href="?range=last_month"><i class="bi bi-calendar-minus me-2"></i>Last Month</a></li>
+                    <li><a class="dropdown-item {% if range == 'this_quarter' %}active{% endif %}" href="?range=this_quarter"><i class="bi bi-calendar3 me-2"></i>This Quarter</a></li>
+                    <li><a class="dropdown-item {% if range == 'this_year' %}active{% endif %}"    href="?range=this_year"><i class="bi bi-calendar-range me-2"></i>This Year</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#customRangeModal"><i class="bi bi-sliders2 me-2"></i>Custom Range</a></li>
+                </ul>
+            </div>
+            {% if range != 'this_month' %}
+            <a href="?range=this_month" class="btn btn-outline-secondary rounded-pill px-4">
+                <i class="bi bi-arrow-clockwise me-2"></i>Reset
+            </a>
+            {% endif %}
+            {# FIX: pass event so spinner can reference event.currentTarget #}
+            <button class="btn btn-primary rounded-pill px-4" onclick="exportDashboardData(event)">
+                <i class="bi bi-download me-2"></i>Export
+            </button>
+        </div>
+    </div>
+
+    {# Summary stat cards #}
+    <div class="dashboard-grid">
+
+        <div class="stat-card revenue">
+            <div class="stat-icon"><i class="bi bi-cash-coin"></i></div>
+            <div class="stat-label">Revenue Collected</div>
+            <div class="stat-value">₦{{ total_revenue|floatformat:2|intcomma }}</div>
+            <div class="d-flex justify-content-between align-items-center">
+                <small class="text-muted">Contract: ₦{{ total_contract_value|floatformat:0|intcomma }}</small>
+                <span class="badge bg-success bg-opacity-10 text-success px-3 py-1">
+                    {{ collection_rate_pct }}% collected
+                </span>
+            </div>
+        </div>
+
+        <div class="stat-card warning">
+            <div class="stat-icon"><i class="bi bi-clock-history"></i></div>
+            <div class="stat-label">Outstanding Balance</div>
+            <div class="stat-value">₦{{ total_outstanding|floatformat:2|intcomma }}</div>
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-1">
+                <small class="text-primary fw-medium">
+                    <i class="bi bi-person me-1"></i>Patient: ₦{{ patient_outstanding|floatformat:0|intcomma }}
+                </small>
+                <small class="text-info fw-medium">
+                    <i class="bi bi-shield me-1"></i>HMO: ₦{{ insurance_outstanding|floatformat:0|intcomma }}
+                </small>
+            </div>
+        </div>
+
+        <div class="stat-card danger">
+            <div class="stat-icon"><i class="bi bi-file-earmark-text"></i></div>
+            <div class="stat-label">Unpaid Payer Invoices</div>
+            <div class="stat-value">₦{{ unpaid_invoices|floatformat:2|intcomma }}</div>
+            <div class="d-flex justify-content-between align-items-center">
+                <small class="text-muted">HMOs / Corporate</small>
+                {% if unpaid_invoices > 0 %}
+                <a href="{% url 'billing:invoice_list' %}?status=overdue"
+                   class="btn btn-sm btn-outline-danger rounded-pill px-3">
+                    <i class="bi bi-eye me-1"></i>View
+                </a>
+                {% else %}
+                <span class="badge bg-success bg-opacity-10 text-success px-3 py-1">All cleared</span>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+
+    {# Charts + activity feed #}
+    <div class="row g-4 mt-2">
+
+        <div class="col-lg-8">
+            <div class="row g-4">
+
+                {# Payment status doughnut #}
+                <div class="col-md-6">
+                    <div class="chart-container">
+                        <div class="chart-title"><i class="bi bi-pie-chart-fill"></i>Payment Status</div>
+                        <div style="height:240px; position:relative;">
+                            <canvas id="paymentStatusChart"></canvas>
+                        </div>
+                        <div class="mt-4">
+                            {% if payment_breakdown %}
+                                {% for item in payment_breakdown %}
+                                <div class="d-flex justify-content-between align-items-center mb-2 px-2">
+                                    <div class="d-flex align-items-center">
+                                        <span class="status-indicator
+                                            {% if item.payment_status == 'PAID' %}bg-success
+                                            {% elif item.payment_status == 'UNPAID' %}bg-danger
+                                            {% elif item.payment_status == 'PARTIAL' %}bg-warning
+                                            {% elif item.payment_status == 'INVOICED' %}bg-primary
+                                            {% elif item.payment_status == 'AUTHORIZED' %}bg-info
+                                            {% else %}bg-secondary{% endif %}">
+                                        </span>
+                                        <span class="small fw-medium">
+                                            {% if item.payment_status == 'PAID' %}Paid
+                                            {% elif item.payment_status == 'UNPAID' %}Unpaid
+                                            {% elif item.payment_status == 'PARTIAL' %}Partial
+                                            {% elif item.payment_status == 'INVOICED' %}Invoiced
+                                            {% elif item.payment_status == 'OVERDUE' %}Overdue
+                                            {% elif item.payment_status == 'AUTHORIZED' %}Authorized
+                                            {% elif item.payment_status == 'WAIVED' %}Waived
+                                            {% else %}{{ item.payment_status|title }}{% endif %}
+                                        </span>
+                                    </div>
+                                    <div class="text-end">
+                                        <strong class="small">₦{{ item.total|default:0|floatformat:2|intcomma }}</strong>
+                                        <small class="text-muted ms-1">({{ item.count }})</small>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="no-data py-3">
+                                    <i class="bi bi-pie-chart"></i>
+                                    <p class="small mb-0">No payment data for this period</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                {# Billing type pie #}
+                <div class="col-md-6">
+                    <div class="chart-container">
+                        <div class="chart-title"><i class="bi bi-bar-chart-fill"></i>Billing Types</div>
+                        <div style="height:240px; position:relative;">
+                            <canvas id="billingTypeChart"></canvas>
+                        </div>
+                        <div class="mt-4">
+                            {% if billing_breakdown %}
+                                {% for item in billing_breakdown %}
+                                <div class="d-flex justify-content-between align-items-center mb-2 px-2">
+                                    <div class="d-flex align-items-center">
+                                        <span class="type-indicator
+                                            {% if item.billing_type == 'CASH' %}bg-success
+                                            {% elif item.billing_type == 'HMO' %}bg-primary
+                                            {% elif item.billing_type == 'CORPORATE' %}bg-warning
+                                            {% elif item.billing_type == 'NHIS' %}bg-info
+                                            {% else %}bg-secondary{% endif %}">
+                                        </span>
+                                        <span class="small fw-medium">
+                                            {% if item.billing_type == 'CASH' %}Cash / Self-Pay
+                                            {% elif item.billing_type == 'HMO' %}HMO / Insurance
+                                            {% elif item.billing_type == 'CORPORATE' %}Corporate
+                                            {% elif item.billing_type == 'NHIS' %}NHIS
+                                            {% elif item.billing_type == 'STAFF' %}Staff
+                                            {% else %}{{ item.billing_type }}{% endif %}
+                                        </span>
+                                    </div>
+                                    <div class="text-end">
+                                        <strong class="small">₦{{ item.total|default:0|floatformat:2|intcomma }}</strong>
+                                        <small class="text-muted ms-1">({{ item.count }})</small>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="no-data py-3">
+                                    <i class="bi bi-bar-chart"></i>
+                                    <p class="small mb-0">No billing type data</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        {# Recent activity feed #}
+        <div class="col-lg-4">
+            <div class="chart-container d-flex flex-column" style="min-height:400px;">
+                <div class="chart-title">
+                    <i class="bi bi-activity"></i>Recent Activity
+                    <span class="badge bg-primary rounded-pill ms-auto">{{ recent_billings|length }}</span>
+                </div>
+                <div style="max-height:380px; overflow-y:auto; flex:1;" class="pe-1">
+                    {% if recent_billings %}
+                        {% for billing in recent_billings %}
+                        <div class="activity-item"
+                             onclick="window.location.href='{% url 'billing:billing_detail' billing.pk %}'">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <strong class="d-block small">
+                                        {{ billing.request.patient.get_full_name|default:"Unknown Patient" }}
+                                    </strong>
+                                    <small class="text-muted">{{ billing.request.request_id|default:"N/A" }}</small>
+                                </div>
+                                <span class="status-badge status-{{ billing.payment_status|lower }}">
+                                    <i class="bi bi-circle-fill"></i>
+                                    {{ billing.get_payment_status_display }}
+                                </span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-end">
+                                <small class="text-muted">
+                                    <i class="bi bi-tag me-1"></i>
+                                    {{ billing.get_billing_type_display|truncatechars:12 }}
+                                </small>
+                                <div class="text-end">
+                                    <strong class="text-primary small">₦{{ billing.total_amount|floatformat:2|intcomma }}</strong>
+                                    <br><small class="text-muted">{{ billing.created_at|timesince }} ago</small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="no-data py-4">
+                            <i class="bi bi-clock-history"></i>
+                            <p class="mb-1">No recent activity</p>
+                            <small class="text-muted">Try a different date range</small>
+                        </div>
+                    {% endif %}
+                </div>
+                {% if recent_billings %}
+                <div class="text-center pt-3 border-top mt-2">
+                    <a href="{% url 'billing:billing_list' %}"
+                       class="btn btn-link text-primary text-decoration-none small">
+                        <i class="bi bi-arrow-right me-1"></i>View All Transactions
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+
+    {# Billing records table #}
+    <div class="table-card mt-4">
+        <div class="table-header">
+            <div>
+                <h3 class="table-title"><i class="bi bi-table me-2 text-primary"></i>Billing Records</h3>
+                <small class="text-muted">{{ start_date|date:"M d, Y" }} — {{ end_date|date:"M d, Y" }}</small>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <div class="position-relative">
+                    <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" style="z-index:1;"></i>
+                    <input type="text" class="form-control form-control-sm ps-5"
+                           placeholder="Search records…" id="searchInput"
+                           style="min-width:220px; border-radius:50px;">
+                </div>
+                <div class="dropdown">
+                    <button class="btn btn-outline-primary btn-sm dropdown-toggle rounded-pill px-3"
+                            type="button" data-bs-toggle="dropdown" id="filterDropdownBtn">
+                        <i class="bi bi-funnel me-1"></i>Filter
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                        <li><h6 class="dropdown-header">Payment Status</h6></li>
+                        <li><a class="dropdown-item table-filter" href="#" data-filter="status" data-value="">All</a></li>
+                        <li><a class="dropdown-item table-filter" href="#" data-filter="status" data-value="PAID">Paid</a></li>
+                        <li><a class="dropdown-item table-filter" href="#" data-filter="status" data-value="UNPAID">Unpaid</a></li>
+                        <li><a class="dropdown-item table-filter" href="#" data-filter="status" data-value="PARTIAL">Partial</a></li>
+                        <li><a class="dropdown-item table-filter" href="#" data-filter="status" data-value="INVOICED">Invoiced</a></li>
+                        <li><a class="dropdown-item table-filter" href="#" data-filter="status" data-value="AUTHORIZED">Authorized</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><h6 class="dropdown-header">Billing Type</h6></li>
+                        <li><a class="dropdown-item table-filter" href="#" data-filter="type" data-value="">All</a></li>
+                        <li><a class="dropdown-item table-filter" href="#" data-filter="type" data-value="CASH">Cash</a></li>
+                        <li><a class="dropdown-item table-filter" href="#" data-filter="type" data-value="HMO">HMO</a></li>
+                        <li><a class="dropdown-item table-filter" href="#" data-filter="type" data-value="NHIS">NHIS</a></li>
+                        <li><a class="dropdown-item table-filter" href="#" data-filter="type" data-value="CORPORATE">Corporate</a></li>
+                        <li><a class="dropdown-item table-filter" href="#" data-filter="type" data-value="STAFF">Staff</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table billing-table align-middle mb-0" id="billingTable">
+                <thead>
+                    <tr>
+                        <th>Request ID</th>
+                        <th>Patient</th>
+                        <th>Type</th>
+                        <th class="text-end">Subtotal</th>
+                        <th class="text-end">Discount</th>
+                        <th class="text-end">Tax</th>
+                        <th class="text-end">Total</th>
+                        <th class="text-end">Patient Owes</th>
+                        <th class="text-end">HMO Owes</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for billing in recent_billings %}
+                    <tr data-status="{{ billing.payment_status }}"
+                        data-type="{{ billing.billing_type }}"
+                        onclick="window.location.href='{% url 'billing:billing_detail' billing.pk %}'">
+
+                        <td onclick="event.stopPropagation()">
+                            <a href="{% url 'billing:billing_detail' billing.pk %}"
+                               class="fw-bold text-primary text-decoration-none">
+                                {{ billing.request.request_id|default:"N/A" }}
+                            </a>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="avatar-placeholder"><i class="bi bi-person"></i></div>
+                                <div>
+                                    <div class="fw-medium small">{{ billing.request.patient.get_full_name|default:"Unknown" }}</div>
+                                    <div class="text-muted" style="font-size:0.78rem;">{{ billing.request.patient.contact_phone|default:"—" }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark px-2 py-1 small">
+                                {{ billing.get_billing_type_display }}
+                            </span>
+                            {% if billing.insurance_provider %}
+                            <div class="text-muted mt-1" style="font-size:0.75rem;">
+                                {{ billing.insurance_provider.name|truncatechars:14 }}
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td class="text-end fw-medium small">₦{{ billing.subtotal|floatformat:2|intcomma }}</td>
+                        <td class="text-end text-danger small">
+                            {% if billing.discount > 0 %}-{% endif %}₦{{ billing.discount|floatformat:2|intcomma }}
+                        </td>
+                        <td class="text-end small">₦{{ billing.tax|floatformat:2|intcomma }}</td>
+                        <td class="text-end fw-bold text-primary small">₦{{ billing.total_amount|floatformat:2|intcomma }}</td>
+
+                        {# Patient portion — green when paid, amber when still owed #}
+                        <td class="text-end small">
+                            <span class="{% if billing.patient_amount_paid >= billing.patient_portion %}text-success{% else %}text-warning fw-medium{% endif %}">
+                                ₦{{ billing.patient_portion|floatformat:2|intcomma }}
+                            </span>
+                        </td>
+                        {# Insurance portion — dash for CASH records where it's always 0 #}
+                        <td class="text-end small">
+                            {% if billing.insurance_portion > 0 %}
+                            <span class="text-info">₦{{ billing.insurance_portion|floatformat:2|intcomma }}</span>
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            <span class="status-badge status-{{ billing.payment_status|lower }}">
+                                <i class="bi bi-circle-fill"></i>
+                                {{ billing.get_payment_status_display }}
+                            </span>
+                        </td>
+                        <td class="small text-nowrap">
+                            <div>{{ billing.created_at|date:"d M Y" }}</div>
+                            <div class="text-muted">{{ billing.created_at|date:"H:i" }}</div>
+                        </td>
+                        <td onclick="event.stopPropagation()">
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-light rounded-pill px-2"
+                                        type="button" data-bs-toggle="dropdown">
+                                    <i class="bi bi-three-dots-vertical"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                                    <li>
+                                        <a class="dropdown-item" href="{% url 'billing:billing_detail' billing.pk %}">
+                                            <i class="bi bi-eye me-2"></i>View Details
+                                        </a>
+                                    </li>
+                                    {% if not billing.is_fully_paid %}
+                                    <li>
+                                        <a class="dropdown-item" href="#"
+                                           data-bs-toggle="modal" data-bs-target="#quickPaymentModal"
+                                           data-billing-id="{{ billing.pk }}"
+                                           data-amount="{{ billing.patient_portion }}">
+                                            <i class="bi bi-credit-card me-2"></i>Record Payment
+                                        </a>
+                                    </li>
+                                    {% endif %}
+                                    {% if billing.insurance_portion > 0 and billing.payment_status != 'INVOICED' %}
+                                    <li>
+                                        <a class="dropdown-item"
+                                           href="{% url 'billing:generate_invoice' %}?billing={{ billing.pk }}">
+                                            <i class="bi bi-receipt me-2"></i>Add to Invoice
+                                        </a>
+                                    </li>
+                                    {% endif %}
+                                    {# Delete removed — use the detail view for corrections/waivers #}
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="12">
+                            <div class="no-data">
+                                <i class="bi bi-receipt"></i>
+                                <p class="mb-1 fw-medium">No billing records in this period</p>
+                                <small class="text-muted">Try a different date range</small>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if recent_billings %}
+        <div class="d-flex justify-content-between align-items-center px-4 py-3 border-top bg-light bg-opacity-50">
+            <small class="text-muted">
+                <i class="bi bi-info-circle me-1"></i>Showing {{ recent_billings|length }} most recent records
+            </small>
+            <a href="{% url 'billing:billing_list' %}?range={{ range }}"
+               class="btn btn-sm btn-primary rounded-pill px-4">
+                <i class="bi bi-arrow-right me-1"></i>View All
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+</div>{# /col-lg-9 #}
+</div>{# /row #}
+</div>{# /billing-dashboard #}
+
+
+{# ════════════════════════════════════════════════════════════════ MODALS #}
+
+<div class="modal fade" id="customRangeModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header border-0 bg-light">
+                <h5 class="modal-title fw-bold"><i class="bi bi-calendar-range me-2 text-primary"></i>Custom Date Range</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="customRangeForm">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium">From Date</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0"><i class="bi bi-calendar"></i></span>
+                                <input type="date" class="form-control border-start-0" name="start_date" value="{{ start_date|date:'Y-m-d' }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium">To Date</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0"><i class="bi bi-calendar"></i></span>
+                                <input type="date" class="form-control border-start-0" name="end_date" value="{{ end_date|date:'Y-m-d' }}" required>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 bg-light">
+                <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal"><i class="bi bi-x me-1"></i>Cancel</button>
+                <button type="button" class="btn btn-primary rounded-pill px-4" onclick="applyCustomRange()"><i class="bi bi-check2 me-1"></i>Apply Range</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="quickPaymentModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header border-0 bg-light">
+                <h5 class="modal-title fw-bold"><i class="bi bi-cash-stack me-2 text-success"></i>Quick Payment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-3">
+                    <label class="form-label fw-medium">Billing Record</label>
+                    <select class="form-select" id="quickBillingSelect">
+                        <option value="">Choose a record…</option>
+                        {% for billing in recent_billings %}
+                        {% if billing.payment_status != 'PAID' and billing.patient_portion > 0 %}
+                        {#
+                          FIX: was billing.patient_balance_due — not available on this queryset.
+                          Using billing.patient_portion (the full co-pay obligation).
+                          The detail page handles partial amounts accurately.
+                        #}
+                        <option value="{{ billing.pk }}" data-amount="{{ billing.patient_portion }}">
+                            {{ billing.request.request_id }} — {{ billing.request.patient.get_full_name }}
+                            (₦{{ billing.patient_portion|floatformat:2 }})
+                        </option>
+                        {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-medium">Amount (₦)</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light">₦</span>
+                        <input type="number" class="form-control" id="quickPaymentAmount" step="0.01" min="0.01" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="mb-1">
+                    <label class="form-label fw-medium">Payment Method</label>
+                    <select class="form-select" id="quickPaymentMethod">
+                        <option value="CASH">Cash</option>
+                        <option value="POS">POS / Card</option>
+                        <option value="TRANSFER">Bank Transfer</option>
+                        <option value="CHEQUE">Cheque</option>
+                    </select>
+                </div>
+                <div class="alert alert-info border-0 small mt-3 mb-0">
+                    <i class="bi bi-info-circle me-1"></i>
+                    You'll be taken to the billing detail page to confirm. Payments need server validation.
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light">
+                <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success rounded-pill px-4" onclick="processQuickPayment()">
+                    <i class="bi bi-arrow-right-circle me-1"></i>Go to Payment
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    // ── Payment status doughnut ──────────────────────────────────────────
+    const paymentCtx = document.getElementById('paymentStatusChart');
+    if (paymentCtx) {
+        const SC = { PAID:'rgba(40,167,69,0.9)', UNPAID:'rgba(220,53,69,0.9)', PARTIAL:'rgba(255,193,7,0.9)', INVOICED:'rgba(13,110,253,0.9)', AUTHORIZED:'rgba(32,201,151,0.9)', OVERDUE:'rgba(253,126,20,0.9)', WAIVED:'rgba(108,117,125,0.9)' };
+        const pLabels = [{% for item in payment_breakdown %}'{{ item.payment_status }}'{% if not forloop.last %},{% endif %}{% endfor %}];
+        const pTotals = [{% for item in payment_breakdown %}{{ item.total|default:0 }}{% if not forloop.last %},{% endif %}{% endfor %}];
+        new Chart(paymentCtx, {
+            type: 'doughnut',
+            data: { labels: pLabels, datasets: [{ data: pTotals, backgroundColor: pLabels.map(l => SC[l]||'rgba(150,150,150,0.9)'), borderWidth: 2, borderColor: '#fff' }] },
+            options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => { const v=ctx.raw||0, t=ctx.dataset.data.reduce((a,b)=>a+b,0); return `${ctx.label}: ₦${v.toLocaleString()} (${t>0?Math.round(v/t*100):0}%)`; } } } } }
+        });
+    }
+
+    // ── Billing type pie ─────────────────────────────────────────────────
+    const billingCtx = document.getElementById('billingTypeChart');
+    if (billingCtx) {
+        const TC = { CASH:'rgba(40,167,69,0.9)', HMO:'rgba(44,90,160,0.9)', CORPORATE:'rgba(255,193,7,0.9)', NHIS:'rgba(23,162,184,0.9)', STAFF:'rgba(108,117,125,0.9)' };
+        const bLabels = [{% for item in billing_breakdown %}'{{ item.billing_type }}'{% if not forloop.last %},{% endif %}{% endfor %}];
+        const bTotals = [{% for item in billing_breakdown %}{{ item.total|default:0 }}{% if not forloop.last %},{% endif %}{% endfor %}];
+        new Chart(billingCtx, {
+            type: 'pie',
+            data: { labels: bLabels, datasets: [{ data: bTotals, backgroundColor: bLabels.map(l => TC[l]||'rgba(150,150,150,0.9)'), borderWidth: 2, borderColor: '#fff' }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => { const v=ctx.raw||0, t=ctx.dataset.data.reduce((a,b)=>a+b,0); return `${ctx.label}: ₦${v.toLocaleString()} (${t>0?Math.round(v/t*100):0}%)`; } } } } }
+        });
+    }
+
+    // ── Table search ─────────────────────────────────────────────────────
+    const searchInput  = document.getElementById('searchInput');
+    const billingTable = document.getElementById('billingTable');
+    if (searchInput && billingTable) {
+        searchInput.addEventListener('input', function () {
+            const term = this.value.toLowerCase();
+            billingTable.querySelectorAll('tbody tr').forEach(row => {
+                row.style.display = row.textContent.toLowerCase().includes(term) ? '' : 'none';
+            });
+        });
+    }
+
+    // ── Table filter dropdown ────────────────────────────────────────────
+    const filterBtn = document.getElementById('filterDropdownBtn');
+    document.querySelectorAll('.table-filter').forEach(item => {
+        item.addEventListener('click', function (e) {
+            e.preventDefault();
+            const type = this.dataset.filter, value = this.dataset.value;
+            billingTable.querySelectorAll('tbody tr').forEach(row => {
+                if (!value) { row.style.display = ''; return; }
+                row.style.display = (type === 'status' ? row.dataset.status : row.dataset.type) === value ? '' : 'none';
+            });
+            if (filterBtn) filterBtn.innerHTML = `<i class="bi bi-funnel me-1"></i>${this.textContent.trim()}`;
+        });
+    });
+
+    // ── Quick payment pre-fill ───────────────────────────────────────────
+    const billingSelect = document.getElementById('quickBillingSelect');
+    const amountInput   = document.getElementById('quickPaymentAmount');
+
+    if (billingSelect && amountInput) {
+        billingSelect.addEventListener('change', function () {
+            const opt = this.options[this.selectedIndex];
+            amountInput.value = opt.value ? (opt.dataset.amount || '') : '';
+        });
+    }
+
+    document.querySelectorAll('[data-bs-target="#quickPaymentModal"]').forEach(trigger => {
+        trigger.addEventListener('click', function () {
+            if (this.dataset.billingId && billingSelect) billingSelect.value = this.dataset.billingId;
+            if (this.dataset.amount && amountInput) amountInput.value = this.dataset.amount;
+        });
+    });
+
+});
+
+function applyCustomRange() {
+    const form = document.getElementById('customRangeForm');
+    const start = form.elements['start_date'].value;
+    const end   = form.elements['end_date'].value;
+    if (!start || !end) { alert('Please select both dates.'); return; }
+    if (new Date(start) > new Date(end)) { alert('Start date must be before end date.'); return; }
+    window.location.href = `?start_date=${start}&end_date=${end}&range=custom`;
+}
+
+function exportDashboardData(event) {
+    const btn = event.currentTarget, orig = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Exporting…';
+    btn.disabled = true;
+    setTimeout(() => {
+        const rows = [
+            ['Metric','Value'],
+            ['Date Range','{{ start_date|date:"Y-m-d" }} to {{ end_date|date:"Y-m-d" }}'],
+            ['Total Revenue Collected','{{ total_revenue }}'],
+            ['Total Contract Value','{{ total_contract_value }}'],
+            ['Patient Outstanding','{{ patient_outstanding }}'],
+            ['Insurance Outstanding','{{ insurance_outstanding }}'],
+            ['Total Outstanding','{{ total_outstanding }}'],
+            ['Unpaid Payer Invoices','{{ unpaid_invoices }}'],
+            ['Collection Rate %','{{ collection_rate_pct }}'],
+            ['Patient Collection %','{{ patient_collection_pct }}'],
+            ['HMO Collection %','{{ insurance_collection_pct }}'],
+            ['Avg Billing Amount','{{ avg_billing }}'],
+        ];
+        const csv  = rows.map(r => r.join(',')).join('\n');
+        const blob = new Blob([csv], { type:'text/csv' });
+        const url  = URL.createObjectURL(blob);
+        const a    = Object.assign(document.createElement('a'), { href:url, download:'billing_{{ start_date|date:"Ymd" }}_{{ end_date|date:"Ymd" }}.csv' });
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        btn.innerHTML = orig; btn.disabled = false;
+        showToast('Export complete!', 'success');
+    }, 800);
+}
+
+function processQuickPayment() {
+    const billingId = document.getElementById('quickBillingSelect').value;
+    const amount    = document.getElementById('quickPaymentAmount').value;
+    const method    = document.getElementById('quickPaymentMethod').value;
+    if (!billingId) { alert('Please select a billing record.'); return; }
+    if (!amount || parseFloat(amount) <= 0) { alert('Please enter a valid amount.'); return; }
+    window.location.href = `/billing/records/${billingId}/?prefill_amount=${amount}&prefill_method=${method}`;
+}
+
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-bg-${type} border-0 position-fixed bottom-0 end-0 m-3`;
+    toast.setAttribute('role','alert'); toast.style.zIndex = '9999';
+    toast.innerHTML = `<div class="d-flex"><div class="toast-body"><i class="bi bi-check-circle me-2"></i>${message}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>`;
+    document.body.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast, { delay:3000 });
+    bsToast.show();
+    toast.addEventListener('hidden.bs.toast', () => toast.remove());
+}
+</script>
+{% endblock %}

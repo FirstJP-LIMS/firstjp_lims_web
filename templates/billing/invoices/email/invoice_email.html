@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Invoice {{ invoice.invoice_number }}</title>
+<style>
+  body { margin: 0; padding: 0; background: #f3f4f6; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+  .wrapper { max-width: 600px; margin: 32px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .top-bar { background: #111827; padding: 24px 32px; }
+  .top-bar h1 { margin: 0; color: white; font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+  .top-bar p  { margin: 4px 0 0; color: #9ca3af; font-size: 13px; }
+  .body { padding: 32px; }
+  .greeting { font-size: 15px; color: #374151; margin-bottom: 20px; }
+  .amount-box {
+    background: #f0fdf4; border: 1px solid #bbf7d0;
+    border-radius: 8px; padding: 20px 24px;
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 24px;
+  }
+  .amount-box .label { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; }
+  .amount-box .amount { font-size: 26px; font-weight: 700; color: #15803d; font-family: 'Courier New', monospace; }
+  .meta-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  .meta-table tr { border-bottom: 1px solid #f3f4f6; }
+  .meta-table td { padding: 9px 0; font-size: 13px; }
+  .meta-table td:first-child { color: #6b7280; width: 45%; }
+  .meta-table td:last-child { color: #111827; font-weight: 500; font-family: 'Courier New', monospace; }
+  .notice { background: #eff6ff; border-left: 3px solid #2563eb; padding: 12px 16px; border-radius: 0 6px 6px 0; font-size: 13px; color: #1e40af; margin-bottom: 24px; }
+  .footer { padding: 20px 32px; background: #f9fafb; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af; text-align: center; }
+  .footer a { color: #6b7280; text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <div class="top-bar">
+    <h1>{{ vendor.name }}</h1>
+    <p>Laboratory Billing System</p>
+  </div>
+
+  <div class="body">
+    <p class="greeting">
+      Dear {{ provider.contact_person|default:provider.name }},
+    </p>
+    <p style="font-size:14px; color:#374151; margin-bottom:20px;">
+      Please find attached Invoice <strong>{{ invoice.invoice_number }}</strong>
+      for laboratory services rendered to your enrollees for the period
+      <strong>{{ invoice.period_start|date:"d M Y" }}</strong> –
+      <strong>{{ invoice.period_end|date:"d M Y" }}</strong>.
+    </p>
+
+    <div class="amount-box">
+      <div>
+        <div class="label">Amount Due</div>
+        <div class="amount">NGN {{ invoice.total_amount|floatformat:2 }}</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="label">Due By</div>
+        <div style="font-size:15px; font-weight:600; color:#374151; margin-top:4px;">
+          {{ invoice.due_date|date:"d M Y" }}
+        </div>
+      </div>
+    </div>
+
+    <table class="meta-table">
+      <tr>
+        <td>Invoice Number</td>
+        <td>{{ invoice.invoice_number }}</td>
+      </tr>
+      <tr>
+        <td>Invoice Date</td>
+        <td>{{ invoice.invoice_date|date:"d M Y" }}</td>
+      </tr>
+      <tr>
+        <td>Service Period</td>
+        <td>{{ invoice.period_start|date:"d M Y" }} – {{ invoice.period_end|date:"d M Y" }}</td>
+      </tr>
+      <tr>
+        <td>Payment Terms</td>
+        <td>{{ provider.payment_terms_days }} days</td>
+      </tr>
+      <tr>
+        <td>Line Items</td>
+        <td>{{ invoice.billing_records.count }} records</td>
+      </tr>
+    </table>
+
+    <div class="notice">
+      Please quote invoice number <strong>{{ invoice.invoice_number }}</strong>
+      with your payment. The PDF invoice is attached to this email.
+    </div>
+
+    <p style="font-size:13px; color:#6b7280; margin:0;">
+      Questions about this invoice? Contact us at
+      <a href="mailto:{{ vendor.email|default:'billing@lab.com' }}" style="color:#2563eb;">
+        {{ vendor.email|default:"billing@lab.com" }}
+      </a>.
+    </p>
+  </div>
+
+  <div class="footer">
+    This is an automated email from {{ vendor.name }} · Do not reply directly to this address<br>
+    <a href="#">Unsubscribe from billing notifications</a>
+  </div>
+
+</div>
+</body>
+</html>

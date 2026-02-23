@@ -1,0 +1,26 @@
+Dear {{ provider.contact_person|default:provider.name }},
+
+Please find attached Invoice {{ invoice.invoice_number }} from {{ vendor.name }}.
+
+INVOICE DETAILS
+───────────────────────────────────────
+Invoice Number : {{ invoice.invoice_number }}
+Invoice Date   : {{ invoice.invoice_date|date:"d M Y" }}
+Due Date       : {{ invoice.due_date|date:"d M Y" }}
+Period         : {{ invoice.period_start|date:"d M Y" }} – {{ invoice.period_end|date:"d M Y" }}
+Payment Terms  : {{ provider.payment_terms_days }} days
+───────────────────────────────────────
+Amount Due     : NGN {{ invoice.total_amount|floatformat:2 }}
+───────────────────────────────────────
+
+This invoice covers laboratory services rendered to your enrollees
+during the period stated above.
+
+Please quote invoice number {{ invoice.invoice_number }} with your
+payment and remit to the account details on file.
+
+If you have any questions about this invoice, please contact us at
+{{ vendor.email|default:"billing@lab.com" }}.
+
+Thank you,
+{{ vendor.name }} Billing Team

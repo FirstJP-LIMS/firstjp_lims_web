@@ -25,305 +25,415 @@ from django.db.models import Q, Sum, Count, Avg, Case, When, DecimalField, F, Va
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 from datetime import datetime
-from ..models import BillingInformation, Payment, InsuranceProvider, CorporateClient, Invoice
+from ..models import BillingInformation, Payment, InsuranceProvider, Invoice, D
 from ..forms import BillingInformationForm, BillingFilterForm, PaymentForm
 from apps.accounts.decorators import require_capability
 
 from django.utils import timezone
-from decimal import Decimal as D
+# from decimal import Decimal as D
+
+
+"""
+billing/views.py — BillingDashboardView and billing_list_view
+
+Bugs fixed:
+──────────────────────────────────────────────────────────────────────────────
+1.  [DASHBOARD] corporate_client removed from select_related
+2.  [DASHBOARD] vendor guard added — AttributeError if user has no vendor
+3.  [DASHBOARD] total_revenue now sums patient_amount_paid + insurance_amount_paid
+    (actual collected cash), not total_amount (which includes uncollected portions)
+4.  [DASHBOARD] outstanding_balance split into patient_outstanding and
+    insurance_outstanding so the dashboard can show meaningful numbers per party
+5.  [LIST] datetime.strftime → datetime.strptime (strftime formats, strptime parses)
+6.  [LIST] date_to was parsing date_from by mistake (copy-paste bug) — fixed
+7.  [LIST] provider filter now only queries insurance_provider_id (corporate_client
+    FK no longer exists)
+8.  [LIST] CorporateClient queryset and context key removed
+9.  [LIST] corporate_client removed from select_related
+10. [LIST] insurance_providers queryset passed to context for filter dropdown
+"""
 
 
 
-# ==========================================
-# DASHBOARD
-# ==========================================
+# ───────────────────
+# Dashboard
+# ──────────────────────────────
+"""
+billing/views.py — BillingDashboardView
+
+Fix: TemplateSyntaxError from non-existent 'multiply' and 'divide' template filters.
+Django's template engine only supports basic arithmetic via the 'add' filter.
+Any calculation beyond addition must happen in the view, not the template.
+
+Additional metrics pre-calculated here so the template only renders values:
+  - collection_rate_pct   : revenue / (revenue + outstanding) × 100
+  - patient_collection_pct: patient_amount_paid / patient_portion × 100
+  - insurance_collection_pct: insurance_amount_paid / insurance_portion × 100
+  - avg_billing_amount    : total_amount / number of billing records
+"""
+
+
 class BillingDashboardView(LoginRequiredMixin, View):
-    template_name = 'billing/dashboard.html'
+    template_name = 'billing/dashboard1.html'
 
     def get(self, request):
-        vendor = request.user.vendor
+        vendor = getattr(request.user, 'vendor', None)
+        if vendor is None:
+            raise PermissionDenied("Only vendor accounts can access the billing dashboard.")
 
-        # -----------------------------------
-        # DATE RANGE FILTER
-        # -----------------------------------
-        range_opt = request.GET.get("range", "this_month")
+        # ── Date range filter ────────────────────────────────────────────────
+        range_opt = request.GET.get('range', 'this_month')
         today = timezone.now().date()
 
-        if range_opt == "today":
-            start_date = today
-            end_date = today
+        if range_opt == 'today':
+            start_date = end_date = today
 
-        elif range_opt == "this_week":
+        elif range_opt == 'this_week':
             start_date = today - timedelta(days=today.weekday())  # Monday
             end_date = today
 
-        elif range_opt == "last_month":
+        elif range_opt == 'last_month':
             first_of_this_month = today.replace(day=1)
             last_month_end = first_of_this_month - timedelta(days=1)
             start_date = last_month_end.replace(day=1)
             end_date = last_month_end
 
-        elif range_opt == "this_quarter":
+        elif range_opt == 'this_quarter':
             quarter = (today.month - 1) // 3 + 1
             start_month = 3 * quarter - 2
             start_date = date(today.year, start_month, 1)
             end_date = today
 
-        elif range_opt == "this_year":
+        elif range_opt == 'this_year':
             start_date = date(today.year, 1, 1)
             end_date = today
 
-        else:  # default: this month
+        else:  # default: this_month
             start_date = today.replace(day=1)
             end_date = today
 
-        # Base queryset for the selected range
         billing_qs = BillingInformation.objects.filter(
             vendor=vendor,
-            created_at__date__range=[start_date, end_date]
+            created_at__date__range=[start_date, end_date],
         )
 
-        # -----------------------------------
-        # SUMMARY METRICS
-        # -----------------------------------
-        total_revenue = billing_qs.filter(
-            payment_status__in=['PAID', 'PARTIAL']
-        ).aggregate(total=Sum('total_amount'))['total'] or Decimal('0')
+        # ── Revenue: actual cash collected, not contract value ───────────────
+        collected = billing_qs.aggregate(
+            patient_collected=Sum('patient_amount_paid'),
+            insurance_collected=Sum('insurance_amount_paid'),
+        )
+        total_revenue = (
+            D(collected['patient_collected'] or 0)
+            + D(collected['insurance_collected'] or 0)
+        )
 
-        outstanding_balance = billing_qs.filter(
-            payment_status__in=['UNPAID', 'PARTIAL', 'INVOICED']
-        ).aggregate(total=Sum('total_amount'))['total'] or Decimal('0')
+        # ── Outstanding: split by party ──────────────────────────────────────
+        outstanding = billing_qs.filter(
+            payment_status__in=['UNPAID', 'PARTIAL', 'AUTHORIZED', 'INVOICED', 'OVERDUE'],
+        ).aggregate(
+            patient_owed=Sum('patient_portion'),
+            patient_paid=Sum('patient_amount_paid'),
+            insurance_owed=Sum('insurance_portion'),
+            insurance_paid=Sum('insurance_amount_paid'),
+        )
+        patient_outstanding = max(
+            D(outstanding['patient_owed'] or 0) - D(outstanding['patient_paid'] or 0),
+            D('0.00'),
+        )
+        insurance_outstanding = max(
+            D(outstanding['insurance_owed'] or 0) - D(outstanding['insurance_paid'] or 0),
+            D('0.00'),
+        )
+        total_outstanding = patient_outstanding + insurance_outstanding
 
-        unpaid_invoices = Invoice.objects.filter(
-            vendor=vendor,
-            status__in=['SENT', 'OVERDUE']
-        ).aggregate(total=Sum('total_amount'))['total'] or Decimal('0')
+        # ── Unpaid payer invoices ────────────────────────────────────────────
+        unpaid_invoices = D(
+            Invoice.objects.filter(
+                vendor=vendor,
+                status__in=['SENT', 'OVERDUE'],
+            ).aggregate(total=Sum('total_amount'))['total'] or 0
+        )
 
-        # -----------------------------------
-        # RECENT LIST
-        # -----------------------------------
-        recent_billings = billing_qs.select_related(
-            'request', 'insurance_provider', 'corporate_client'
-        ).order_by('-created_at')[:10]
+        # ── Pre-calculated rates (FIX: these were in the template as multiply/divide) ──
+        #
+        # Collection rate = revenue collected / (revenue + outstanding) × 100
+        # Answers: "Of all money owed to us in this period, what % have we collected?"
+        #
+        collection_denominator = total_revenue + total_outstanding
+        collection_rate_pct = (
+            round(float(total_revenue / collection_denominator) * 100, 1)
+            if collection_denominator > 0 else 0.0
+        )
 
-        # -----------------------------------
-        # BREAKDOWN DATA
-        # -----------------------------------
+        # Patient collection rate = patient_paid / patient_portion × 100
+        total_patient_portion = D(
+            billing_qs.aggregate(s=Sum('patient_portion'))['s'] or 0
+        )
+        patient_collection_pct = (
+            round(float(
+                D(collected['patient_collected'] or 0) / total_patient_portion
+            ) * 100, 1)
+            if total_patient_portion > 0 else 0.0
+        )
+
+        # Insurance collection rate = insurance_paid / insurance_portion × 100
+        total_insurance_portion = D(
+            billing_qs.aggregate(s=Sum('insurance_portion'))['s'] or 0
+        )
+        insurance_collection_pct = (
+            round(float(
+                D(collected['insurance_collected'] or 0) / total_insurance_portion
+            ) * 100, 1)
+            if total_insurance_portion > 0 else 0.0
+        )
+
+        # Average billing amount across the period
+        avg_billing = D(
+            billing_qs.aggregate(avg=Avg('total_amount'))['avg'] or 0
+        )
+
+        # Total contract value (sum of all billing records in range)
+        total_contract_value = D(
+            billing_qs.aggregate(s=Sum('total_amount'))['s'] or 0
+        )
+
+        # ── Recent billing records ───────────────────────────────────────────
+        recent_billings = (
+            billing_qs
+            .select_related('request', 'request__patient', 'insurance_provider')
+            .order_by('-created_at')[:10]
+        )
+
+        # ── Breakdown tables ─────────────────────────────────────────────────
         payment_breakdown = billing_qs.values('payment_status').annotate(
             count=Count('id'),
-            total=Sum('total_amount')
-        )
+            total=Sum('total_amount'),
+        ).order_by('payment_status')
 
         billing_breakdown = billing_qs.values('billing_type').annotate(
             count=Count('id'),
-            total=Sum('total_amount')
-        )
+            total=Sum('total_amount'),
+        ).order_by('billing_type')
 
-        # -----------------------------------
-        # Context
-        # -----------------------------------
         context = {
-            "range": range_opt,
-            "start_date": start_date,
-            "end_date": end_date,
+            # Filter state
+            'range':      range_opt,
+            'start_date': start_date,
+            'end_date':   end_date,
 
-            "total_revenue": total_revenue,
-            "outstanding_balance": outstanding_balance,
-            "unpaid_invoices": unpaid_invoices,
+            # ── Core financial metrics ───────────────────────────────────────
+            'total_revenue':          total_revenue,
+            'total_contract_value':   total_contract_value,
+            'avg_billing':            avg_billing,
 
-            "payment_breakdown": payment_breakdown,
-            "billing_breakdown": billing_breakdown,
-            "recent_billings": recent_billings,
+            # Outstanding split by party
+            'patient_outstanding':    patient_outstanding,
+            'insurance_outstanding':  insurance_outstanding,
+            'total_outstanding':      total_outstanding,
+
+            # Unpaid payer invoices
+            'unpaid_invoices':        unpaid_invoices,
+
+            # ── Pre-calculated rates (use directly in template, no arithmetic needed) ─
+            # FIX: these replace the invalid {{ value|multiply:100|divide:x }} calls
+            'collection_rate_pct':       collection_rate_pct,       # e.g. 73.4
+            'patient_collection_pct':    patient_collection_pct,    # e.g. 88.2
+            'insurance_collection_pct':  insurance_collection_pct,  # e.g. 41.0
+
+            # ── Breakdown data ───────────────────────────────────────────────
+            'payment_breakdown':  payment_breakdown,
+            'billing_breakdown':  billing_breakdown,
+            'recent_billings':    recent_billings,
         }
 
         return render(request, self.template_name, context)
 
 
+# ─────────────────────
+# Billing List
+# ──────────────────────────
+
 @login_required
 def billing_list_view(request):
     """
-    Features:
-    - Full text search
-    - Billing type filter
-    - Payment status filter
-    - Date range filter
-    - Insurance/Corporate provider filter
-    - Sorting options
-    - Summary statistics
-    - Status breakdown
-    - Pagination
-    """
-    vendor = getattr(request.user, "vendor", None)
-    if vendor is None:
-        raise PermissionDenied("Only vendors can access billing records.")
+    Filterable, searchable, paginated billing record list.
 
-    queryset = BillingInformation.objects.filter(
-        vendor=vendor
-    ).select_related(
-        "request", "request__patient",
-        "price_list", "insurance_provider",
-        "corporate_client"
+    Filters:
+      - Full-text search (request ID, patient name, policy number, employee ID)
+      - Billing type
+      - Payment status
+      - Date range (created_at)
+      - Insurance / corporate provider
+    """
+    vendor = getattr(request.user, 'vendor', None)
+    if vendor is None:
+        raise PermissionDenied("Only vendor accounts can access billing records.")
+
+    queryset = (
+        BillingInformation.objects
+        .filter(vendor=vendor)
+        .select_related(
+            'request',
+            'request__patient',
+            'price_list',
+            'insurance_provider',   # covers HMO, NHIS, Corporate, Staff
+        )
     )
 
-    # ------------------------
-    # SEARCH
-    # ------------------------
-    q = request.GET.get("q")
+    # ── Search ───────────────────────────────────────────────────────────────
+    q = request.GET.get('q', '').strip()
     if q:
         queryset = queryset.filter(
-            Q(request__request_id__icontains=q) |
+            Q(request__request_id__icontains=q)        |
             Q(request__patient__first_name__icontains=q) |
-            Q(request__patient__last_name__icontains=q) |
-            Q(policy_number__icontains=q) |
+            Q(request__patient__last_name__icontains=q)  |
+            Q(policy_number__icontains=q)               |
             Q(employee_id__icontains=q)
         )
 
-    # ------------------------
-    # FILTERS
-    # ------------------------
-    billing_type = request.GET.get("billing_type")
+    # ── Filters ──────────────────────────────────────────────────────────────
+    billing_type = request.GET.get('billing_type', '').strip()
     if billing_type:
         queryset = queryset.filter(billing_type=billing_type)
 
-    payment_status = request.GET.get("payment_status")
+    payment_status = request.GET.get('payment_status', '').strip()
     if payment_status:
         queryset = queryset.filter(payment_status=payment_status)
 
-    date_from = request.GET.get("date_from")
-    if date_from:
-        date_from_obj = datetime.strftime(date_from, "%Y-%m-%d").date()
-        queryset = queryset.filter(created_at__date__gte=date_from_obj)
+    # Date parsing — strptime parses a string into a date; strftime formats a date
+    # into a string. The original code had these backwards.
+    date_from_str = request.GET.get('date_from', '').strip()
+    if date_from_str:
+        try:
+            date_from_obj = datetime.strptime(date_from_str, '%Y-%m-%d').date()
+            queryset = queryset.filter(created_at__date__gte=date_from_obj)
+        except ValueError:
+            pass  # silently ignore malformed date rather than crashing
 
-    date_to = request.GET.get("date_to")
-    if date_to:
-        date_to_obj = datetime.strftime(date_from, "%Y-%m-%d").date()
-        queryset = queryset.filter(created_at__date__lte=date_to_obj)
+    date_to_str = request.GET.get('date_to', '').strip()
+    if date_to_str:
+        try:
+            date_to_obj = datetime.strptime(date_to_str, '%Y-%m-%d').date()
+            queryset = queryset.filter(created_at__date__lte=date_to_obj)
+        except ValueError:
+            pass
 
-    provider_id = request.GET.get("provider")
+    # Provider filter — insurance_provider only; corporate_client FK no longer exists
+    provider_id = request.GET.get('provider', '').strip()
     if provider_id:
-        queryset = queryset.filter(
-            Q(insurance_provider_id=provider_id) |
-            Q(corporate_client_id=provider_id)
-        )
+        queryset = queryset.filter(insurance_provider_id=provider_id)
 
-    # ------------------------
-    # SUMMARY STATISTICS
-    # ------------------------
+    # ── Summary statistics ───────────────────────────────────────────────────
     summary = queryset.aggregate(
-        total_billings=Count("id"),
-        total_amount_sum=Sum("total_amount"),
+        total_billings=Count('id'),
+        total_amount_sum=Sum('total_amount'),
         unpaid_amount=Sum(
             Case(
-                When(payment_status="UNPAID", then=F("total_amount")),
+                When(payment_status='UNPAID', then=F('total_amount')),
                 default=Value(0),
-                output_field=DecimalField(max_digits=14, decimal_places=2)
+                output_field=DecimalField(max_digits=14, decimal_places=2),
             )
         ),
         paid_amount=Sum(
             Case(
-                When(payment_status="PAID", then=F("total_amount")),
+                When(payment_status='PAID', then=F('patient_amount_paid') + F('insurance_amount_paid')),
                 default=Value(0),
-                output_field=DecimalField(max_digits=14, decimal_places=2)
+                output_field=DecimalField(max_digits=14, decimal_places=2),
+            )
+        ),
+        # Patient-side outstanding
+        patient_outstanding=Sum(
+            Case(
+                When(
+                    payment_status__in=['UNPAID', 'PARTIAL', 'AUTHORIZED'],
+                    then=F('patient_portion') - F('patient_amount_paid'),
+                ),
+                default=Value(0),
+                output_field=DecimalField(max_digits=14, decimal_places=2),
+            )
+        ),
+        # Insurance-side outstanding
+        insurance_outstanding=Sum(
+            Case(
+                When(
+                    payment_status__in=['UNPAID', 'PARTIAL', 'AUTHORIZED', 'INVOICED'],
+                    then=F('insurance_portion') - F('insurance_amount_paid'),
+                ),
+                default=Value(0),
+                output_field=DecimalField(max_digits=14, decimal_places=2),
             )
         ),
     )
 
-    # Breakdown by payment status
-    status_breakdown = queryset.values("payment_status").annotate(
-        count=Count("id"),
-        total=Sum("total_amount")   # still safe here
-    ).order_by("payment_status")
+    status_breakdown = (
+        queryset
+        .values('payment_status')
+        .annotate(count=Count('id'), total=Sum('total_amount'))
+        .order_by('payment_status')
+    )
 
-    # ------------------------
-    # SORTING
-    # ------------------------
-    sort = request.GET.get("sort", "-created_at")
-    allowed_sorts = {
-        "-created_at", "created_at",
-        "-total_amount", "total_amount"
-    }
-    if sort in allowed_sorts:
-        queryset = queryset.order_by(sort)
+    # ── Sorting ──────────────────────────────────────────────────────────────
+    sort = request.GET.get('sort', '-created_at')
+    allowed_sorts = {'-created_at', 'created_at', '-total_amount', 'total_amount'}
+    if sort not in allowed_sorts:
+        sort = '-created_at'
+    queryset = queryset.order_by(sort)
 
-    # ------------------------
-    # PAGINATION
-    # ------------------------
+    # ── Pagination ───────────────────────────────────────────────────────────
     paginator = Paginator(queryset, 25)
-    page_obj = paginator.get_page(request.GET.get("page"))
+    page_obj = paginator.get_page(request.GET.get('page'))
 
+    # Annotate each row with derived display values
     for billing in page_obj:
         billing.balance = billing.get_balance_due()
-        billing.is_overdue = (
-            billing.payment_status in ["UNPAID", "PARTIAL"] and
-            (timezone.now().date() - billing.created_at.date()).days > 30
+        billing.patient_balance = max(
+            D(billing.patient_portion) - D(billing.patient_amount_paid), D('0.00')
+        )
+        billing.insurance_balance = max(
+            D(billing.insurance_portion) - D(billing.insurance_amount_paid), D('0.00')
+        )
+        billing.is_overdue_flag = (
+            billing.payment_status in ('UNPAID', 'PARTIAL')
+            and (timezone.now().date() - billing.created_at.date()).days > 30
         )
 
+    # Provider list for the filter dropdown
     insurance_providers = InsuranceProvider.objects.filter(
         vendor=vendor, is_active=True
-    )
-    corporate_clients = CorporateClient.objects.filter(
-        vendor=vendor, is_active=True
-    )
+    ).order_by('provider_type', 'name')
 
     context = {
-        "billings": page_obj,
-        "page_obj": page_obj,
-        "paginator": paginator,
-        "q": q or "",
-        "billing_type": billing_type or "",
-        "payment_status": payment_status or "",
-        "date_from": date_from or "",
-        "date_to": date_to or "",
-        "provider_id": provider_id or "",
-        "sort": sort,
-        "summary": summary,
-        "status_breakdown": status_breakdown,
-        "insurance_providers": insurance_providers,
-        "corporate_clients": corporate_clients,
+        'billings':   page_obj,
+        'page_obj':   page_obj,
+        'paginator':  paginator,
+
+        # Active filter values (passed back for template to repopulate inputs)
+        'q':              q,
+        'billing_type':   billing_type,
+        'payment_status': payment_status,
+        'date_from':      date_from_str,
+        'date_to':        date_to_str,
+        'provider_id':    provider_id,
+        'sort':           sort,
+
+        # Statistics
+        'summary':          summary,
+        'status_breakdown': status_breakdown,
+
+        # Filter dropdown data
+        'insurance_providers': insurance_providers,
+
+        # Choices for billing type and status filter dropdowns
+        'billing_type_choices':   BillingInformation.BILLING_TYPES,
+        'payment_status_choices': BillingInformation.PAYMENT_STATUS,
     }
 
-    return render(request, "billing/billing/list.html", context)
+    return render(request, 'billing/billing/list.html', context)
 
 
-# @login_required
-# def billing_create_view(request, request_id):
-#     """
-#     Create billing information for a TestRequest.
-#     Ensures:
-#     - One billing record per request (OneToOneField)
-#     - Auto-calculation from model.save()
-#     - Vendor scoping for multi-tenancy
-#     """
-#     test_request = get_object_or_404(
-#         'labs.TestRequest',
-#         pk=request_id,
-#         vendor=request.user.vendor  # vendor scoping
-#     )
-
-#     # If a billing record already exists → redirect to update
-#     if hasattr(test_request, "billing_info"):
-#         return redirect("billing:billing_update", billing_id=test_request.billing_info.pk)
-
-#     if request.method == "POST":
-#         form = BillingInformationForm(request.POST)
-#         if form.is_valid():
-#             with transaction.atomic():
-#                 billing = form.save(commit=False)
-#                 billing.vendor = request.user.vendor
-#                 billing.request = test_request
-#                 billing.save()  # auto-calculation occurs here
-#                 messages.success(request, "Billing has been created successfully.")
-#                 return redirect("billing:billing_detail", billing_id=billing.pk)
-#     else:
-#         # Pre-fill price list based on billing type
-#         initial = {}
-#         form = BillingInformationForm(initial=initial)
-
-#     ctx = {
-#         "request_obj": test_request,
-#         "form": form,
-#     }
-#     return render(request, "billing/billing_create.html", ctx)
+# ─────────────────────
+# Billing Create
+# ──────────────────────────
 
 @login_required
 def billing_create_view(request, request_id):
@@ -517,18 +627,61 @@ def confirm_payment_view(request, pk):
     return redirect('billing:billing_detail', pk=pk)
 
 
-# ========================================
-# 4. BILLING DETAIL VIEW (Enhanced)
-# ========================================
+"""
+billing/views.py — billing_detail_view
+
+Changes in this refactor:
+- corporate_client removed from select_related (model FK no longer exists)
+- State flags now delegate to model properties (is_payment_cleared, is_fully_paid)
+  rather than re-implementing the same logic in the view
+- Patient portion / insurance portion added to context with clear labels
+- HMO-specific context (copay rate, amounts still owed per party) added
+- Payment methods sourced from Payment.PAYMENT_METHODS (single source of truth)
+- AWAY_BACK sentinel replaced with a clean timezone-aware fallback
+- Timeline waiver entry uses created_at as fallback when authorized_at is None
+"""
+
+import logging
+# from datetime import datetime
+
+# from django.contrib import messages
+# from django.contrib.auth.decorators import login_required
+# from django.core.exceptions import PermissionDenied
+# from django.db.models import Sum
+# from django.shortcuts import redirect, render
+# from django.utils import timezone
+
+# from ..models import BillingInformation, Payment
+# from labs.utils import D  # your safe Decimal helper
+
+logger = logging.getLogger(__name__)
+
+
 @login_required
 def billing_detail_view(request, pk):
     """
-    Comprehensive billing record with all payment/authorization options.
+    Comprehensive billing record view.
+
+    Financial summary surfaced:
+    ┌────────────────────────────────────────────────────────┐
+    │  subtotal          Sum of retail test prices           │
+    │  discount          Negotiated rate discount applied    │
+    │  tax               Tax on discounted amount            │
+    │  total_amount      Final Contract Price                │
+    │                                                        │
+    │  patient_portion   What the patient pays at front desk │
+    │  insurance_portion What the HMO/payer owes the lab     │
+    │                                                        │
+    │  patient_amount_paid   Collected so far from patient   │
+    │  insurance_amount_paid Received so far from payer      │
+    │  patient_balance_due   Still owed by the patient       │
+    │  insurance_balance_due Still owed by the payer         │
+    └────────────────────────────────────────────────────────┘
     """
-    vendor = getattr(request.user, "vendor", None)
+
+    vendor = getattr(request.user, 'vendor', None)
     if vendor is None:
-        from django.core.exceptions import PermissionDenied
-        raise PermissionDenied("Only vendors can view billing records.")
+        raise PermissionDenied("Only vendor accounts can view billing records.")
 
     try:
         billing = (
@@ -537,13 +690,13 @@ def billing_detail_view(request, pk):
                 'request',
                 'request__patient',
                 'price_list',
-                'insurance_provider',
-                'corporate_client',
-                'authorized_by'
+                'insurance_provider',       # covers HMO, NHIS, Corporate, Staff
+                'authorized_by',
             )
             .prefetch_related(
                 'payments',
-                'request__requested_tests'
+                'payments__collected_by',
+                'request__requested_tests',
             )
             .get(pk=pk, vendor=vendor)
         )
@@ -552,145 +705,161 @@ def billing_detail_view(request, pk):
         return redirect('billing:billing_list')
 
     test_request = billing.request
+    provider = billing.insurance_provider  # may be None for CASH
 
-    # ========================================
-    # BILLING STATE FLAGS
-    # ========================================
-    is_fully_paid = billing.payment_status == 'PAID'
-    is_authorized = billing.payment_status == 'AUTHORIZED'
-    is_waived = billing.payment_status == 'WAIVED'
-    
-    # Payment is cleared if: PAID, AUTHORIZED, or WAIVED
-    payment_cleared = billing.payment_status in ['PAID', 'AUTHORIZED', 'WAIVED']
-    
-    # Blocked means payment not cleared
-    is_blocked = not payment_cleared
-    
-    # Can proceed to sample collection?
-    can_collect_sample = payment_cleared
+    # ── State flags (delegate to model — don't re-implement here) ────────────
+    #
+    # billing.is_payment_cleared : patient has paid their portion (or it's Corporate/Staff)
+    # billing.is_fully_paid()    : total paid >= total_amount
+    #
+    is_fully_paid   = billing.is_fully_paid()
+    is_authorized   = billing.payment_status == 'AUTHORIZED'
+    is_waived       = billing.payment_status == 'WAIVED'
+    is_invoiced     = billing.payment_status == 'INVOICED'
+    payment_cleared = billing.is_payment_cleared    # property on model
+    is_blocked      = not payment_cleared
 
-    # ========================================
-    # PAYMENT SUMMARY
-    # ========================================
-    total_paid = (
+    sample_exists = (
+        hasattr(test_request, 'sample') and test_request.sample is not None
+    )
+    can_collect_sample = payment_cleared and not sample_exists
+
+    # ── Financial summary ────────────────────────────────────────────────────
+    #
+    # Total actually paid is derived from the Payment ledger (source of truth),
+    # not from billing.patient_amount_paid alone, so we query it fresh.
+    #
+    total_paid_from_ledger = (
         billing.payments.aggregate(total=Sum('amount'))['total']
         or D('0.00')
     )
-    balance_due = billing.get_balance_due()
-    payment_count = billing.payments.count()
 
-    # ========================================
-    # TEST BREAKDOWN
-    # ========================================
+    # Per-party balances
+    patient_balance_due   = max(D(billing.patient_portion)   - D(billing.patient_amount_paid),   D('0.00'))
+    insurance_balance_due = max(D(billing.insurance_portion) - D(billing.insurance_amount_paid), D('0.00'))
+
+    # Co-pay rate as a readable percentage (e.g. 0.6000 → "60%")
+    copay_percentage = None
+    hmo_percentage   = None
+    if provider and billing.billing_type in ('HMO', 'NHIS', 'CORPORATE', 'STAFF'):
+        rate = D(getattr(provider, 'patient_copay_percentage', 0))
+        copay_percentage = round(rate * 100, 1)        # e.g. 60.0
+        hmo_percentage   = round((1 - rate) * 100, 1)  # e.g. 40.0
+
+    # ── Test breakdown ───────────────────────────────────────────────────────
     test_details = []
     for lab_test in test_request.requested_tests.all():
-        if billing.price_list:
+        if billing.price_list and callable(
+            getattr(lab_test, 'get_price_from_price_list', None)
+        ):
             try:
-                price = lab_test.get_price_from_price_list(billing.price_list)
+                price = D(lab_test.get_price_from_price_list(billing.price_list))
             except Exception:
-                price = lab_test.price
+                price = D(getattr(lab_test, 'price', 0))
         else:
-            price = lab_test.price
+            price = D(getattr(lab_test, 'price', 0))
 
         test_details.append({
-            'test': lab_test,
+            'test':  lab_test,
             'price': price,
         })
 
-    # ========================================
-    # SAMPLE STATUS
-    # ========================================
-    sample_exists = hasattr(test_request, 'sample') and test_request.sample is not None
+    # ── Timeline ─────────────────────────────────────────────────────────────
+    _epoch = timezone.make_aware(datetime(2000, 1, 1))   # safe sort sentinel
 
-    # ========================================
-    # TIMELINE
-    # ========================================
-    timeline = [{
-        'type': 'billing',
-        'date': billing.created_at,
-        'description': 'Billing record created',
-        'amount': billing.total_amount,
-        'user': None,
-    }]
+    timeline = [
+        {
+            'type':        'billing',
+            'date':        billing.created_at,
+            'description': 'Billing record created',
+            'amount':      billing.total_amount,
+            'user':        None,
+        }
+    ]
 
     if is_authorized and billing.authorized_at:
         timeline.append({
-            'type': 'authorization',
-            'date': billing.authorized_at,
-            'description': f'Authorized to proceed',
-            'reference': billing.authorization_reason,
-            'user': billing.authorized_by,
+            'type':        'authorization',
+            'date':        billing.authorized_at,
+            'description': 'Authorized to proceed',
+            'reference':   billing.authorization_reason,
+            'user':        billing.authorized_by,
         })
 
-    if is_waived and billing.waiver_amount:
+    if is_waived:
         timeline.append({
-            'type': 'waiver',
-            'date': billing.authorized_at,
-            'description': f'Payment waived',
-            'amount': billing.waiver_amount,
-            'reference': billing.authorization_reason,
-            'user': billing.authorized_by,
+            'type':        'waiver',
+            # authorized_at may be None if record was auto-waived
+            'date':        billing.authorized_at or billing.created_at,
+            'description': 'Payment waived',
+            'amount':      billing.waiver_amount,
+            'reference':   billing.authorization_reason,
+            'user':        billing.authorized_by,
         })
 
     for payment in billing.payments.all():
         timeline.append({
-            'type': 'payment',
-            'date': payment.payment_date,
-            'description': f'{payment.get_payment_method_display()} payment',
-            'amount': payment.amount,
-            'reference': payment.transaction_reference,
-            'user': payment.collected_by,
+            'type':        'payment',
+            'date':        payment.payment_date,
+            'description': f'{payment.get_payment_method_display()} payment received',
+            'amount':      payment.amount,
+            'reference':   payment.transaction_reference,
+            'user':        payment.collected_by,
         })
 
+    timeline.sort(key=lambda x: x['date'] or _epoch, reverse=True)
 
-    # Define a fallback date (e.g., the beginning of time)
-    AWAY_BACK = timezone.make_aware(datetime.min)
-
-    timeline.sort(
-        key=lambda x: x['date'] if x['date'] else AWAY_BACK, 
-        reverse=True
-    )
-    # timeline.sort(key=lambda x: x['date'], reverse=True)
-
-    # ========================================
-    # CONTEXT
-    # ========================================
+    # ── Context ──────────────────────────────────────────────────────────────
     context = {
-        "billing": billing,
-        "test_request": test_request,
+        # Core objects
+        'billing':      billing,
+        'test_request': test_request,
+        'provider':     provider,
 
-        # State flags
-        "is_fully_paid": is_fully_paid,
-        "is_authorized": is_authorized,
-        "is_waived": is_waived,
-        "is_blocked": is_blocked,
-        "payment_cleared":payment_cleared,
-        
-        "can_collect_sample": payment_cleared and not sample_exists,
+        # ── State flags ──────────────────────────────────────────────────────
+        'is_fully_paid':      is_fully_paid,
+        'is_authorized':      is_authorized,
+        'is_waived':          is_waived,
+        'is_invoiced':        is_invoiced,
+        'payment_cleared':    payment_cleared,
+        'is_blocked':         is_blocked,
+        'can_collect_sample': can_collect_sample,
 
-        # Financials
-        "balance_due": balance_due,
-        "total_paid": total_paid,
-        "payment_count": payment_count,
+        # ── Financial breakdown ───────────────────────────────────────────────
+        # Pricing layers
+        'subtotal':           billing.subtotal,
+        'discount':           billing.discount,
+        'tax':                billing.tax,
+        'total_amount':       billing.total_amount,   # Final Contract Price
 
-        # Tests & Sample
-        "test_details": test_details,
-        # "sample": sample,
+        # Co-pay split — the core of the HMO billing workflow
+        'patient_portion':          billing.patient_portion,
+        'insurance_portion':        billing.insurance_portion,
 
-        # UI
-        "timeline": timeline,
-        
-        # Payment methods for form
-        "payment_methods": [
-            ('cash', 'Cash'),
-            ('bank_transfer', 'Bank Transfer'),
-            ('pos', 'POS/Card'),
-            ('cheque', 'Cheque'),
-            ('mobile_money', 'Mobile Money'),
-        ],
+        # What has actually been collected / received
+        'patient_amount_paid':      billing.patient_amount_paid,
+        'insurance_amount_paid':    billing.insurance_amount_paid,
+
+        # What is still outstanding per party
+        'patient_balance_due':      patient_balance_due,
+        'insurance_balance_due':    insurance_balance_due,
+
+        # Total from the payment ledger (authoritative)
+        'total_paid':               total_paid_from_ledger,
+        'payment_count':            billing.payments.count(),
+
+        'copay_percentage':         copay_percentage,   # None for CASH
+        'hmo_percentage':           hmo_percentage,     # None for CASH
+
+        # ── Tests & timeline ─────────────────────────────────────────────────
+        'test_details': test_details,
+        'timeline':     timeline,
+
+        # ── Payment form options 
+        'payment_methods': Payment.PAYMENT_METHODS,
     }
 
-    return render(request, "billing/billing/detail.html", context)
+    return render(request, 'billing/billing/detail1.html', context)
 
 
 @login_required
@@ -1491,3 +1660,434 @@ class BillingReportView(LoginRequiredMixin, View):
 #     return render(request, "billing/billing/detail3.html", context)
 
 
+
+
+
+
+
+# # ==========================================
+# # DASHBOARD
+# # ==========================================
+# class BillingDashboardView(LoginRequiredMixin, View):
+#     template_name = 'billing/dashboard.html'
+
+#     def get(self, request):
+#         vendor = request.user.vendor
+
+#         # -----------------------------------
+#         # DATE RANGE FILTER
+#         # -----------------------------------
+#         range_opt = request.GET.get("range", "this_month")
+#         today = timezone.now().date()
+
+#         if range_opt == "today":
+#             start_date = today
+#             end_date = today
+
+#         elif range_opt == "this_week":
+#             start_date = today - timedelta(days=today.weekday())  # Monday
+#             end_date = today
+
+#         elif range_opt == "last_month":
+#             first_of_this_month = today.replace(day=1)
+#             last_month_end = first_of_this_month - timedelta(days=1)
+#             start_date = last_month_end.replace(day=1)
+#             end_date = last_month_end
+
+#         elif range_opt == "this_quarter":
+#             quarter = (today.month - 1) // 3 + 1
+#             start_month = 3 * quarter - 2
+#             start_date = date(today.year, start_month, 1)
+#             end_date = today
+
+#         elif range_opt == "this_year":
+#             start_date = date(today.year, 1, 1)
+#             end_date = today
+
+#         else:  # default: this month
+#             start_date = today.replace(day=1)
+#             end_date = today
+
+#         # Base queryset for the selected range
+#         billing_qs = BillingInformation.objects.filter(
+#             vendor=vendor,
+#             created_at__date__range=[start_date, end_date]
+#         )
+
+#         # -----------------------------------
+#         # SUMMARY METRICS
+#         # -----------------------------------
+#         total_revenue = billing_qs.filter(
+#             payment_status__in=['PAID', 'PARTIAL']
+#         ).aggregate(total=Sum('total_amount'))['total'] or Decimal('0')
+
+#         outstanding_balance = billing_qs.filter(
+#             payment_status__in=['UNPAID', 'PARTIAL', 'INVOICED']
+#         ).aggregate(total=Sum('total_amount'))['total'] or Decimal('0')
+
+#         unpaid_invoices = Invoice.objects.filter(
+#             vendor=vendor,
+#             status__in=['SENT', 'OVERDUE']
+#         ).aggregate(total=Sum('total_amount'))['total'] or Decimal('0')
+
+#         # -----------------------------------
+#         # RECENT LIST
+#         # -----------------------------------
+#         recent_billings = billing_qs.select_related(
+#             'request', 'insurance_provider', 'corporate_client'
+#         ).order_by('-created_at')[:10]
+
+#         # -----------------------------------
+#         # BREAKDOWN DATA
+#         # -----------------------------------
+#         payment_breakdown = billing_qs.values('payment_status').annotate(
+#             count=Count('id'),
+#             total=Sum('total_amount')
+#         )
+
+#         billing_breakdown = billing_qs.values('billing_type').annotate(
+#             count=Count('id'),
+#             total=Sum('total_amount')
+#         )
+
+#         # -----------------------------------
+#         # Context
+#         # -----------------------------------
+#         context = {
+#             "range": range_opt,
+#             "start_date": start_date,
+#             "end_date": end_date,
+
+#             "total_revenue": total_revenue,
+#             "outstanding_balance": outstanding_balance,
+#             "unpaid_invoices": unpaid_invoices,
+
+#             "payment_breakdown": payment_breakdown,
+#             "billing_breakdown": billing_breakdown,
+#             "recent_billings": recent_billings,
+#         }
+
+#         return render(request, self.template_name, context)
+
+
+# @login_required
+# def billing_list_view(request):
+#     """
+#     Features:
+#     - Full text search
+#     - Billing type filter
+#     - Payment status filter
+#     - Date range filter
+#     - Insurance/Corporate provider filter
+#     - Sorting options
+#     - Summary statistics
+#     - Status breakdown
+#     - Pagination
+#     """
+#     vendor = getattr(request.user, "vendor", None)
+#     if vendor is None:
+#         raise PermissionDenied("Only vendors can access billing records.")
+
+#     queryset = BillingInformation.objects.filter(
+#         vendor=vendor
+#     ).select_related(
+#         "request", "request__patient",
+#         "price_list", "insurance_provider",
+#         "corporate_client"
+#     )
+
+#     # ------------------------
+#     # SEARCH
+#     # ------------------------
+#     q = request.GET.get("q")
+#     if q:
+#         queryset = queryset.filter(
+#             Q(request__request_id__icontains=q) |
+#             Q(request__patient__first_name__icontains=q) |
+#             Q(request__patient__last_name__icontains=q) |
+#             Q(policy_number__icontains=q) |
+#             Q(employee_id__icontains=q)
+#         )
+
+#     # ------------------------
+#     # FILTERS
+#     # ------------------------
+#     billing_type = request.GET.get("billing_type")
+#     if billing_type:
+#         queryset = queryset.filter(billing_type=billing_type)
+
+#     payment_status = request.GET.get("payment_status")
+#     if payment_status:
+#         queryset = queryset.filter(payment_status=payment_status)
+
+#     date_from = request.GET.get("date_from")
+#     if date_from:
+#         date_from_obj = datetime.strftime(date_from, "%Y-%m-%d").date()
+#         queryset = queryset.filter(created_at__date__gte=date_from_obj)
+
+#     date_to = request.GET.get("date_to")
+#     if date_to:
+#         date_to_obj = datetime.strftime(date_from, "%Y-%m-%d").date()
+#         queryset = queryset.filter(created_at__date__lte=date_to_obj)
+
+#     provider_id = request.GET.get("provider")
+#     if provider_id:
+#         queryset = queryset.filter(
+#             Q(insurance_provider_id=provider_id) |
+#             Q(corporate_client_id=provider_id)
+#         )
+
+#     # ------------------------
+#     # SUMMARY STATISTICS
+#     # ------------------------
+#     summary = queryset.aggregate(
+#         total_billings=Count("id"),
+#         total_amount_sum=Sum("total_amount"),
+#         unpaid_amount=Sum(
+#             Case(
+#                 When(payment_status="UNPAID", then=F("total_amount")),
+#                 default=Value(0),
+#                 output_field=DecimalField(max_digits=14, decimal_places=2)
+#             )
+#         ),
+#         paid_amount=Sum(
+#             Case(
+#                 When(payment_status="PAID", then=F("total_amount")),
+#                 default=Value(0),
+#                 output_field=DecimalField(max_digits=14, decimal_places=2)
+#             )
+#         ),
+#     )
+
+#     # Breakdown by payment status
+#     status_breakdown = queryset.values("payment_status").annotate(
+#         count=Count("id"),
+#         total=Sum("total_amount")   # still safe here
+#     ).order_by("payment_status")
+
+#     # ------------------------
+#     # SORTING
+#     # ------------------------
+#     sort = request.GET.get("sort", "-created_at")
+#     allowed_sorts = {
+#         "-created_at", "created_at",
+#         "-total_amount", "total_amount"
+#     }
+#     if sort in allowed_sorts:
+#         queryset = queryset.order_by(sort)
+
+#     # ------------------------
+#     # PAGINATION
+#     # ------------------------
+#     paginator = Paginator(queryset, 25)
+#     page_obj = paginator.get_page(request.GET.get("page"))
+
+#     for billing in page_obj:
+#         billing.balance = billing.get_balance_due()
+#         billing.is_overdue = (
+#             billing.payment_status in ["UNPAID", "PARTIAL"] and
+#             (timezone.now().date() - billing.created_at.date()).days > 30
+#         )
+
+#     insurance_providers = InsuranceProvider.objects.filter(
+#         vendor=vendor, is_active=True
+#     )
+#     corporate_clients = CorporateClient.objects.filter(
+#         vendor=vendor, is_active=True
+#     )
+
+#     context = {
+#         "billings": page_obj,
+#         "page_obj": page_obj,
+#         "paginator": paginator,
+#         "q": q or "",
+#         "billing_type": billing_type or "",
+#         "payment_status": payment_status or "",
+#         "date_from": date_from or "",
+#         "date_to": date_to or "",
+#         "provider_id": provider_id or "",
+#         "sort": sort,
+#         "summary": summary,
+#         "status_breakdown": status_breakdown,
+#         "insurance_providers": insurance_providers,
+#         "corporate_clients": corporate_clients,
+#     }
+
+#     return render(request, "billing/billing/list.html", context)
+
+
+
+# ========================================
+# 4. BILLING DETAIL VIEW (Enhanced)
+# ========================================
+# @login_required
+# def billing_detail_view(request, pk):
+#     """
+#     Comprehensive billing record with all payment/authorization options.
+#     """
+#     vendor = getattr(request.user, "vendor", None)
+#     if vendor is None:
+#         from django.core.exceptions import PermissionDenied
+#         raise PermissionDenied("Only vendors can view billing records.")
+
+#     try:
+#         billing = (
+#             BillingInformation.objects
+#             .select_related(
+#                 'request',
+#                 'request__patient',
+#                 'price_list',
+#                 'insurance_provider',
+#                 'corporate_client',
+#                 'authorized_by'
+#             )
+#             .prefetch_related(
+#                 'payments',
+#                 'request__requested_tests'
+#             )
+#             .get(pk=pk, vendor=vendor)
+#         )
+#     except BillingInformation.DoesNotExist:
+#         messages.error(request, "Billing record not found.")
+#         return redirect('billing:billing_list')
+
+#     test_request = billing.request
+
+#     # ========================================
+#     # BILLING STATE FLAGS
+#     # ========================================
+#     is_fully_paid = billing.payment_status == 'PAID'
+#     is_authorized = billing.payment_status == 'AUTHORIZED'
+#     is_waived = billing.payment_status == 'WAIVED'
+    
+#     # Payment is cleared if: PAID, AUTHORIZED, or WAIVED
+#     payment_cleared = billing.payment_status in ['PAID', 'AUTHORIZED', 'WAIVED']
+    
+#     # Blocked means payment not cleared
+#     is_blocked = not payment_cleared
+    
+#     # Can proceed to sample collection?
+#     can_collect_sample = payment_cleared
+
+#     # ========================================
+#     # PAYMENT SUMMARY
+#     # ========================================
+#     total_paid = (
+#         billing.payments.aggregate(total=Sum('amount'))['total']
+#         or D('0.00')
+#     )
+#     balance_due = billing.get_balance_due()
+#     payment_count = billing.payments.count()
+
+#     # ========================================
+#     # TEST BREAKDOWN
+#     # ========================================
+#     test_details = []
+#     for lab_test in test_request.requested_tests.all():
+#         if billing.price_list:
+#             try:
+#                 price = lab_test.get_price_from_price_list(billing.price_list)
+#             except Exception:
+#                 price = lab_test.price
+#         else:
+#             price = lab_test.price
+
+#         test_details.append({
+#             'test': lab_test,
+#             'price': price,
+#         })
+
+#     # ========================================
+#     # SAMPLE STATUS
+#     # ========================================
+#     sample_exists = hasattr(test_request, 'sample') and test_request.sample is not None
+
+#     # ========================================
+#     # TIMELINE
+#     # ========================================
+#     timeline = [{
+#         'type': 'billing',
+#         'date': billing.created_at,
+#         'description': 'Billing record created',
+#         'amount': billing.total_amount,
+#         'user': None,
+#     }]
+
+#     if is_authorized and billing.authorized_at:
+#         timeline.append({
+#             'type': 'authorization',
+#             'date': billing.authorized_at,
+#             'description': f'Authorized to proceed',
+#             'reference': billing.authorization_reason,
+#             'user': billing.authorized_by,
+#         })
+
+#     if is_waived and billing.waiver_amount:
+#         timeline.append({
+#             'type': 'waiver',
+#             'date': billing.authorized_at,
+#             'description': f'Payment waived',
+#             'amount': billing.waiver_amount,
+#             'reference': billing.authorization_reason,
+#             'user': billing.authorized_by,
+#         })
+
+#     for payment in billing.payments.all():
+#         timeline.append({
+#             'type': 'payment',
+#             'date': payment.payment_date,
+#             'description': f'{payment.get_payment_method_display()} payment',
+#             'amount': payment.amount,
+#             'reference': payment.transaction_reference,
+#             'user': payment.collected_by,
+#         })
+
+
+#     # Define a fallback date (e.g., the beginning of time)
+#     AWAY_BACK = timezone.make_aware(datetime.min)
+
+#     timeline.sort(
+#         key=lambda x: x['date'] if x['date'] else AWAY_BACK, 
+#         reverse=True
+#     )
+#     # timeline.sort(key=lambda x: x['date'], reverse=True)
+
+#     # ========================================
+#     # CONTEXT
+#     # ========================================
+#     context = {
+#         "billing": billing,
+#         "test_request": test_request,
+
+#         # State flags
+#         "is_fully_paid": is_fully_paid,
+#         "is_authorized": is_authorized,
+#         "is_waived": is_waived,
+#         "is_blocked": is_blocked,
+#         "payment_cleared":payment_cleared,
+        
+#         "can_collect_sample": payment_cleared and not sample_exists,
+
+#         # Financials
+#         "balance_due": balance_due,
+#         "total_paid": total_paid,
+#         "payment_count": payment_count,
+
+#         # Tests & Sample
+#         "test_details": test_details,
+#         # "sample": sample,
+
+#         # UI
+#         "timeline": timeline,
+        
+#         # Payment methods for form
+#         "payment_methods": [
+#             ('cash', 'Cash'),
+#             ('bank_transfer', 'Bank Transfer'),
+#             ('pos', 'POS/Card'),
+#             ('cheque', 'Cheque'),
+#             ('mobile_money', 'Mobile Money'),
+#         ],
+#     }
+
+#     return render(request, "billing/billing/detail.html", context)

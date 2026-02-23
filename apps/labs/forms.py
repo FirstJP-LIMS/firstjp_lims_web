@@ -6,7 +6,7 @@ from crispy_forms.layout import Layout, Row, Column, Field, HTML, Div, Submit
 from crispy_forms.bootstrap import PrependedText, AppendedText
 from .models import VendorTest, Department, Patient, TestRequest, Sample
 from ..clinician.models import ClinicianPatientRelationship
-from apps.billing.models import BillingInformation, InsuranceProvider, CorporateClient
+from apps.billing.models import BillingInformation, InsuranceProvider
 
 import logging
 from decimal import Decimal
@@ -299,22 +299,29 @@ class PatientForm(forms.ModelForm):
             ),
             Submit('submit', 'Register Patient', css_class='btn-wine w-100 py-2')
         )
-        
 
 
 
+"""
+labs/forms.py — TestRequestForm
+
+Changes in this refactor:
+- CorporateClient field and queryset removed entirely
+- INSURANCE_BILLING_TYPES expanded to {'HMO', 'NHIS', 'CORPORATE', 'STAFF'}
+  — all non-cash types now resolve to an InsuranceProvider FK
+- insurance_provider label updated to reflect it now covers all payer types
+- clean() billing validation block simplified to a single insurance_provider check
+- total_order_price property simplified — single provider resolution path
+"""
 
 PRIORITY_STATUS = [
     ('routine', 'Routine'),
-    ('urgent', 'Urgent'),
-    ('stat', 'STAT'),
+    ('urgent',  'Urgent'),
+    ('stat',    'STAT'),
 ]
 
-# ─────────────────────────────────────────────────
-# Insurance billing types — used in both form validation
-# and the view's pricing resolution logic
-# ──────────────────────────────────────────────────────
-INSURANCE_BILLING_TYPES = ['HMO', 'NHIS']
+
+INSURANCE_BILLING_TYPES = {'HMO', 'NHIS', 'CORPORATE', 'STAFF'}
 
 
 class TestRequestForm(forms.ModelForm):
@@ -324,18 +331,10 @@ class TestRequestForm(forms.ModelForm):
     Used by:
       - Lab Staff  : Can create patients on-the-fly, full catalog access
       - Clinicians : Patient selection, clinical context required
-
-    Key design decisions:
-      - Patient fields, billing fields, and test selection are all
-        declared as explicit form fields (not part of the model),
-        because they belong to Patient / BillingInformation, not TestRequest.
-      - Meta.fields contains ONLY actual TestRequest model fields.
-      - Billing type dependencies are enforced in clean() via add_error()
-        so all errors accumulate rather than halting on the first one.
     """
 
     # ─────────────────────────────────────────────
-    # Patient selection (not on TestRequest model)
+    # Patient selection
     # ─────────────────────────────────────────────
     existing_patient = forms.ModelChoiceField(
         queryset=Patient.objects.none(),
@@ -387,7 +386,7 @@ class TestRequestForm(forms.ModelForm):
     )
 
     # ─────────────────────────────────────────────
-    # Test selection (M2M, not on TestRequest model directly)
+    # Test selection
     # ─────────────────────────────────────────────
     tests_to_order = forms.ModelMultipleChoiceField(
         queryset=VendorTest.objects.none(),
@@ -427,7 +426,7 @@ class TestRequestForm(forms.ModelForm):
     )
 
     # ─────────────────────────────────────────────
-    # Billing fields (belong to BillingInformation, not TestRequest)
+    # Billing fields
     # ─────────────────────────────────────────────
     billing_type = forms.ChoiceField(
         choices=BillingInformation.BILLING_TYPES,
@@ -437,24 +436,18 @@ class TestRequestForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-select'})
     )
 
+    # Single payer field — covers HMO, NHIS, Corporate wellness, and Staff.
     insurance_provider = forms.ModelChoiceField(
         queryset=InsuranceProvider.objects.none(),
         required=False,
-        label="Insurance Provider (HMO / NHIS)",
+        label="Insurance / Corporate Provider",
+        help_text="Required for HMO, NHIS, Corporate, and Staff billing.",
         widget=forms.Select(attrs={'class': 'form-select'})
     )
 
-    corporate_client = forms.ModelChoiceField(
-        queryset=CorporateClient.objects.none(),
-        required=False,
-        label="Corporate Client",
-        widget=forms.Select(attrs={'class': 'form-select'})
-    )
-
-    # ─────────────────────────────────────────────────────────────────
-    # Meta — ONLY contains actual TestRequest model fields.
-    # All custom/external fields are declared explicitly above.
-    # ─────────────────────────────────────────────────────────────────
+    # ───────────────────────────────────────
+    # Meta — ONLY actual TestRequest model fields.
+    # ────────────────────────────────────────
     class Meta:
         model = TestRequest
         fields = [
@@ -482,12 +475,6 @@ class TestRequestForm(forms.ModelForm):
     # Initialisation
     # ─────────────────────────────────────────────
     def __init__(self, *args, user=None, vendor=None, patient=None, **kwargs):
-        """
-        Args:
-            user   : Current user (lab_staff or clinician)
-            vendor : Current vendor — used to filter all querysets
-            patient: Pre-selected patient (optional shortcut from patient detail page)
-        """
         super().__init__(*args, **kwargs)
 
         self.user = user
@@ -495,35 +482,38 @@ class TestRequestForm(forms.ModelForm):
         self.patient = patient
         self.is_clinician = bool(user and user.role == 'clinician')
         self.is_lab_staff = bool(
-            user and user.role in ['lab_staff', 'vendor_admin', 'lab_supervisor', 'lab_technician']
+            user and user.role in [
+                'lab_staff', 'vendor_admin', 'lab_supervisor', 'lab_technician'
+            ]
         )
 
         if vendor:
-            self.fields['insurance_provider'].queryset = InsuranceProvider.objects.filter(
-                vendor=vendor, is_active=True
+            # All active providers for this vendor — HMO, NHIS, Corporate, Staff
+            self.fields['insurance_provider'].queryset = (
+                InsuranceProvider.objects.filter(vendor=vendor, is_active=True)
+                .order_by('provider_type', 'name')
             )
-            self.fields['corporate_client'].queryset = CorporateClient.objects.filter(
-                vendor=vendor, is_active=True
+            self.fields['existing_patient'].queryset = (
+                Patient.objects.filter(vendor=vendor)
+                .order_by('first_name', 'last_name')
             )
-            self.fields['existing_patient'].queryset = Patient.objects.filter(
-                vendor=vendor
-            ).order_by('first_name', 'last_name')
 
             # Test catalog: clinicians see only enabled tests; staff see all
-            if self.is_clinician:
-                self.fields['tests_to_order'].queryset = VendorTest.objects.filter(
-                    vendor=vendor, enabled=True
-                ).select_related('assigned_department').order_by('name')
-            else:
-                self.fields['tests_to_order'].queryset = VendorTest.objects.filter(
-                    vendor=vendor
-                ).select_related('assigned_department').order_by('name')
+            base_qs = VendorTest.objects.filter(vendor=vendor).select_related(
+                'assigned_department'
+            ).order_by('name')
+            self.fields['tests_to_order'].queryset = (
+                base_qs.filter(enabled=True) if self.is_clinician else base_qs
+            )
 
-        # If patient pre-selected (e.g. from patient detail page), hide patient fields
+        # Pre-selected patient (e.g. opened from patient detail page)
         if patient:
             self.fields['existing_patient'].initial = patient
             self.fields['existing_patient'].widget = forms.HiddenInput()
-            for field in ['first_name', 'last_name', 'date_of_birth', 'gender', 'contact_email', 'contact_phone']:
+            for field in [
+                'first_name', 'last_name', 'date_of_birth',
+                'gender', 'contact_email', 'contact_phone',
+            ]:
                 self.fields[field].widget = forms.HiddenInput()
 
         # Clinicians must always supply clinical indication
@@ -535,61 +525,56 @@ class TestRequestForm(forms.ModelForm):
     # Field-level clean
     # ─────────────────────────────────────────────
     def clean_date_of_birth(self):
-        """Return None gracefully when the field is left blank."""
         return self.cleaned_data.get('date_of_birth') or None
 
     # ─────────────────────────────────────────────
     # Cross-field validation
     # ─────────────────────────────────────────────
     def clean(self):
-        """
-        All validation errors are collected via self.add_error() so the user
-        sees every problem at once rather than fixing one error per submission.
-
-        Non-field errors (patient, tests) are the only ones that use raise,
-        because they are not attributable to a single field.
-        """
         cleaned_data = super().clean()
 
-        # ── 1. Patient ──────────────────────────────────────────────
-        existing_patient = cleaned_data.get('existing_patient')
-        first_name = cleaned_data.get('first_name')
-        last_name = cleaned_data.get('last_name')
-
-        if not existing_patient and not (first_name and last_name):
+        # ── 1. Patient ───────────────────────────────────────────────────────
+        if not cleaned_data.get('existing_patient') and not (
+            cleaned_data.get('first_name') and cleaned_data.get('last_name')
+        ):
             raise forms.ValidationError(
                 "Please select an existing patient or provide new patient details "
                 "(First Name and Last Name are required)."
             )
 
-        # ── 2. Tests ────────────────────────────────────────────────
-        tests_to_order = cleaned_data.get('tests_to_order')
-        if not tests_to_order:
+        # ── 2. Tests ─────────────────────────────────────────────────────────
+        if not cleaned_data.get('tests_to_order'):
             raise forms.ValidationError("Please select at least one test to order.")
 
-        # ── 3. Billing type dependencies ────────────────────────────
+        # ── 3. Billing type → provider dependency ────────────────────────────
+        # Every non-cash billing type requires an InsuranceProvider.
+        # Corporate and Staff wellness programs are registered as InsuranceProvider
+        # with the appropriate provider_type — there is no longer a separate
+        # CorporateClient field.
         billing_type = cleaned_data.get('billing_type')
-
         if billing_type in INSURANCE_BILLING_TYPES and not cleaned_data.get('insurance_provider'):
             self.add_error(
                 'insurance_provider',
-                f'An insurance provider is required for {billing_type} billing.'
+                f'A provider is required for {billing_type} billing. '
+                f'If this is a corporate or staff account, ensure it is registered '
+                f'as an Insurance Provider with the correct type.'
             )
 
-        if billing_type == 'CORPORATE' and not cleaned_data.get('corporate_client'):
-            self.add_error(
-                'corporate_client',
-                'A corporate client is required for corporate billing.'
-            )
-
-        # ── 4. Clinician-specific rules ─────────────────────────────
+        # ── 4. Clinician-specific rules ──────────────────────────────────────
         if self.is_clinician:
             if not cleaned_data.get('clinical_indication'):
-                self.add_error('clinical_indication', 'Clinical indication is required for clinician orders.')
-
-            priority = cleaned_data.get('priority')
-            if priority in ('urgent', 'stat') and not cleaned_data.get('urgency_reason'):
-                self.add_error('urgency_reason', 'Justification is required for urgent / STAT orders.')
+                self.add_error(
+                    'clinical_indication',
+                    'Clinical indication is required for clinician orders.'
+                )
+            if (
+                cleaned_data.get('priority') in ('urgent', 'stat')
+                and not cleaned_data.get('urgency_reason')
+            ):
+                self.add_error(
+                    'urgency_reason',
+                    'Justification is required for urgent / STAT orders.'
+                )
 
         return cleaned_data
 
@@ -598,8 +583,8 @@ class TestRequestForm(forms.ModelForm):
     # ─────────────────────────────────────────────
     def get_or_create_patient(self):
         """
-        Return an existing Patient or create a new one from the form data.
-        Must only be called after is_valid() has returned True.
+        Return an existing Patient or create a new one.
+        Must only be called after is_valid() returns True.
         """
         existing = self.cleaned_data.get('existing_patient')
         if existing:
@@ -616,26 +601,23 @@ class TestRequestForm(forms.ModelForm):
         )
 
     @property
-    def total_order_price(self):
+    def total_order_price(self) -> Decimal:
         """
         Preview price for the selected tests, respecting the active price list.
 
-        Falls back to each test's retail price when no price-list-aware method
-        is available (e.g. for CASH billing or tests without a custom price entry).
+        For all non-cash billing types, the price list is resolved from the
+        selected InsuranceProvider. Falls back to each test's retail price
+        for CASH or when no price list is configured on the provider.
         """
         if not hasattr(self, 'cleaned_data'):
             return Decimal('0.00')
 
         tests = self.cleaned_data.get('tests_to_order', [])
-        billing_type = self.cleaned_data.get('billing_type', 'CASH')
         price_list = None
 
-        if billing_type in INSURANCE_BILLING_TYPES:
+        if self.cleaned_data.get('billing_type') in INSURANCE_BILLING_TYPES:
             provider = self.cleaned_data.get('insurance_provider')
             price_list = getattr(provider, 'price_list', None)
-        elif billing_type == 'CORPORATE':
-            client = self.cleaned_data.get('corporate_client')
-            price_list = getattr(client, 'price_list', None)
 
         total = Decimal('0.00')
         for test in tests:
@@ -651,25 +633,21 @@ class TestRequestForm(forms.ModelForm):
     # ─────────────────────────────────────────────
     def save(self, commit=True):
         """
-        Save the TestRequest instance only.
+        Saves the TestRequest instance only.
 
-        M2M (requested_tests) is intentionally NOT set here — the view owns
-        that step because it runs after patient and vendor have been assigned.
-        Billing creation also lives entirely in the view.
+        M2M (requested_tests) is NOT set here — the view owns that step
+        because it runs after patient and vendor have been assigned to the instance.
+        Billing creation lives entirely in the view.
         """
         instance = super().save(commit=False)
-
-        # The view sets vendor, patient, and requested_by, but we can
-        # set the clinician relationship here since it depends on the user role.
         instance.ordering_clinician = self.user if self.is_clinician else None
 
         if commit:
             instance.save()
-            # Do NOT call instance.requested_tests.set() here.
-            # The view does this after test_request.save() to keep
-            # responsibility clear and avoid duplicate .set() calls.
 
         return instance
+    
+
 
 # class TestRequestForm(forms.ModelForm):
 #     """
@@ -841,10 +819,10 @@ class TestRequestForm(forms.ModelForm):
 #                 vendor=vendor,
 #                 is_active=True
 #             )
-#             self.fields['corporate_client'].queryset = CorporateClient.objects.filter(
-#                 vendor=vendor,
-#                 is_active=True
-#             )
+#             # self.fields['corporate_client'].queryset = CorporateClient.objects.filter(
+#             #     vendor=vendor,
+#             #     is_active=True
+#             # )
 
 #             self.fields["existing_patient"].queryset = Patient.objects.filter(
 #                 vendor=vendor
@@ -996,8 +974,6 @@ class TestRequestForm(forms.ModelForm):
         
 #         return instance
     
-
-
 
 class SampleForm(forms.ModelForm):
     """

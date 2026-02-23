@@ -165,23 +165,6 @@
                                     <small class="form-text text-muted">{{ form.tax_percentage.help_text }}</small>
                                 </div>
 
-                                <div class="col-md-4 mb-3">
-                                    <label for="{{ form.max_discount_amount.id_for_label }}" class="form-label">
-                                        {{ form.max_discount_amount.label }}
-                                    </label>
-                                    <div class="input-group">
-                                        <span class="input-group-text">₦</span>
-                                        {{ form.max_discount_amount }}
-                                    </div>
-                                    {% if form.max_discount_amount.errors %}
-                                        <div class="invalid-feedback d-block">
-                                            {{ form.max_discount_amount.errors }}
-                                        </div>
-                                    {% endif %}
-                                    <small class="form-text text-muted">{{ form.max_discount_amount.help_text }}</small>
-                                </div>
-                            </div>
-
                             <div class="mb-3">
                                 <div class="form-check">
                                     {{ form.allow_overrides }}

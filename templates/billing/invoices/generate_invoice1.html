@@ -1,0 +1,495 @@
+{% extends "laboratory/assets/base.html" %}
+{% load static %}
+{% load crispy_forms_tags %}
+{% load humanize %}
+
+{% block title %}Generate Invoice{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ── Step indicator ───────────────────────────────────────────────── */
+    .step-indicator { display: flex; align-items: flex-start; margin-bottom: 2rem; }
+
+    .step { flex: 1; text-align: center; position: relative; }
+
+    .step:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        top: 24px; left: 60%;
+        width: 80%; height: 2px;
+        background: #e9ecef;
+        z-index: 0;
+    }
+    .step.completed:not(:last-child)::after { background: #198754; }
+    .step.active:not(:last-child)::after    { background: linear-gradient(90deg, #0d6efd, #e9ecef); }
+
+    .step-icon {
+        width: 48px; height: 48px;
+        border: 2px solid #e9ecef;
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        margin: 0 auto 8px;
+        font-size: 1.1rem;
+        color: #6c757d;
+        background: white;
+        position: relative; z-index: 1;
+        transition: all 0.25s ease;
+    }
+    .step.active    .step-icon { border-color: #0d6efd; background: #0d6efd; color: white; }
+    .step.completed .step-icon { border-color: #198754; background: #198754; color: white; }
+
+    .step-label { font-size: 0.8rem; color: #6c757d; font-weight: 500; }
+    .step.active    .step-label { color: #0d6efd; font-weight: 600; }
+    .step.completed .step-label { color: #198754; }
+
+    /* ── Records table ────────────────────────────────────────────────── */
+    .record-row {
+        border-left: 3px solid transparent;
+        transition: background 0.15s, border-color 0.15s;
+    }
+    .record-row:hover   { background: #f8f9fa; border-left-color: #0d6efd; }
+    .record-row.checked { background: #e7f1ff; border-left-color: #0d6efd; }
+
+    /* ── Selection bar ────────────────────────────────────────────────── */
+    .selection-bar {
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        padding: 0.875rem 1.25rem;
+        margin-bottom: 1rem;
+    }
+
+    /* ── Loading overlay ──────────────────────────────────────────────── */
+    #loadingOverlay {
+        display: none; position: fixed;
+        inset: 0; background: rgba(255,255,255,0.85);
+        backdrop-filter: blur(4px);
+        justify-content: center; align-items: center;
+        z-index: 9999;
+    }
+    #loadingOverlay.show { display: flex; }
+
+    /* ── Sticky filter panel ──────────────────────────────────────────── */
+    .filter-card { position: sticky; top: 72px; }
+
+    /* ── Empty state ──────────────────────────────────────────────────── */
+    .empty-icon { font-size: 3.5rem; color: #dee2e6; }
+</style>
+{% endblock %}
+
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    {# ── Loading overlay ──────────────────────────────────────────────── #}
+    <div id="loadingOverlay">
+        <div class="text-center">
+            <div class="spinner-border text-primary" style="width:3.5rem;height:3.5rem;" role="status"></div>
+            <h5 class="mt-3 text-primary">Creating Invoice…</h5>
+            <p class="text-muted small mb-0">Please wait</p>
+        </div>
+    </div>
+
+    {# ── Breadcrumb ───────────────────────────────────────────────────── #}
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{% url 'billing:dashboard' %}" class="text-decoration-none">Dashboard</a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'billing:invoice_list' %}" class="text-decoration-none">Invoices</a>
+            </li>
+            <li class="breadcrumb-item active">Generate Invoice</li>
+        </ol>
+    </nav>
+
+    {# ── Page header ──────────────────────────────────────────────────── #}
+    <div class="mb-4">
+        <h1 class="h3 fw-bold mb-1">
+            <i class="bi bi-file-text-fill text-primary me-2"></i>Generate Invoice
+        </h1>
+        <p class="text-muted mb-0">
+            Select a provider and date range to preview unbilled records, then generate an invoice.
+        </p>
+    </div>
+
+    {# ── Step indicator ───────────────────────────────────────────────── #}
+    <div class="step-indicator mb-4">
+        <div class="step {% if records %}completed{% else %}active{% endif %}">
+            <div class="step-icon"><i class="bi bi-funnel-fill"></i></div>
+            <div class="step-label">Filter</div>
+        </div>
+        <div class="step {% if records %}active{% endif %}">
+            <div class="step-icon"><i class="bi bi-check2-square"></i></div>
+            <div class="step-label">Review &amp; Select</div>
+        </div>
+        <div class="step">
+            <div class="step-icon"><i class="bi bi-file-check-fill"></i></div>
+            <div class="step-label">Generate</div>
+        </div>
+    </div>
+
+    {# ── Flash messages ───────────────────────────────────────────────── #}
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
+                <i class="bi bi-{% if message.tags == 'success' %}check-circle-fill{% elif message.tags == 'error' or message.tags == 'danger' %}exclamation-triangle-fill{% else %}info-circle-fill{% endif %} me-2"></i>
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {# ── Two-column layout ────────────────────────────────────────────── #}
+    <div class="row g-4">
+
+        {# Left: Filter form (sticky) #}
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 filter-card">
+                <div class="card-header bg-white border-0 pt-4 pb-2 px-4">
+                    <h6 class="fw-bold mb-0">
+                        <i class="bi bi-funnel-fill text-primary me-2"></i>Filter Records
+                    </h6>
+                </div>
+                <div class="card-body px-4 pb-4">
+                    <form method="get" id="filterForm">
+                        {{ form.insurance_provider|as_crispy_field }}
+                        <div class="row g-2">
+                            <div class="col-6">{{ form.start_date|as_crispy_field }}</div>
+                            <div class="col-6">{{ form.end_date|as_crispy_field }}</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 mt-2" id="filterBtn">
+                            <i class="bi bi-search me-2"></i>Preview Records
+                        </button>
+                    </form>
+
+                    {# Summary panel — only shown after a successful filter #}
+                    {% if summary %}
+                    <hr class="my-3">
+                    <h6 class="fw-semibold mb-3 text-muted small text-uppercase letter-spacing-1">
+                        Preview Summary
+                    </h6>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted small">Records found</span>
+                        <span class="fw-bold">{{ summary.record_count }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted small">Total contract value</span>
+                        <span class="fw-bold">₦{{ summary.total_contract|intcomma }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted small">Insurance portion</span>
+                        <span class="fw-bold text-success">₦{{ summary.total_insurance|intcomma }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted small">Patient portion (already paid)</span>
+                        <span class="fw-bold text-info">₦{{ summary.total_patient|intcomma }}</span>
+                    </div>
+                    {% endif %}
+
+                    {# Tips #}
+                    <div class="mt-4 p-3 bg-light rounded-3">
+                        <p class="small fw-semibold mb-2">What gets included?</p>
+                        <ul class="list-unstyled small text-muted mb-0">
+                            <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>UNPAID, PARTIAL, AUTHORIZED records</li>
+                            <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-2"></i>Insurance portion &gt; ₦0 only</li>
+                            <li><i class="bi bi-x-circle-fill text-danger me-2"></i>Already INVOICED records are excluded</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# Right: Records table or empty states #}
+        <div class="col-lg-8">
+
+            {% if records %}
+
+            {# ── Selection bar ──────────────────────────────────────── #}
+            <div class="selection-bar d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <div>
+                    <span class="fw-bold text-primary" id="selectedCount">0</span>
+                    <span class="text-muted"> records selected</span>
+                    <span class="mx-2 text-muted">·</span>
+                    <span class="text-muted">Insurance total:</span>
+                    <span class="fw-bold" id="selectedInsurance">₦0.00</span>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-primary" onclick="selectAll()">
+                        <i class="bi bi-check-all me-1"></i>Select All
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="deselectAll()">
+                        <i class="bi bi-x me-1"></i>Clear
+                    </button>
+                </div>
+            </div>
+
+            {# ── Records table ──────────────────────────────────────── #}
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-header bg-white border-0 px-4 pt-4 pb-3 d-flex align-items-center justify-content-between">
+                    <h6 class="fw-bold mb-0">
+                        <i class="bi bi-list-check text-primary me-2"></i>
+                        Billable Records — {{ selected_provider.name }}
+                        <span class="badge bg-primary rounded-pill ms-2">{{ records.count }}</span>
+                    </h6>
+                </div>
+
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4" width="44">
+                                        <input class="form-check-input" type="checkbox"
+                                               id="selectAllChk" onchange="toggleAll(this)">
+                                    </th>
+                                    <th>Request</th>
+                                    <th>Patient</th>
+                                    <th>Date</th>
+                                    <th class="text-end">Contract</th>
+                                    <th class="text-end">Insurance</th>
+                                    <th class="text-end">Patient</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in records %}
+                                <tr class="record-row" id="row-{{ record.id }}">
+                                    <td class="ps-4">
+                                        <input class="form-check-input record-chk"
+                                               type="checkbox"
+                                               value="{{ record.id }}"
+                                               data-insurance="{{ record.insurance_portion }}"
+                                               onchange="updateBar()">
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'billing:billing_detail' pk=record.pk %}"
+                                           class="fw-semibold text-decoration-none"
+                                           target="_blank"
+                                           title="View billing record">
+                                            {{ record.request.request_id }}
+                                            <i class="bi bi-box-arrow-up-right small ms-1 text-muted"></i>
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <span class="d-flex align-items-center gap-1">
+                                            <i class="bi bi-person-circle text-primary"></i>
+                                            {{ record.request.patient.get_full_name }}
+                                        </span>
+                                    </td>
+                                    <td class="text-muted small">{{ record.created_at|date:"d M Y" }}</td>
+                                    <td class="text-end fw-semibold">₦{{ record.total_amount|intcomma }}</td>
+                                    <td class="text-end">
+                                        <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2">
+                                            ₦{{ record.insurance_portion|intcomma }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="badge bg-info bg-opacity-10 text-info rounded-pill px-2">
+                                            ₦{{ record.patient_portion|intcomma }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if record.payment_status == 'UNPAID' %}
+                                            <span class="badge bg-warning bg-opacity-15 text-warning rounded-pill">Unpaid</span>
+                                        {% elif record.payment_status == 'PARTIAL' %}
+                                            <span class="badge bg-info bg-opacity-15 text-info rounded-pill">Partial</span>
+                                        {% elif record.payment_status == 'AUTHORIZED' %}
+                                            <span class="badge bg-primary bg-opacity-15 text-primary rounded-pill">Authorised</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {# Footer: Generate button #}
+                <div class="card-footer bg-white border-0 px-4 py-3">
+                    <form method="post"
+                          action="{% url 'billing:generate_invoice' %}"
+                          id="invoiceForm"
+                          onsubmit="return prepareAndSubmit()">
+                        {% csrf_token %}
+                        {# Hidden fields carry filter state to the POST handler #}
+                        <input type="hidden" name="provider_id"  value="{{ selected_provider.id }}">
+                        <input type="hidden" name="start_date"   value="{{ request.GET.start_date }}">
+                        <input type="hidden" name="end_date"     value="{{ request.GET.end_date }}">
+                        {# Selected record IDs are injected here by JS before submit #}
+                        <div id="recordIdContainer"></div>
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <p class="text-muted small mb-0">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Generating creates a DRAFT invoice. You can review it before sending.
+                            </p>
+                            <button type="submit"
+                                    class="btn btn-primary px-4"
+                                    id="generateBtn"
+                                    disabled>
+                                <i class="bi bi-file-text-fill me-2"></i>Generate Invoice
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            {% elif form.is_valid %}
+
+            {# ── No records found ───────────────────────────────────── #}
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body text-center py-5">
+                    <div class="empty-icon mb-3"><i class="bi bi-inbox-fill"></i></div>
+                    <h5 class="fw-bold">No Billable Records Found</h5>
+                    <p class="text-muted mb-4">
+                        There are no unbilled records for <strong>{{ selected_provider.name }}</strong>
+                        in the selected date range.<br>
+                        Records may already be invoiced or have zero insurance portion.
+                    </p>
+                    <a href="{% url 'billing:generate_invoice' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-arrow-repeat me-2"></i>Reset Filters
+                    </a>
+                </div>
+            </div>
+
+            {% else %}
+
+            {# ── Initial state ──────────────────────────────────────── #}
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body text-center py-5">
+                    <div class="empty-icon mb-3"><i class="bi bi-file-earmark-text"></i></div>
+                    <h5 class="fw-bold">Start by Selecting a Provider</h5>
+                    <p class="text-muted">
+                        Use the filter panel to choose a provider and date range,
+                        then preview the unbilled records before generating.
+                    </p>
+                    <div class="d-inline-flex flex-wrap gap-3 justify-content-center mt-2">
+                        <span class="text-muted small"><i class="bi bi-1-circle-fill text-primary me-1"></i>Select provider</span>
+                        <span class="text-muted small"><i class="bi bi-2-circle-fill text-primary me-1"></i>Set date range</span>
+                        <span class="text-muted small"><i class="bi bi-3-circle-fill text-primary me-1"></i>Review records</span>
+                        <span class="text-muted small"><i class="bi bi-4-circle-fill text-primary me-1"></i>Generate invoice</span>
+                    </div>
+                </div>
+            </div>
+
+            {% endif %}
+
+        </div>{# /col-lg-8 #}
+    </div>{# /row #}
+</div>
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+(function () {
+    'use strict';
+
+    // ── Helpers ───────────────────────────────────────────────────────────
+    function fmt(n) {
+        return '₦' + n.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function allCheckboxes() {
+        return Array.from(document.querySelectorAll('.record-chk'));
+    }
+
+    function checkedCheckboxes() {
+        return allCheckboxes().filter(cb => cb.checked);
+    }
+
+    // ── Update selection bar ──────────────────────────────────────────────
+    function updateBar() {
+        const checked = checkedCheckboxes();
+        const total   = checked.reduce((s, cb) => s + parseFloat(cb.dataset.insurance || 0), 0);
+
+        document.getElementById('selectedCount').textContent    = checked.length;
+        document.getElementById('selectedInsurance').textContent = fmt(total);
+
+        const btn = document.getElementById('generateBtn');
+        if (btn) btn.disabled = checked.length === 0;
+
+        // Row highlight
+        allCheckboxes().forEach(cb => {
+            const row = document.getElementById('row-' + cb.value);
+            if (row) row.classList.toggle('checked', cb.checked);
+        });
+
+        // Header checkbox state
+        const hdr = document.getElementById('selectAllChk');
+        if (hdr) {
+            const all = allCheckboxes().length;
+            hdr.checked       = checked.length === all && all > 0;
+            hdr.indeterminate = checked.length > 0 && checked.length < all;
+        }
+    }
+
+    // ── Select / deselect ─────────────────────────────────────────────────
+    window.selectAll = function () {
+        allCheckboxes().forEach(cb => cb.checked = true);
+        updateBar();
+    };
+
+    window.deselectAll = function () {
+        allCheckboxes().forEach(cb => cb.checked = false);
+        updateBar();
+    };
+
+    window.toggleAll = function (hdr) {
+        allCheckboxes().forEach(cb => cb.checked = hdr.checked);
+        updateBar();
+    };
+
+    // ── Prepare POST: inject hidden record_id inputs ───────────────────────
+    window.prepareAndSubmit = function () {
+        const checked = checkedCheckboxes();
+
+        if (checked.length === 0) {
+            alert('Please select at least one record to generate an invoice.');
+            return false;
+        }
+
+        const container = document.getElementById('recordIdContainer');
+        container.innerHTML = '';
+        checked.forEach(cb => {
+            const inp = document.createElement('input');
+            inp.type  = 'hidden';
+            inp.name  = 'record_ids';
+            inp.value = cb.value;
+            container.appendChild(inp);
+        });
+
+        document.getElementById('loadingOverlay').classList.add('show');
+        return true;
+    };
+
+    // ── Filter form: loading state ─────────────────────────────────────────
+    const filterForm = document.getElementById('filterForm');
+    const filterBtn  = document.getElementById('filterBtn');
+    if (filterForm && filterBtn) {
+        filterForm.addEventListener('submit', function () {
+            filterBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Loading…';
+            filterBtn.disabled  = true;
+        });
+    }
+
+    // ── Keyboard shortcuts ─────────────────────────────────────────────────
+    document.addEventListener('keydown', function (e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'a' && document.querySelector('.record-chk')) {
+            e.preventDefault();
+            selectAll();
+        }
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            const btn = document.getElementById('generateBtn');
+            if (btn && !btn.disabled) btn.click();
+        }
+    });
+
+    // ── Init ───────────────────────────────────────────────────────────────
+    updateBar();
+
+})();
+</script>
+{% endblock %}

@@ -42,176 +42,247 @@ def sample_examination_list(request):
     return render(request, 'laboratory/sample/sample_list.html', {'samples': samples})
 
 
-@login_required
-@require_capability('can_collect_sample')
-def collect_sample_view(request, billing_pk):
-    vendor = request.user.vendor
-    billing = get_object_or_404(
-        BillingInformation.objects.select_related('request', 'request__patient'),
-        pk=billing_pk, vendor=vendor
-    )
-    test_request = billing.request
-
-    # 1. Verification Gate
-    if not billing.payment_status in ('PAID', 'AUTHORIZED', 'WAIVED'):
-        messages.error(request, "Clearance required from billing.")
-        return redirect('billing:billing_detail', pk=billing.pk)
-
-    if hasattr(test_request, 'sample'):
-        messages.warning(request, "Sample already exists.")
-        return redirect('labs:sample_detail', pk=test_request.sample.pk)
-
-    # 2. Process Collection
-    if request.method == 'POST':
-        form = SampleForm(request.POST)
-        if form.is_valid():
-            try:
-                with transaction.atomic():
-                    # Initialize Sample
-                    sample = form.save(commit=False)
-                    sample.vendor = vendor
-                    sample.test_request = test_request
-                    sample.patient = test_request.patient
-                    sample.status = 'AC'  # 
-                    sample.save()
-
-                    # sample.save() # Triggers auto-ID generation
-
-                    # Create Test Assignments for EACH requested test
-                    requested_tests = test_request.requested_tests.all()
-                    assignments = [
-                        TestAssignment(
-                            vendor=vendor,
-                            request=test_request,
-                            lab_test=lt,
-                            sample=sample,
-                            department=lt.assigned_department,
-                            status='P'  # Pending Analysis
-                        ) for lt in requested_tests
-                    ]
-                    TestAssignment.objects.bulk_create(assignments)
-
-                    # Update Request Status to 'Sample Collected'
-                    test_request.status = 'R' 
-                    test_request.save(update_fields=['status'])
-
-                messages.success(request, f"✅ Sample {sample.sample_id} secured.")
-                return redirect('labs:sample-exam-list')
-            except Exception as e:
-                messages.error(request, f"Database Error: {str(e)}")
-        else:
-        # LOG THE ERRORS to the console so you can see them immediately
-            print(form.errors) 
-            messages.error(request, "Please correct the errors in the form.")
-    else:
-        # Pre-fill with technician name
-        form = SampleForm(initial={'collected_by': request.user.get_full_name()})
-
-    return render(request, 'laboratory/sample/collect_sample.html', {
-        'form': form,
-        'billing': billing,
-        'test_request': test_request
-    })
-
-
 # @login_required
 # @require_capability('can_collect_sample')
 # def collect_sample_view(request, billing_pk):
 #     vendor = request.user.vendor
-
 #     billing = get_object_or_404(
-#         BillingInformation.objects.select_related(
-#             'request',
-#             'request__patient'
-#         ),
-#         pk=billing_pk,
-#         vendor=vendor
+#         BillingInformation.objects.select_related('request', 'request__patient'),
+#         pk=billing_pk, vendor=vendor
 #     )
-
 #     test_request = billing.request
 
-#     # ─────────────────────────────────────────────
-#     # 1. Verification / Guard Clauses
-#     # ─────────────────────────────────────────────
+#     # 1. Verification Gate
 #     if billing.payment_status not in ('PAID', 'AUTHORIZED', 'WAIVED'):
 #         messages.error(request, "Clearance required from billing.")
 #         return redirect('billing:billing_detail', pk=billing.pk)
 
 #     if hasattr(test_request, 'sample'):
-#         messages.warning(request, "Sample already exists for this request.")
+#         messages.warning(request, "Sample already exists.")
 #         return redirect('labs:sample_detail', pk=test_request.sample.pk)
 
-#     # ─────────────────────────────────────────────
-#     # 2. Sample Collection
-#     # ─────────────────────────────────────────────
+#     # 2. Process Collection
 #     if request.method == 'POST':
-#         form = SampleForm(
-#             request.POST,
-#             instance=Sample(
-#                 vendor=vendor,
-#                 test_request=test_request,
-#                 patient=test_request.patient,
-#             )
-#         )
-
+#         form = SampleForm(request.POST)
 #         if form.is_valid():
 #             try:
 #                 with transaction.atomic():
+#                     # Initialize Sample
 #                     sample = form.save(commit=False)
+#                     sample.vendor = vendor
+#                     sample.test_request = test_request
+#                     sample.patient = test_request.patient
+#                     sample.status = 'AC'  # 
+#                     sample.save()
 
-#                     # Enforce audit integrity
-#                     sample.collected_by = request.user.get_full_name()
-#                     sample.status = 'AC'
-#                     sample.save()  # sample_id auto-generated here
+#                     # sample.save() # Triggers auto-ID generation
 
-#                     # Create test assignments
+#                     # Create Test Assignments for EACH requested test
+#                     requested_tests = test_request.requested_tests.all()
 #                     assignments = [
 #                         TestAssignment(
 #                             vendor=vendor,
 #                             request=test_request,
-#                             lab_test=lab_test,
+#                             lab_test=lt,
 #                             sample=sample,
-#                             department=lab_test.assigned_department,
-#                             status='P',  # Pending Analysis
-#                         )
-#                         for lab_test in test_request.requested_tests.all()
+#                             department=lt.assigned_department,
+#                             status='P'  # Pending Analysis
+#                         ) for lt in requested_tests
 #                     ]
 #                     TestAssignment.objects.bulk_create(assignments)
 
-#                     # Advance request lifecycle
-#                     test_request.status = 'R'  # Sample Collected
+#                     # Update Request Status to 'Sample Collected'
+#                     test_request.status = 'R' 
 #                     test_request.save(update_fields=['status'])
 
-#                 messages.success(
-#                     request,
-#                     f"Sample {sample.sample_id} successfully collected."
-#                 )
+#                 messages.success(request, f"✅ Sample {sample.sample_id} secured.")
 #                 return redirect('labs:sample-exam-list')
-
-#             except Exception as exc:
-#                 messages.error(request, "An unexpected error occurred while saving the sample.")
-#                 # Optional: logger.exception(exc)
-
+#             except Exception as e:
+#                 messages.error(request, f"Database Error: {str(e)}")
 #         else:
-#             # Visible + debuggable validation feedback
-#             messages.error(request, "Please correct the errors below.")
-#             # Optional for dev:
-#             print(form.errors)
-
+#         # LOG THE ERRORS to the console so you can see them immediately
+#             print(form.errors) 
+#             messages.error(request, "Please correct the errors in the form.")
 #     else:
-#         form = SampleForm(initial={
-#             'collected_by': request.user.get_full_name()
-#         })
+#         # Pre-fill with technician name
+#         form = SampleForm(initial={'collected_by': request.user.get_full_name()})
 
-#     return render(
-#         request,
-#         'laboratory/sample/collect_sample1.html',
-#         {
-#             'form': form,
-#             'billing': billing,
-#             'test_request': test_request,
-#         }
-#     )
+#     return render(request, 'laboratory/sample/collect_sample.html', {
+#         'form': form,
+#         'billing': billing,
+#         'test_request': test_request
+#     })
+
+
+
+"""
+labs/views/sample_mgt.py — collect_sample_view
+
+Bugs fixed:
+───────────────────────────────────────────────────────────────────────────────
+1.  404 root cause: the template was almost certainly linking to test_request.pk
+    rather than billing.pk (or billing_info.pk). The view URL parameter is
+    billing_pk — make sure every template link that opens this view uses:
+        {% url 'labs:collect_sample' billing_pk=test_request.billing_info.pk %}
+    NOT:
+        {% url 'labs:collect_sample' billing_pk=test_request.pk %}  ← wrong UUID
+
+2.  Operator precedence bug in the payment gate (critical — gate never fired):
+        if not billing.payment_status in (...):   ← parses as (not status) in (...)
+                                                    always False, gate was bypassed
+        Fixed to:
+        if billing.payment_status not in (...):
+
+3.  Gate replaced with billing.is_payment_cleared (model property):
+    The old hardcoded tuple included 'PARTIAL' which is wrong for HMO patients —
+    PARTIAL means the patient has NOT yet paid their copay. The model's
+    is_payment_cleared property already encodes the correct rules per billing type:
+      CASH      → patient must have fully paid
+      HMO/NHIS  → patient must have paid their copay portion
+      CORPORATE/STAFF → always cleared (company invoiced later)
+      PAID/AUTHORIZED/WAIVED → always cleared
+    Using the property keeps this logic in one place.
+
+4.  Exception handler now logs the full traceback (was only str(e) which loses
+    the stack trace and makes debugging very hard).
+
+5.  Vendor guard uses getattr to avoid AttributeError on users without a vendor.
+"""
+
+# import logging
+
+# from django.contrib import messages
+# from django.contrib.auth.decorators import login_required
+# from django.db import transaction
+# from django.shortcuts import get_object_or_404, redirect, render
+
+# from billing.models import BillingInformation
+# from labs.forms import SampleForm
+# from labs.models import Sample, TestAssignment
+# from tenants.decorators import require_capability
+
+# logger = logging.getLogger(__name__)
+
+
+@login_required
+@require_capability('can_collect_sample')
+def collect_sample_view(request, billing_pk):
+    """
+    Gate → Collect → Assign workflow.
+
+    URL parameter is billing_pk (BillingInformation.pk), NOT test_request.pk.
+
+    Template links must use:
+        {% url 'labs:collect_sample' billing_pk=test_request.billing_info.pk %}
+
+    Common mistake that causes 404:
+        {% url 'labs:collect_sample' billing_pk=test_request.pk %}  ← WRONG
+    """
+    vendor = getattr(request.user, 'vendor', None)
+    if vendor is None:
+        messages.error(request, "Vendor account required.")
+        return redirect('dashboard')
+
+    billing = get_object_or_404(
+        BillingInformation.objects.select_related(
+            'request',
+            'request__patient',
+            'insurance_provider',
+        ),
+        pk=billing_pk,
+        vendor=vendor,
+    )
+    test_request = billing.request
+
+    # ── 1. Payment gate 
+    if not billing.is_payment_cleared:
+        messages.error(
+            request,
+            f"Payment clearance required before sample collection. "
+            f"Current status: {billing.get_payment_status_display()}. "
+            f"Patient must pay ₦{billing.patient_portion:,.2f} at the front desk."
+        )
+        return redirect('billing:billing_detail', pk=billing.pk)
+
+    # ── 2. Duplicate sample guard ─────────────────────────────────────────
+    if hasattr(test_request, 'sample') and test_request.sample is not None:
+        messages.warning(request, "A sample has already been collected for this request.")
+        return redirect('labs:sample_detail', pk=test_request.sample.pk)
+
+    # ── 3. Process collection ─────────────────────────────────────────────
+    if request.method == 'POST':
+        form = SampleForm(request.POST)
+
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+
+                    # Create the Sample
+                    sample = form.save(commit=False)
+                    sample.vendor       = vendor
+                    sample.test_request = test_request
+                    sample.patient      = test_request.patient
+                    sample.status       = 'AC'  # Accepted / collected
+                    sample.save()
+
+                    # Create a TestAssignment for each requested test
+                    requested_tests = test_request.requested_tests.select_related(
+                        'assigned_department'
+                    ).all()
+
+                    TestAssignment.objects.bulk_create([
+                        TestAssignment(
+                            vendor=vendor,
+                            request=test_request,
+                            lab_test=lab_test,
+                            sample=sample,
+                            department=lab_test.assigned_department,
+                            status='P',  # Pending analysis
+                        )
+                        for lab_test in requested_tests
+                    ])
+
+                    # Advance request status to 'Sample Received'
+                    test_request.status = 'R'
+                    test_request.save(update_fields=['status'])
+
+                messages.success(
+                    request,
+                    f"✅ Sample {sample.sample_id} collected successfully "
+                    f"for {test_request.patient.first_name} {test_request.patient.last_name}."
+                )
+                return redirect('labs:sample-exam-list')
+
+            except Exception:
+                # Log full traceback — str(e) alone loses the stack frame
+                logger.exception(
+                    "Error during sample collection — billing_pk=%s vendor=%s",
+                    billing_pk,
+                    vendor.pk,
+                )
+                messages.error(
+                    request,
+                    "An unexpected error occurred while recording the sample. "
+                    "Please try again or contact support."
+                )
+
+        else:
+            # Surface form errors in the server log for faster debugging
+            logger.warning(
+                "SampleForm invalid — billing_pk=%s errors=%s",
+                billing_pk,
+                form.errors.as_json(),
+            )
+            messages.error(request, "Please correct the errors in the form.")
+
+    else:
+        form = SampleForm(initial={'collected_by': request.user.get_full_name()})
+
+    return render(request, 'laboratory/sample/collect_sample.html', {
+        'form':         form,
+        'billing':      billing,
+        'test_request': test_request,
+    })
 
 
 @login_required

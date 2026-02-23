@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.db.models import Sum
 from django.utils.html import format_html
 from .models import (
-    PriceList, TestPrice, InsuranceProvider, CorporateClient,
+    PriceList, InsuranceProvider, TestPrice,
     BillingInformation, Payment, Invoice, InvoicePayment
 )
 
@@ -49,20 +49,20 @@ class PriceListAdmin(admin.ModelAdmin):
         return qs
 
 
-@admin.register(TestPrice)
-class TestPriceAdmin(admin.ModelAdmin):
-    list_display = ('test', 'price_list', 'price', 'discount_percentage', 'cost_price', 'margin_display')
-    list_filter = ('price_list__vendor', 'price_list')
-    search_fields = ('test__name', 'test__code', 'price_list__name')
-    autocomplete_fields = ['test', 'price_list']
+# @admin.register(TestPrice)
+# class TestPriceAdmin(admin.ModelAdmin):
+#     list_display = ('test', 'price_list', 'price', 'discount_percentage', 'cost_price', 'margin_display')
+#     list_filter = ('price_list__vendor', 'price_list')
+#     search_fields = ('test__name', 'test__code', 'price_list__name')
+#     autocomplete_fields = ['test', 'price_list']
     
-    def margin_display(self, obj):
-        margin = obj.profit_margin()
-        if margin is not None:
-            color = 'green' if margin > 20 else 'orange' if margin > 10 else 'red'
-            return format_html('<span style="color: {};">{:.2f}%</span>', color, margin)
-        return '-'
-    margin_display.short_description = 'Profit Margin'
+#     def margin_display(self, obj):
+#         margin = obj.profit_margin()
+#         if margin is not None:
+#             color = 'green' if margin > 20 else 'orange' if margin > 10 else 'red'
+#             return format_html('<span style="color: {};">{:.2f}%</span>', color, margin)
+#         return '-'
+#     margin_display.short_description = 'Profit Margin'
 
 
 # ==========================================
@@ -113,43 +113,43 @@ class InsuranceProviderAdmin(admin.ModelAdmin):
 # CORPORATE CLIENT ADMIN
 # ==========================================
 
-@admin.register(CorporateClient)
-class CorporateClientAdmin(admin.ModelAdmin):
-    list_display = ('company_name', 'contact_person', 'credit_limit', 
-                   'outstanding_balance_display', 'payment_terms_days', 'is_active')
-    list_filter = ('is_active', 'vendor')
-    search_fields = ('company_name', 'contact_person', 'email', 'bank_account_number')
-    readonly_fields = ('created_at', 'updated_at', 'outstanding_balance_display')
+# @admin.register(CorporateClient)
+# class CorporateClientAdmin(admin.ModelAdmin):
+#     list_display = ('company_name', 'contact_person', 'credit_limit', 
+#                    'outstanding_balance_display', 'payment_terms_days', 'is_active')
+#     list_filter = ('is_active', 'vendor')
+#     search_fields = ('company_name', 'contact_person', 'email', 'bank_account_number')
+#     readonly_fields = ('created_at', 'updated_at', 'outstanding_balance_display')
     
-    fieldsets = (
-        ('Company Information', {
-            'fields': ('vendor', 'company_name', 'bank_name', 'bank_account_number', 'is_active')
-        }),
-        ('Contact Details', {
-            'fields': ('contact_person', 'phone', 'email', 'billing_address')
-        }),
-        ('Financial Terms', {
-            'fields': ('payment_terms_days', 'credit_limit', 'special_discount_percentage', 
-                      'max_discount_amount', 'price_list')
-        }),
-        ('Status', {
-            'fields': ('outstanding_balance_display', 'created_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
-    )
+#     fieldsets = (
+#         ('Company Information', {
+#             'fields': ('vendor', 'company_name', 'bank_name', 'bank_account_number', 'is_active')
+#         }),
+#         ('Contact Details', {
+#             'fields': ('contact_person', 'phone', 'email', 'billing_address')
+#         }),
+#         ('Financial Terms', {
+#             'fields': ('payment_terms_days', 'credit_limit', 'special_discount_percentage', 
+#                       'max_discount_amount', 'price_list')
+#         }),
+#         ('Status', {
+#             'fields': ('outstanding_balance_display', 'created_at', 'updated_at'),
+#             'classes': ('collapse',)
+#         }),
+#     )
     
-    def outstanding_balance_display(self, obj):
-        balance = obj.get_outstanding_balance()
-        color = 'red' if balance > obj.credit_limit else 'green'
-        return format_html('<span style="color: {}; font-weight: bold;">₦{:,.2f}</span>', 
-                          color, balance)
-    outstanding_balance_display.short_description = 'Outstanding Balance'
+#     def outstanding_balance_display(self, obj):
+#         balance = obj.get_outstanding_balance()
+#         color = 'red' if balance > obj.credit_limit else 'green'
+#         return format_html('<span style="color: {}; font-weight: bold;">₦{:,.2f}</span>', 
+#                           color, balance)
+#     outstanding_balance_display.short_description = 'Outstanding Balance'
     
-    def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        if not request.user.is_superuser:
-            qs = qs.filter(vendor=request.user.vendor)
-        return qs
+#     def get_queryset(self, request):
+#         qs = super().get_queryset(request)
+#         if not request.user.is_superuser:
+#             qs = qs.filter(vendor=request.user.vendor)
+#         return qs
 
 
 # ==========================================

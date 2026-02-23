@@ -1,5 +1,4 @@
 {% extends 'laboratory/assets/base.html' %}
-
 {% load static %}
 
 {% block title %}{{ title }}{% endblock %}
@@ -7,40 +6,269 @@
 {% block extra_css %}
 <style>
     .form-section {
-        background: #f8f9fa;
-        padding: 1.5rem;
-        border-radius: 8px;
-        margin-bottom: 1.5rem;
+        background: linear-gradient(135deg, #ffffff 0%, #f8faff 100%);
+        padding: 1.75rem;
+        border-radius: 16px;
+        margin-bottom: 1.75rem;
+        border: 1px solid rgba(0,0,0,0.05);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+        transition: all 0.3s ease;
     }
+
+    .form-section:hover {
+        box-shadow: 0 8px 15px rgba(0,0,0,0.05);
+        border-color: rgba(13, 110, 253, 0.2);
+    }
+
     .form-section h5 {
-        color: #2d3748;
-        margin-bottom: 1rem;
-        padding-bottom: 0.5rem;
+        color: #1e293b;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.75rem;
         border-bottom: 2px solid #e2e8f0;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
     }
+
+    .form-section h5 i {
+        color: #0d6efd;
+        margin-right: 0.75rem;
+        font-size: 1.25rem;
+    }
+
     .required-field::after {
         content: " *";
-        color: #e53e3e;
+        color: #dc3545;
+        font-weight: bold;
     }
+
     .help-box {
-        background: #e0f2fe;
+        background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
         border-left: 4px solid #0284c7;
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 10px rgba(2, 132, 199, 0.1);
+    }
+
+    .form-control, .form-select {
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 0.6rem 1rem;
+        transition: all 0.2s ease;
+        background-color: #ffffff;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.1);
+        outline: none;
+    }
+
+    /* Apply red border to invalid fields via Django's error class */
+    .form-control.is-invalid,
+    .form-select.is-invalid {
+        border-color: #dc3545;
+        background-image: none;
+    }
+
+    .field-error {
+        font-size: 0.875rem;
+        margin-top: 0.35rem;
+        color: #dc3545;
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
+    .input-group {
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    .input-group-text {
+        background-color: #f8f9fa;
+        border: 2px solid #e9ecef;
+        border-right: none;
+        color: #6c757d;
+        font-weight: 500;
+    }
+
+    .input-group .form-control {
+        border-left: none;
+    }
+
+    .input-group:focus-within .input-group-text {
+        border-color: #0d6efd;
+        background-color: #e9ecef;
+    }
+
+    .card {
+        border: none;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    }
+
+    .card-header {
+        background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+        border-radius: 20px 20px 0 0 !important;
+        padding: 1.25rem 1.5rem;
+        border: none;
+    }
+
+    .card-header h6 { font-weight: 600; letter-spacing: 0.3px; }
+    .card-body { padding: 1.75rem; }
+
+    .btn {
+        border-radius: 10px;
+        padding: 0.6rem 1.5rem;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        border: none;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+        box-shadow: 0 4px 10px rgba(13, 110, 253, 0.3);
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(13, 110, 253, 0.4);
+    }
+
+    .btn-outline-secondary {
+        border: 2px solid #e9ecef;
+        color: #6c757d;
+        background: white;
+    }
+
+    .btn-outline-secondary:hover {
+        background: #f8f9fa;
+        border-color: #ced4da;
+        transform: translateY(-2px);
+    }
+
+    .btn-lg { padding: 0.75rem 2rem; font-size: 1.1rem; }
+
+    .breadcrumb {
+        background: white;
+        padding: 1rem 1.5rem;
+        border-radius: 50px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+
+    .breadcrumb-item a {
+        color: #0d6efd;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .breadcrumb-item.active { color: #6c757d; }
+
+    .stat-item {
         padding: 1rem;
-        border-radius: 4px;
-        margin-bottom: 1rem;
+        background: #f8f9fa;
+        border-radius: 12px;
+        margin-bottom: 0.75rem;
+        transition: all 0.2s ease;
+    }
+
+    .stat-item:hover {
+        background: #e9ecef;
+        transform: translateX(5px);
+    }
+
+    .stat-label { color: #6c757d; font-size: 0.875rem; margin-bottom: 0.25rem; }
+    .stat-value { font-size: 1.5rem; font-weight: 700; color: #1e293b; }
+
+    .alert {
+        animation: slideDown 0.3s ease;
+        border-radius: 12px;
+        border: none;
+        padding: 1rem 1.5rem;
+    }
+
+    @keyframes slideDown {
+        from { opacity: 0; transform: translateY(-10px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .form-actions {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 16px;
+        border: 1px solid rgba(0,0,0,0.05);
+        margin-top: 1.5rem;
+    }
+
+    /* Provider type badge colours */
+    .provider-type-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 50px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .btn-loading {
+        position: relative;
+        color: transparent !important;
+        pointer-events: none;
+    }
+
+    .btn-loading::after {
+        content: '';
+        position: absolute;
+        width: 1.2rem;
+        height: 1.2rem;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        border: 2px solid white;
+        border-radius: 50%;
+        border-top-color: transparent;
+        animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+    @media (max-width: 768px) {
+        .form-section { padding: 1.25rem; }
+        .card-body { padding: 1.25rem; }
+        .btn-lg { padding: 0.6rem 1.5rem; font-size: 1rem; }
     }
 </style>
 {% endblock %}
 
+
 {% block content %}
 <div class="container-fluid py-4">
-    <!-- Breadcrumb -->
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show mb-4" role="alert">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-circle{% else %}info-circle{% endif %} me-3 fs-4"></i>
+                    <div>{{ message }}</div>
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+                </div>
+            </div>
+        {% endfor %}
+    {% endif %}
+
     <nav aria-label="breadcrumb" class="mb-4">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'billing:dashboard' %}">Billing</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'billing:insurance_list' %}">Insurance Providers</a></li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'billing:dashboard' %}"><i class="fas fa-home me-1"></i>Billing</a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'billing:insurance_list' %}">Insurance Providers</a>
+            </li>
             {% if provider %}
-                <li class="breadcrumb-item"><a href="{% url 'billing:insurance_detail' provider.pk %}">{{ provider.name }}</a></li>
+                <li class="breadcrumb-item">
+                    <a href="{% url 'billing:insurance_detail' provider.pk %}">{{ provider.name }}</a>
+                </li>
                 <li class="breadcrumb-item active">Edit</li>
             {% else %}
                 <li class="breadcrumb-item active">Create</li>
@@ -48,102 +276,167 @@
         </ol>
     </nav>
 
-    <!-- Page Header -->
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h2>{{ title }}</h2>
-            <p class="text-muted">Configure insurance/HMO provider details and financial terms.</p>
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="display-6 fw-bold mb-2">{{ title }}</h1>
+            <p class="text-muted mb-0">
+                <i class="fas fa-info-circle me-2"></i>
+                Configure provider details, financial terms, and co-pay rules
+            </p>
         </div>
-        <div class="col-md-4 text-end">
-            <a href="{% url 'billing:insurance_list' %}" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left"></i> Back to List
-            </a>
-        </div>
+        <a href="{% url 'billing:insurance_list' %}" class="btn btn-outline-secondary btn-lg">
+            <i class="fas fa-arrow-left me-2"></i>Back to List
+        </a>
     </div>
 
-    <div class="row">
-        <!-- Form Column -->
+    <div class="row g-4">
+
+
         <div class="col-lg-8">
-            <div class="card shadow-sm">
+            <div class="card">
                 <div class="card-body">
-                    <form method="post" novalidate>
+                    <form method="post" novalidate id="insuranceForm">
                         {% csrf_token %}
-                        
-                        <!-- Display Non-Field Errors -->
+
+                        {# Non-field errors (e.g. unique_together constraint) #}
                         {% if form.non_field_errors %}
-                            <div class="alert alert-danger">
-                                {{ form.non_field_errors }}
+                            <div class="alert alert-danger d-flex align-items-center mb-4" role="alert">
+                                <i class="fas fa-exclamation-triangle me-3 fs-4"></i>
+                                <div>{{ form.non_field_errors }}</div>
                             </div>
                         {% endif %}
 
-                        <!-- Basic Information -->
                         <div class="form-section">
-                            <h5><i class="fas fa-info-circle me-2"></i>Basic Information</h5>
-                            
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="{{ form.name.id_for_label }}" class="form-label required-field">
+                            <h5>
+                                <i class="fas fa-building"></i>
+                                Provider Identity
+                            </h5>
+
+                            {# Provider type — REQUIRED, was missing from original template #}
+                            <div class="mb-3">
+                                <label for="{{ form.provider_type.id_for_label }}"
+                                       class="form-label fw-semibold required-field">
+                                    {{ form.provider_type.label }}
+                                </label>
+                                {% if form.provider_type.errors %}
+                                    {# Add is-invalid so Bootstrap highlights the select in red #}
+                                    <select name="provider_type"
+                                            id="{{ form.provider_type.id_for_label }}"
+                                            class="form-select is-invalid">
+                                        {% for val, label in form.provider_type.field.choices %}
+                                            <option value="{{ val }}"
+                                                {% if form.provider_type.value == val %}selected{% endif %}>
+                                                {{ label }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="field-error">
+                                        <i class="fas fa-exclamation-circle"></i>
+                                        {{ form.provider_type.errors|join:", " }}
+                                    </div>
+                                {% else %}
+                                    {{ form.provider_type }}
+                                {% endif %}
+                                <small class="text-muted">
+                                    HMO = private insurer · NHIS = government · CORPORATE = wellness program · STAFF = internal
+                                </small>
+                            </div>
+
+                            <div class="row g-3">
+                                {# Provider name #}
+                                <div class="col-md-6">
+                                    <label for="{{ form.name.id_for_label }}"
+                                           class="form-label fw-semibold required-field">
                                         {{ form.name.label }}
                                     </label>
-                                    {{ form.name }}
                                     {% if form.name.errors %}
-                                        <div class="invalid-feedback d-block">{{ form.name.errors }}</div>
+                                        <input type="text" name="name"
+                                               value="{{ form.name.value|default:'' }}"
+                                               class="form-control is-invalid"
+                                               id="{{ form.name.id_for_label }}">
+                                        <div class="field-error">
+                                            <i class="fas fa-exclamation-circle"></i>
+                                            {{ form.name.errors|join:", " }}
+                                        </div>
+                                    {% else %}
+                                        {{ form.name }}
                                     {% endif %}
-                                    <small class="form-text text-muted">Full HMO/Insurance company name</small>
+                                    <small class="text-muted">Full company name e.g. Hygeia HMO</small>
                                 </div>
 
-                                <div class="col-md-6 mb-3">
-                                    <label for="{{ form.code.id_for_label }}" class="form-label required-field">
+                                {# Short code #}
+                                <div class="col-md-6">
+                                    <label for="{{ form.code.id_for_label }}"
+                                           class="form-label fw-semibold required-field">
                                         {{ form.code.label }}
                                     </label>
-                                    {{ form.code }}
                                     {% if form.code.errors %}
-                                        <div class="invalid-feedback d-block">{{ form.code.errors }}</div>
+                                        <input type="text" name="code"
+                                               value="{{ form.code.value|default:'' }}"
+                                               class="form-control is-invalid"
+                                               placeholder="AVON, HYG, SHELL"
+                                               id="{{ form.code.id_for_label }}">
+                                        <div class="field-error">
+                                            <i class="fas fa-exclamation-circle"></i>
+                                            {{ form.code.errors|join:", " }}
+                                        </div>
+                                    {% else %}
+                                        {{ form.code }}
                                     {% endif %}
-                                    <small class="form-text text-muted">Short code (e.g., AVON, HYG)</small>
+                                    <small class="text-muted">Short code — auto-capitalised</small>
                                 </div>
                             </div>
 
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <div class="form-check">
+                            {# Toggle switches #}
+                            <div class="row g-3 mt-2">
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch">
                                         {{ form.is_active }}
-                                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                        <label class="form-check-label fw-semibold"
+                                               for="{{ form.is_active.id_for_label }}">
                                             {{ form.is_active.label }}
                                         </label>
                                     </div>
-                                    <small class="form-text text-muted">Allow new billing for this provider</small>
+                                    <small class="text-muted d-block mt-1">Allow new billing for this provider</small>
                                 </div>
-
-                                <div class="col-md-6 mb-3">
-                                    <div class="form-check">
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch">
                                         {{ form.requires_preauth }}
-                                        <label class="form-check-label" for="{{ form.requires_preauth.id_for_label }}">
+                                        <label class="form-check-label fw-semibold"
+                                               for="{{ form.requires_preauth.id_for_label }}">
                                             {{ form.requires_preauth.label }}
                                         </label>
                                     </div>
-                                    <small class="form-text text-muted">Require authorization code</small>
+                                    <small class="text-muted d-block mt-1">Require authorisation code for services</small>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Contact Details -->
                         <div class="form-section">
-                            <h5><i class="fas fa-address-card me-2"></i>Contact Details</h5>
-                            
+                            <h5>
+                                <i class="fas fa-address-book"></i>
+                                Contact Details
+                            </h5>
+
                             <div class="mb-3">
-                                <label for="{{ form.contact_person.id_for_label }}" class="form-label">
+                                <label for="{{ form.contact_person.id_for_label }}"
+                                       class="form-label fw-semibold">
                                     {{ form.contact_person.label }}
                                 </label>
                                 {{ form.contact_person }}
                                 {% if form.contact_person.errors %}
-                                    <div class="invalid-feedback d-block">{{ form.contact_person.errors }}</div>
+                                    <div class="field-error">
+                                        <i class="fas fa-exclamation-circle"></i>
+                                        {{ form.contact_person.errors|join:", " }}
+                                    </div>
                                 {% endif %}
                             </div>
 
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="{{ form.phone.id_for_label }}" class="form-label">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="{{ form.phone.id_for_label }}"
+                                           class="form-label fw-semibold">
                                         {{ form.phone.label }}
                                     </label>
                                     <div class="input-group">
@@ -151,12 +444,16 @@
                                         {{ form.phone }}
                                     </div>
                                     {% if form.phone.errors %}
-                                        <div class="invalid-feedback d-block">{{ form.phone.errors }}</div>
+                                        <div class="field-error">
+                                            <i class="fas fa-exclamation-circle"></i>
+                                            {{ form.phone.errors|join:", " }}
+                                        </div>
                                     {% endif %}
                                 </div>
 
-                                <div class="col-md-6 mb-3">
-                                    <label for="{{ form.email.id_for_label }}" class="form-label">
+                                <div class="col-md-6">
+                                    <label for="{{ form.email.id_for_label }}"
+                                           class="form-label fw-semibold">
                                         {{ form.email.label }}
                                     </label>
                                     <div class="input-group">
@@ -164,29 +461,40 @@
                                         {{ form.email }}
                                     </div>
                                     {% if form.email.errors %}
-                                        <div class="invalid-feedback d-block">{{ form.email.errors }}</div>
+                                        <div class="field-error">
+                                            <i class="fas fa-exclamation-circle"></i>
+                                            {{ form.email.errors|join:", " }}
+                                        </div>
                                     {% endif %}
                                 </div>
                             </div>
 
-                            <div class="mb-3">
-                                <label for="{{ form.address.id_for_label }}" class="form-label">
+                            <div class="mt-3">
+                                <label for="{{ form.address.id_for_label }}"
+                                       class="form-label fw-semibold">
                                     {{ form.address.label }}
                                 </label>
                                 {{ form.address }}
                                 {% if form.address.errors %}
-                                    <div class="invalid-feedback d-block">{{ form.address.errors }}</div>
+                                    <div class="field-error">
+                                        <i class="fas fa-exclamation-circle"></i>
+                                        {{ form.address.errors|join:", " }}
+                                    </div>
                                 {% endif %}
                             </div>
                         </div>
 
-                        <!-- Financial Terms -->
+
                         <div class="form-section">
-                            <h5><i class=""></i>Financial Terms</h5>
-                            
-                            <div class="row">
-                                <div class="col-md-4 mb-3">
-                                    <label for="{{ form.payment_terms_days.id_for_label }}" class="form-label required-field">
+                            <h5>
+                                <i class="fas fa-chart-line"></i>
+                                Financial Terms
+                            </h5>
+
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label for="{{ form.payment_terms_days.id_for_label }}"
+                                           class="form-label fw-semibold required-field">
                                         {{ form.payment_terms_days.label }}
                                     </label>
                                     <div class="input-group">
@@ -194,13 +502,17 @@
                                         <span class="input-group-text">days</span>
                                     </div>
                                     {% if form.payment_terms_days.errors %}
-                                        <div class="invalid-feedback d-block">{{ form.payment_terms_days.errors }}</div>
+                                        <div class="field-error">
+                                            <i class="fas fa-exclamation-circle"></i>
+                                            {{ form.payment_terms_days.errors|join:", " }}
+                                        </div>
                                     {% endif %}
-                                    <small class="form-text text-muted">{{ form.payment_terms_days.help_text }}</small>
+                                    <small class="text-muted">Invoice payment period</small>
                                 </div>
 
-                                <div class="col-md-4 mb-3">
-                                    <label for="{{ form.credit_limit.id_for_label }}" class="form-label required-field">
+                                <div class="col-md-4">
+                                    <label for="{{ form.credit_limit.id_for_label }}"
+                                           class="form-label fw-semibold">
                                         {{ form.credit_limit.label }}
                                     </label>
                                     <div class="input-group">
@@ -208,50 +520,69 @@
                                         {{ form.credit_limit }}
                                     </div>
                                     {% if form.credit_limit.errors %}
-                                        <div class="invalid-feedback d-block">{{ form.credit_limit.errors }}</div>
+                                        <div class="field-error">
+                                            <i class="fas fa-exclamation-circle"></i>
+                                            {{ form.credit_limit.errors|join:", " }}
+                                        </div>
                                     {% endif %}
-                                    <small class="form-text text-muted">Maximum outstanding balance</small>
+                                    <small class="text-muted">0 = unlimited</small>
                                 </div>
 
-                                <div class="col-md-4 mb-3">
-                                    <label for="{{ form.default_copay_percentage.id_for_label }}" class="form-label required-field">
-                                        {{ form.patient_copay_percentage.label }}
+                                <div class="col-md-4">
+                                    <label for="{{ form.patient_copay_percentage.id_for_label }}"
+                                           class="form-label fw-semibold required-field">
+                                        Patient Co-pay
                                     </label>
                                     <div class="input-group">
                                         {{ form.patient_copay_percentage }}
-                                        <span class="input-group-text">%</span>
+                                        <span class="input-group-text">× 100%</span>
                                     </div>
                                     {% if form.patient_copay_percentage.errors %}
-                                        <div class="invalid-feedback d-block">{{ form.patient_copay_percentage.errors }}</div>
+                                        <div class="field-error">
+                                            <i class="fas fa-exclamation-circle"></i>
+                                            {{ form.patient_copay_percentage.errors|join:", " }}
+                                        </div>
                                     {% endif %}
-                                    <small class="form-text text-muted">{{ form.patient_copay_percentage.help_text }}</small>
+                                    <small class="text-muted">Decimal: 0.6000 = patient pays 60%</small>
                                 </div>
                             </div>
 
-                            <div class="mb-3">
-                                <label for="{{ form.price_list.id_for_label }}" class="form-label">
+                            {# Price list #}
+                            <div class="mt-3">
+                                <label for="{{ form.price_list.id_for_label }}"
+                                       class="form-label fw-semibold">
                                     {{ form.price_list.label }}
                                 </label>
                                 {{ form.price_list }}
                                 {% if form.price_list.errors %}
-                                    <div class="invalid-feedback d-block">{{ form.price_list.errors }}</div>
+                                    <div class="field-error">
+                                        <i class="fas fa-exclamation-circle"></i>
+                                        {{ form.price_list.errors|join:", " }}
+                                    </div>
                                 {% endif %}
-                                <small class="form-text text-muted">
-                                    Select the price list that applies to this provider
-                                    {% if not form.price_list.field.queryset %}
-                                        <a href="{% url 'billing:pricelist_create' %}" class="ms-2">Create a price list first</a>
-                                    {% endif %}
-                                </small>
+                                {# FIX: check queryset existence correctly #}
+                                {% if not form.price_list.field.queryset.exists %}
+                                    <div class="alert alert-warning mt-2 py-2">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        No non-retail price lists available.
+                                        <a href="{% url 'billing:pricelist_create' %}" class="alert-link">Create one first.</a>
+                                    </div>
+                                {% else %}
+                                    <small class="text-muted">
+                                        Negotiated rate list — leave blank to use retail prices
+                                    </small>
+                                {% endif %}
                             </div>
                         </div>
 
-                        <!-- Form Actions -->
-                        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
-                            <a href="{% url 'billing:insurance_list' %}" class="btn btn-outline-secondary">
-                                <i class="fas fa-times"></i> Cancel
+                        {# ── Form actions ───────────────────────────────── #}
+                        <div class="form-actions d-flex justify-content-between align-items-center">
+                            <a href="{% url 'billing:insurance_list' %}"
+                               class="btn btn-outline-secondary btn-lg">
+                                <i class="fas fa-times me-2"></i>Cancel
                             </a>
-                            <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="fas fa-save"></i> {{ submit_text }}
+                            <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                                <i class="fas fa-save me-2"></i>{{ submit_text }}
                             </button>
                         </div>
                     </form>
@@ -259,110 +590,198 @@
             </div>
         </div>
 
-        <!-- Help Sidebar -->
         <div class="col-lg-4">
+
             <div class="help-box">
-                <h6 class="fw-bold mb-2">
+                <h5 class="fw-bold mb-3">
                     <i class="fas fa-lightbulb me-2"></i>Quick Tips
-                </h6>
-                <ul class="small mb-0">
-                    <li>Use short, unique codes (3-5 characters)</li>
-                    <li>Credit limits help manage risk</li>
-                    <li>Co-pay is the patient's portion (e.g., 0.10 = 10%)</li>
-                    <li>Payment terms affect invoice due dates</li>
+                </h5>
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-3 d-flex align-items-start">
+                        <span class="badge bg-primary bg-opacity-10 text-primary rounded-circle p-2 me-3">
+                            <i class="fas fa-check small"></i>
+                        </span>
+                        <span>Select the correct <strong>Provider Type</strong> — it controls which fields appear on test request forms</span>
+                    </li>
+                    <li class="mb-3 d-flex align-items-start">
+                        <span class="badge bg-primary bg-opacity-10 text-primary rounded-circle p-2 me-3">
+                            <i class="fas fa-check small"></i>
+                        </span>
+                        <span>Use short, unique codes (3–5 characters)</span>
+                    </li>
+                    <li class="mb-3 d-flex align-items-start">
+                        <span class="badge bg-primary bg-opacity-10 text-primary rounded-circle p-2 me-3">
+                            <i class="fas fa-check small"></i>
+                        </span>
+                        <span>Credit limits help manage financial risk per payer</span>
+                    </li>
+                    <li class="d-flex align-items-start">
+                        <span class="badge bg-primary bg-opacity-10 text-primary rounded-circle p-2 me-3">
+                            <i class="fas fa-check small"></i>
+                        </span>
+                        <span>Payment terms drive invoice due dates</span>
+                    </li>
                 </ul>
             </div>
 
-            <div class="card shadow-sm mb-3">
-                <div class="card-header bg-info text-white">
+            <div class="card mb-3">
+                <div class="card-header text-white">
                     <h6 class="mb-0"><i class="fas fa-question-circle me-2"></i>Field Guide</h6>
                 </div>
                 <div class="card-body">
-                    <h6 class="fw-bold">Co-pay Percentage</h6>
-                    <p class="small">The portion patient pays directly. Enter as decimal:</p>
-                    <ul class="small">
-                        <li>0.10 = 10% patient, 90% insurance</li>
-                        <li>0.20 = 20% patient, 80% insurance</li>
-                        <li>0.00 = Insurance pays 100%</li>
-                    </ul>
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-primary mb-2">Provider Type</h6>
+                        <p class="small text-muted mb-0">
+                            <strong>HMO</strong> — private health insurer<br>
+                            <strong>NHIS</strong> — National Health Insurance Scheme<br>
+                            <strong>CORPORATE</strong> — company wellness program<br>
+                            <strong>STAFF</strong> — internal staff billing account
+                        </p>
+                    </div>
 
-                    <h6 class="fw-bold mt-3">Credit Limit</h6>
-                    <p class="small mb-2">
-                        Maximum amount the provider can owe before payment is required. 
-                        Set based on trust and contract terms.
-                    </p>
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-primary mb-2">Co-pay Percentage</h6>
+                        <p class="small text-muted mb-2">The fraction the patient pays at the front desk:</p>
+                        <div class="bg-light p-3 rounded-3 small">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>0.0000</span><span class="fw-bold">Provider pays 100%</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>0.2000</span><span class="fw-bold">Patient 20% / Provider 80%</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>0.6000</span><span class="fw-bold">Patient 60% / Provider 40%</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>1.0000</span><span class="fw-bold">Patient pays 100%</span>
+                            </div>
+                        </div>
+                    </div>
 
-                    <h6 class="fw-bold mt-3">Pre-Authorization</h6>
-                    <p class="small mb-0">
-                        If enabled, staff must enter an authorization code for each test request.
-                    </p>
+                    <div>
+                        <h6 class="fw-bold text-primary mb-2">Pre-Authorization</h6>
+                        <p class="small text-muted mb-0">
+                            When enabled, staff must enter a valid authorisation code
+                            before services can be rendered for this provider.
+                        </p>
+                    </div>
                 </div>
             </div>
 
+            {# Current status — edit mode only #}
             {% if provider %}
-            <div class="card shadow-sm">
+            <div class="card">
                 <div class="card-header bg-warning text-dark">
                     <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Current Status</h6>
                 </div>
                 <div class="card-body">
-                    <div class="mb-2">
-                        <small class="text-muted">Outstanding Balance</small>
-                        <h5 class="mb-0 text-danger">₦{{ provider.get_outstanding_balance|floatformat:2 }}</h5>
+                    <div class="stat-item">
+                        <div class="stat-label">Outstanding Balance</div>
+                        {# Shows what the provider currently owes the lab #}
+                        <div class="stat-value text-danger">
+                            ₦{{ provider.get_outstanding_balance|floatformat:2 }}
+                        </div>
                     </div>
-                    <div class="mb-2">
-                        <small class="text-muted">Active Invoices</small>
-                        <p class="mb-0">{{ provider.invoices.filter.count }} invoice(s)</p>
+                    <div class="stat-item">
+                        <div class="stat-label">Open Invoices</div>
+                        {# FIX: .filter is a method, not a property — use .count directly #}
+                        <div class="stat-value">
+                            {{ provider.invoices.count }}
+                        </div>
                     </div>
-                    <div>
-                        <small class="text-muted">Created</small>
-                        <p class="mb-0">{{ provider.created_at|date:"d M Y" }}</p>
+                    <div class="stat-item">
+                        <div class="stat-label">Credit Utilisation</div>
+                        <div class="stat-value {% if provider.is_over_credit_limit %}text-danger{% else %}text-success{% endif %}">
+                            {% if provider.credit_limit > 0 %}
+                                {{ provider.get_utilization_percentage|floatformat:1 }}%
+                            {% else %}
+                                Unlimited
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Created</div>
+                        <div class="stat-value" style="font-size: 1rem;">
+                            {{ provider.created_at|date:"d M Y" }}
+                        </div>
                     </div>
                 </div>
             </div>
             {% endif %}
-        </div>
-    </div>
+
+        </div>{# /sidebar #}
+    </div>{# /row #}
 </div>
 {% endblock %}
 
+
 {% block extra_js %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Validate co-pay percentage (0-1)
-        const copayInput = document.querySelector('input[name="default_copay_percentage"]');
-        if (copayInput) {
-            copayInput.addEventListener('input', function() {
-                const value = parseFloat(this.value);
-                if (value > 1) {
-                    this.value = 1;
-                }
-                if (value < 0) {
-                    this.value = 0;
-                }
-            });
-        }
+document.addEventListener('DOMContentLoaded', function () {
 
-        // Validate payment terms
-        const termsInput = document.querySelector('input[name="payment_terms_days"]');
-        if (termsInput) {
-            termsInput.addEventListener('input', function() {
-                const value = parseInt(this.value);
-                if (value < 0) {
-                    this.value = 0;
-                }
-            });
-        }
+    // ── Auto-uppercase code field ─────────────────────────────────────────
+    const codeInput = document.querySelector('input[name="code"]');
+    if (codeInput) {
+        ['input', 'keyup'].forEach(evt =>
+            codeInput.addEventListener(evt, () => {
+                codeInput.value = codeInput.value.toUpperCase();
+            })
+        );
+    }
 
-        // Validate credit limit
-        const creditInput = document.querySelector('input[name="credit_limit"]');
-        if (creditInput) {
-            creditInput.addEventListener('input', function() {
-                const value = parseFloat(this.value);
-                if (value < 0) {
-                    this.value = 0;
-                }
+    // ── Co-pay input: clamp 0–1, format to 4 dp on blur ──────────────────
+    const copayInput = document.querySelector('input[name="patient_copay_percentage"]');
+    if (copayInput) {
+        copayInput.addEventListener('input', function () {
+            let v = parseFloat(this.value);
+            if (!isNaN(v)) {
+                if (v > 1) this.value = '1.0000';
+                if (v < 0) this.value = '0.0000';
+            }
+        });
+        copayInput.addEventListener('blur', function () {
+            const v = parseFloat(this.value);
+            if (!isNaN(v)) this.value = v.toFixed(4);
+        });
+    }
+
+    // ── Non-negative guards for numeric fields ───────────────────────────
+    ['payment_terms_days', 'credit_limit'].forEach(name => {
+        const el = document.querySelector(`input[name="${name}"]`);
+        if (el) {
+            el.addEventListener('input', function () {
+                const v = parseFloat(this.value);
+                if (isNaN(v) || v < 0) this.value = 0;
             });
         }
     });
+
+    // ── Provider type → label hint ───────────────────────────────────────
+    // Updates a small hint below the select so staff know what each type means
+    const typeSelect = document.querySelector('select[name="provider_type"]');
+    const hints = {
+        'HMO':       'Private health insurer — negotiated rates, co-pay split applies',
+        'NHIS':      'Government scheme — NHIS rates, co-pay split applies',
+        'CORPORATE': 'Corporate wellness — company billed in full via invoice',
+        'STAFF':     'Internal staff — discounted or waived billing',
+    };
+    if (typeSelect) {
+        const hintEl = typeSelect.parentElement.querySelector('small.text-muted');
+        typeSelect.addEventListener('change', function () {
+            if (hintEl && hints[this.value]) hintEl.textContent = hints[this.value];
+        });
+    }
+
+    // ── Submit loading state ─────────────────────────────────────────────
+    const form = document.getElementById('insuranceForm');
+    const submitBtn = document.getElementById('submitBtn');
+    if (form && submitBtn) {
+        form.addEventListener('submit', function () {
+            submitBtn.classList.add('btn-loading');
+            submitBtn.disabled = true;
+        });
+    }
+
+});
 </script>
 {% endblock %}

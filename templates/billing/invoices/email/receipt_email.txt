@@ -1,0 +1,27 @@
+Dear {{ provider.contact_person|default:provider.name }},
+
+We acknowledge receipt of your payment. Please find your receipt attached.
+
+PAYMENT RECEIPT
+───────────────────────────────────────
+Receipt No     : RCP-{{ payment.pk|stringformat:"s"|slice:"0:8"|upper }}
+Payment Date   : {{ payment.payment_date|date:"d M Y" }}
+Payment Method : {{ payment.get_payment_method_display }}{% if payment.reference_number %}
+Reference No   : {{ payment.reference_number }}{% endif %}
+───────────────────────────────────────
+Invoice        : {{ invoice.invoice_number }}
+Amount Received: NGN {{ payment.amount|floatformat:2 }}
+───────────────────────────────────────
+{% if invoice.balance_due > 0 %}
+REMAINING BALANCE: NGN {{ invoice.balance_due|floatformat:2 }}
+This amount is due by {{ invoice.due_date|date:"d M Y" }}.
+{% else %}
+Invoice {{ invoice.invoice_number }} is now FULLY PAID.
+Thank you for your prompt payment.
+{% endif %}
+
+If you have any questions about this receipt, please contact us at
+{{ vendor.email|default:"billing@lab.com" }}.
+
+Thank you,
+{{ vendor.name }} Billing Team

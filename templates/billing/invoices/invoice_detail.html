@@ -1,114 +1,712 @@
 {% extends "laboratory/assets/base.html" %}
 {% load static %}
+{% load humanize %}
+{% load crispy_forms_tags %}
 
-{% block title %}Invoices - {{ vendor.name }}{% endblock %}
+{% block title %}{{ invoice.invoice_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ── Design language: clean utilitarian ledger ─────────────────────────
+       Inspired by accounting software and legal documents.
+       Monospaced amounts, ruled lines, deliberate whitespace.
+       One accent colour (slate blue) used sparingly.
+    ─────────────────────────────────────────────────────────────────────── */
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+    :root {
+        --accent:   #2563eb;
+        --danger:   #dc2626;
+        --success:  #16a34a;
+        --warning:  #d97706;
+        --muted:    #6b7280;
+        --border:   #e5e7eb;
+        --surface:  #f9fafb;
+        --text:     #111827;
+    }
+
+    body { font-family: 'DM Sans', sans-serif; }
+
+    /* Mono for all numbers */
+    .mono { font-family: 'DM Mono', monospace; }
+
+    /* ── Status pill ─────────────────────────────────────────────────────── */
+    .status-pill {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 3px 12px;
+        border-radius: 4px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+    }
+    .status-pill.draft    { background: #fef3c7; color: #92400e; }
+    .status-pill.sent     { background: #dbeafe; color: #1e40af; }
+    .status-pill.partial  { background: #e0f2fe; color: #0369a1; }
+    .status-pill.paid     { background: #dcfce7; color: #15803d; }
+    .status-pill.overdue  { background: #fee2e2; color: #991b1b; }
+    .status-pill.cancelled{ background: #f3f4f6; color: #4b5563; }
+
+    /* ── Section header rule ─────────────────────────────────────────────── */
+    .section-rule {
+        display: flex; align-items: center; gap: 12px;
+        margin-bottom: 1rem;
+    }
+    .section-rule span {
+        font-size: 0.7rem;
+        font-weight: 600;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--muted);
+        white-space: nowrap;
+    }
+    .section-rule::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: var(--border);
+    }
+
+    /* ── Invoice meta strip ──────────────────────────────────────────────── */
+    .meta-strip {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 0;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow: hidden;
+        margin-bottom: 2rem;
+    }
+    .meta-cell {
+        padding: 14px 20px;
+        border-right: 1px solid var(--border);
+    }
+    .meta-cell:last-child { border-right: none; }
+    .meta-cell label {
+        display: block;
+        font-size: 0.68rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 4px;
+    }
+    .meta-cell .val {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: var(--text);
+    }
+
+    /* ── Amount panel ────────────────────────────────────────────────────── */
+    .amount-panel {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    .amount-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 20px;
+        border-bottom: 1px solid var(--border);
+    }
+    .amount-row:last-child { border-bottom: none; }
+    .amount-row.total-row {
+        background: var(--text);
+        color: white;
+    }
+    .amount-row.total-row .mono { color: white; }
+    .amount-row.balance-row {
+        background: var(--surface);
+    }
+    .amount-row label {
+        font-size: 0.82rem;
+        color: var(--muted);
+        margin: 0;
+    }
+    .amount-row.total-row label { color: rgba(255,255,255,0.7); }
+
+    /* ── Line items table ────────────────────────────────────────────────── */
+    .ledger-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.84rem;
+    }
+    .ledger-table thead tr {
+        border-bottom: 2px solid var(--text);
+    }
+    .ledger-table thead th {
+        font-size: 0.68rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+        padding: 8px 12px;
+        text-align: left;
+    }
+    .ledger-table thead th.r { text-align: right; }
+    .ledger-table tbody tr {
+        border-bottom: 1px solid var(--border);
+        transition: background 0.1s;
+    }
+    .ledger-table tbody tr:hover { background: var(--surface); }
+    .ledger-table tbody td { padding: 11px 12px; color: var(--text); }
+    .ledger-table tbody td.r { text-align: right; }
+    .ledger-table tfoot tr { border-top: 2px solid var(--border); }
+    .ledger-table tfoot td {
+        padding: 10px 12px;
+        font-weight: 600;
+        font-size: 0.84rem;
+    }
+    .ledger-table tfoot td.r { text-align: right; }
+
+    /* ── Payment entries ─────────────────────────────────────────────────── */
+    .payment-entry {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--border);
+    }
+    .payment-entry:last-child { border-bottom: none; }
+    .payment-dot {
+        width: 8px; height: 8px;
+        border-radius: 50%;
+        background: var(--success);
+        flex-shrink: 0;
+        margin-right: 12px;
+    }
+
+    /* ── Action buttons ──────────────────────────────────────────────────── */
+    .action-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 1.5rem;
+    }
+    .btn-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-size: 0.83rem;
+        font-weight: 500;
+        border: 1px solid var(--border);
+        background: white;
+        color: var(--text);
+        cursor: pointer;
+        transition: all 0.15s;
+        text-decoration: none;
+    }
+    .btn-action:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: #eff6ff;
+    }
+    .btn-action.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: white;
+    }
+    .btn-action.primary:hover { background: #1d4ed8; color: white; }
+    .btn-action.success {
+        background: var(--success);
+        border-color: var(--success);
+        color: white;
+    }
+    .btn-action.success:hover { background: #15803d; color: white; }
+    .btn-action.danger  { border-color: var(--danger); color: var(--danger); }
+    .btn-action.danger:hover { background: #fef2f2; }
+
+    /* ── Modal ───────────────────────────────────────────────────────────── */
+    .clean-modal .modal-content {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    }
+    .clean-modal .modal-header {
+        border-bottom: 1px solid var(--border);
+        padding: 20px 24px 16px;
+    }
+    .clean-modal .modal-body  { padding: 20px 24px; }
+    .clean-modal .modal-footer {
+        border-top: 1px solid var(--border);
+        padding: 16px 24px 20px;
+    }
+    .clean-modal .modal-title {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--text);
+    }
+
+    /* ── Overdue banner ──────────────────────────────────────────────────── */
+    .overdue-banner {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.85rem;
+        color: var(--danger);
+        font-weight: 500;
+    }
+
+    /* ── Provider card ───────────────────────────────────────────────────── */
+    .provider-card {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 20px;
+    }
+    .provider-card .name {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text);
+        margin-bottom: 8px;
+    }
+    .provider-card .detail {
+        font-size: 0.82rem;
+        color: var(--muted);
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        margin-bottom: 4px;
+    }
+
+    @media (max-width: 768px) {
+        .meta-strip  { grid-template-columns: 1fr 1fr; }
+        .meta-cell   { border-bottom: 1px solid var(--border); }
+        .action-row  { flex-direction: column; }
+        .btn-action  { justify-content: center; }
+    }
+
+    @media print {
+        .no-print { display: none !important; }
+        .meta-strip, .amount-panel, .provider-card { border: 1px solid #ccc; }
+    }
+</style>
+{% endblock %}
+
 
 {% block content %}
-<div class="card shadow-sm mb-4">
-    <div class="card-header bg-white py-3">
-        <h5 class="mb-0 text-primary">Service Breakdown</h5>
+<div class="container-fluid py-4" style="max-width: 1100px;">
+
+    {# ── Flash messages ─────────────────────────────────────────────────── #}
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show border-0 rounded-3 shadow-sm mb-3 no-print" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    {# ── Overdue banner ─────────────────────────────────────────────────── #}
+    {% if is_overdue %}
+    <div class="overdue-banner no-print">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        This invoice is overdue. Due date was {{ invoice.due_date|date:"d M Y" }}.
+        Outstanding balance: <span class="mono ms-1">₦{{ balance_due|intcomma }}</span>
     </div>
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
+    {% endif %}
+
+    {# ── Breadcrumb + title ─────────────────────────────────────────────── #}
+    <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+        <div>
+            <nav aria-label="breadcrumb" class="mb-1 no-print">
+                <ol class="breadcrumb" style="font-size: 0.8rem;">
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'billing:dashboard' %}" class="text-decoration-none text-muted">Dashboard</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'billing:invoice_list' %}" class="text-decoration-none text-muted">Invoices</a>
+                    </li>
+                    <li class="breadcrumb-item active text-muted">{{ invoice.invoice_number }}</li>
+                </ol>
+            </nav>
+
+            <div class="d-flex align-items-center gap-3">
+                <h1 class="h4 fw-bold mb-0 mono">{{ invoice.invoice_number }}</h1>
+                <span class="status-pill {{ invoice.status|lower }}">
+                    {{ invoice.get_status_display }}
+                </span>
+            </div>
+            <p class="text-muted small mt-1 mb-0">
+                {{ provider.name }} · Created {{ invoice.created_at|date:"d M Y" }} by {{ invoice.created_by.get_full_name }}
+            </p>
+        </div>
+
+        {# ── Actions ──────────────────────────────────────────────────── #}
+        <div class="action-row no-print">
+            <a href="{% url 'billing:invoice_pdf' invoice.pk %}"
+               class="btn-action" target="_blank">
+                <i class="bi bi-download"></i> Download Invoice
+            </a>
+            {% if payments.exists %}
+                {% for payment in payments %}
+                    <a href="{% url 'billing:invoice_receipt' pk=invoice.pk payment_pk=payment.pk  %}"
+                    class="btn-action" target="_blank">
+                    <i class="bi bi-download"></i> Download Receipt
+                    </a>
+                {% endfor %}
+            {% endif %}
+            <button class="btn-action" onclick="window.print()">
+                <i class="bi bi-printer"></i> Print
+            </button>
+
+            {% if can_send %}
+            <button class="btn-action primary"
+                    data-bs-toggle="modal" data-bs-target="#sendModal">
+                <i class="bi bi-send"></i> Mark as Sent
+            </button>
+            {% endif %}
+
+            {% if can_pay %}
+            <button class="btn-action success"
+                    data-bs-toggle="modal" data-bs-target="#paymentModal">
+                <i class="bi bi-cash-stack"></i> Record Payment
+            </button>
+            {% endif %}
+
+            {% if can_cancel %}
+            <button class="btn-action danger"
+                    data-bs-toggle="modal" data-bs-target="#cancelModal">
+                <i class="bi bi-x-circle"></i> Cancel
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    {# ── Meta strip ─────────────────────────────────────────────────────── #}
+    <div class="meta-strip">
+        <div class="meta-cell">
+            <label>Invoice Date</label>
+            <div class="val">{{ invoice.invoice_date|date:"d M Y" }}</div>
+        </div>
+        <div class="meta-cell">
+            <label>Due Date</label>
+            <div class="val {% if is_overdue %}text-danger fw-semibold{% endif %}">
+                {{ invoice.due_date|date:"d M Y" }}
+            </div>
+        </div>
+        <div class="meta-cell">
+            <label>Period</label>
+            <div class="val">{{ invoice.period_start|date:"d M" }} – {{ invoice.period_end|date:"d M Y" }}</div>
+        </div>
+        <div class="meta-cell">
+            <label>Payment Terms</label>
+            <div class="val">{{ provider.payment_terms_days }} days</div>
+        </div>
+        <div class="meta-cell">
+            <label>Line Items</label>
+            <div class="val mono">{{ line_items.count }}</div>
+        </div>
+    </div>
+
+    {# ── Two-column: provider + amounts ─────────────────────────────────── #}
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="section-rule"><span>Bill To</span></div>
+            <div class="provider-card">
+                <div class="name">{{ provider.name }}</div>
+                {% if provider.contact_person %}
+                <div class="detail"><i class="bi bi-person"></i> {{ provider.contact_person }}</div>
+                {% endif %}
+                {% if provider.address %}
+                <div class="detail"><i class="bi bi-geo-alt"></i> {{ provider.address }}</div>
+                {% endif %}
+                {% if provider.phone %}
+                <div class="detail"><i class="bi bi-telephone"></i> {{ provider.phone }}</div>
+                {% endif %}
+                {% if provider.email %}
+                <div class="detail"><i class="bi bi-envelope"></i> {{ provider.email }}</div>
+                {% endif %}
+                <div class="detail mt-2">
+                    <i class="bi bi-tag"></i>
+                    <span class="status-pill {{ provider.provider_type|lower }} ms-1"
+                          style="background:#f1f5f9; color:#475569;">
+                        {{ provider.get_provider_type_display }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="section-rule"><span>Amount Summary</span></div>
+            <div class="amount-panel">
+                <div class="amount-row">
+                    <label>Contract Value (all line items)</label>
+                    <span class="mono">₦{{ line_summary.total_contract|default:0|intcomma }}</span>
+                </div>
+                <div class="amount-row">
+                    <label>Patient Portions (collected at front desk)</label>
+                    <span class="mono">₦{{ line_summary.total_patient|default:0|intcomma }}</span>
+                </div>
+                <div class="amount-row total-row">
+                    <label>Insurance Payable (this invoice)</label>
+                    <span class="mono fw-bold">₦{{ invoice.total_amount|intcomma }}</span>
+                </div>
+                <div class="amount-row">
+                    <label>Amount Received</label>
+                    <span class="mono text-success">₦{{ invoice.amount_paid|intcomma }}</span>
+                </div>
+                <div class="amount-row balance-row">
+                    <label class="fw-semibold" style="color: var(--text);">Balance Due</label>
+                    <span class="mono fw-bold {% if balance_due > 0 %}text-danger{% else %}text-success{% endif %}"
+                          style="font-size: 1.1rem;">
+                        ₦{{ balance_due|intcomma }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# ── Line items ─────────────────────────────────────────────────────── #}
+    <div class="section-rule mb-3"><span>Line Items</span></div>
+    <div class="table-responsive mb-4">
+        <table class="ledger-table">
+            <thead>
                 <tr>
-                    <th class="ps-4">Date</th>
-                    <th>Patient Details</th>
-                    <th>Tests Performed</th>
-                    <th>Policy/Auth</th>
-                    <th class="text-end pe-4">Insurance Liability (₦)</th>
+                    <th>Request</th>
+                    <th>Patient</th>
+                    <th>Date</th>
+                    <th class="r">Contract</th>
+                    <th class="r">Patient Paid</th>
+                    <th class="r">Insurance</th>
+                    <th>Status</th>
                 </tr>
             </thead>
             <tbody>
                 {% for item in line_items %}
                 <tr>
-                    <td class="ps-4">
-                        <small class="text-muted">{{ item.created_at|date:"d M Y" }}</small>
-                    </td>
                     <td>
-                        <div class="fw-bold text-dark">{{ item.request.patient.full_name }}</div>
-                        <small class="text-muted text-uppercase" style="font-size: 0.75rem;">
-                            ID: {{ item.request.patient.patient_id }}
-                        </small>
+                        <a href="{% url 'billing:billing_detail' pk=item.pk %}"
+                           class="text-decoration-none mono fw-medium"
+                           style="color: var(--accent);">
+                            {{ item.request.request_id }}
+                        </a>
                     </td>
+                    <td>{{ item.request.patient.get_full_name }}</td>
+                    <td class="text-muted">{{ item.created_at|date:"d M Y" }}</td>
+                    <td class="r mono">₦{{ item.total_amount|intcomma }}</td>
+                    <td class="r mono text-muted">₦{{ item.patient_portion|intcomma }}</td>
+                    <td class="r mono fw-medium">₦{{ item.insurance_portion|intcomma }}</td>
                     <td>
-                        <ul class="list-unstyled mb-0" style="font-size: 0.85rem;">
-                            {% for test in item.request.requested_tests.all %}
-                            <li><i class="bi bi-check2-circle text-success me-1"></i>{{ test.name }}</li>
-                            {% endfor %}
-                        </ul>
+                        <span class="status-pill {{ item.payment_status|lower }}">
+                            {{ item.get_payment_status_display }}
+                        </span>
                     </td>
-                    <td>
-                        <div class="small">P: {{ item.policy_number|default:"N/A" }}</div>
-                        <div class="small text-muted">A: {{ item.pre_authorization_code|default:"N/A" }}</div>
-                    </td>
-                    <td class="text-end pe-4 fw-bold text-primary">
-                        {{ item.insurance_portion|floatformat:2 }}
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="5" class="text-center py-4 text-muted">No line items found for this invoice.</td>
                 </tr>
                 {% endfor %}
             </tbody>
-            <tfoot class="table-light">
+            <tfoot>
                 <tr>
-                    <td colspan="4" class="text-end fw-bold">Subtotal:</td>
-                    <td class="text-end pe-4 fw-bold text-dark">₦{{ invoice.subtotal|floatformat:2 }}</td>
-                </tr>
-                {% if invoice.tax > 0 %}
-                <tr>
-                    <td colspan="4" class="text-end fw-bold">VAT/Tax:</td>
-                    <td class="text-end pe-4 fw-bold text-dark">₦{{ invoice.tax|floatformat:2 }}</td>
-                </tr>
-                {% endif %}
-                <tr class="table-primary border-top border-primary">
-                    <td colspan="4" class="text-end fw-bold text-uppercase">Total Amount Due:</td>
-                    <td class="text-end pe-4 fw-bold fs-5 text-primary">₦{{ invoice.total_amount|floatformat:2 }}</td>
+                    <td colspan="3" class="text-muted" style="font-weight: 400; font-size: 0.78rem;">
+                        {{ line_items.count }} record{{ line_items.count|pluralize }}
+                    </td>
+                    <td class="r mono">₦{{ line_summary.total_contract|default:0|intcomma }}</td>
+                    <td class="r mono text-muted">₦{{ line_summary.total_patient|default:0|intcomma }}</td>
+                    <td class="r mono">₦{{ line_summary.total_insurance|default:0|intcomma }}</td>
+                    <td></td>
                 </tr>
             </tfoot>
         </table>
     </div>
-</div>
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h4 class="mb-1">Invoice #{{ invoice.invoice_number }}</h4>
-        <span class="badge {% if invoice.status == 'PAID' %}bg-success{% elif invoice.status == 'DRAFT' %}bg-warning text-dark{% else %}bg-info{% endif %}">
-            {{ invoice.get_status_display }}
-        </span>
-    </div>
-    <div class="btn-group shadow-sm">
-        <a href="#" class="btn btn-outline-secondary" onclick="window.print();">
-            <i class="bi bi-printer me-2"></i>Print PDF
-        </a>
-        
-        {% if invoice.status == 'DRAFT' %}
-            <form action="{% url 'billing:mark_as_sent' invoice.pk %}" method="POST" class="d-inline">
+    {# ── Payments ───────────────────────────────────────────────────────── #}
+    <div class="section-rule mb-3"><span>Payment History</span></div>
+    {% if payments %}
+        {% for p in payments %}
+        <div class="payment-entry">
+            <div class="d-flex align-items-center">
+                <div class="payment-dot"></div>
+                <div>
+                    <div class="fw-medium mono" style="font-size: 0.9rem;">₦{{ p.amount|intcomma }}</div>
+                    <div class="text-muted" style="font-size: 0.78rem;">
+                        {{ p.payment_date|date:"d M Y" }}
+                        · {{ p.get_payment_method_display }}
+                        {% if p.reference_number %} · Ref: {{ p.reference_number }}{% endif %}
+                        · by {{ p.recorded_by.get_full_name }}
+                    </div>
+                </div>
+            </div>
+            <span class="status-pill paid">Received</span>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p class="text-muted small py-3">No payments recorded yet.</p>
+    {% endif %}
+
+    {% if invoice.notes %}
+    <div class="section-rule mt-4 mb-3"><span>Notes</span></div>
+    <p class="text-muted small">{{ invoice.notes }}</p>
+    {% endif %}
+
+</div>{# /container #}
+
+
+{# ── Send modal ─────────────────────────────────────────────────────────── #}
+{% if can_send %}
+<div class="modal fade clean-modal" id="sendModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 420px;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title">Mark Invoice as Sent</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'billing:invoice_send' invoice.pk %}">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-send me-2"></i>Confirm & Send
-                </button>
+                <div class="modal-body">
+                    <p class="text-muted small mb-3">
+                        This marks the invoice as sent to <strong>{{ provider.name }}</strong>
+                        and starts the {{ provider.payment_terms_days }}-day payment clock.
+                    </p>
+                    <div class="amount-panel">
+                        <div class="amount-row">
+                            <label>Invoice</label>
+                            <span class="mono fw-medium">{{ invoice.invoice_number }}</span>
+                        </div>
+                        <div class="amount-row">
+                            <label>Amount Due</label>
+                            <span class="mono fw-bold">₦{{ invoice.total_amount|intcomma }}</span>
+                        </div>
+                        <div class="amount-row">
+                            <label>Payment Due By</label>
+                            <span class="mono">{{ invoice.due_date|date:"d M Y" }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn-action primary">
+                        <i class="bi bi-send"></i> Confirm — Mark Sent
+                    </button>
+                </div>
             </form>
-        {% endif %}
-
-        {% if invoice.status == 'SENT' or invoice.status == 'OVERDUE' %}
-            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#paymentModal">
-                <i class="bi bi-cash-coin me-2"></i>Record HMO Payment
-            </button>
-        {% endif %}
+        </div>
     </div>
 </div>
+{% endif %}
 
-@media print {
-    .nav-link-custom, .sidebar, .btn-group, .navbar {
-        display: none !important;
-    }
-    .card {
-        border: none !important;
-        box-shadow: none !important;
-    }
-}
+{# ── Payment modal ──────────────────────────────────────────────────────── #}
+{% if can_pay %}
+<div class="modal fade clean-modal" id="paymentModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 480px;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title">Record Payment</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'billing:invoice_payment' invoice.pk %}"
+                  id="paymentForm">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="amount-panel mb-4">
+                        <div class="amount-row">
+                            <label>Invoice Total</label>
+                            <span class="mono">₦{{ invoice.total_amount|intcomma }}</span>
+                        </div>
+                        <div class="amount-row balance-row">
+                            <label class="fw-semibold" style="color: var(--text)">Balance Due</label>
+                            <span class="mono fw-bold text-danger">₦{{ balance_due|intcomma }}</span>
+                        </div>
+                    </div>
+                    {{ payment_form|crispy }}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn-action success">
+                        <i class="bi bi-check-circle"></i> Record Payment
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
 
+{# ── Cancel modal ───────────────────────────────────────────────────────── #}
+{% if can_cancel %}
+<div class="modal fade clean-modal" id="cancelModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 420px;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title text-danger">Cancel Invoice</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'billing:invoice_cancel' invoice.pk %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <p class="text-muted small mb-3">
+                        Cancelling <strong>{{ invoice.invoice_number }}</strong> will release all
+                        {{ line_items.count }} attached billing record{{ line_items.count|pluralize }}
+                        back to <em>Authorized</em> status so they can be re-invoiced.
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Reason (optional)</label>
+                        <textarea name="cancellation_reason"
+                                  class="form-control form-control-sm"
+                                  rows="2"
+                                  placeholder="e.g. Issued in error, wrong provider selected…"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">
+                        Keep Invoice
+                    </button>
+                    <button type="submit" class="btn-action danger">
+                        <i class="bi bi-x-circle"></i> Cancel Invoice
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+(function () {
+    'use strict';
+
+    // Show loading state on any modal form submit
+    document.querySelectorAll('.modal form').forEach(function (form) {
+        form.addEventListener('submit', function () {
+            const btn = form.querySelector('[type="submit"]');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Processing…';
+            }
+        });
+    });
+
+    // Ctrl+P → browser print (already works natively; this just prevents
+    // accidental default in some browsers)
+    document.addEventListener('keydown', function (e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+            // Let browser handle it
+        }
+    });
+
+    // Clipboard copy utility (for invoice number / ref ID if needed later)
+    window.copyText = function (text) {
+        navigator.clipboard.writeText(text).then(function () {
+            const el = document.createElement('div');
+            el.style.cssText =
+                'position:fixed;top:20px;right:20px;background:#111827;color:white;' +
+                'padding:8px 14px;border-radius:6px;font-size:0.8rem;z-index:9999;';
+            el.textContent = 'Copied to clipboard';
+            document.body.appendChild(el);
+            setTimeout(function () { el.remove(); }, 2000);
+        });
+    };
+
+})();
+</script>
 {% endblock %}

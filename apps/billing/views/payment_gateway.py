@@ -15,12 +15,12 @@ from django.urls import reverse_lazy, reverse
 from django.utils import timezone
 
 from ..models import (
-    PriceList, TestPrice, InsuranceProvider, CorporateClient,
+    PriceList, TestPrice, InsuranceProvider,
     BillingInformation, Payment, Invoice, InvoicePayment, D
 )
 from django.views.decorators.csrf import csrf_exempt
 from ..forms import (
-    PriceListForm, TestPriceForm, InsuranceProviderForm, CorporateClientForm,
+    PriceListForm, TestPriceForm, InsuranceProviderForm,
     BillingInformationForm, PaymentForm, InvoiceForm, InvoicePaymentForm,
     BillingFilterForm, InvoiceFilterForm
 )

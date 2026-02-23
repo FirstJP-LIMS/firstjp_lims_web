@@ -74,7 +74,7 @@ urlpatterns = [
     # examination
     path('examination/samples/', sample_mgt.sample_examination_list, name='sample-exam-list'),
 
-    # 🆕 Sample Collection URLs
+    # Sample Collection
     path('samples/collect/<uuid:billing_pk>/', sample_mgt.collect_sample_view, name='collect_sample'),
 
     path('examination/sample/<str:sample_id>/', sample_mgt.sample_examination_detail, name='sample-exam-detail'),

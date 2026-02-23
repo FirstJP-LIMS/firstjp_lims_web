@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Payment Receipt — {{ invoice.invoice_number }}</title>
+<style>
+  body { margin: 0; padding: 0; background: #f3f4f6; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+  .wrapper { max-width: 600px; margin: 32px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .top-bar { background: #15803d; padding: 24px 32px; }
+  .top-bar h1 { margin: 0; color: white; font-size: 20px; font-weight: 700; }
+  .top-bar p  { margin: 4px 0 0; color: #bbf7d0; font-size: 13px; }
+  .checkmark { font-size: 40px; text-align: center; padding: 24px 0 8px; }
+  .body { padding: 8px 32px 32px; }
+  .heading { font-size: 18px; font-weight: 700; color: #111827; text-align: center; margin-bottom: 4px; }
+  .subheading { font-size: 13px; color: #6b7280; text-align: center; margin-bottom: 24px; }
+  .amount-box {
+    background: #f0fdf4; border: 1px solid #bbf7d0;
+    border-radius: 8px; padding: 20px 24px; text-align: center;
+    margin-bottom: 24px;
+  }
+  .amount-box .label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+  .amount-box .amount { font-size: 30px; font-weight: 700; color: #15803d; font-family: 'Courier New', monospace; }
+  .meta-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  .meta-table tr { border-bottom: 1px solid #f3f4f6; }
+  .meta-table td { padding: 9px 0; font-size: 13px; }
+  .meta-table td:first-child { color: #6b7280; width: 45%; }
+  .meta-table td:last-child { color: #111827; font-weight: 500; font-family: 'Courier New', monospace; }
+  .balance-box-clear {
+    background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;
+    padding: 14px 20px; text-align: center; margin-bottom: 20px;
+    font-size: 14px; font-weight: 600; color: #15803d;
+  }
+  .balance-box-due {
+    background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px;
+    padding: 14px 20px; margin-bottom: 20px;
+  }
+  .balance-box-due .bal-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #92400e; margin-bottom: 4px; }
+  .balance-box-due .bal-amount { font-size: 18px; font-weight: 700; color: #d97706; font-family: 'Courier New', monospace; }
+  .balance-box-due .bal-due { font-size: 12px; color: #92400e; margin-top: 2px; }
+  .footer { padding: 20px 32px; background: #f9fafb; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <div class="top-bar">
+    <h1>{{ vendor.name }}</h1>
+    <p>Payment Receipt Confirmation</p>
+  </div>
+
+  <div class="checkmark">✅</div>
+
+  <div class="body">
+    <p class="heading">Payment Received</p>
+    <p class="subheading">
+      Dear {{ provider.contact_person|default:provider.name }}, your payment has been recorded.
+      The receipt PDF is attached to this email.
+    </p>
+
+    <div class="amount-box">
+      <div class="label">Amount Received</div>
+      <div class="amount">NGN {{ payment.amount|floatformat:2 }}</div>
+    </div>
+
+    <table class="meta-table">
+      <tr>
+        <td>Receipt No</td>
+        <td>{{ payment.pk|stringformat:"s"|slice:"0:8"|upper }}</td>
+      </tr>
+      <tr>
+        <td>Payment Date</td>
+        <td>{{ payment.payment_date|date:"d M Y" }}</td>
+      </tr>
+      <tr>
+        <td>Payment Method</td>
+        <td>{{ payment.get_payment_method_display }}</td>
+      </tr>
+      {% if payment.reference_number %}
+      <tr>
+        <td>Reference No</td>
+        <td>{{ payment.reference_number }}</td>
+      </tr>
+      {% endif %}
+      <tr>
+        <td>Against Invoice</td>
+        <td>{{ invoice.invoice_number }}</td>
+      </tr>
+      <tr>
+        <td>Invoice Total</td>
+        <td>NGN {{ invoice.total_amount|floatformat:2 }}</td>
+      </tr>
+    </table>
+
+    {% if invoice.balance_due <= 0 %}
+    <div class="balance-box-clear">
+      ✓ Invoice {{ invoice.invoice_number }} is now fully paid. Thank you.
+    </div>
+    {% else %}
+    <div class="balance-box-due">
+      <div class="bal-label">Remaining Balance</div>
+      <div class="bal-amount">NGN {{ invoice.balance_due|floatformat:2 }}</div>
+      <div class="bal-due">Due by {{ invoice.due_date|date:"d M Y" }}</div>
+    </div>
+    {% endif %}
+
+    <p style="font-size:13px; color:#6b7280; margin:0; text-align:center;">
+      Questions? Contact
+      <a href="mailto:{{ vendor.email|default:'billing@lab.com' }}" style="color:#15803d;">
+        {{ vendor.email|default:"billing@lab.com" }}
+      </a>
+    </p>
+  </div>
+
+  <div class="footer">
+    This is an automated receipt from {{ vendor.name }} Billing System
+  </div>
+
+</div>
+</body>
+</html>

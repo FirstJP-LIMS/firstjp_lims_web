@@ -1,0 +1,1125 @@
+{% extends 'laboratory/assets/base.html' %}
+{% load static %}
+
+{% block title %}Billing Details - {{ billing.request.request_id }}{% endblock %}
+
+
+{% block extra_css %}
+<style>
+    /* Modern Financial Dashboard Styling */
+    :root {
+        --primary: #4361ee;
+        --success: #06d6a0;
+        --warning: #ffb703;
+        --danger: #ef476f;
+        --info: #4cc9f0;
+        --dark: #2b2d42;
+        --light: #f8f9fa;
+    }
+
+    /* Page Header */
+    .page-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 2rem;
+        border-radius: 24px;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+        border: 1px solid rgba(255,255,255,0.5);
+    }
+
+    .status-badge {
+        padding: 0.75rem 1.5rem;
+        border-radius: 50px;
+        font-weight: 600;
+        font-size: 1rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    .status-badge i {
+        font-size: 1.25rem;
+    }
+
+    .status-paid {
+        background: linear-gradient(135deg, #06d6a0 0%, #05b586 100%);
+        color: white;
+    }
+
+    .status-pending {
+        background: linear-gradient(135deg, #ffb703 0%, #faa307 100%);
+        color: white;
+    }
+
+    .status-overdue {
+        background: linear-gradient(135deg, #ef476f 0%, #d62828 100%);
+        color: white;
+    }
+
+    .status-waived {
+        background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+        color: white;
+    }
+
+    .status-authorized {
+        background: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%);
+        color: white;
+    }
+
+    /* Info Cards */
+    .info-card {
+        background: white;
+        border-radius: 24px;
+        padding: 1.75rem;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.02);
+        border: 1px solid rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+
+    .info-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.05);
+        border-color: rgba(67, 97, 238, 0.2);
+    }
+
+    .info-card-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+
+    .info-card-header i {
+        width: 48px;
+        height: 48px;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: var(--primary);
+    }
+
+    .info-card-header h5 {
+        margin: 0;
+        font-weight: 600;
+        color: var(--dark);
+    }
+
+    .info-card-header small {
+        color: #6c757d;
+        font-size: 0.875rem;
+    }
+
+    /* Financial Cards */
+    .financial-card {
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        border-radius: 20px;
+        padding: 1.5rem;
+        border: 1px solid rgba(0,0,0,0.05);
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .financial-card:hover {
+        border-color: var(--primary);
+        box-shadow: 0 10px 30px rgba(67, 97, 238, 0.1);
+    }
+
+    .financial-label {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-bottom: 0.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .financial-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--dark);
+        line-height: 1.2;
+    }
+
+    .financial-value small {
+        font-size: 1rem;
+        font-weight: normal;
+        color: #6c757d;
+        margin-left: 0.5rem;
+    }
+
+    .financial-highlight {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1rem;
+        border-radius: 16px;
+        margin-bottom: 1rem;
+    }
+
+    .financial-highlight .financial-value {
+        color: white;
+    }
+
+    /* Progress Bar */
+    .payment-progress {
+        height: 12px;
+        border-radius: 50px;
+        background: #e9ecef;
+        overflow: hidden;
+        margin: 1rem 0;
+    }
+
+    .payment-progress-bar {
+        height: 100%;
+        background: linear-gradient(135deg, var(--success) 0%, #05b586 100%);
+        border-radius: 50px;
+        transition: width 0.3s ease;
+    }
+
+    /* Split Ratio Display */
+    .split-ratio {
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+        padding: 1.5rem;
+        background: #f8f9fa;
+        border-radius: 16px;
+        margin: 1rem 0;
+    }
+
+    .ratio-item {
+        flex: 1;
+        text-align: center;
+    }
+
+    .ratio-item .label {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-bottom: 0.5rem;
+    }
+
+    .ratio-item .percentage {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--dark);
+    }
+
+    .ratio-item .percentage small {
+        font-size: 1rem;
+        font-weight: normal;
+        color: #6c757d;
+    }
+
+    .ratio-divider {
+        width: 2px;
+        height: 40px;
+        background: #dee2e6;
+    }
+
+    /* Timeline */
+    .timeline {
+        position: relative;
+        padding: 1rem 0;
+    }
+
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 24px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #e9ecef;
+    }
+
+    .timeline-item {
+        position: relative;
+        padding-left: 70px;
+        margin-bottom: 1.5rem;
+    }
+
+    .timeline-icon {
+        position: absolute;
+        left: 0;
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        color: white;
+        z-index: 1;
+    }
+
+    .timeline-icon.billing { background: linear-gradient(135deg, var(--primary) 0%, #3a0ca3 100%); }
+    .timeline-icon.payment { background: linear-gradient(135deg, var(--success) 0%, #05b586 100%); }
+    .timeline-icon.authorization { background: linear-gradient(135deg, var(--info) 0%, #3a86ff 100%); }
+    .timeline-icon.waiver { background: linear-gradient(135deg, var(--warning) 0%, #faa307 100%); }
+
+    .timeline-content {
+        background: white;
+        border-radius: 16px;
+        padding: 1rem 1.5rem;
+        border: 1px solid #e9ecef;
+        transition: all 0.2s ease;
+    }
+
+    .timeline-content:hover {
+        border-color: var(--primary);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    }
+
+    .timeline-date {
+        font-size: 0.75rem;
+        color: #6c757d;
+        margin-bottom: 0.25rem;
+    }
+
+    .timeline-title {
+        font-weight: 600;
+        color: var(--dark);
+        margin-bottom: 0.25rem;
+    }
+
+    .timeline-amount {
+        font-weight: 700;
+        color: var(--success);
+        margin-top: 0.5rem;
+    }
+
+    /* Test Items */
+    .test-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        border-bottom: 1px solid #e9ecef;
+        transition: all 0.2s ease;
+    }
+
+    .test-item:last-child {
+        border-bottom: none;
+    }
+
+    .test-item:hover {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding-left: 1.5rem;
+    }
+
+    .test-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .test-info i {
+        width: 36px;
+        height: 36px;
+        background: #f8f9fa;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--primary);
+    }
+
+    .test-name {
+        font-weight: 600;
+        color: var(--dark);
+    }
+
+    .test-price {
+        font-weight: 700;
+        color: var(--primary);
+    }
+
+    /* Action Buttons */
+    .action-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+        margin: 1.5rem 0;
+    }
+
+    .action-btn {
+        background: white;
+        border: 2px solid #e9ecef;
+        border-radius: 16px;
+        padding: 1.25rem 1rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        text-decoration: none;
+        color: var(--dark);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .action-btn:hover {
+        transform: translateY(-3px);
+        border-color: var(--primary);
+        box-shadow: 0 10px 25px rgba(67, 97, 238, 0.15);
+        color: var(--dark);
+    }
+
+    .action-btn i {
+        font-size: 2rem;
+        color: var(--primary);
+    }
+
+    .action-btn span {
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+
+    .action-btn small {
+        font-size: 0.75rem;
+        color: #6c757d;
+    }
+
+    .action-btn.disabled {
+        opacity: 0.5;
+        pointer-events: none;
+        background: #f8f9fa;
+    }
+
+    /* Modal Styling */
+    .modal-content {
+        border: none;
+        border-radius: 24px;
+        overflow: hidden;
+    }
+
+    .modal-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-bottom: none;
+        padding: 1.5rem;
+    }
+
+    .modal-body {
+        padding: 2rem;
+    }
+
+    .modal-footer {
+        border-top: 1px solid #e9ecef;
+        padding: 1.5rem;
+    }
+
+    /* Amount Highlight */
+    .amount-highlight {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 16px;
+        padding: 1.5rem;
+        text-align: center;
+        margin: 1rem 0;
+    }
+
+    .amount-highlight .amount {
+        font-size: 3rem;
+        font-weight: 700;
+        color: var(--primary);
+        line-height: 1.2;
+    }
+
+    .amount-highlight .label {
+        font-size: 0.875rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .page-header {
+            padding: 1.5rem;
+        }
+
+        .status-badge {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+
+        .financial-value {
+            font-size: 1.5rem;
+        }
+
+        .split-ratio {
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .ratio-divider {
+            width: 100%;
+            height: 2px;
+        }
+
+        .action-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .timeline-item {
+            padding-left: 60px;
+        }
+    }
+
+    /* Print Styles */
+    @media print {
+        .action-btn, .modal, .btn {
+            display: none !important;
+        }
+
+        .info-card {
+            box-shadow: none;
+            border: 1px solid #dee2e6;
+        }
+
+        .page-header {
+            background: none;
+            box-shadow: none;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="d-flex flex-wrap justify-content-between align-items-center">
+            <div>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{% url 'billing:dashboard' %}">Dashboard</a></li>
+                        <li class="breadcrumb-item"><a href="{% url 'billing:billing_list' %}">Billing</a></li>
+                        <li class="breadcrumb-item active">{{ billing.billing_id }}</li>
+                    </ol>
+                </nav>
+                <div class="d-flex align-items-center gap-3">
+                    <h1 class="display-6 fw-bold mb-0">Billing Details</h1>
+                    
+                    <span class="status-badge 
+                        {% if billing.payment_status == 'PAID' %}status-paid
+                        {% elif billing.payment_status == 'WAIVED' %}status-waived
+                        {% elif billing.payment_status == 'AUTHORIZED' %}status-authorized
+                        {% elif billing.payment_status == 'INVOICED' %}status-pending
+                        {% elif billing.payment_status == 'PARTIAL' %}status-partial
+                        {% else %}status-pending{% endif %}">
+                        
+                        <i class="fas 
+                            {% if billing.payment_status == 'PAID' %}fa-check-circle
+                            {% elif billing.payment_status == 'AUTHORIZED' %}fa-check-double
+                            {% elif billing.payment_status == 'PARTIAL' %}fa-spinner
+                            {% else %}fa-clock{% endif %}"></i>
+                        
+                        {{ billing.payment_status }}
+                    </span>
+                </div>
+            </div>
+            <div class="mt-3 mt-md-0">
+                <a href="{% url 'billing:billing_list' %}" class="btn btn-outline-secondary btn-lg">
+                    <i class="fas fa-arrow-left me-2"></i>Back to List
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Grid -->
+    <div class="action-grid">
+        <!-- Authorize Button -->
+        {% if not is_authorized and not is_waived %}
+        <a href="#" class="action-btn" data-bs-toggle="modal" data-bs-target="#authorizeModal">
+            <i class="fas fa-check-double"></i>
+            <span>Authorize Payment</span>
+            <small>Approve and proceed</small>
+        </a>
+        {% endif %}
+
+        <!-- Waive Button -->
+        {% if not is_waived and not is_fully_paid %}
+        <a href="#" class="action-btn" data-bs-toggle="modal" data-bs-target="#waiveModal">
+            <i class="fas fa-gift"></i>
+            <span>Waive Payment</span>
+            <small>Mark as waived</small>
+        </a>
+        {% endif %}
+
+        <!-- Record Payment Button -->
+        {% if not is_fully_paid and not is_waived %}
+        <a href="#" class="action-btn" data-bs-toggle="modal" data-bs-target="#paymentModal">
+            <i class="fas fa-money-bill-wave"></i>
+            <span>Record Payment</span>
+            <small>Cash, card, or transfer</small>
+        </a>
+        {% endif %}
+
+        <!-- Pay Online Button -->
+        <a href="#" class="action-btn">
+            <i class="fas fa-credit-card"></i>
+            <span>Pay Online</span>
+            <small>Secure payment gateway</small>
+        </a>
+
+        <!-- Collect Sample Button -->
+        {% if can_collect_sample %}
+        <a href="{% url 'labs:collect_sample' billing_pk=test_request.billing_info.pk %}" class="action-btn">
+            <i class="fas fa-flask"></i>
+            <span>Collect Sample</span>
+            <small>Ready for collection</small>
+        </a>
+        {% elif is_blocked %}
+        <div class="action-btn disabled">
+            <i class="fas fa-ban"></i>
+            <span>Sample Blocked</span>
+            <small>Payment required</small>
+        </div>
+        {% endif %}
+
+        <!-- Print Button -->
+        <a href="#" class="action-btn" onclick="window.print()">
+            <i class="fas fa-print"></i>
+            <span>Print Receipt</span>
+            <small>Download PDF</small>
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <!-- Main Content Column -->
+        <div class="col-lg-8">
+            <!-- Financial Summary Card -->
+            <div class="info-card mb-4">
+                <div class="info-card-header">
+                    <i class="fas fa-chart-pie"></i>
+                    <div>
+                        <h5>Financial Summary</h5>
+                        <small>Breakdown of charges and payments</small>
+                    </div>
+                </div>
+
+                <div class="row g-4">
+                    <!-- Left Column - Pricing Layers -->
+                    <div class="col-md-6">
+                        <div class="financial-card">
+                            <div class="financial-label">
+                                <i class="fas fa-tag"></i>Subtotal (Retail Prices)
+                            </div>
+                            <div class="financial-value">₦{{ subtotal|floatformat:2 }}</div>
+                        </div>
+
+                        <div class="financial-card">
+                            <div class="financial-label">
+                                <i class="fas fa-percent"></i>Discount
+                            </div>
+                            <div class="financial-value text-success">-₦{{ discount|floatformat:2 }}</div>
+                        </div>
+
+                        <div class="financial-card">
+                            <div class="financial-label">
+                                <i class="fas fa-calculator"></i>Tax (VAT)
+                            </div>
+                            <div class="financial-value">₦{{ tax|floatformat:2 }}</div>
+                        </div>
+
+                        <div class="financial-highlight">
+                            <div class="financial-label">
+                                <i class="fas fa-file-invoice"></i>Final Contract Price
+                            </div>
+                            <div class="financial-value">₦{{ total_amount|floatformat:2 }}</div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column - Payment Split -->
+                    <div class="col-md-6">
+                        {% if provider %}
+                        <!-- Split Ratio Display for HMO/Corporate -->
+                        <div class="split-ratio">
+                            <div class="ratio-item">
+                                <div class="label">Patient Share</div>
+                                <div class="percentage">{{ copay_percentage|default:"0" }}<small>%</small></div>
+                                <div class="small text-muted">₦{{ patient_portion|floatformat:2 }}</div>
+                            </div>
+                            <div class="ratio-divider"></div>
+                            <div class="ratio-item">
+                                <div class="label">{{ provider.get_provider_type_display }} Share</div>
+                                <div class="percentage">{{ hmo_percentage|default:"0" }}<small>%</small></div>
+                                <div class="small text-muted">₦{{ insurance_portion|floatformat:2 }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="financial-card">
+                            <div class="financial-label">
+                                <i class="fas fa-user"></i>Patient Portion
+                            </div>
+                            <div class="financial-value">₦{{ patient_portion|floatformat:2 }}</div>
+                        </div>
+
+                        <div class="financial-card">
+                            <div class="financial-label">
+                                <i class="fas fa-building"></i>{% if provider %}{{ provider.get_provider_type_display }}{% else %}Insurance{% endif %} Portion
+                            </div>
+                            <div class="financial-value">₦{{ insurance_portion|floatformat:2 }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Progress -->
+                <div class="mt-4">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Payment Progress</span>
+                        <span class="fw-bold">{{ total_paid|floatformat:2 }} / {{ total_amount|floatformat:2 }}</span>
+                    </div>
+                    <div class="payment-progress">
+                        <div class="payment-progress-bar" style="width: {% widthratio total_paid total_amount 100 %}%"></div>
+                    </div>
+                    
+                    <div class="row g-3 mt-3">
+                        <div class="col-md-4">
+                            <div class="text-center p-3 bg-light rounded-3">
+                                <small class="text-muted d-block">Paid by Patient</small>
+                                <strong class="fs-4 text-primary">₦{{ patient_amount_paid|floatformat:2 }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center p-3 bg-light rounded-3">
+                                <small class="text-muted d-block">Paid by {% if provider %}{{ provider.get_provider_type_display }}{% else %}Insurance{% endif %}</small>
+                                <strong class="fs-4 text-success">₦{{ insurance_amount_paid|floatformat:2 }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center p-3 bg-light rounded-3">
+                                <small class="text-muted d-block">Balance Due</small>
+                                <strong class="fs-4 text-danger">₦{{ patient_balance_due|add:insurance_balance_due|floatformat:2 }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Request Information Card -->
+            <div class="info-card mb-4">
+                <div class="info-card-header">
+                    <i class="fas fa-clipboard-list"></i>
+                    <div>
+                        <h5>Request Information</h5>
+                        <small>Test request details</small>
+                    </div>
+                </div>
+
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <td class="text-muted">Request ID:</td>
+                                <td class="fw-bold">{{ test_request.request_id }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Patient:</td>
+                                <td class="fw-bold">{{ test_request.patient.full_name }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Requested By:</td>
+                                <td>{{ test_request.requested_by.get_full_name|default:"System" }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <td class="text-muted">Priority:</td>
+                                <td>
+                                    <span class="badge 
+                                        {% if test_request.priority == 'STAT' %}bg-danger
+                                        {% elif test_request.priority == 'urgent' %}bg-warning
+                                        {% else %}bg-info{% endif %}">
+                                        {{ test_request.priority|upper }}
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Created:</td>
+                                <td>{{ test_request.created_at|date:"M d, Y H:i" }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Clinical Indication:</td>
+                                <td>{{ test_request.clinical_indication|truncatechars:50 }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tests Breakdown Card -->
+            <div class="info-card mb-4">
+                <div class="info-card-header">
+                    <i class="fas fa-flask"></i>
+                    <div>
+                        <h5>Ordered Tests ({{ test_details|length }})</h5>
+                        <small>Detailed test breakdown</small>
+                    </div>
+                </div>
+
+                <div class="test-list">
+                    {% for item in test_details %}
+                    <div class="test-item">
+                        <div class="test-info">
+                            <i class="fas fa-vial"></i>
+                            <div>
+                                <div class="test-name">{{ item.test.name }}</div>
+                                <small class="text-muted">{{ item.test.assigned_department.name|default:"No Department" }}</small>
+                            </div>
+                        </div>
+                        <div class="test-price">₦{{ item.price|floatformat:2 }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Timeline Card -->
+            <div class="info-card">
+                <div class="info-card-header">
+                    <i class="fas fa-history"></i>
+                    <div>
+                        <h5>Activity Timeline</h5>
+                        <small>All events related to this billing</small>
+                    </div>
+                </div>
+
+                <div class="timeline">
+                    {% for event in timeline %}
+                    <div class="timeline-item">
+                        <div class="timeline-icon {{ event.type }}">
+                            <i class="fas 
+                                {% if event.type == 'billing' %}fa-file-invoice
+                                {% elif event.type == 'payment' %}fa-money-bill-wave
+                                {% elif event.type == 'authorization' %}fa-check-double
+                                {% elif event.type == 'waiver' %}fa-gift
+                                {% else %}fa-circle{% endif %}"></i>
+                        </div>
+                        <div class="timeline-content">
+                            <div class="timeline-date">{{ event.date|date:"M d, Y H:i" }}</div>
+                            <div class="timeline-title">{{ event.description }}</div>
+                            {% if event.amount %}   
+                            <div class="timeline-amount">₦{{ event.amount|floatformat:2 }}</div>
+                            {% endif %}
+                            {% if event.reference %}
+                            <small class="text-muted">Ref: {{ event.reference }}</small>
+                            {% endif %}
+                            {% if event.user %}
+                            <small class="text-muted d-block">by {{ event.user.get_full_name }}</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted text-center py-4">No timeline events found</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar Column -->
+        <div class="col-lg-4">
+            <!-- Provider Information Card -->
+            {% if provider %}
+            <div class="info-card mb-4">
+                <div class="info-card-header">
+                    <i class="fas fa-building"></i>
+                    <div>
+                        <h5>{{ provider.get_provider_type_display }}</h5>
+                        <small>Provider details</small>
+                    </div>
+                </div>
+
+                <div class="text-center mb-3">
+                    <h4 class="fw-bold">{{ provider.name }}</h4>
+                    <span class="badge bg-primary">{{ provider.code }}</span>
+                </div>
+
+                <table class="table table-borderless">
+                    <tr>
+                        <td class="text-muted">Contact:</td>
+                        <td>{{ provider.contact_person|default:"N/A" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Phone:</td>
+                        <td>{{ provider.phone|default:"N/A" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Email:</td>
+                        <td>{{ provider.email|default:"N/A" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Price List:</td>
+                        <td>{{ provider.price_list.name|default:"Default" }}</td>
+                    </tr>
+                </table>
+            </div>
+            {% endif %}
+
+            <!-- Payment Summary Card -->
+            <div class="info-card mb-4">
+                <div class="info-card-header">
+                    <i class="fas fa-credit-card"></i>
+                    <div>
+                        <h5>Payment Summary</h5>
+                        <small>{{ payment_count }} payment{{ payment_count|pluralize }}</small>
+                    </div>
+                </div>
+
+                <div class="amount-highlight">
+                    <div class="amount">₦{{ total_paid|floatformat:2 }}</div>
+                    <div class="label">Total Paid</div>
+                </div>
+
+                <table class="table table-borderless mt-3">
+                    <tr>
+                        <td class="text-muted">Patient Paid:</td>
+                        <td class="fw-bold text-primary">₦{{ patient_amount_paid|floatformat:2 }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Insurance Paid:</td>
+                        <td class="fw-bold text-success">₦{{ insurance_amount_paid|floatformat:2 }}</td>
+                    </tr>
+                    <tr class="border-top">
+                        <td class="text-muted">Patient Balance:</td>
+                        <td class="fw-bold text-danger">₦{{ patient_balance_due|floatformat:2 }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Insurance Balance:</td>
+                        <td class="fw-bold text-danger">₦{{ insurance_balance_due|floatformat:2 }}</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Quick Actions Card -->
+            <div class="info-card">
+                <div class="info-card-header">
+                    <i class="fas fa-bolt"></i>
+                    <div>
+                        <h5>Quick Actions</h5>
+                        <small>Common tasks</small>
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <a href="#" class="btn btn-outline-primary">
+                        <i class="fas fa-download me-2"></i>Download Invoice
+                    </a>
+                    <a href="#" class="btn btn-outline-primary">
+                        <i class="fas fa-receipt me-2"></i>Download Receipt
+                    </a>
+                    <a href="{% url 'labs:request_detail' test_request.pk %}" class="btn btn-outline-primary">
+                        <i class="fas fa-clipboard-list me-2"></i>View Test Request
+                    </a>
+                    <a href="{% url 'billing:billing_list' %}?patient={{ test_request.patient.pk }}" class="btn btn-outline-primary">
+                        <i class="fas fa-history me-2"></i>Patient History
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Authorize Modal -->
+<div class="modal fade" id="authorizeModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-check-double me-2 text-primary"></i>
+                    Authorize Payment
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'billing:authorize_billing' billing.pk %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <p>Are you sure you want to authorize this billing record?</p>
+                    <p class="text-muted small">Authorization confirms that payment has been verified and the request can proceed to sample collection.</p>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Authorization Reason (Optional)</label>
+                        <textarea class="form-control" name="reason" rows="2" placeholder="Add any notes about this authorization..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-check-double me-2"></i>Confirm Authorization
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Waive Modal -->
+<div class="modal fade" id="waiveModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-gift me-2 text-warning"></i>
+                    Waive Payment
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'billing:waive_billing' billing.pk %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <p>Are you sure you want to waive payment for this billing?</p>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Waiving payment means the patient will not be charged. This action cannot be undone.
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Waiver Reason <span class="text-danger">*</span></label>
+                        <select class="form-select" name="reason" required>
+                            <option value="">Select reason...</option>
+                            <option value="charity">Charity / Hardship</option>
+                            <option value="staff">Staff Benefit</option>
+                            <option value="error">Billing Error</option>
+                            <option value="courtesy">Courtesy Waiver</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Additional Notes</label>
+                        <textarea class="form-control" name="notes" rows="2" placeholder="Provide more details..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-gift me-2"></i>Confirm Waiver
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Modal -->
+<div class="modal fade" id="paymentModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-money-bill-wave me-2 text-success"></i>
+                    Record Payment
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'billing:confirm_payment' billing.pk %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="amount-highlight mb-3">
+                        <div class="small">Total Due</div>
+                        <div class="amount">₦{{ patient_balance_due|floatformat:2 }}</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Payment Amount <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">₦</span>
+                            <input type="number" class="form-control" name="amount" step="0.01" min="0.01" max="{{ patient_balance_due }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Payment Method <span class="text-danger">*</span></label>
+                        <select class="form-select" name="method" required>
+                            <option value="">Select method...</option>
+                            {% for code, label in payment_methods %}
+                            <option value="{{ code }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Transaction Reference</label>
+                        <input type="text" class="form-control" name="reference" placeholder="Receipt/Transaction number">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Notes</label>
+                        <textarea class="form-control" name="notes" rows="2" placeholder="Any additional information..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check me-2"></i>Record Payment
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function(tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+
+        // Handle payment modal amount validation
+        const paymentAmount = document.querySelector('input[name="amount"]');
+        if (paymentAmount) {
+            paymentAmount.addEventListener('input', function() {
+                const max = parseFloat(this.max);
+                let value = parseFloat(this.value);
+                
+                if (value > max) {
+                    this.value = max;
+                }
+                if (value < 0) {
+                    this.value = 0.01;
+                }
+            });
+        }
+
+        // Auto-calculate change or remaining balance
+        const paymentForm = document.querySelector('#paymentModal form');
+        if (paymentForm) {
+            paymentForm.addEventListener('submit', function(e) {
+                const amount = parseFloat(paymentAmount.value);
+                const balance = parseFloat('{{ patient_balance_due }}');
+                
+                if (amount > balance) {
+                    e.preventDefault();
+                    alert('Payment amount cannot exceed the balance due.');
+                }
+            });
+        }
+
+        // Print functionality
+        document.querySelectorAll('[onclick="window.print()"]').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.print();
+            });
+        });
+
+        // Refresh data every 30 seconds (optional)
+        // setInterval(function() {
+        //     location.reload();
+        // }, 30000);
+    });
+</script>
+{% endblock %}

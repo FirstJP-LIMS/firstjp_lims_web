@@ -194,3 +194,4 @@ def generate_receipt_pdf(payment):
     pdf_file = html.write_pdf(stylesheets=[css_string], font_config=font_config)
     
     return pdf_file
+

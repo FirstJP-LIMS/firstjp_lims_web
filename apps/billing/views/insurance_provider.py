@@ -104,6 +104,83 @@ def insurance_list_view(request):
 
 
 @login_required
+def insurance_create_view(request):
+    """
+    Create a new InsuranceProvider (HMO, NHIS, Corporate wellness, or Staff).
+
+    Duplicate code checking is handled inside InsuranceProviderForm.clean_code()
+    rather than the view, keeping validation in one place.
+    """
+    vendor = getattr(request.user, 'vendor', None)
+    if vendor is None:
+        raise PermissionDenied("Only vendor accounts can create insurance providers.")
+
+    if request.method == 'POST':
+        form = InsuranceProviderForm(request.POST, vendor=vendor)
+
+        if form.is_valid():
+            provider = form.save(commit=False)
+            provider.vendor = vendor
+            provider.save()
+
+            messages.success(
+                request,
+                f'Provider "{provider.name}" ({provider.get_provider_type_display()}) '
+                f'created successfully.'
+            )
+            return redirect('billing:insurance_detail', pk=provider.pk)
+
+        else:
+            messages.error(request, 'Please correct the errors below.')
+
+    else:
+        form = InsuranceProviderForm(vendor=vendor)
+
+    return render(request, 'billing/insurance/form.html', {
+        'form': form,
+        'title': 'Create Insurance / Corporate Provider',
+        'submit_text': 'Create Provider',
+    })
+
+
+@login_required
+def insurance_update_view(request, pk):
+    """
+    Update an existing InsuranceProvider.
+
+    Passing the instance ensures InsuranceProviderForm.clean_code()
+    excludes the current record from the duplicate check.
+    """
+    vendor = getattr(request.user, 'vendor', None)
+    if vendor is None:
+        raise PermissionDenied("Only vendor accounts can edit insurance providers.")
+
+    provider = get_object_or_404(InsuranceProvider, pk=pk, vendor=vendor)
+
+    if request.method == 'POST':
+        form = InsuranceProviderForm(request.POST, instance=provider, vendor=vendor)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Provider "{provider.name}" updated successfully.')
+            return redirect('billing:insurance_detail', pk=provider.pk)
+
+        else:
+            messages.error(request, 'Please correct the errors below.')
+
+    else:
+        form = InsuranceProviderForm(instance=provider, vendor=vendor)
+
+    return render(request, 'billing/insurance/form.html', {
+        'form': form,
+        'title': f'Edit {provider.name}',
+        'submit_text': 'Save Changes',
+        'provider': provider,
+    })
+
+
+
+@login_required
 def insurance_detail_view(request, pk):
     """
     View insurance provider details with financial summary.
@@ -195,117 +272,120 @@ def insurance_detail_view(request, pk):
     return render(request, "billing/insurance/detail.html", context)
 
 
-@login_required
-def insurance_create_view(request):
-    """
-    Create a new insurance/HMO provider.
+
+
+# @login_required
+# def insurance_create_view(request):
+#     """
+#     Create a new insurance/HMO provider.
     
-    Features:
-    - Vendor auto-assignment
-    - Price list selection (vendor-specific)
-    - Form validation
-    - Duplicate code checking
-    """
+#     Features:
+#     - Vendor auto-assignment
+#     - Price list selection (vendor-specific)
+#     - Form validation
+#     - Duplicate code checking
+#     """
     
-    # Validate vendor
-    vendor = getattr(request.user, "vendor", None)
-    if vendor is None:
-        raise PermissionDenied("Only vendors can create insurance providers.")
+#     # Validate vendor
+#     vendor = getattr(request.user, "vendor", None)
+#     if vendor is None:
+#         raise PermissionDenied("Only vendors can create insurance providers.")
     
-    if request.method == "POST":
-        form = InsuranceProviderForm(request.POST, vendor=vendor)
+#     if request.method == "POST":
+#         form = InsuranceProviderForm(request.POST, vendor=vendor)
         
-        if form.is_valid():
-            # Check for duplicate code
-            code = form.cleaned_data['code']
-            if InsuranceProvider.objects.filter(vendor=vendor, code=code).exists():
-                messages.error(
-                    request,
-                    f'Insurance provider with code "{code}" already exists.'
-                )
-            else:
-                provider = form.save(commit=False)
-                provider.vendor = vendor
-                provider.save()
+#         if form.is_valid():
+#             # Check for duplicate code
+#             code = form.cleaned_data['code']
+#             if InsuranceProvider.objects.filter(vendor=vendor, code=code).exists():
+#                 messages.error(
+#                     request,
+#                     f'Insurance provider with code "{code}" already exists.'
+#                 )
+#             else:
+#                 provider = form.save(commit=False)
+#                 provider.vendor = vendor
+#                 provider.save()
                 
-                messages.success(
-                    request,
-                    f'Insurance provider "{provider.name}" created successfully.'
-                )
-                return redirect('billing:insurance_detail', pk=provider.pk)
-        else:
-            messages.error(request, 'Please correct the errors below.')
-    else:
-        form = InsuranceProviderForm()
+#                 messages.success(
+#                     request,
+#                     f'Insurance provider "{provider.name}" created successfully.'
+#                 )
+#                 return redirect('billing:insurance_detail', pk=provider.pk)
+#         else:
+#             messages.error(request, 'Please correct the errors below.')
+#     else:
+#         form = InsuranceProviderForm()
     
-    context = {
-        "form": form,
-        "title": "Create Insurance Provider",
-        "submit_text": "Create Provider",
-    }
+#     context = {
+#         "form": form,
+#         "title": "Create Insurance Provider",
+#         "submit_text": "Create Provider",
+#     }
     
-    return render(request, "billing/insurance/form.html", context)
+#     return render(request, "billing/insurance/form.html", context)
 
 
-@login_required
-def insurance_update_view(request, pk):
-    """
-    Update an existing insurance provider.
+# @login_required
+# def insurance_update_view(request, pk):
+#     """
+#     Update an existing insurance provider.
     
-    Features:
-    - Ownership verification
-    - Form pre-population
-    - Change tracking
-    """
+#     Features:
+#     - Ownership verification
+#     - Form pre-population
+#     - Change tracking
+#     """
     
-    # Validate vendor
-    vendor = getattr(request.user, "vendor", None)
-    if vendor is None:
-        raise PermissionDenied("Only vendors can update insurance providers.")
+#     # Validate vendor
+#     vendor = getattr(request.user, "vendor", None)
+#     if vendor is None:
+#         raise PermissionDenied("Only vendors can update insurance providers.")
     
-    # Get provider
-    try:
-        provider = InsuranceProvider.objects.get(pk=pk, vendor=vendor)
-    except InsuranceProvider.DoesNotExist:
-        messages.error(request, "Insurance provider not found.")
-        return redirect('billing:insurance_list')
+#     # Get provider
+#     try:
+#         provider = InsuranceProvider.objects.get(pk=pk, vendor=vendor)
+#     except InsuranceProvider.DoesNotExist:
+#         messages.error(request, "Insurance provider not found.")
+#         return redirect('billing:insurance_list')
     
-    if request.method == "POST":
-        form = InsuranceProviderForm(request.POST, instance=provider, vendor=vendor)
+#     if request.method == "POST":
+#         form = InsuranceProviderForm(request.POST, instance=provider, vendor=vendor)
         
-        if form.is_valid():
-            # Check for duplicate code (excluding current provider)
-            code = form.cleaned_data['code']
-            duplicate = InsuranceProvider.objects.filter(
-                vendor=vendor,
-                code=code
-            ).exclude(pk=pk)
+#         if form.is_valid():
+#             # Check for duplicate code (excluding current provider)
+#             code = form.cleaned_data['code']
+#             duplicate = InsuranceProvider.objects.filter(
+#                 vendor=vendor,
+#                 code=code
+#             ).exclude(pk=pk)
             
-            if duplicate.exists():
-                messages.error(
-                    request,
-                    f'Another insurance provider with code "{code}" already exists.'
-                )
-            else:
-                updated_provider = form.save()
-                messages.success(
-                    request,
-                    f'Insurance provider "{updated_provider.name}" updated successfully.'
-                )
-                return redirect('billing:insurance_detail', pk=updated_provider.pk)
-        else:
-            messages.error(request, 'Please correct the errors below.')
-    else:
-        form = InsuranceProviderForm(instance=provider, vendor=vendor)
+#             if duplicate.exists():
+#                 messages.error(
+#                     request,
+#                     f'Another insurance provider with code "{code}" already exists.'
+#                 )
+#             else:
+#                 updated_provider = form.save()
+#                 messages.success(
+#                     request,
+#                     f'Insurance provider "{updated_provider.name}" updated successfully.'
+#                 )
+#                 return redirect('billing:insurance_detail', pk=updated_provider.pk)
+#         else:
+#             messages.error(request, 'Please correct the errors below.')
+#     else:
+#         form = InsuranceProviderForm(instance=provider, vendor=vendor)
     
-    context = {
-        "form": form,
-        "provider": provider,
-        "title": f"Edit: {provider.name}",
-        "submit_text": "Update Provider",
-    }
+#     context = {
+#         "form": form,
+#         "provider": provider,
+#         "title": f"Edit: {provider.name}",
+#         "submit_text": "Update Provider",
+#     }
     
-    return render(request, "billing/insurance/form.html", context)
+#     return render(request, "billing/insurance/form.html", context)
+
 
 
 @login_required
