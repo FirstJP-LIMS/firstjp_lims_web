@@ -1,6 +1,6 @@
 from django.urls import path
 # from . import views
-from .views import billing_task, payment_gateway, pricelist, insurance_provider, corporate_client, invoicing
+from .views import billing_task, payment_gateway, pricelist, insurance_provider, invoicing
 
 app_name = 'billing'
 
@@ -70,64 +70,7 @@ urlpatterns = [
     path('insurance/bulk-deactivate/', insurance_provider.insurance_bulk_deactivate_view, name='insurance_bulk_deactivate'),
 
 
-    # Corporate Clients
-    # path('corporate/', corporate_client.corporate_list_view, name='corporate_list'),
-    # path('corporate/create/', corporate_client.corporate_create_view, name='corporate_create'),
-    # path('corporate/<int:pk>/', corporate_client.corporate_detail_view, name='corporate_detail'),
-    # path('corporate/<int:pk>/edit/', corporate_client.corporate_update_view, name='corporate_update'),
-    # path('corporate/<int:pk>/delete/', corporate_client.corporate_delete_view, name='corporate_delete'),
-    # path('corporate/<int:pk>/toggle-active/', corporate_client.corporate_toggle_active_view, name='corporate_toggle_active'),
-    # path('corporate/<int:pk>/employee-report/', corporate_client.corporate_employee_report_view, name='corporate_employee_report'),
-    # path('corporate/<int:pk>/financial-report/', corporate_client.corporate_financial_report_view, name='corporate_financial_report'),
-        
-    # # Invoices
-#     path('invoices/', invoice_receipt.invoice_list, name='invoice_list'),
-    
-#     path('invoices/create/', invoice_receipt.invoice_create, name='invoice_create'),
-
-#     path('invoices/<uuid:pk>/', invoice_receipt.invoice_detail, name='invoice_detail'),
-
-#     # Invoice Payment
-#     path('invoices/<uuid:invoice_pk>/payments/create/', 
-#          invoice_receipt.invoice_payment_create, 
-#          name='invoice_payment_create'),
-    
-#     # PDF Generation - Download
-#     path('invoices/<uuid:invoice_pk>/pdf/', 
-#          invoice_receipt.generate_invoice_pdf_view, 
-#          name='invoice_pdf_download'),
-    
-#     path('invoices/<uuid:invoice_pk>/pdf/preview/', 
-#          invoice_receipt.preview_invoice_pdf_view, 
-#          name='invoice_pdf_preview'),
-    
-#     path('payments/<uuid:payment_pk>/receipt/pdf/', 
-#          invoice_receipt.generate_receipt_pdf_view, 
-#          name='receipt_pdf_download'),
-    
-#     path('payments/<uuid:payment_pk>/receipt/pdf/preview/', 
-#          invoice_receipt.preview_receipt_pdf_view, 
-#          name='receipt_pdf_preview'),
-    
-#     # Email Invoice & Receipt
-#     path('invoices/<uuid:invoice_pk>/email/', 
-#          invoice_receipt.email_invoice_view, 
-#          name='email_invoice'),
-    
-#     path('payments/<uuid:payment_pk>/receipt/email/', 
-#          invoice_receipt.email_receipt_view, 
-#          name='email_receipt'),
-    
-#     # Print View
-#     path('invoices/<uuid:invoice_pk>/print/', 
-#          invoice_receipt.print_invoice_view, 
-#          name='invoice_print'),
-
-
-
-
      # INVOICE RENEWED
-     # billing/urls.py
     path('invoices/', invoicing.invoice_list_view, name='invoice_list'),
     path('invoices/generate/', invoicing.generate_invoice_view, name='generate_invoice'),
 
@@ -143,51 +86,6 @@ urlpatterns = [
 
     path('invoices/<uuid:pk>/payments/<uuid:payment_pk>/receipt/', invoicing.download_receipt_pdf_view, name='invoice_receipt'),
 
-    #  path("invoices/", invoicing.invoice_list_view, name="invoice_list"),
-
-    # path('invoices/create/', invoicing.generate_hmo_invoice_final, name='create_invoice'),
-
-    #  # path(
-    #  #    "invoices/hmo/<int:provider_id>/generate/",
-    #  #    invoicing.generate_hmo_invoice_view,
-    #  #    name="generate_hmo_invoice"
-    #  # ),
-
-    #  # path(
-    #  #    "invoices/corporate/<int:client_id>/generate/",
-    #  #    invoicing.generate_corporate_invoice_view,
-    #  #    name="generate_corporate_invoice"
-    #  # ),
-
-    #  path(
-    #     "invoices/<uuid:invoice_id>/",
-    #     invoicing.invoice_detail_view,
-    #     name="invoice_detail"
-    #  ),
-     
-
-#     # Optional: List all invoices (HMO/Corporate)
-#     path('invoices/', 
-#          views.invoice_list_view,  # you can implement a list view later
-#          name='invoice_list'),
-
-#     # Optional: Create invoice from billing records (batch)
-#     path('invoice/create/', 
-#          views.invoice_create_view,  # optional, if needed
-#          name='invoice_create'),
-
-#     # Optional: Add payment to invoice
-#     path('invoice/<uuid:invoice_id>/payment/', 
-#          views.invoice_payment_add_view,  # can point to form handler in detail view
-#          name='invoice_payment_add'),
-
-
-
-
-
-
-
-    # path('invoices/<int:invoice_pk>/pdf/', billing_task.GenerateInvoicePDFView.as_view(), name='generate_invoice_pdf'),
     # Reports
     path('reports/', billing_task.BillingReportView.as_view(), name='reports'),
     
