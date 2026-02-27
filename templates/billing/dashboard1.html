@@ -266,6 +266,10 @@
             <div class="nav-icon"><i class="bi bi-shield-check"></i></div>
             <span class="nav-text">Insurance / Corporate</span>
         </a>
+        <a href="{% url 'billing:referrer_list' %}" class="nav-link-custom">
+            <div class="nav-icon"><i class="bi bi-shield-check"></i></div>
+            <span class="nav-text">Partner / Referrer</span>
+        </a>
     </div>
 
     <div class="nav-section">
@@ -300,7 +304,7 @@
 </div>{# /col-lg-3 #}
 
 
-{# ════════════════════════════════════════════════════════ MAIN CONTENT #}
+{# ═══════════════════════════ MAIN CONTENT #}
 <div class="col-lg-9">
 <div class="dashboard-content">
 
@@ -313,8 +317,7 @@
                 <span class="date-range-text">{{ start_date|date:"M d, Y" }}</span>
                 <i class="bi bi-arrow-right mx-2 text-muted"></i>
                 <span class="date-range-text">{{ end_date|date:"M d, Y" }}</span>
-                {# FIX: 'replace' is not a Django filter — explicit mapping instead #}
-                <span class="badge bg-primary bg-opacity-10 text-primary ms-2 px-3 py-1">
+                <span class="badge bg-primary bg-opacity-10 text-white ms-2 px-3 py-1">
                     {% if range == 'today' %}Today
                     {% elif range == 'this_week' %}This Week
                     {% elif range == 'this_month' %}This Month
@@ -360,7 +363,7 @@
         <div class="stat-card revenue">
             <div class="stat-icon"><i class="bi bi-cash-coin"></i></div>
             <div class="stat-label">Revenue Collected</div>
-            <div class="stat-value">₦{{ total_revenue|floatformat:2|intcomma }}</div>
+            <div class="stat-value">₦{{ total_revenue|intcomma }}</div>
             <div class="d-flex justify-content-between align-items-center">
                 <small class="text-muted">Contract: ₦{{ total_contract_value|floatformat:0|intcomma }}</small>
                 <span class="badge bg-success bg-opacity-10 text-success px-3 py-1">
@@ -517,7 +520,7 @@
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <div>
                                     <strong class="d-block small">
-                                        {{ billing.request.patient.get_full_name|default:"Unknown Patient" }}
+                                        {{ billing.request.patient.get_full_name }}
                                     </strong>
                                     <small class="text-muted">{{ billing.request.request_id|default:"N/A" }}</small>
                                 </div>

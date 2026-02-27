@@ -154,11 +154,8 @@ class BillingDashboardView(LoginRequiredMixin, View):
             ).aggregate(total=Sum('total_amount'))['total'] or 0
         )
 
-        # ── Pre-calculated rates (FIX: these were in the template as multiply/divide) ──
-        #
         # Collection rate = revenue collected / (revenue + outstanding) × 100
         # Answers: "Of all money owed to us in this period, what % have we collected?"
-        #
         collection_denominator = total_revenue + total_outstanding
         collection_rate_pct = (
             round(float(total_revenue / collection_denominator) * 100, 1)
@@ -201,10 +198,11 @@ class BillingDashboardView(LoginRequiredMixin, View):
         recent_billings = (
             billing_qs
             .select_related('request', 'request__patient', 'insurance_provider')
+            .prefetch_related('payments')
             .order_by('-created_at')[:10]
         )
-
-        # ── Breakdown tables ─────────────────────────────────────────────────
+ 
+        # ── Breakdown tables ──────────────────────────────────
         payment_breakdown = billing_qs.values('payment_status').annotate(
             count=Count('id'),
             total=Sum('total_amount'),

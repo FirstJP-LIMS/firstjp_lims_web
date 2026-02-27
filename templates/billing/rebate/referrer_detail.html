@@ -1,0 +1,256 @@
+{% extends "laboratory/assets/base.html" %}
+{% load static %}{% load humanize %}
+{% block title %}{{ referrer.name }} — Referral Partner{% endblock %}
+
+{% block extra_css %}
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
+  :root{--accent:#2563eb;--success:#16a34a;--muted:#6b7280;--border:#e5e7eb;--surface:#f9fafb;--text:#111827;}
+  body{font-family:'DM Sans',sans-serif;}
+  .mono{font-family:'DM Mono',monospace;}
+
+  .kpi-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:1.75rem;}
+  .kpi-cell{padding:14px 18px;border-right:1px solid var(--border);}
+  .kpi-cell:last-child{border-right:none;}
+  .kpi-cell label{display:block;font-size:.66rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:3px;}
+  .kpi-cell .kval{font-family:'DM Mono',monospace;font-weight:700;font-size:1.05rem;color:var(--text);}
+  .kpi-cell .kval.green{color:var(--success);}
+
+  .info-panel{border:1px solid var(--border);border-radius:10px;padding:20px 22px;height:100%;}
+  .info-row{display:flex;justify-content:space-between;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--border);font-size:.86rem;}
+  .info-row:last-child{border-bottom:none;}
+  .info-row .ilabel{color:var(--muted);}
+  .info-row .ival{font-weight:500;text-align:right;max-width:55%;}
+
+  .ledger{width:100%;border-collapse:collapse;font-size:.83rem;}
+  .ledger thead tr{border-bottom:2px solid var(--text);}
+  .ledger thead th{font-size:.67rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:7px 10px;}
+  .ledger thead th.r{text-align:right;}
+  .ledger tbody tr{border-bottom:1px solid var(--border);}
+  .ledger tbody tr:hover{background:var(--surface);}
+  .ledger tbody td{padding:10px;}
+  .ledger tbody td.r{text-align:right;}
+
+  .status-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:4px;font-size:.68rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;}
+  .status-pill.unpaid{background:#fef3c7;color:#92400e;}
+  .status-pill.included{background:#dbeafe;color:#1e40af;}
+  .status-pill.paid{background:#dcfce7;color:#15803d;}
+  .status-pill.draft{background:#fef3c7;color:#92400e;}
+  .status-pill.approved{background:#dbeafe;color:#1e40af;}
+  .status-pill.cancelled{background:#f3f4f6;color:#4b5563;}
+
+  .section-rule{display:flex;align-items:center;gap:10px;margin-bottom:.875rem;}
+  .section-rule span{font-size:.67rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);white-space:nowrap;}
+  .section-rule::after{content:'';flex:1;height:1px;background:var(--border);}
+
+  .inactive-banner{background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 16px;margin-bottom:1.5rem;font-size:.85rem;color:#991b1b;display:flex;align-items:center;gap:8px;}
+
+  @media(max-width:768px){.kpi-strip{grid-template-columns:1fr 1fr;}.kpi-cell{border-bottom:1px solid var(--border);}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4" style="max-width:1050px;">
+
+  {% if messages %}{% for m in messages %}
+  <div class="alert alert-{{ m.tags }} alert-dismissible fade show border-0 shadow-sm mb-3" role="alert">
+    {{ m }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>{% endfor %}{% endif %}
+
+  {# Breadcrumb #}
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb" style="font-size:.8rem;">
+      <li class="breadcrumb-item"><a href="{% url 'billing:dashboard' %}" class="text-decoration-none text-muted">Dashboard</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'billing:referrer_list' %}" class="text-decoration-none text-muted">Partners</a></li>
+      <li class="breadcrumb-item active text-muted">{{ referrer.name }}</li>
+    </ol>
+  </nav>
+
+  {# Header #}
+  <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+    <div>
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <h1 class="h4 fw-bold mb-0">{{ referrer.name }}</h1>
+        {% if referrer.code %}<span class="mono" style="font-size:.82rem;color:var(--muted);">{{ referrer.code }}</span>{% endif %}
+        {% if not referrer.is_active %}<span class="status-pill cancelled">Inactive</span>{% endif %}
+      </div>
+      <p class="text-muted small mb-0">
+        {% if referrer.rebate_type == 'PERCENTAGE' %}
+          {{ referrer.rebate_value }}% rebate on amount collected
+        {% else %}
+          ₦{{ referrer.rebate_value|intcomma }} flat per request
+        {% endif %}
+        · {{ referrer.payment_terms_days }}-day payment terms
+      </p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{% url 'billing:referrer_statement' %}?referrer={{ referrer.pk }}"
+         class="btn btn-outline-success btn-sm">
+        <i class="bi bi-file-text me-1"></i>Generate Statement
+      </a>
+      <a href="{% url 'billing:referrer_update' pk=referrer.pk %}"
+         class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-pencil me-1"></i>Edit
+      </a>
+    </div>
+  </div>
+
+  {% if not referrer.is_active %}
+  <div class="inactive-banner">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    This partner is inactive and will not appear in the referrer dropdown on new test requests.
+    <a href="{% url 'billing:referrer_update' pk=referrer.pk %}" class="ms-2 fw-semibold" style="color:inherit;">Reactivate →</a>
+  </div>
+  {% endif %}
+
+  {# KPI strip #}
+  <div class="kpi-strip">
+    <div class="kpi-cell"><label>Total Referrals</label><div class="kval">{{ metrics.referral_count }}</div></div>
+    <div class="kpi-cell"><label>Rebate Records</label><div class="kval">{{ metrics.record_count }}</div></div>
+    <div class="kpi-cell"><label>Unpaid Balance</label><div class="kval green">₦{{ metrics.unpaid_total|intcomma }}</div></div>
+    <div class="kpi-cell"><label>Total Paid Out</label><div class="kval">₦{{ metrics.paid_total|intcomma }}</div></div>
+    <div class="kpi-cell"><label>Lifetime Earned</label><div class="kval">₦{{ metrics.lifetime|intcomma }}</div></div>
+  </div>
+
+  {# Two-column: contact info + bank details #}
+  <div class="row g-4 mb-4">
+    <div class="col-md-6">
+      <div class="section-rule"><span>Contact</span></div>
+      <div class="info-panel">
+        {% if referrer.contact_person %}
+        <div class="info-row"><span class="ilabel">Contact Person</span><span class="ival">{{ referrer.contact_person }}</span></div>
+        {% endif %}
+        {% if referrer.phone %}
+        <div class="info-row"><span class="ilabel">Phone</span><span class="ival mono">{{ referrer.phone }}</span></div>
+        {% endif %}
+        {% if referrer.email %}
+        <div class="info-row"><span class="ilabel">Email</span><span class="ival">{{ referrer.email }}</span></div>
+        {% endif %}
+        {% if referrer.address %}
+        <div class="info-row"><span class="ilabel">Address</span><span class="ival">{{ referrer.address }}</span></div>
+        {% endif %}
+        {% if not referrer.contact_person and not referrer.phone and not referrer.email %}
+        <p class="text-muted small mb-0">No contact details on file. <a href="{% url 'billing:referrer_update' pk=referrer.pk %}">Add them →</a></p>
+        {% endif %}
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="section-rule"><span>Agreement &amp; Bank</span></div>
+      <div class="info-panel">
+        <div class="info-row">
+          <span class="ilabel">Rebate Type</span>
+          <span class="ival">{{ referrer.get_rebate_type_display }}</span>
+        </div>
+        <div class="info-row">
+          <span class="ilabel">Rebate Value</span>
+          <span class="ival mono fw-bold">
+            {% if referrer.rebate_type == 'PERCENTAGE' %}{{ referrer.rebate_value }}%
+            {% else %}₦{{ referrer.rebate_value|intcomma }}{% endif %}
+          </span>
+        </div>
+        <div class="info-row"><span class="ilabel">Payment Terms</span><span class="ival">{{ referrer.payment_terms_days }} days</span></div>
+        {% if referrer.bank_name %}
+        <div class="info-row"><span class="ilabel">Bank</span><span class="ival">{{ referrer.bank_name }}</span></div>
+        <div class="info-row"><span class="ilabel">Account No.</span><span class="ival mono">{{ referrer.account_number }}</span></div>
+        <div class="info-row"><span class="ilabel">Account Name</span><span class="ival">{{ referrer.account_name }}</span></div>
+        {% else %}
+        <div class="info-row">
+          <span class="ilabel">Bank Details</span>
+          <span class="ival"><a href="{% url 'billing:referrer_update' pk=referrer.pk %}" style="color:var(--accent);">Add for settlement →</a></span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# Recent rebate records #}
+  <div class="section-rule mb-3"><span>Recent Rebate Records</span></div>
+  {% if recent_rebates %}
+  <div class="card border-0 shadow-sm rounded-3 mb-4">
+    <div class="table-responsive">
+      <table class="ledger">
+        <thead>
+          <tr>
+            <th>Request</th>
+            <th>Patient</th>
+            <th>Date Earned</th>
+            <th class="r">Collected</th>
+            <th class="r">Rebate</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for rec in recent_rebates %}
+          <tr>
+            <td>
+              <a href="{% url 'billing:billing_detail' pk=rec.billing.pk %}"
+                 class="text-decoration-none mono" style="color:var(--accent);font-size:.82rem;" target="_blank">
+                {{ rec.billing.request.request_id }}
+              </a>
+            </td>
+            <td>{{ rec.billing.request.patient.get_full_name }}</td>
+            <td class="text-muted small">{{ rec.earned_at|date:"d M Y" }}</td>
+            <td class="r mono text-muted">₦{{ rec.payment_basis|intcomma }}</td>
+            <td class="r mono fw-medium" style="color:var(--success);">₦{{ rec.rebate_amount|intcomma }}</td>
+            <td><span class="status-pill {{ rec.status|lower }}">{{ rec.get_status_display }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if metrics.record_count > 20 %}
+    <div class="card-footer bg-white border-0 py-2 text-center">
+      <a href="{% url 'billing:referrer_statement' %}?referrer={{ referrer.pk }}" class="small text-muted">
+        View all {{ metrics.record_count }} records in Statement Engine →
+      </a>
+    </div>
+    {% endif %}
+  </div>
+  {% else %}
+  <p class="text-muted small mb-4">No rebate records yet. Rebates are created automatically after a referred patient's payment clears.</p>
+  {% endif %}
+
+  {# Settlement history #}
+  <div class="section-rule mb-3"><span>Settlement History</span></div>
+  {% if settlements %}
+  <div class="card border-0 shadow-sm rounded-3">
+    <div class="table-responsive">
+      <table class="ledger">
+        <thead>
+          <tr>
+            <th>Statement No.</th>
+            <th>Period</th>
+            <th>Records</th>
+            <th class="r">Amount</th>
+            <th>Status</th>
+            <th>Paid On</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in settlements %}
+          <tr>
+            <td>
+              <a href="{% url 'billing:settlement_detail' pk=s.pk %}"
+                 class="text-decoration-none mono" style="color:var(--accent);font-size:.82rem;">
+                {{ s.statement_number }}
+              </a>
+            </td>
+            <td class="text-muted small">{{ s.period_start|date:"d M" }} – {{ s.period_end|date:"d M Y" }}</td>
+            <td class="mono text-muted">{{ s.record_count }}</td>
+            <td class="r mono fw-medium">₦{{ s.total_amount|intcomma }}</td>
+            <td><span class="status-pill {{ s.status|lower }}">{{ s.get_status_display }}</span></td>
+            <td class="text-muted small">{{ s.payment_date|date:"d M Y"|default:"—" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <p class="text-muted small">No settlements yet. <a href="{% url 'billing:referrer_statement' %}?referrer={{ referrer.pk }}">Generate first statement →</a></p>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+

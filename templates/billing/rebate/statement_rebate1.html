@@ -1,0 +1,922 @@
+{% extends "laboratory/assets/base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Generate Rebate Statement - FirstJP LIMS{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Modern Statement Generation Styling */
+    :root {
+        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --success-gradient: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+        --warning-gradient: linear-gradient(135deg, #fad961 0%, #f76b1c 100%);
+        --info-gradient: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
+    }
+    
+    .step-indicator {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 2.5rem;
+        position: relative;
+        padding: 0 1rem;
+    }
+    
+    .step {
+        flex: 1;
+        text-align: center;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .step:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        top: 30px;
+        left: 60%;
+        width: 80%;
+        height: 3px;
+        background: linear-gradient(90deg, #e9ecef 0%, #e9ecef 100%);
+        z-index: -1;
+    }
+    
+    .step.active:not(:last-child)::after {
+        background: linear-gradient(90deg, #667eea 0%, #e9ecef 100%);
+    }
+    
+    .step.completed:not(:last-child)::after {
+        background: linear-gradient(90deg, #48bb78 0%, #48bb78 100%);
+    }
+    
+    .step-icon {
+        width: 60px;
+        height: 60px;
+        background: white;
+        border: 3px solid #e9ecef;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 15px;
+        font-size: 1.5rem;
+        color: #6c757d;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .step.active .step-icon {
+        border-color: #667eea;
+        background: var(--primary-gradient);
+        color: white;
+        transform: scale(1.1);
+        box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+    }
+    
+    .step.completed .step-icon {
+        border-color: #48bb78;
+        background: var(--success-gradient);
+        color: white;
+    }
+    
+    .step-label {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #4a5568;
+        margin-bottom: 0.25rem;
+    }
+    
+    .step-desc {
+        font-size: 0.875rem;
+        color: #a0aec0;
+    }
+    
+    .step.active .step-label {
+        color: #667eea;
+    }
+    
+    .step.completed .step-label {
+        color: #48bb78;
+    }
+    
+    .filter-panel {
+        background: white;
+        border-radius: 24px;
+        padding: 2rem;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.05);
+        border: 1px solid #f0f0f0;
+        transition: all 0.3s ease;
+    }
+    
+    .filter-panel:hover {
+        box-shadow: 0 15px 50px rgba(0,0,0,0.1);
+    }
+    
+    .balance-card {
+        background: linear-gradient(135deg, #f8fafd 0%, #f1f5f9 100%);
+        border-radius: 18px;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+        border: 1px solid rgba(102, 126, 234, 0.1);
+        cursor: pointer;
+    }
+    
+    .balance-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(102, 126, 234, 0.15);
+        border-color: #667eea;
+    }
+    
+    .balance-card.selected {
+        background: var(--primary-gradient);
+        color: white;
+    }
+    
+    .balance-card.selected .text-muted {
+        color: rgba(255,255,255,0.8) !important;
+    }
+    
+    .balance-amount {
+        font-size: 1.5rem;
+        font-weight: 700;
+        line-height: 1.2;
+    }
+    
+    .summary-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 24px;
+        padding: 2rem;
+        color: white;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .summary-card::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        transform: rotate(45deg);
+    }
+    
+    .summary-stat {
+        text-align: center;
+        padding: 1rem;
+        background: rgba(255,255,255,0.1);
+        border-radius: 18px;
+        backdrop-filter: blur(10px);
+    }
+    
+    .summary-stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+    }
+    
+    .summary-stat-label {
+        font-size: 0.875rem;
+        opacity: 0.9;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .record-row {
+        transition: all 0.2s ease;
+        border-left: 4px solid transparent;
+        background: white;
+    }
+    
+    .record-row:hover {
+        background: #f8fafd;
+        border-left-color: #667eea;
+        transform: translateX(5px);
+        box-shadow: -5px 0 15px rgba(102, 126, 234, 0.1);
+    }
+    
+    .record-row.selected {
+        background: #ebf4ff;
+        border-left-color: #667eea;
+    }
+    
+    .record-checkbox {
+        width: 20px;
+        height: 20px;
+        border-radius: 6px;
+        border: 2px solid #e2e8f0;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .record-checkbox:checked {
+        background: #667eea;
+        border-color: #667eea;
+    }
+    
+    .selection-stats {
+        background: linear-gradient(135deg, #f8fafd 0%, #f1f5f9 100%);
+        border-radius: 18px;
+        padding: 1.25rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid #e2e8f0;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: linear-gradient(135deg, #f8fafd 0%, #f1f5f9 100%);
+        border-radius: 24px;
+    }
+    
+    .empty-state-icon {
+        width: 120px;
+        height: 120px;
+        border-radius: 60px;
+        background: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.5rem;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.05);
+    }
+    
+    .empty-state-icon i {
+        font-size: 4rem;
+        background: var(--primary-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255,255,255,0.9);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        backdrop-filter: blur(5px);
+    }
+    
+    .loading-overlay.show {
+        display: flex;
+    }
+    
+    .spinner-lg {
+        width: 4rem;
+        height: 4rem;
+        border-width: 4px;
+    }
+    
+    .floating-action {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        z-index: 100;
+    }
+    
+    .floating-action .btn {
+        width: 60px;
+        height: 60px;
+        border-radius: 30px;
+        background: var(--primary-gradient);
+        border: none;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        transition: all 0.3s ease;
+    }
+    
+    .floating-action .btn:hover {
+        transform: scale(1.1) rotate(90deg);
+        box-shadow: 0 15px 40px rgba(102, 126, 234, 0.6);
+    }
+    
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.7); }
+        70% { box-shadow: 0 0 0 15px rgba(102, 126, 234, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(102, 126, 234, 0); }
+    }
+    
+    .pulse-animation {
+        animation: pulse 2s infinite;
+    }
+    
+    @media (max-width: 768px) {
+        .step-indicator {
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .step:not(:last-child)::after {
+            display: none;
+        }
+        
+        .step-icon {
+            width: 50px;
+            height: 50px;
+            font-size: 1.25rem;
+        }
+        
+        .filter-panel {
+            padding: 1.5rem;
+        }
+        
+        .summary-stat-value {
+            font-size: 1.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="text-center">
+            <div class="spinner-border text-primary spinner-lg" role="status">
+                <span class="visually-hidden">Processing...</span>
+            </div>
+            <h5 class="mt-3 text-primary fw-bold">Generating Statement...</h5>
+            <p class="text-muted">Please wait while we process your request</p>
+        </div>
+    </div>
+
+    <!-- Page Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'billing:dashboard' %}" class="text-decoration-none">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'billing:referrer_list' %}" class="text-decoration-none">Referrers</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Generate Statement</li>
+                </ol>
+            </nav>
+            <h1 class="display-6 fw-bold mb-2">
+                <i class="bi bi-file-text-fill text-primary me-2"></i>
+                Generate Rebate Statement
+            </h1>
+            <p class="text-muted mb-0">Create settlement statements for referrer partners</p>
+        </div>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show rounded-4 border-0 shadow-sm mb-4 animate-in" role="alert">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <i class="bi bi-{% if message.tags == 'success' %}check-circle-fill text-success{% elif message.tags == 'error' %}exclamation-triangle-fill text-danger{% else %}info-circle-fill text-info{% endif %} fs-4 me-3"></i>
+                    </div>
+                    <div class="flex-grow-1">{{ message }}</div>
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+                </div>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Step Indicator -->
+    <div class="step-indicator">
+        <div class="step {% if selected_referrer %}completed{% else %}active{% endif %}">
+            <div class="step-icon">
+                <i class="bi bi-person-badge"></i>
+            </div>
+            <div class="step-label">Select Referrer</div>
+            <div class="step-desc">Choose partner & date range</div>
+        </div>
+        <div class="step {% if selected_referrer and records %}active{% elif selected_referrer %}completed{% endif %}">
+            <div class="step-icon">
+                <i class="bi bi-list-check"></i>
+            </div>
+            <div class="step-label">Review Records</div>
+            <div class="step-desc">Select unpaid rebates</div>
+        </div>
+        <div class="step">
+            <div class="step-icon">
+                <i class="bi bi-file-check"></i>
+            </div>
+            <div class="step-label">Generate Statement</div>
+            <div class="step-desc">Create settlement</div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Left Column - Filter Panel -->
+        <div class="col-lg-4">
+            <div class="filter-panel sticky-top" style="top: 20px;">
+                <h5 class="fw-bold mb-4">
+                    <i class="bi bi-funnel-fill text-primary me-2"></i>
+                    Filter Options
+                </h5>
+
+                <form method="get" id="filterForm" class="needs-validation">
+                    <!-- Referrer Selection -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold text-primary mb-3">Select Referrer</label>
+                        {% for referrer in referrers %}
+                        <div class="balance-card {% if selected_referrer and selected_referrer.id == referrer.id %}selected{% endif %}" 
+                             onclick="selectReferrer('{{ referrer.id }}')">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="fw-bold mb-0">{{ referrer.name }}</h6>
+                                <span class="badge bg-white bg-opacity-20 rounded-pill px-3 py-2">
+                                    {{ referrer.code|default:"No Code" }}
+                                </span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="small {% if selected_referrer and selected_referrer.id == referrer.id %}text-white-50{% else %}text-muted{% endif %}">
+                                    <i class="bi bi-wallet2 me-1"></i>Unpaid Balance
+                                </span>
+                                <span class="balance-amount">
+                                    ₦{{ referrer.unpaid_total|default:"0"|intcomma }}
+                                </span>
+                            </div>
+                            <div class="mt-2">
+                                <span class="small {% if selected_referrer and selected_referrer.id == referrer.id %}text-white-50{% else %}text-muted{% endif %}">
+                                    <i class="bi bi-calendar me-1"></i>Terms: {{ referrer.payment_terms_days }} days
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Date Range -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold text-primary mb-3">Date Range</label>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small text-muted">Start Date</label>
+                                <input type="date" name="start" class="form-control form-control-lg rounded-4 border-2" 
+                                       value="{{ request.GET.start }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small text-muted">End Date</label>
+                                <input type="date" name="end" class="form-control form-control-lg rounded-4 border-2" 
+                                       value="{{ request.GET.end }}" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Hidden Referrer Input -->
+                    <input type="hidden" name="referrer" id="referrerInput" value="{{ request.GET.referrer }}">
+
+                    <!-- Submit Button -->
+                    <button type="submit" class="btn btn-primary w-100 py-3 rounded-4 hover-lift" id="filterBtn">
+                        <i class="bi bi-search me-2"></i>
+                        Preview Records
+                    </button>
+                </form>
+
+                <!-- Quick Info -->
+                <div class="mt-4 p-3 bg-light rounded-4">
+                    <h6 class="fw-semibold mb-3">
+                        <i class="bi bi-info-circle text-primary me-2"></i>
+                        About Rebate Statements
+                    </h6>
+                    <ul class="list-unstyled small text-muted mb-0">
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            Shows only UNPAID rebate records
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            Records are grouped by earned date
+                        </li>
+                        <li>
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                            Statements can be generated once per record
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column - Results -->
+        <div class="col-lg-8">
+            {% if selected_referrer and records %}
+                <!-- Summary Cards -->
+                <div class="summary-card mb-4">
+                    <div class="row g-4">
+                        <div class="col-md-4">
+                            <div class="summary-stat">
+                                <div class="summary-stat-value">{{ summary.record_count }}</div>
+                                <div class="summary-stat-label">Records Found</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="summary-stat">
+                                <div class="summary-stat-value">₦{{ summary.total_rebate|intcomma }}</div>
+                                <div class="summary-stat-label">Total Rebate</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="summary-stat">
+                                <div class="summary-stat-value">₦{{ summary.total_basis|intcomma }}</div>
+                                <div class="summary-stat-label">Collection Basis</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Selection Summary -->
+                <div class="selection-stats" id="selectionSummary">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between">
+                        <div>
+                            <span class="fw-bold text-primary" id="selectedCount">0</span> records selected
+                            <span class="text-muted mx-2">|</span>
+                            <span>Total Rebate: <span class="fw-bold text-success" id="selectedTotal">₦0</span></span>
+                        </div>
+                        <div class="mt-2 mt-sm-0">
+                            <button class="btn btn-sm btn-outline-primary rounded-pill me-2" onclick="selectAllRecords()">
+                                <i class="bi bi-check-all me-1"></i>Select All
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary rounded-pill" onclick="deselectAllRecords()">
+                                <i class="bi bi-x me-1"></i>Clear All
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Records Table -->
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-header bg-white border-0 p-4">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <h5 class="fw-bold mb-0">
+                                <i class="bi bi-list-check text-primary me-2"></i>
+                                Unpaid Rebates for {{ selected_referrer.name }}
+                            </h5>
+                            <span class="badge bg-primary rounded-pill px-3 py-2">
+                                {{ records.count }} pending
+                            </span>
+                        </div>
+                        <p class="text-muted small mb-0 mt-2">
+                            <i class="bi bi-calendar-range me-1"></i>
+                            Period: {{ request.GET.start }} to {{ request.GET.end }}
+                        </p>
+                    </div>
+
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th class="ps-4" width="50">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="selectAll" onclick="toggleAll(this)">
+                                            </div>
+                                        </th>
+                                        <th>Patient</th>
+                                        <th>Request ID</th>
+                                        <th>Earned Date</th>
+                                        <th>Collection Basis</th>
+                                        <th>Rebate Amount</th>
+                                        <th>Rebate Type</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for record in records %}
+                                    <tr class="record-row" id="row-{{ record.id }}">
+                                        <td class="ps-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input record-checkbox" 
+                                                       type="checkbox" 
+                                                       value="{{ record.id }}"
+                                                       data-amount="{{ record.rebate_amount }}"
+                                                       onchange="updateSelectionSummary()">
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="symbol symbol-40px bg-light-primary rounded-3 me-3">
+                                                    <i class="bi bi-person-circle text-primary fs-4"></i>
+                                                </div>
+                                                <div>
+                                                    <span class="fw-semibold">{{ record.billing.request.patient.full_name }}</span>
+                                                    <small class="d-block text-muted">
+                                                        ID: {{ record.billing.request.patient.id|slice:":8" }}
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="fw-semibold">{{ record.billing.request.request_id }}</span>
+                                            <small class="d-block text-muted">{{ record.billing.id|slice:":8" }}</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-light text-dark rounded-pill px-3 py-2">
+                                                <i class="bi bi-calendar me-1"></i>
+                                                {{ record.earned_at|date:"M d, Y" }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="fw-semibold">₦{{ record.payment_basis|intcomma }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="fw-bold text-success">₦{{ record.rebate_amount|intcomma }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-{% if record.rebate_type == 'PERCENTAGE' %}info{% else %}warning{% endif %} bg-opacity-10 text-{% if record.rebate_type == 'PERCENTAGE' %}info{% else %}warning{% endif %} px-3 py-2 rounded-pill">
+                                                {% if record.rebate_type == 'PERCENTAGE' %}
+                                                    <i class="bi bi-percent me-1"></i>{{ record.rebate_value }}%
+                                                {% else %}
+                                                    <i class="bi bi-cash me-1"></i>₦{{ record.rebate_value|intcomma }}
+                                                {% endif %}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card-footer bg-white border-0 p-4">
+                        <form method="post" id="statementForm" action="{% url 'billing:rebate_statement' %}" onsubmit="return validateAndSubmit()">
+                            {% csrf_token %}
+                            <input type="hidden" name="referrer_id" value="{{ selected_referrer.id }}">
+                            <input type="hidden" name="start" value="{{ request.GET.start }}">
+                            <input type="hidden" name="end" value="{{ request.GET.end }}">
+                            <div id="selectedRecordsContainer"></div>
+
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="text-muted small">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Selected records will be marked as "INCLUDED" in the statement
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-lg px-5 rounded-4 hover-lift" id="generateBtn" disabled>
+                                    <i class="bi bi-file-text-fill me-2"></i>
+                                    Generate Statement
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            {% elif selected_referrer and not records %}
+                <!-- Empty State for No Records -->
+                <div class="empty-state">
+                    <div class="empty-state-icon">
+                        <i class="bi bi-inbox"></i>
+                    </div>
+                    <h4 class="fw-bold mb-3">No Unpaid Rebates Found</h4>
+                    <p class="text-muted mb-4">
+                        No unpaid rebate records found for {{ selected_referrer.name }}<br>
+                        in the selected period. Try adjusting the date range.
+                    </p>
+                    <button onclick="resetFilters()" class="btn btn-primary px-5 py-3 rounded-4 hover-lift">
+                        <i class="bi bi-arrow-repeat me-2"></i>
+                        Reset Filters
+                    </button>
+                </div>
+            {% else %}
+                <!-- Initial Empty State -->
+                <div class="empty-state">
+                    <div class="empty-state-icon">
+                        <i class="bi bi-file-earmark-text"></i>
+                    </div>
+                    <h4 class="fw-bold mb-3">Ready to Generate Statement</h4>
+                    <p class="text-muted mb-4">
+                        Select a referrer partner and date range to preview<br>
+                        unpaid rebate records eligible for settlement.
+                    </p>
+                    <div class="row justify-content-center g-3">
+                        <div class="col-auto">
+                            <div class="d-flex align-items-center text-success">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                Choose Referrer
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="d-flex align-items-center text-success">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                Select Date Range
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="d-flex align-items-center text-success">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                Generate Statement
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Floating Action Button -->
+{% if selected_referrer and records %}
+<div class="floating-action">
+    <button class="btn btn-primary pulse-animation" onclick="document.getElementById('generateBtn').click()">
+        <i class="bi bi-file-arrow-up-fill fs-4"></i>
+    </button>
+</div>
+{% endif %}
+
+<script>
+    let selectedRecords = new Set();
+    
+    // Select referrer function
+    function selectReferrer(referrerId) {
+        document.getElementById('referrerInput').value = referrerId;
+        document.getElementById('filterForm').submit();
+    }
+    
+    // Update selection summary
+    function updateSelectionSummary() {
+        const checkboxes = document.querySelectorAll('.record-checkbox:checked');
+        selectedRecords = new Set([...checkboxes].map(cb => cb.value));
+        
+        const totalAmount = [...checkboxes].reduce((sum, cb) => 
+            sum + parseFloat(cb.dataset.amount || 0), 0
+        );
+        
+        document.getElementById('selectedCount').textContent = selectedRecords.size;
+        document.getElementById('selectedTotal').textContent = 
+            '₦' + totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        
+        const generateBtn = document.getElementById('generateBtn');
+        if (generateBtn) {
+            generateBtn.disabled = selectedRecords.size === 0;
+        }
+        
+        // Highlight selected rows
+        document.querySelectorAll('.record-row').forEach(row => {
+            const checkbox = row.querySelector('.record-checkbox');
+            if (checkbox && checkbox.checked) {
+                row.classList.add('selected');
+            } else {
+                row.classList.remove('selected');
+            }
+        });
+        
+        // Update select all checkbox
+        const selectAll = document.getElementById('selectAll');
+        if (selectAll) {
+            const totalCheckboxes = document.querySelectorAll('.record-checkbox').length;
+            if (selectedRecords.size === totalCheckboxes) {
+                selectAll.checked = true;
+                selectAll.indeterminate = false;
+            } else if (selectedRecords.size === 0) {
+                selectAll.checked = false;
+                selectAll.indeterminate = false;
+            } else {
+                selectAll.indeterminate = true;
+            }
+        }
+    }
+    
+    // Toggle all records
+    function toggleAll(checkbox) {
+        const checkboxes = document.querySelectorAll('.record-checkbox');
+        checkboxes.forEach(cb => {
+            cb.checked = checkbox.checked;
+        });
+        updateSelectionSummary();
+    }
+    
+    // Select all records
+    function selectAllRecords() {
+        document.querySelectorAll('.record-checkbox').forEach(cb => {
+            cb.checked = true;
+        });
+        updateSelectionSummary();
+    }
+    
+    // Deselect all records
+    function deselectAllRecords() {
+        document.querySelectorAll('.record-checkbox').forEach(cb => {
+            cb.checked = false;
+        });
+        updateSelectionSummary();
+    }
+    
+    // Validate and submit form
+    function validateAndSubmit() {
+        const checkboxes = document.querySelectorAll('.record-checkbox:checked');
+        
+        if (checkboxes.length === 0) {
+            alert('Please select at least one rebate record to generate a statement.');
+            return false;
+        }
+        
+        // Show loading overlay
+        document.getElementById('loadingOverlay').classList.add('show');
+        
+        // Collect selected record IDs
+        const container = document.getElementById('selectedRecordsContainer');
+        container.innerHTML = '';
+        
+        checkboxes.forEach(cb => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'record_ids';
+            input.value = cb.value;
+            container.appendChild(input);
+        });
+        
+        return true;
+    }
+    
+    // Reset filters
+    function resetFilters() {
+        window.location.href = "{% url 'billing:referrer_statement' %}";
+    }
+    
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        updateSelectionSummary();
+        
+        // Auto-submit filter form with loading state
+        document.getElementById('filterForm')?.addEventListener('submit', function() {
+            document.getElementById('filterBtn').innerHTML = 
+                '<span class="spinner-border spinner-border-sm me-2"></span>Loading...';
+            document.getElementById('filterBtn').disabled = true;
+        });
+    });
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Ctrl/Cmd + A to select all
+        if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+            e.preventDefault();
+            selectAllRecords();
+        }
+        
+        // Ctrl/Cmd + Enter to submit
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            document.getElementById('generateBtn')?.click();
+        }
+        
+        // Esc to clear selection
+        if (e.key === 'Escape') {
+            deselectAllRecords();
+        }
+    });
+</script>
+
+<style>
+    .hover-lift {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .hover-lift:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 15px 30px rgba(102, 126, 234, 0.2) !important;
+    }
+    
+    .symbol-40px {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .bg-light-primary {
+        background: rgba(102, 126, 234, 0.1);
+    }
+    
+    .text-white-50 {
+        color: rgba(255,255,255,0.5);
+    }
+    
+    .animate-in {
+        animation: slideInDown 0.3s ease;
+    }
+    
+    @keyframes slideInDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    /* Custom scrollbar */
+    .table-responsive::-webkit-scrollbar {
+        height: 8px;
+    }
+    
+    .table-responsive::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+    
+    .table-responsive::-webkit-scrollbar-thumb {
+        background: #cbd5e0;
+        border-radius: 10px;
+    }
+    
+    .table-responsive::-webkit-scrollbar-thumb:hover {
+        background: #a0aec0;
+    }
+</style>
+{% endblock %}

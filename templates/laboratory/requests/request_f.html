@@ -705,12 +705,82 @@
                             {% endif %}
                         </div>
 
-                        <div class="col-md-6">
+                        {% comment %} <div class="col-md-6">
                             <label for="{{ form.external_referral.id_for_label }}" class="form-label fw-semibold">
                                 {{ form.external_referral.label }}
                             </label>
                             {{ form.external_referral }}
-                        </div>
+                        </div> {% endcomment %}
+
+{% comment %} 
+
+<div class="card border-0 shadow-sm rounded-3 mb-3">
+    <div class="card-header bg-white border-0 px-4 pt-3">
+        <div class="d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-signpost-split text-primary"></i>
+                <h6 class="fw-semibold mb-0">Referral Source</h6>
+                {% if form.external_referral.value %}
+                    <span class="badge bg-success-subtle text-success">Set</span>
+                {% else %}
+                    <span class="badge bg-light text-muted">Optional</span>
+                {% endif %}
+            </div>
+            <button class="btn btn-link btn-sm text-muted p-0" type="button" 
+                    data-bs-toggle="collapse" data-bs-target="#referralSection">
+                <i class="bi bi-chevron-down" id="referralChevron"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="collapse {% if form.referrer.value or form.referrer.errors %}show{% endif %}" id="referralSection">
+        <div class="card-body px-4 pb-4 pt-1">
+            <div class="row g-3">
+                <div class="col-md-7">
+                    <label class="form-label small fw-bold">Referring Partner</label>
+                    {{ form.external_referral }}
+                    {% if form.external_referral.errors %}<div class="text-danger small mt-1">{{ form.external_referral.errors.0 }}</div>{% endif %}
+                </div>
+
+                <div class="col-md-5" id="referrerPreviewCol" style="display:none;">
+                    <div class="rebate-preview-box">
+                        <small class="text-uppercase text-muted fw-bold d-block">Agreement</small>
+                        <span id="referrerPreviewText" class="fw-bold text-success small"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+ {% endcomment %}
+
+<div class="col-md-7">
+    <label class="form-label small fw-bold">Referring Partner</label>
+
+    <select name="external_referral"
+            id="id_external_referral"
+            class="form-select">
+
+        <option value="">— Walk-in / No Referral —</option>
+
+        {% for ref in form.fields.external_referral.queryset %}
+            <option value="{{ ref.pk }}"
+                    data-rebate-type="{{ ref.rebate_type }}"
+                    data-rebate-value="{{ ref.rebate_value }}"
+                    {% if form.external_referral.value == ref.pk|stringformat:"s" %}selected{% endif %}>
+                {{ ref.name }}
+            </option>
+        {% endfor %}
+    </select>
+
+    {% if form.external_referral.errors %}
+        <div class="text-danger small mt-1">
+            {{ form.external_referral.errors.0 }}
+        </div>
+    {% endif %}
+</div>
+
+
 
                         <div class="col-md-6">
                             <div class="form-check form-switch mt-4">
@@ -820,227 +890,274 @@
         </div>
     </form>
 </div>
+
 {% endblock %}
-
 {% block extra_js %}
+
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Initialize tooltips
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        tooltipTriggerList.map(function(tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
-        });
+document.addEventListener("DOMContentLoaded", function () {
+    const referrerSelect = document.getElementById("id_external_referral");
+    const previewCol = document.getElementById("referrerPreviewCol");
+    const previewText = document.getElementById("referrerPreviewText");
+    const collapseSection = document.getElementById("referralSection");
 
-        // Set today's date for date of birth max
-        const today = new Date().toISOString().split('T')[0];
-        document.querySelector('input[type="date"]')?.setAttribute('max', today);
+    function updateReferrerPreview() {
 
-        // Initialize patient toggle based on existing_patient value
-        const existingPatientField = document.querySelector('select[name="existing_patient"]');
-        if (existingPatientField && existingPatientField.value) {
-            togglePatient('existing');
-        } else {
-            togglePatient('new');
+        const selectedOption = referrerSelect.options[referrerSelect.selectedIndex];
+
+        if (!selectedOption || !selectedOption.value) {
+            previewCol.style.display = "none";
+            previewText.innerText = "";
+            return;
         }
 
-        // Initialize billing type handling
-        const billingTypeField = document.querySelector('select[name="billing_type"]');
-        if (billingTypeField) {
-            billingTypeField.addEventListener('change', function() {
-                toggleProviderField(this.value);
-                updateTotalPrice();
+        const rebateType = selectedOption.dataset.rebateType;
+        const rebateValue = selectedOption.dataset.rebateValue;
+
+        let displayText = "";
+
+        if (rebateType === "PERCENTAGE") {
+            displayText = `${rebateValue}% of order subtotal`;
+        } else if (rebateType === "FIXED") {
+            displayText = `₦${parseFloat(rebateValue).toLocaleString()} per request`;
+        }
+
+        previewText.innerText = displayText;
+        previewCol.style.display = "block";
+
+        // Auto-expand if collapsed
+        if (!collapseSection.classList.contains("show")) {
+            new bootstrap.Collapse(collapseSection, {
+                toggle: true
             });
-            toggleProviderField(billingTypeField.value);
-        }
-
-        // Initialize provider field
-        const providerField = document.querySelector('select[name="insurance_provider"]');
-        if (providerField) {
-            providerField.addEventListener('change', updateTotalPrice);
-        }
-
-        // Update total price on any change
-        updateTotalPrice();
-
-        // Form submission loading state
-        const form = document.getElementById('testRequestForm');
-        const submitBtn = document.getElementById('submitBtn');
-
-        form.addEventListener('submit', function() {
-            submitBtn.classList.add('btn-loading');
-            submitBtn.disabled = true;
-        });
-
-        // Priority change handler
-        const priorityField = document.querySelector('select[name="priority"]');
-        if (priorityField) {
-            priorityField.addEventListener('change', function() {
-                const urgencyField = document.querySelector('textarea[name="urgency_reason"]');
-                if (this.value === 'routine') {
-                    urgencyField.value = '';
-                    urgencyField.disabled = true;
-                    urgencyField.placeholder = 'Not required for routine orders';
-                } else {
-                    urgencyField.disabled = false;
-                    urgencyField.placeholder = 'Required for urgent/STAT orders';
-                }
-            });
-            priorityField.dispatchEvent(new Event('change'));
-        }
-    });
-
-    function togglePatient(type) {
-        const existingSection = document.getElementById('existingPatientSection');
-        const newSection = document.getElementById('newPatientSection');
-        const existingBtn = document.getElementById('existingPatientBtn');
-        const newBtn = document.getElementById('newPatientBtn');
-
-        if (type === 'existing') {
-            existingSection.style.display = 'block';
-            newSection.style.display = 'none';
-            existingBtn.classList.add('active');
-            newBtn.classList.remove('active');
-            
-            // Disable new patient fields
-            document.querySelectorAll('#newPatientSection input, #newPatientSection select').forEach(field => {
-                field.disabled = true;
-            });
-            document.querySelector('select[name="existing_patient"]').disabled = false;
-        } else {
-            existingSection.style.display = 'none';
-            newSection.style.display = 'block';
-            existingBtn.classList.remove('active');
-            newBtn.classList.add('active');
-            
-            // Enable new patient fields
-            document.querySelectorAll('#newPatientSection input, #newPatientSection select').forEach(field => {
-                field.disabled = false;
-            });
-            document.querySelector('select[name="existing_patient"]').disabled = true;
         }
     }
 
-    function toggleProviderField(billingType) {
-        const providerField = document.getElementById('providerField');
-        const nonCashTypes = ['HMO', 'NHIS', 'CORPORATE', 'STAFF'];
-        
-        if (nonCashTypes.includes(billingType)) {
-            providerField.style.display = 'block';
-            document.querySelector('select[name="insurance_provider"]').required = true;
-        } else {
-            providerField.style.display = 'none';
-            document.querySelector('select[name="insurance_provider"]').required = false;
-        }
-    }
+    referrerSelect.addEventListener("change", updateReferrerPreview);
 
-    function toggleTest(element) {
-        const checkbox = element.querySelector('input[type="checkbox"]');
-        checkbox.checked = !checkbox.checked;
-        
-        if (checkbox.checked) {
-            element.classList.add('selected');
-        } else {
-            element.classList.remove('selected');
-        }
-        
-        updateTotalPrice();
-        updateSelectedCount();
-    }
+    // Trigger on page load (for edit forms)
+    updateReferrerPreview();
+});
 
-    function filterTests() {
-        const searchTerm = document.getElementById('testSearch').value.toLowerCase();
-        const departmentFilter = document.getElementById('departmentFilter').value;
-        const tests = document.querySelectorAll('.test-item');
+document.addEventListener('DOMContentLoaded', function() {
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function(tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
 
-        tests.forEach(test => {
-            const testName = test.querySelector('.test-name').textContent.toLowerCase();
-            const testDepartment = test.dataset.department;
-            
-            const matchesSearch = testName.includes(searchTerm);
-            const matchesDepartment = !departmentFilter || testDepartment === departmentFilter;
-            
-            if (matchesSearch && matchesDepartment) {
-                test.style.display = 'block';
-            } else {
-                test.style.display = 'none';
-            }
-        });
-    }
+        // Set today's date for date of birth max
+        const today = new Date().toISOString().split('T')[0];
+        document.querySelector('input[type="date"]')?.setAttribute('max', today);
 
-    function updateTotalPrice() {
-        const selectedTests = Array.from(document.querySelectorAll('input[name="tests_to_order"]:checked'));
-        const billingType = document.querySelector('select[name="billing_type"]').value;
-        const providerField = document.querySelector('select[name="insurance_provider"]');
-        const providerId = providerField ? providerField.value : null;
-        
-        // Calculate subtotal
-        let subtotal = 0;
-        selectedTests.forEach(test => {
-            const priceElement = test.closest('.test-item').querySelector('.test-price');
-            const price = parseFloat(priceElement.textContent.replace(/[^0-9.-]+/g, ''));
-            subtotal += price;
-        });
+        // Initialize patient toggle based on existing_patient value
+        const existingPatientField = document.querySelector('select[name="existing_patient"]');
+        if (existingPatientField && existingPatientField.value) {
+            togglePatient('existing');
+        } else {
+            togglePatient('new');
+        }
 
-        // Mock calculations (replace with actual API call)
-        const discount = providerId && billingType !== 'CASH' ? subtotal * 0.1 : 0; // 10% discount for insurance
-        const discountedAmount = subtotal - discount;
-        const tax = discountedAmount * 0.025; // 2.5% VAT
-        const total = discountedAmount + tax;
-        
-        // Mock co-pay (replace with actual provider co-pay)
-        const copayPercent = providerId && billingType !== 'CASH' ? 0.2 : 1.0; // 20% co-pay for insurance
-        const patientPortion = total * copayPercent;
-        const insurancePortion = total - patientPortion;
+        // Initialize billing type handling
+        const billingTypeField = document.querySelector('select[name="billing_type"]');
+        if (billingTypeField) {
+            billingTypeField.addEventListener('change', function() {
+                toggleProviderField(this.value);
+                updateTotalPrice();
+            });
+            toggleProviderField(billingTypeField.value);
+        }
 
-        // Update display
-        document.getElementById('subtotal').textContent = `₦${subtotal.toFixed(2)}`;
-        document.getElementById('discount').textContent = `-₦${discount.toFixed(2)}`;
-        document.getElementById('tax').textContent = `₦${tax.toFixed(2)}`;
-        document.getElementById('total').textContent = `₦${total.toFixed(2)}`;
-        document.getElementById('patientPortion').textContent = `₦${patientPortion.toFixed(2)}`;
-        document.getElementById('insurancePortion').textContent = `₦${insurancePortion.toFixed(2)}`;
-    }
+        // Initialize provider field
+        const providerField = document.querySelector('select[name="insurance_provider"]');
+        if (providerField) {
+            providerField.addEventListener('change', updateTotalPrice);
+        }
 
-    function updateSelectedCount() {
-        const count = document.querySelectorAll('input[name="tests_to_order"]:checked').length;
-        document.getElementById('selectedCount').textContent = count;
-        
-        // Estimate processing time based on selected tests
-        if (count > 0) {
-            const totalTime = count * 30; // 30 minutes per test
-            const hours = Math.floor(totalTime / 60);
-            const minutes = totalTime % 60;
-            document.getElementById('processingTime').textContent = 
-                hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
-        } else {
-            document.getElementById('processingTime').textContent = '--';
-        }
-    }
+        // Update total price on any change
+        updateTotalPrice();
 
-    function quickFill(type) {
-        switch(type) {
-            case 'routine':
-                document.querySelector('select[name="priority"]').value = 'routine';
-                document.querySelector('textarea[name="urgency_reason"]').value = '';
-                break;
-            case 'urgent':
-                document.querySelector('select[name="priority"]').value = 'urgent';
-                document.querySelector('textarea[name="urgency_reason"]').value = 'Clinical urgency per physician request';
-                break;
-            case 'stat':
-                document.querySelector('select[name="priority"]').value = 'stat';
-                document.querySelector('textarea[name="urgency_reason"]').value = 'STAT - Critical patient condition';
-                break;
-            case 'corporate':
-                document.querySelector('select[name="billing_type"]').value = 'CORPORATE';
-                toggleProviderField('CORPORATE');
-                break;
-            case 'hmo':
-                document.querySelector('select[name="billing_type"]').value = 'HMO';
-                toggleProviderField('HMO');
-                break;
-        }
-        updateTotalPrice();
-    }
+        // Form submission loading state
+        const form = document.getElementById('testRequestForm');
+        const submitBtn = document.getElementById('submitBtn');
+
+        form.addEventListener('submit', function() {
+            submitBtn.classList.add('btn-loading');
+            submitBtn.disabled = true;
+        });
+
+        // Priority change handler
+        const priorityField = document.querySelector('select[name="priority"]');
+        if (priorityField) {
+            priorityField.addEventListener('change', function() {
+                const urgencyField = document.querySelector('textarea[name="urgency_reason"]');
+                if (this.value === 'routine') {
+                    urgencyField.value = '';
+                    urgencyField.disabled = true;
+                    urgencyField.placeholder = 'Not required for routine orders';
+                } else {
+                    urgencyField.disabled = false;
+                    urgencyField.placeholder = 'Required for urgent/STAT orders';
+                }
+            });
+            priorityField.dispatchEvent(new Event('change'));
+        }
+    });
+
+    function togglePatient(type) {
+        const existingSection = document.getElementById('existingPatientSection');
+        const newSection = document.getElementById('newPatientSection');
+        const existingBtn = document.getElementById('existingPatientBtn');
+        const newBtn = document.getElementById('newPatientBtn');
+
+        if (type === 'existing') {
+            existingSection.style.display = 'block';
+            newSection.style.display = 'none';
+            existingBtn.classList.add('active');
+            newBtn.classList.remove('active');
+            
+            // Disable new patient fields
+            document.querySelectorAll('#newPatientSection input, #newPatientSection select').forEach(field => {
+                field.disabled = true;
+            });
+            document.querySelector('select[name="existing_patient"]').disabled = false;
+        } else {
+            existingSection.style.display = 'none';
+            newSection.style.display = 'block';
+            existingBtn.classList.remove('active');
+            newBtn.classList.add('active');
+            
+            // Enable new patient fields
+            document.querySelectorAll('#newPatientSection input, #newPatientSection select').forEach(field => {
+                field.disabled = false;
+            });
+            document.querySelector('select[name="existing_patient"]').disabled = true;
+        }
+    }
+
+    function toggleProviderField(billingType) {
+        const providerField = document.getElementById('providerField');
+        const nonCashTypes = ['HMO', 'NHIS', 'CORPORATE', 'STAFF'];
+        
+        if (nonCashTypes.includes(billingType)) {
+            providerField.style.display = 'block';
+            document.querySelector('select[name="insurance_provider"]').required = true;
+        } else {
+            providerField.style.display = 'none';
+            document.querySelector('select[name="insurance_provider"]').required = false;
+        }
+    }
+
+    function toggleTest(element) {
+        const checkbox = element.querySelector('input[type="checkbox"]');
+        checkbox.checked = !checkbox.checked;
+        
+        if (checkbox.checked) {
+            element.classList.add('selected');
+        } else {
+            element.classList.remove('selected');
+        }
+        
+        updateTotalPrice();
+        updateSelectedCount();
+    }
+
+    function filterTests() {
+        const searchTerm = document.getElementById('testSearch').value.toLowerCase();
+        const departmentFilter = document.getElementById('departmentFilter').value;
+        const tests = document.querySelectorAll('.test-item');
+
+        tests.forEach(test => {
+            const testName = test.querySelector('.test-name').textContent.toLowerCase();
+            const testDepartment = test.dataset.department;
+            
+            const matchesSearch = testName.includes(searchTerm);
+            const matchesDepartment = !departmentFilter || testDepartment === departmentFilter;
+            
+            if (matchesSearch && matchesDepartment) {
+                test.style.display = 'block';
+            } else {
+                test.style.display = 'none';
+            }
+        });
+    }
+
+    function updateTotalPrice() {
+        const selectedTests = Array.from(document.querySelectorAll('input[name="tests_to_order"]:checked'));
+        const billingType = document.querySelector('select[name="billing_type"]').value;
+        const providerField = document.querySelector('select[name="insurance_provider"]');
+        const providerId = providerField ? providerField.value : null;
+        
+        // Calculate subtotal
+        let subtotal = 0;
+        selectedTests.forEach(test => {
+            const priceElement = test.closest('.test-item').querySelector('.test-price');
+            const price = parseFloat(priceElement.textContent.replace(/[^0-9.-]+/g, ''));
+            subtotal += price;
+        });
+
+        // Mock calculations (replace with actual API call)
+        const discount = providerId && billingType !== 'CASH' ? subtotal * 0.1 : 0; // 10% discount for insurance
+        const discountedAmount = subtotal - discount;
+        const tax = discountedAmount * 0.025; // 2.5% VAT
+        const total = discountedAmount + tax;
+        
+        // Mock co-pay (replace with actual provider co-pay)
+        const copayPercent = providerId && billingType !== 'CASH' ? 0.2 : 1.0; // 20% co-pay for insurance
+        const patientPortion = total * copayPercent;
+        const insurancePortion = total - patientPortion;
+
+        // Update display
+        document.getElementById('subtotal').textContent = `₦${subtotal.toFixed(2)}`;
+        document.getElementById('discount').textContent = `-₦${discount.toFixed(2)}`;
+        document.getElementById('tax').textContent = `₦${tax.toFixed(2)}`;
+        document.getElementById('total').textContent = `₦${total.toFixed(2)}`;
+        document.getElementById('patientPortion').textContent = `₦${patientPortion.toFixed(2)}`;
+        document.getElementById('insurancePortion').textContent = `₦${insurancePortion.toFixed(2)}`;
+    }
+
+    function updateSelectedCount() {
+        const count = document.querySelectorAll('input[name="tests_to_order"]:checked').length;
+        document.getElementById('selectedCount').textContent = count;
+        
+        // Estimate processing time based on selected tests
+        if (count > 0) {
+            const totalTime = count * 30; // 30 minutes per test
+            const hours = Math.floor(totalTime / 60);
+            const minutes = totalTime % 60;
+            document.getElementById('processingTime').textContent = 
+                hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+        } else {
+            document.getElementById('processingTime').textContent = '--';
+        }
+    }
+
+    function quickFill(type) {
+        switch(type) {
+            case 'routine':
+                document.querySelector('select[name="priority"]').value = 'routine';
+                document.querySelector('textarea[name="urgency_reason"]').value = '';
+                break;
+            case 'urgent':
+                document.querySelector('select[name="priority"]').value = 'urgent';
+                document.querySelector('textarea[name="urgency_reason"]').value = 'Clinical urgency per physician request';
+                break;
+            case 'stat':
+                document.querySelector('select[name="priority"]').value = 'stat';
+                document.querySelector('textarea[name="urgency_reason"]').value = 'STAT - Critical patient condition';
+                break;
+            case 'corporate':
+                document.querySelector('select[name="billing_type"]').value = 'CORPORATE';
+                toggleProviderField('CORPORATE');
+                break;
+            case 'hmo':
+                document.querySelector('select[name="billing_type"]').value = 'HMO';
+                toggleProviderField('HMO');
+                break;
+        }
+        updateTotalPrice();
+    }
 </script>
+
+
 {% endblock %}

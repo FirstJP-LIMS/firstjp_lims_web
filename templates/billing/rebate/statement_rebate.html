@@ -1,0 +1,338 @@
+{% extends "laboratory/assets/base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}{{ settlement.statement_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+    :root { --accent:#2563eb; --success:#16a34a; --warning:#d97706; --danger:#dc2626; --muted:#6b7280; --border:#e5e7eb; --surface:#f9fafb; --text:#111827; }
+    body { font-family: 'DM Sans', sans-serif; }
+    .mono { font-family: 'DM Mono', monospace; }
+
+    .status-pill { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:4px; font-size:0.7rem; font-weight:600; letter-spacing:0.05em; text-transform:uppercase; }
+    .status-pill.draft    { background:#fef3c7; color:#92400e; }
+    .status-pill.approved { background:#dbeafe; color:#1e40af; }
+    .status-pill.paid     { background:#dcfce7; color:#15803d; }
+    .status-pill.cancelled{ background:#f3f4f6; color:#4b5563; }
+
+    .meta-strip { display:flex; gap:0; border:1px solid var(--border); border-radius:8px; overflow:hidden; margin-bottom:1.5rem; }
+    .meta-cell { flex:1; padding:12px 18px; border-right:1px solid var(--border); }
+    .meta-cell:last-child { border-right:none; }
+    .meta-cell label { display:block; font-size:0.66rem; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); margin-bottom:3px; }
+    .meta-cell .val { font-size:0.88rem; font-weight:500; }
+
+    .amount-panel { border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+    .amount-row { display:flex; justify-content:space-between; align-items:center; padding:11px 18px; border-bottom:1px solid var(--border); font-size:0.86rem; }
+    .amount-row:last-child { border-bottom:none; }
+    .amount-row.highlight { background:var(--text); color:white; }
+    .amount-row label { color:var(--muted); margin:0; font-size:0.82rem; }
+    .amount-row.highlight label { color:rgba(255,255,255,0.6); }
+
+    .ledger { width:100%; border-collapse:collapse; font-size:0.83rem; }
+    .ledger thead tr { border-bottom:2px solid var(--text); }
+    .ledger thead th { font-size:0.67rem; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); padding:7px 10px; }
+    .ledger thead th.r { text-align:right; }
+    .ledger tbody tr { border-bottom:1px solid var(--border); }
+    .ledger tbody tr:hover { background:var(--surface); }
+    .ledger tbody td { padding:10px; }
+    .ledger tbody td.r { text-align:right; }
+    .ledger tfoot tr { border-top:2px solid var(--border); background:var(--surface); }
+    .ledger tfoot td { padding:10px; font-weight:600; }
+    .ledger tfoot td.r { text-align:right; }
+
+    .action-row { display:flex; gap:8px; flex-wrap:wrap; }
+    .btn-act { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:6px; font-size:0.83rem; font-weight:500; border:1px solid var(--border); background:white; color:var(--text); cursor:pointer; transition:all 0.15s; }
+    .btn-act:hover { border-color:var(--accent); color:var(--accent); background:#eff6ff; }
+    .btn-act.success { background:var(--success); border-color:var(--success); color:white; }
+    .btn-act.success:hover { background:#15803d; }
+    .btn-act.primary { background:var(--accent); border-color:var(--accent); color:white; }
+    .btn-act.primary:hover { background:#1d4ed8; }
+    .btn-act.danger { border-color:var(--danger); color:var(--danger); }
+    .btn-act.danger:hover { background:#fef2f2; }
+
+    .clean-modal .modal-content { border:none; border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,0.15); }
+    .clean-modal .modal-header { border-bottom:1px solid var(--border); padding:18px 22px 14px; }
+    .clean-modal .modal-body { padding:18px 22px; }
+    .clean-modal .modal-footer { border-top:1px solid var(--border); padding:14px 22px 18px; }
+    .clean-modal .modal-title { font-size:0.92rem; font-weight:600; }
+
+    .section-rule { display:flex; align-items:center; gap:10px; margin-bottom:0.875rem; }
+    .section-rule span { font-size:0.67rem; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); white-space:nowrap; }
+    .section-rule::after { content:''; flex:1; height:1px; background:var(--border); }
+
+    @media print {
+        .no-print { display:none !important; }
+        .meta-strip, .amount-panel { border:1px solid #ccc; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4" style="max-width:1050px;">
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show border-0 shadow-sm mb-3 no-print" role="alert">
+            {{ message }} <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    {# Breadcrumb #}
+    <nav aria-label="breadcrumb" class="mb-3 no-print">
+        <ol class="breadcrumb" style="font-size:0.8rem;">
+            <li class="breadcrumb-item"><a href="{% url 'billing:dashboard' %}" class="text-decoration-none text-muted">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="" class="text-decoration-none text-muted">Rebate Statements</a></li>
+            <li class="breadcrumb-item active text-muted">{{ settlement.statement_number }}</li>
+        </ol>
+    </nav>
+
+    {# Header #}
+    <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-3 mb-1">
+                <h1 class="h4 fw-bold mb-0 mono">{{ settlement.statement_number }}</h1>
+                <span class="status-pill {{ settlement.status|lower }}">{{ settlement.get_status_display }}</span>
+            </div>
+            <p class="text-muted small mb-0">
+                {{ referrer.name }} · Created {{ settlement.created_at|date:"d M Y" }}
+                by {{ settlement.created_by.get_full_name }}
+            </p>
+        </div>
+
+        <div class="action-row no-print">
+            <button class="btn-act" onclick="window.print()">
+                <i class="bi bi-printer"></i> Print
+            </button>
+            {% if can_approve %}
+            <form method="post" style="display:inline;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="approve">
+                <button type="submit" class="btn-act primary">
+                    <i class="bi bi-check2-circle"></i> Approve Statement
+                </button>
+            </form>
+            {% endif %}
+            {% if can_pay %}
+            <button class="btn-act success"
+                    data-bs-toggle="modal" data-bs-target="#payModal">
+                <i class="bi bi-cash-stack"></i> Record Payment
+            </button>
+            {% endif %}
+            {% if can_cancel %}
+            <button class="btn-act danger"
+                    data-bs-toggle="modal" data-bs-target="#cancelModal">
+                <i class="bi bi-x-circle"></i> Cancel
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    {# Meta strip #}
+    <div class="meta-strip">
+        <div class="meta-cell">
+            <label>Period</label>
+            <div class="val">{{ settlement.period_start|date:"d M Y" }} – {{ settlement.period_end|date:"d M Y" }}</div>
+        </div>
+        <div class="meta-cell">
+            <label>Records</label>
+            <div class="val mono">{{ settlement.record_count }}</div>
+        </div>
+        <div class="meta-cell">
+            <label>Agreement</label>
+            <div class="val small">
+                {% if referrer.rebate_type == 'PERCENTAGE' %}{{ referrer.rebate_value }}% of collected{% else %}₦{{ referrer.rebate_value }} flat{% endif %}
+            </div>
+        </div>
+        {% if settlement.status == 'PAID' %}
+        <div class="meta-cell">
+            <label>Paid On</label>
+            <div class="val">{{ settlement.payment_date|date:"d M Y" }}</div>
+        </div>
+        <div class="meta-cell">
+            <label>Reference</label>
+            <div class="val mono">{{ settlement.payment_reference }}</div>
+        </div>
+        {% endif %}
+    </div>
+
+    {# Two-column: partner info + amount #}
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="section-rule"><span>Pay To</span></div>
+            <div style="border:1px solid var(--border); border-radius:8px; padding:18px;">
+                <div style="font-weight:600; font-size:0.95rem; margin-bottom:8px;">{{ referrer.name }}</div>
+                {% if referrer.contact_person %}<div class="text-muted small mb-1"><i class="bi bi-person me-1"></i>{{ referrer.contact_person }}</div>{% endif %}
+                {% if referrer.phone %}<div class="text-muted small mb-1"><i class="bi bi-telephone me-1"></i>{{ referrer.phone }}</div>{% endif %}
+                {% if referrer.email %}<div class="text-muted small mb-1"><i class="bi bi-envelope me-1"></i>{{ referrer.email }}</div>{% endif %}
+                {% if referrer.bank_name %}
+                <hr style="border-color:var(--border); margin:10px 0;">
+                <div class="small text-muted mb-1">Bank: {{ referrer.bank_name }}</div>
+                <div class="small text-muted mb-1">Account: <span class="mono">{{ referrer.account_number }}</span></div>
+                <div class="small text-muted">Name: {{ referrer.account_name }}</div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="section-rule"><span>Summary</span></div>
+            <div class="amount-panel">
+                <div class="amount-row">
+                    <label>Rebate Records Included</label>
+                    <span class="mono">{{ settlement.record_count }}</span>
+                </div>
+                <div class="amount-row highlight">
+                    <label>Total Amount Due</label>
+                    <span class="mono fw-bold" style="font-size:1.1rem;">₦{{ settlement.total_amount|intcomma }}</span>
+                </div>
+                {% if settlement.status == 'PAID' %}
+                <div class="amount-row" style="background:#f0fdf4;">
+                    <label style="color:var(--success); font-weight:600;">Payment Status</label>
+                    <span class="mono text-success fw-bold">FULLY PAID</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {# Rebate records table #}
+    <div class="section-rule mb-3"><span>Rebate Records</span></div>
+    <div class="card border-0 shadow-sm rounded-3">
+        <div class="table-responsive">
+            <table class="ledger">
+                <thead>
+                    <tr>
+                        <th>Request</th>
+                        <th>Patient</th>
+                        <th>Date Earned</th>
+                        <th class="r">Collected</th>
+                        <th class="r">Rebate</th>
+                        <th>Rate</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rec in records %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'billing:billing_detail' pk=rec.billing.pk %}"
+                               class="text-decoration-none mono"
+                               style="color:var(--accent); font-size:0.82rem;"
+                               target="_blank">
+                                {{ rec.billing.request.request_id }}
+                            </a>
+                        </td>
+                        <td>{{ rec.billing.request.patient.get_full_name }}</td>
+                        <td class="text-muted small">{{ rec.earned_at|date:"d M Y" }}</td>
+                        <td class="r mono text-muted">₦{{ rec.payment_basis|intcomma }}</td>
+                        <td class="r mono fw-medium" style="color:var(--success);">₦{{ rec.rebate_amount|intcomma }}</td>
+                        <td style="font-size:0.73rem; color:var(--muted);">
+                            {% if rec.rebate_type == 'PERCENTAGE' %}{{ rec.rebate_value }}%{% else %}Flat{% endif %}
+                        </td>
+                        <td>
+                            <span class="status-pill {{ rec.status|lower }}">{{ rec.get_status_display }}</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="3" class="text-muted" style="font-weight:400; font-size:0.78rem;">{{ records.count }} record{{ records.count|pluralize }}</td>
+                        <td class="r mono text-muted">—</td>
+                        <td class="r mono" style="color:var(--success);">₦{{ settlement.total_amount|intcomma }}</td>
+                        <td colspan="2"></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+{# ── Record Payment Modal ─────────────────────────────────────────────────── #}
+{% if can_pay %}
+<div class="modal fade clean-modal" id="payModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:440px;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title">Record Settlement Payment</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'billing:settlement_detail' pk=settlement.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="mark_paid">
+                <div class="modal-body">
+                    <div class="amount-panel mb-4">
+                        <div class="amount-row highlight">
+                            <label>Amount to Disburse</label>
+                            <span class="mono fw-bold">₦{{ settlement.total_amount|intcomma }}</span>
+                        </div>
+                        <div class="amount-row">
+                            <label>Payable To</label>
+                            <span class="fw-medium">{{ referrer.name }}</span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Payment Date</label>
+                        <input type="date" name="payment_date" class="form-control form-control-sm"
+                               value="{{ today|date:'Y-m-d' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Payment Method</label>
+                        <select name="payment_method" class="form-select form-select-sm">
+                            <option value="TRANSFER">Bank Transfer</option>
+                            <option value="CHEQUE">Cheque</option>
+                            <option value="CASH">Cash</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Payment Reference <span class="text-danger">*</span></label>
+                        <input type="text" name="payment_reference" class="form-control form-control-sm"
+                               placeholder="e.g. TRF-20260201-0094" required>
+                        <div class="form-text">Bank transfer reference or cheque number</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn-act success">
+                        <i class="bi bi-check-circle"></i> Confirm Payment
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{# ── Cancel Modal ─────────────────────────────────────────────────────────── #}
+{% if can_cancel %}
+<div class="modal fade clean-modal" id="cancelModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:400px;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title text-danger">Cancel Statement</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'billing:settlement_detail' pk=settlement.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="cancel">
+                <div class="modal-body">
+                    <p class="text-muted small mb-0">
+                        Cancelling <strong>{{ settlement.statement_number }}</strong> will release
+                        all {{ settlement.record_count }} rebate record{{ settlement.record_count|pluralize }}
+                        back to <em>Unpaid</em> so they can be included in a future statement.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Keep</button>
+                    <button type="submit" class="btn-act danger">
+                        <i class="bi bi-x-circle"></i> Cancel Statement
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

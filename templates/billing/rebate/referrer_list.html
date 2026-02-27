@@ -1,0 +1,902 @@
+{% extends "laboratory/assets/base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Referrer Partners{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Modern Referrer Dashboard Styling */
+    :root {
+        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --success-gradient: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+        --warning-gradient: linear-gradient(135deg, #fad961 0%, #f76b1c 100%);
+        --info-gradient: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card-modern {
+        background: white;
+        border-radius: 20px;
+        padding: 1.5rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid rgba(255,255,255,0.1);
+        backdrop-filter: blur(10px);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .stat-card-modern::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--primary-gradient);
+    }
+    
+    .stat-card-modern:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    }
+    
+    .stat-icon-wrapper {
+        width: 56px;
+        height: 56px;
+        border-radius: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.75rem;
+        margin-bottom: 1rem;
+        background: var(--primary-gradient);
+        color: white;
+    }
+    
+    .stat-value {
+        font-size: 2.25rem;
+        font-weight: 700;
+        line-height: 1.2;
+        margin-bottom: 0.25rem;
+        background: var(--primary-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 500;
+    }
+    
+    .referrer-table {
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    }
+    
+    .referrer-table thead th {
+        background: #f8fafd;
+        color: #2d3748;
+        font-weight: 600;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 1.25rem 1rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+    
+    .referrer-table tbody tr {
+        transition: all 0.2s ease;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .referrer-table tbody tr:hover {
+        background: #f8fafd;
+        transform: scale(1.01);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    }
+    
+    .referrer-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 16px;
+        background: var(--primary-gradient);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 1.25rem;
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+    }
+    
+    .rebate-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 50px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .rebate-badge.percentage {
+        background: rgba(102, 126, 234, 0.1);
+        color: #667eea;
+    }
+    
+    .rebate-badge.fixed {
+        background: rgba(132, 250, 176, 0.1);
+        color: #2ecc71;
+    }
+    
+    .status-badge {
+        padding: 0.35rem 0.75rem;
+        border-radius: 50px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+    
+    .status-badge.active {
+        background: rgba(46, 204, 113, 0.15);
+        color: #27ae60;
+    }
+    
+    .status-badge.inactive {
+        background: rgba(231, 76, 60, 0.15);
+        color: #e74c3c;
+    }
+    
+    .amount-positive {
+        color: #27ae60;
+        font-weight: 600;
+    }
+    
+    .amount-warning {
+        color: #e67e22;
+        font-weight: 600;
+    }
+    
+    .contact-chip {
+        background: #f1f5f9;
+        border-radius: 50px;
+        padding: 0.25rem 0.75rem;
+        font-size: 0.75rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        color: #4a5568;
+    }
+    
+    .action-group {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: flex-end;
+    }
+    
+    .action-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        background: white;
+        border: 1px solid #e9ecef;
+        color: #4a5568;
+    }
+    
+    .action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        border-color: transparent;
+    }
+    
+    .action-btn.view:hover {
+        background: #667eea;
+        color: white;
+    }
+    
+    .action-btn.edit:hover {
+        background: #2ecc71;
+        color: white;
+    }
+    
+    .action-btn.statement:hover {
+        background: #f39c12;
+        color: white;
+    }
+    
+    .empty-state {
+        padding: 4rem 2rem;
+        text-align: center;
+        background: linear-gradient(135deg, #f5f7fa 0%, #f8fafd 100%);
+        border-radius: 20px;
+    }
+    
+    .empty-state-icon {
+        width: 120px;
+        height: 120px;
+        border-radius: 60px;
+        background: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.5rem;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.05);
+    }
+    
+    .empty-state-icon i {
+        font-size: 4rem;
+        background: var(--primary-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    .search-box {
+        position: relative;
+        margin-bottom: 1.5rem;
+    }
+    
+    .search-box i {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #a0aec0;
+    }
+    
+    .search-box input {
+        padding-left: 2.75rem;
+        border-radius: 50px;
+        border: 2px solid #e9ecef;
+        height: 48px;
+        width: 100%;
+        transition: all 0.2s ease;
+    }
+    
+    .search-box input:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        outline: none;
+    }
+    
+    .filter-tabs {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .filter-tab {
+        padding: 0.5rem 1.25rem;
+        border-radius: 50px;
+        background: white;
+        border: 1px solid #e9ecef;
+        color: #4a5568;
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .filter-tab:hover {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+    }
+    
+    .filter-tab.active {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+    }
+    
+    .quick-stats {
+        display: flex;
+        gap: 2rem;
+        padding: 1rem;
+        background: white;
+        border-radius: 12px;
+        margin-top: 1rem;
+    }
+    
+    .quick-stat-item {
+        text-align: center;
+    }
+    
+    .quick-stat-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #2d3748;
+    }
+    
+    .quick-stat-label {
+        font-size: 0.75rem;
+        color: #718096;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+    
+    @media (max-width: 768px) {
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+        
+        .stat-card-modern {
+            padding: 1rem;
+        }
+        
+        .stat-icon-wrapper {
+            width: 40px;
+            height: 40px;
+            font-size: 1.25rem;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+        }
+        
+        .referrer-table {
+            border-radius: 12px;
+        }
+        
+        .action-group {
+            flex-wrap: wrap;
+        }
+    }
+    
+    /* Animation for new items */
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .animate-in {
+        animation: slideIn 0.5s ease forwards;
+    }
+    
+    /* Progress bar for rebate tracking */
+    .rebate-progress {
+        width: 100%;
+        height: 6px;
+        background: #e9ecef;
+        border-radius: 3px;
+        overflow: hidden;
+        margin-top: 0.5rem;
+    }
+    
+    .rebate-progress-bar {
+        height: 100%;
+        background: var(--primary-gradient);
+        border-radius: 3px;
+        transition: width 0.3s ease;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'billing:dashboard' %}" class="text-decoration-none">Dashboard</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Referrer Partners</li>
+                </ol>
+            </nav>
+            <h1 class="display-6 fw-bold mb-2">
+                <i class="bi bi-people-fill text-primary me-2"></i>
+                Referrer Partners
+            </h1>
+            <p class="text-muted mb-0">Manage partner hospitals and track rebate performance</p>
+        </div>
+        <div class="mt-3 mt-lg-0">
+            <a href="{% url 'billing:referrer_create' %}" class="btn btn-primary btn-lg px-4 hover-lift">
+                <i class="bi bi-plus-circle-fill me-2"></i>
+                Add New Referrer
+            </a>
+        </div>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show rounded-3 border-0 shadow-sm mb-4 animate-in" role="alert">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-{% if message.tags == 'success' %}check-circle-fill{% elif message.tags == 'error' %}exclamation-triangle-fill{% else %}info-circle-fill{% endif %} fs-4 me-3"></i>
+                    <div>{{ message }}</div>
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+                </div>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Summary Stats -->
+    <div class="stats-grid">
+        <div class="stat-card-modern animate-in" style="animation-delay: 0.1s">
+            <div class="stat-icon-wrapper">
+                <i class="bi bi-building"></i>
+            </div>
+            <div class="stat-value">{{ summary.total_partners }}</div>
+            <div class="stat-label">Total Partners</div>
+            <div class="quick-stats">
+                <div class="quick-stat-item">
+                    <div class="quick-stat-value">{{ summary.active_partners }}</div>
+                    <div class="quick-stat-label">Active</div>
+                </div>
+                <div class="quick-stat-item">
+                    <div class="quick-stat-value">{{ summary.total_partners|add:"-"|add:summary.active_partners }}</div>
+                    <div class="quick-stat-label">Inactive</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card-modern animate-in" style="animation-delay: 0.2s">
+            <div class="stat-icon-wrapper" style="background: var(--success-gradient)">
+                <i class="bi bi-cash-stack"></i>
+            </div>
+            <div class="stat-value">₦{{ summary.total_unpaid|default:"0"|intcomma }}</div>
+            <div class="stat-label">Outstanding Rebates</div>
+            <div class="rebate-progress">
+                <div class="rebate-progress-bar" style="width: 35%"></div>
+            </div>
+            <small class="text-muted mt-2 d-block">35% of total expected</small>
+        </div>
+
+        <div class="stat-card-modern animate-in" style="animation-delay: 0.3s">
+            <div class="stat-icon-wrapper" style="background: var(--warning-gradient)">
+                <i class="bi bi-graph-up"></i>
+            </div>
+            <div class="stat-value">₦{{ summary.total_lifetime|default:"0"|intcomma }}</div>
+            <div class="stat-label">Lifetime Rebates</div>
+            <div class="mt-2 d-flex align-items-center">
+                <span class="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-pill">
+                    <i class="bi bi-arrow-up me-1"></i>+23% vs last month
+                </span>
+            </div>
+        </div>
+
+        <div class="stat-card-modern animate-in" style="animation-delay: 0.4s">
+            <div class="stat-icon-wrapper" style="background: var(--info-gradient)">
+                <i class="bi bi-star"></i>
+            </div>
+            <div class="stat-value">{{ referrers|length }}</div>
+            <div class="stat-label">Avg. Referrals/Partner</div>
+            <div class="mt-2 text-muted small">
+                <i class="bi bi-info-circle me-1"></i>
+                Based on last 30 days
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Filter Section -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="search-box">
+                <i class="bi bi-search"></i>
+                <input type="text" id="searchInput" class="form-control" placeholder="Search referrers by name, code, or contact...">
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="filter-tabs">
+                <span class="filter-tab active" data-filter="all">All Referrers</span>
+                <span class="filter-tab" data-filter="active">Active</span>
+                <span class="filter-tab" data-filter="inactive">Inactive</span>
+                <span class="filter-tab" data-filter="unpaid">Has Unpaid</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Referrers Table -->
+    <div class="card border-0 shadow-sm rounded-4 referrer-table">
+        <div class="card-header bg-white border-0 p-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between">
+                <h5 class="fw-bold mb-0">
+                    <i class="bi bi-list-check text-primary me-2"></i>
+                    Partner Referrers
+                </h5>
+                <div class="d-flex align-items-center gap-3">
+                    <span class="text-muted">
+                        <i class="bi bi-arrow-repeat me-1"></i>
+                        Updated {{ referrers.0.updated_at|timesince }} ago
+                    </span>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="exportTable()">
+                        <i class="bi bi-download me-1"></i>Export
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-0">
+            {% if referrers %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="referrerTable">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">Referrer</th>
+                            <th>Contact</th>
+                            <th>Rebate Agreement</th>
+                            <th>Referrals</th>
+                            <th>Unpaid Rebates</th>
+                            <th>Lifetime Earned</th>
+                            <th>Status</th>
+                            <th class="pe-4 text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for referrer in referrers %}
+                        <tr class="referrer-row" data-status="{% if referrer.is_active %}active{% else %}inactive{% endif %}" 
+                            data-unpaid="{% if referrer.unpaid_count > 0 %}true{% else %}false{% endif %}">
+                            <td class="ps-4">
+                                <div class="d-flex align-items-center">
+                                    <div class="referrer-avatar me-3">
+                                        {{ referrer.name|slice:":1"|upper }}
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-semibold mb-1">{{ referrer.name }}</h6>
+                                        <div class="d-flex flex-wrap gap-2">
+                                            {% if referrer.code %}
+                                            <span class="contact-chip">
+                                                <i class="bi bi-tag"></i>
+                                                {{ referrer.code }}
+                                            </span>
+                                            {% endif %}
+                                            <span class="contact-chip">
+                                                <i class="bi bi-building"></i>
+                                                {{ referrer.rebate_records.count }} records
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex flex-column">
+                                    {% if referrer.email %}
+                                    <span class="small mb-1">
+                                        <i class="bi bi-envelope me-1 text-muted"></i>
+                                        <a href="mailto:{{ referrer.email }}" class="text-decoration-none">{{ referrer.email|truncatechars:20 }}</a>
+                                    </span>
+                                    {% endif %}
+                                    {% if referrer.phone %}
+                                    <span class="small">
+                                        <i class="bi bi-telephone me-1 text-muted"></i>
+                                        <a href="tel:{{ referrer.phone }}" class="text-decoration-none">{{ referrer.phone }}</a>
+                                    </span>
+                                    {% endif %}
+                                    {% if referrer.contact_person %}
+                                    <span class="contact-chip mt-1">
+                                        <i class="bi bi-person"></i>
+                                        {{ referrer.contact_person }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <span class="rebate-badge {% if referrer.rebate_type == 'PERCENTAGE' %}percentage{% else %}fixed{% endif %}">
+                                    {% if referrer.rebate_type == 'PERCENTAGE' %}
+                                        <i class="bi bi-percent"></i>
+                                        {{ referrer.rebate_value }}% of collected
+                                    {% else %}
+                                        <i class="bi bi-cash"></i>
+                                        ₦{{ referrer.rebate_value|intcomma }} flat
+                                    {% endif %}
+                                </span>
+                                <small class="d-block text-muted mt-1">
+                                    Terms: {{ referrer.payment_terms_days }} days
+                                </small>
+                            </td>
+                            <td>
+                                <div class="text-center">
+                                    <span class="fw-bold">{{ referrer.referral_count|default:"0" }}</span>
+                                    <small class="text-muted d-block">total referrals</small>
+                                </div>
+                            </td>
+                            <td>
+                                {% if referrer.unpaid_count > 0 %}
+                                <div class="text-center">
+                                    <span class="amount-warning fw-bold">₦{{ referrer.unpaid_total|default:"0"|intcomma }}</span>
+                                    <span class="badge bg-warning bg-opacity-10 text-warning d-inline-block mt-1">
+                                        {{ referrer.unpaid_count }} pending
+                                    </span>
+                                </div>
+                                {% else %}
+                                <span class="text-muted">
+                                    <i class="bi bi-check-circle text-success me-1"></i>
+                                    No pending
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="text-center">
+                                    <span class="amount-positive fw-bold">₦{{ referrer.lifetime_earned|default:"0"|intcomma }}</span>
+                                    <small class="text-muted d-block">lifetime total</small>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="status-badge {% if referrer.is_active %}active{% else %}inactive{% endif %}">
+                                    {% if referrer.is_active %}
+                                    <i class="bi bi-check-circle-fill me-1"></i>Active
+                                    {% else %}
+                                    <i class="bi bi-x-circle-fill me-1"></i>Inactive
+                                    {% endif %}
+                                </span>
+                            </td>
+                            <td class="pe-4">
+                                <div class="action-group">
+                                    <a href="{% url 'billing:referrer_detail' referrer.pk %}" class="action-btn view" title="View Details">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{% url 'billing:referrer_update' referrer.pk %}" class="action-btn edit" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="{% url 'billing:referrer_statement' %}" class="action-btn statement" title="Generate Statement">
+                                        <i class="bi bi-file-text"></i>
+                                    </a>
+                                    <button class="action-btn" onclick="copyReferrerInfo('{{ referrer.name }}', '{{ referrer.code }}')" title="Copy Info">
+                                        <i class="bi bi-files"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-state-icon">
+                    <i class="bi bi-people"></i>
+                </div>
+                <h4 class="fw-bold mb-3">No Referrer Partners Yet</h4>
+                <p class="text-muted mb-4">
+                    Start by adding your first partner hospital or clinic.<br>
+                    You'll be able to track referrals and manage rebates.
+                </p>
+                <a href="{% url 'billing:referrer_create' %}" class="btn btn-primary btn-lg px-5 hover-lift">
+                    <i class="bi bi-plus-circle-fill me-2"></i>
+                    Add Your First Referrer
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if referrers %}
+        <div class="card-footer bg-white border-0 p-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-center">
+                <div class="text-muted small">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Showing {{ referrers|length }} referrer{{ referrers|length|pluralize }}
+                </div>
+                <div class="pagination">
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination pagination-sm">
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#" tabindex="-1">Previous</a>
+                            </li>
+                            <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                            <li class="page-item"><a class="page-link" href="#">2</a></li>
+                            <li class="page-item"><a class="page-link" href="#">3</a></li>
+                            <li class="page-item">
+                                <a class="page-link" href="#">Next</a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Quick Actions Floating Button -->
+    <div class="floating-action">
+        <button class="btn btn-primary rounded-circle shadow-lg" type="button" data-bs-toggle="offcanvas" data-bs-target="#quickActionsOffcanvas">
+            <i class="bi bi-plus-lg fs-4"></i>
+        </button>
+    </div>
+</div>
+
+<!-- Quick Actions Offcanvas -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="quickActionsOffcanvas" aria-labelledby="quickActionsLabel">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title fw-bold" id="quickActionsLabel">Quick Actions</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body">
+        <div class="list-group">
+            <a href="{% url 'billing:referrer_create' %}" class="list-group-item list-group-item-action d-flex align-items-center">
+                <div class="icon-circle bg-primary bg-opacity-10 text-primary me-3">
+                    <i class="bi bi-plus-circle"></i>
+                </div>
+                <div>
+                    <h6 class="mb-0">New Referrer</h6>
+                    <small class="text-muted">Add a new partner hospital</small>
+                </div>
+            </a>
+            <a href="#" class="list-group-item list-group-item-action d-flex align-items-center">
+                <div class="icon-circle bg-info bg-opacity-10 text-info me-3">
+                    <i class="bi bi-graph-up"></i>
+                </div>
+                <div>
+                    <h6 class="mb-0">Rebate Reports</h6>
+                    <small class="text-muted">View detailed analytics</small>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+    .floating-action {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        z-index: 999;
+    }
+    
+    .floating-action .btn {
+        width: 56px;
+        height: 56px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+    }
+    
+    .floating-action .btn:hover {
+        transform: scale(1.1);
+    }
+    
+    .hover-lift {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .hover-lift:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+    }
+    
+    .offcanvas {
+        border-radius: 20px 0 0 20px;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Search functionality
+    document.getElementById('searchInput')?.addEventListener('keyup', function() {
+        const searchTerm = this.value.toLowerCase();
+        const rows = document.querySelectorAll('.referrer-row');
+        
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(searchTerm) ? '' : 'none';
+        });
+    });
+
+    // Filter tabs
+    const filterTabs = document.querySelectorAll('.filter-tab');
+    filterTabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            filterTabs.forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            
+            const filter = this.dataset.filter;
+            const rows = document.querySelectorAll('.referrer-row');
+            
+            rows.forEach(row => {
+                if (filter === 'all') {
+                    row.style.display = '';
+                } else if (filter === 'active') {
+                    row.style.display = row.dataset.status === 'active' ? '' : 'none';
+                } else if (filter === 'inactive') {
+                    row.style.display = row.dataset.status === 'inactive' ? '' : 'none';
+                } else if (filter === 'unpaid') {
+                    row.style.display = row.dataset.unpaid === 'true' ? '' : 'none';
+                }
+            });
+        });
+    });
+
+    // Copy referrer info
+    function copyReferrerInfo(name, code) {
+        const text = `${name} (${code || 'No code'})`;
+        navigator.clipboard.writeText(text).then(() => {
+            showToast('Referrer info copied to clipboard!');
+        });
+    }
+
+    // Export table to CSV
+    function exportTable() {
+        const rows = document.querySelectorAll('#referrerTable tr');
+        const csv = [];
+        
+        rows.forEach(row => {
+            const cols = row.querySelectorAll('td, th');
+            const rowData = [];
+            cols.forEach(col => {
+                if (col.classList.contains('action-group')) return;
+                rowData.push('"' + col.innerText.replace(/"/g, '""') + '"');
+            });
+            csv.push(rowData.join(','));
+        });
+        
+        const csvContent = csv.join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'referrer_partners.csv';
+        a.click();
+        
+        showToast('Table exported successfully!');
+    }
+
+    // Toast notification
+    function showToast(message) {
+        const toast = document.createElement('div');
+        toast.className = 'position-fixed top-0 end-0 m-3 p-3 bg-success text-white rounded-3 shadow-lg';
+        toast.style.zIndex = '9999';
+        toast.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>' + message;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+
+    // Animate stats on scroll
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    });
+
+    document.querySelectorAll('.stat-card-modern').forEach(el => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(20px)';
+        el.style.transition = 'all 0.5s ease';
+        observer.observe(el);
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Ctrl/Cmd + N for new referrer
+        if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+            e.preventDefault();
+            window.location.href = "{% url 'billing:referrer_create' %}";
+        }
+        
+        // Ctrl/Cmd + F for search focus
+        if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+            e.preventDefault();
+            document.getElementById('searchInput')?.focus();
+        }
+    });
+</script>
+{% endblock %}

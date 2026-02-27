@@ -1,6 +1,6 @@
 from django.urls import path
 # from . import views
-from .views import billing_task, payment_gateway, pricelist, insurance_provider, invoicing
+from .views import billing_task, payment_gateway, pricelist, insurance_provider, invoicing, rebate_views
 
 app_name = 'billing'
 
@@ -42,11 +42,11 @@ urlpatterns = [
     
 
     # Payment Actions
-    path('billing/<uuid:pk>/authorize/', billing_task.authorize_billing_view, name='authorize_billing'),
+    path('billings/<uuid:pk>/authorize/', billing_task.authorize_billing_view, name='authorize_billing'),
     
-    path('billing/<uuid:pk>/waive/', billing_task.waive_billing_view, name='waive_billing'),
+    path('billings/<uuid:pk>/waive/', billing_task.waive_billing_view, name='waive_billing'),
     
-    path('billing/<uuid:pk>/confirm-payment/', billing_task.confirm_payment_view, name='confirm_payment'),
+    path('billings/<uuid:pk>/confirm-payment/', billing_task.confirm_payment_view, name='confirm_payment'),
     
     # # Payment Gateway (for future implementation)
     # path('billing/<int:pk>/pay-online/', views.initiate_online_payment, name='pay_online'),
@@ -85,6 +85,21 @@ urlpatterns = [
     path('invoices/<uuid:pk>/pdf/', invoicing.download_invoice_pdf_view, name='invoice_pdf'),
 
     path('invoices/<uuid:pk>/payments/<uuid:payment_pk>/receipt/', invoicing.download_receipt_pdf_view, name='invoice_receipt'),
+
+
+    # Referrer 
+    path('referrer/', rebate_views.referrer_list_view, name='referrer_list'),
+
+    path('referrer/create', rebate_views.referrer_create_view, name='referrer_create'),
+    
+    path('referrer/<uuid:pk>/edit/', rebate_views.referrer_update_view, name='referrer_update'),
+    
+    path('referrer/<uuid:pk>/detail/', rebate_views.referrer_detail_view, name='referrer_detail'),
+
+    # path('referrer/<uuid:pk>/statement/', rebate_views.rebate_statement_view, name='referrer_statement'),
+    path('referrer/statement/', rebate_views.rebate_statement_view, name='referrer_statement'),
+
+    path('rebate/<uuid:pk>/statement/', rebate_views.settlement_detail_view, name='statement_detail'),
 
     # Reports
     path('reports/', billing_task.BillingReportView.as_view(), name='reports'),

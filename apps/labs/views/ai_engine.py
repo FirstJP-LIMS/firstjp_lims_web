@@ -7,7 +7,6 @@ from ..services.ai_service import AIResultInterpreter
 from ..decorators import require_capability
 
 
-
 @login_required
 def generate_ai_insight(request, result_id):
     """
@@ -71,25 +70,3 @@ def approve_ai_insight(request, insight_id):
     )
     return redirect("labs:result_detail", result_id=insight.result.id)
 
-
-# @require_capability("can_verify_results")
-# @login_required
-# def approve_ai_insight(request, insight_id):
-#     # UUID lookup works now
-#     insight = get_object_or_404(AIInterpretation, id=insight_id)
-
-#     # Ownership check: Ensure the pathologist belongs to the same vendor as the result
-#     if insight.result.assignment.vendor != request.user.vendor:
-#         messages.error(request, "Unauthorized approval attempt.")
-#         return redirect("labs:dashboard")
-
-#     insight.is_approved = True
-#     insight.reviewed_by = request.user
-#     insight.reviewed_at = timezone.now() # Add this for clinical auditing
-#     insight.save()
-
-#     messages.success(
-#         request, 
-#         "AI Interpretation has been approved and added to the final report."
-#     )
-#     return redirect("labs:result_detail", result_id=insight.result.id)

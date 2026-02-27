@@ -3,6 +3,11 @@
 {% block content %}
 <div class="min-h-screen flex items-center justify-center bg-gray-50 px-4">
     <div class="max-w-md w-full">
+        <div class="bg-blue-600 text-white py-4 text-center font-medium">
+            <a href="{% url 'labs:result_search' %}" class="hover:underline hover:text-blue-100 transition">
+                Search Result
+            </a>
+        </div>
         <!-- Login Card -->
         <div class="bg-white p-8 rounded-xl shadow-md">
             <div class="space-y-6">
@@ -19,12 +24,16 @@
                     <h2 class="text-2xl font-bold text-gray-900">
                         {% if tenant %}
                             {{ tenant.name }}
+                            
+         
                         {% else %}
                             LIMS Portal
                         {% endif %}
                     </h2>
                     <p class="mt-1 text-gray-500 text-sm">
-                        {% if tenant %}Login{% else %}Sign in to continue{% endif %}
+                        {% if tenant %}
+                        Login
+                        {% else %}Sign in to continue{% endif %}
                     </p>
                 </div>
 

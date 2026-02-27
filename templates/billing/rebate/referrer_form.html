@@ -1,0 +1,216 @@
+{% extends "laboratory/assets/base.html" %}
+{% load static %}{% load humanize %}{% load crispy_forms_tags %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
+  :root{--accent:#2563eb;--success:#16a34a;--muted:#6b7280;--border:#e5e7eb;--surface:#f9fafb;--text:#111827;}
+  body{font-family:'DM Sans',sans-serif;}
+  .mono{font-family:'DM Mono',monospace;}
+  .form-section{border:1px solid var(--border);border-radius:10px;padding:22px 24px;margin-bottom:1.25rem;}
+  .form-section-title{font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:1rem;display:flex;align-items:center;gap:8px;}
+  .form-section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+  .rebate-preview{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 18px;margin-top:1rem;}
+  .rebate-preview .preview-label{font-size:.72rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+  .rebate-preview .preview-val{font-family:'DM Mono',monospace;font-size:1rem;font-weight:700;color:var(--success);}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4" style="max-width:780px;">
+
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb" style="font-size:.8rem;">
+      <li class="breadcrumb-item"><a href="{% url 'billing:dashboard' %}" class="text-decoration-none text-muted">Dashboard</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'billing:referrer_list' %}" class="text-decoration-none text-muted">Partners</a></li>
+      <li class="breadcrumb-item active text-muted">{{ title }}</li>
+    </ol>
+  </nav>
+
+  <div class="mb-4">
+    <h1 class="h4 fw-bold mb-1">{{ title }}</h1>
+    <p class="text-muted small mb-0">
+      {% if is_edit %}Update partner agreement and contact details.
+      {% else %}Register a new referring hospital, clinic, or doctor.{% endif %}
+    </p>
+  </div>
+
+  {% if messages %}{% for m in messages %}
+  <div class="alert alert-{{ m.tags }} alert-dismissible fade show border-0 shadow-sm mb-3" role="alert">
+    {{ m }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>{% endfor %}{% endif %}
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    {# ── Section 1: Identity ─────────────────────────────────────────── #}
+    <div class="form-section">
+      <div class="form-section-title"><span>Partner Identity</span></div>
+      <div class="row g-3">
+        <div class="col-md-8">
+          <label class="form-label small fw-semibold">
+            Partner Name <span class="text-danger">*</span>
+          </label>
+          {{ form.name }}
+          {% if form.name.errors %}<div class="invalid-feedback d-block">{{ form.name.errors.0 }}</div>{% endif %}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small fw-semibold">
+            Short Code
+            <span class="text-muted fw-normal">(optional)</span>
+          </label>
+          {{ form.code }}
+          <div class="form-text">{{ form.code.help_text }}</div>
+          {% if form.code.errors %}<div class="invalid-feedback d-block">{{ form.code.errors.0 }}</div>{% endif %}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small fw-semibold">Contact Person</label>
+          {{ form.contact_person }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small fw-semibold">Phone</label>
+          {{ form.phone }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small fw-semibold">Email</label>
+          {{ form.email }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small fw-semibold">Address</label>
+          {{ form.address }}
+        </div>
+      </div>
+    </div>
+
+    {# ── Section 2: Rebate Agreement ─────────────────────────────────── #}
+    <div class="form-section">
+      <div class="form-section-title"><span>Rebate Agreement</span></div>
+      <div class="row g-3">
+        <div class="col-md-5">
+          <label class="form-label small fw-semibold">
+            Rebate Type <span class="text-danger">*</span>
+          </label>
+          {{ form.rebate_type }}
+          {% if form.rebate_type.errors %}<div class="invalid-feedback d-block">{{ form.rebate_type.errors.0 }}</div>{% endif %}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small fw-semibold" id="rebateValueLabel">
+            Value <span class="text-danger">*</span>
+          </label>
+          <div class="input-group">
+            <span class="input-group-text" id="rebatePrefix">%</span>
+            {{ form.rebate_value }}
+          </div>
+          {% if form.rebate_value.errors %}<div class="invalid-feedback d-block">{{ form.rebate_value.errors.0 }}</div>{% endif %}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small fw-semibold">Payment Terms (days)</label>
+          {{ form.payment_terms_days }}
+        </div>
+      </div>
+
+      {# Live rebate preview #}
+      <div class="rebate-preview mt-3">
+        <div class="preview-label">Example Calculation</div>
+        <div class="preview-val" id="rebatePreview">—</div>
+        <div class="form-text" id="rebatePreviewText">
+          Enter a rebate type and value to see an example calculation.
+        </div>
+      </div>
+    </div>
+
+    {# ── Section 3: Bank Details ──────────────────────────────────────── #}
+    <div class="form-section">
+      <div class="form-section-title"><span>Bank Details <span class="fw-normal text-muted">(for settlement payments)</span></span></div>
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label small fw-semibold">Bank Name</label>
+          {{ form.bank_name }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small fw-semibold">Account Number</label>
+          {{ form.account_number }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small fw-semibold">Account Name</label>
+          {{ form.account_name }}
+        </div>
+      </div>
+    </div>
+
+    {# ── Active toggle ────────────────────────────────────────────────── #}
+    <div class="form-check mb-4 ms-1">
+      {{ form.is_active }}
+      <label class="form-check-label small fw-semibold" for="{{ form.is_active.id_for_label }}">
+        Active — Partner can receive referrals and rebates
+      </label>
+    </div>
+
+    {# ── Form errors ──────────────────────────────────────────────────── #}
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger border-0 rounded-3 mb-3">
+      {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+    </div>
+    {% endif %}
+
+    {# ── Buttons ──────────────────────────────────────────────────────── #}
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary px-4">
+        <i class="bi bi-{% if is_edit %}check-lg{% else %}plus-lg{% endif %} me-1"></i>
+        {% if is_edit %}Save Changes{% else %}Create Partner{% endif %}
+      </button>
+      <a href="{% if is_edit %}{% url 'billing:referrer_detail' pk=referrer.pk %}{% else %}{% url 'billing:referrer_list' %}{% endif %}"
+         class="btn btn-outline-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function(){
+  const typeSelect  = document.getElementById('id_rebate_type');
+  const valueInput  = document.getElementById('id_rebate_value');
+  const prefix      = document.getElementById('rebatePrefix');
+  const preview     = document.getElementById('rebatePreview');
+  const previewText = document.getElementById('rebatePreviewText');
+
+  // Example basis for preview
+  const EXAMPLE_AMOUNT = 3000;
+
+  function updateUI(){
+    const type = typeSelect ? typeSelect.value : '';
+    const val  = parseFloat(valueInput ? valueInput.value : 0) || 0;
+
+    if(prefix){
+      prefix.textContent = type === 'PERCENTAGE' ? '%' : '₦';
+    }
+
+    if(!val){ preview.textContent = '—'; previewText.textContent = 'Enter a value above.'; return; }
+
+    let rebate, explanation;
+    if(type === 'PERCENTAGE'){
+      rebate = (EXAMPLE_AMOUNT * val / 100).toFixed(2);
+      explanation = `On a ₦${EXAMPLE_AMOUNT.toLocaleString()} collection: ${val}% = ₦${parseFloat(rebate).toLocaleString('en-NG', {minimumFractionDigits:2})}`;
+    } else {
+      rebate = parseFloat(val).toFixed(2);
+      explanation = `Fixed ₦${parseFloat(rebate).toLocaleString('en-NG', {minimumFractionDigits:2})} per request, regardless of amount collected.`;
+    }
+
+    preview.textContent     = `₦${parseFloat(rebate).toLocaleString('en-NG', {minimumFractionDigits:2})}`;
+    previewText.textContent = explanation;
+  }
+
+  // Auto-uppercase code field
+  const codeInput = document.querySelector('[name="code"]');
+  if(codeInput){ codeInput.addEventListener('input', ()=>{ codeInput.value = codeInput.value.toUpperCase(); }); }
+
+  if(typeSelect) typeSelect.addEventListener('change', updateUI);
+  if(valueInput) valueInput.addEventListener('input',  updateUI);
+  updateUI();
+})();
+</script>
+{% endblock %}
+
+

@@ -6,7 +6,7 @@ from crispy_forms.layout import Layout, Row, Column, Field, HTML, Div, Submit
 from crispy_forms.bootstrap import PrependedText, AppendedText
 from .models import VendorTest, Department, Patient, TestRequest, Sample
 from ..clinician.models import ClinicianPatientRelationship
-from apps.billing.models import BillingInformation, InsuranceProvider
+from apps.billing.models import BillingInformation, InsuranceProvider, Referrer
 
 import logging
 from decimal import Decimal
@@ -20,6 +20,9 @@ PRIORITY_STATUS = [
         ("routine","ROUTINE"),
     ]
 
+# ============================
+# DEPARTMENT FORM
+# ============================
 
 class DepartmentForm(forms.ModelForm):
     """Form for creating and updating Vendor-scoped lab departments."""
@@ -31,6 +34,10 @@ class DepartmentForm(forms.ModelForm):
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
 
+
+# ============================
+# TEST CONNECTED TO A DEPARTMENT FORM
+# ============================
 
 class VendorLabTestForm(forms.ModelForm):
     """Form for defining a Lab Test within a specific Vendor's catalog."""
@@ -264,6 +271,10 @@ class VendorLabTestForm(forms.ModelForm):
         return cleaned_data
 
 
+# ============================
+# PATIENT FORM
+# ============================
+
 class PatientForm(forms.ModelForm):
     class Meta:
         model = Patient
@@ -301,10 +312,10 @@ class PatientForm(forms.ModelForm):
         )
 
 
-
+# ============================
+# TESTREQUEST
+# ============================
 """
-labs/forms.py — TestRequestForm
-
 Changes in this refactor:
 - CorporateClient field and queryset removed entirely
 - INSURANCE_BILLING_TYPES expanded to {'HMO', 'NHIS', 'CORPORATE', 'STAFF'}
@@ -320,14 +331,10 @@ PRIORITY_STATUS = [
     ('stat',    'STAT'),
 ]
 
-
 INSURANCE_BILLING_TYPES = {'HMO', 'NHIS', 'CORPORATE', 'STAFF'}
-
 
 class TestRequestForm(forms.ModelForm):
     """
-    Flexible form for creating Test Requests.
-
     Used by:
       - Lab Staff  : Can create patients on-the-fly, full catalog access
       - Clinicians : Patient selection, clinical context required
@@ -445,6 +452,22 @@ class TestRequestForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-select'})
     )
 
+    # Referral source 
+    external_referral = forms.ModelChoiceField(
+            queryset=Referrer.objects.none(),
+            required=False,                          # always optional
+            label="Referring Partner",
+            help_text=(
+                "Select the hospital, clinic, or doctor that referred this patient. "
+                "A rebate will be calculated automatically after payment clears."
+            ),
+            empty_label="— Walk-in / No Referral —",
+            widget=forms.Select(attrs={
+                'class': 'form-select',
+                'id': 'id_referrer',
+            })
+        )
+
     # ───────────────────────────────────────
     # Meta — ONLY actual TestRequest model fields.
     # ────────────────────────────────────────
@@ -486,8 +509,24 @@ class TestRequestForm(forms.ModelForm):
                 'lab_staff', 'vendor_admin', 'lab_supervisor', 'lab_technician'
             ]
         )
+        if vendor:
+            referrers = Referrer.objects.filter(vendor=vendor, is_active=True)
+            self.fields['external_referral'].queryset = referrers
+
+            # Attach rebate metadata to each option
+            choices = []
+            for r in referrers:
+                choices.append((
+                    r.pk,
+                    f"{r.name}",
+                ))
+
+            self.fields['external_referral'].choices = [
+                ('', '— Walk-in / No Referral —')
+            ] + choices
 
         if vendor:
+            # self.fields['external_referral'].queryset = Referrer.objects.filter(vendor=vendor, is_active=True)
             # All active providers for this vendor — HMO, NHIS, Corporate, Staff
             self.fields['insurance_provider'].queryset = (
                 InsuranceProvider.objects.filter(vendor=vendor, is_active=True)

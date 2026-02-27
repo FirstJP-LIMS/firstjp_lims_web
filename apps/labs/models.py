@@ -292,11 +292,11 @@ class QualitativeOption(models.Model):
     def __str__(self):
         return f"{self.test.code} — {self.value}{' (normal)' if self.is_normal else ''}"
 
+# import date
 
 # ---------------------
 # Tenant-scoped operational data
 # ---------------------
-# import date
 class Patient(models.Model):
     GENDER_CHOICE = [
         ('M', 'Male'),

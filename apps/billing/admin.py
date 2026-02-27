@@ -3,9 +3,12 @@ from django.db.models import Sum
 from django.utils.html import format_html
 from .models import (
     PriceList, InsuranceProvider, TestPrice,
-    BillingInformation, Payment, Invoice, InvoicePayment
+    BillingInformation, Payment, Invoice, InvoicePayment,
+    Referrer
 )
 
+
+admin.site.register(Referrer)
 
 # ==========================================
 # PRICE LIST ADMIN

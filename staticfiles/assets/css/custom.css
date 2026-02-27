@@ -34,6 +34,7 @@ body {
     transition: var(--transition);
 }
 
+
 .card:hover {
     box-shadow: var(--box-shadow);
 }

@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from .models import (
     PriceList, TestPrice, InsuranceProvider,
-    BillingInformation, Payment, Invoice, InvoicePayment
+    BillingInformation, Payment, Invoice, InvoicePayment, Referrer, D
 )
 
 class InvoiceGenerationForm(forms.Form):
@@ -563,8 +563,6 @@ class InvoiceFilterForm(forms.Form):
 
 
 
-
-
 class TestPriceForm(forms.ModelForm):
     """Form for setting individual test prices within a price list"""
     
@@ -603,306 +601,117 @@ class TestPriceForm(forms.ModelForm):
         return cleaned_data
 
 
+# ===================================
+# REFERRAL/REBATE 
+# ===================================
 
+class ReferrerForm(forms.ModelForm):
+    """
+    Form for creating and editing Referrer (partner hospital) accounts.
+    """
 
+    class Meta:
+        model = Referrer
+        fields = [
+            # Identity
+            'name', 'code', 'contact_person', 'phone', 'email', 'address',
+            # Agreement
+            'rebate_type', 'rebate_value', 'payment_terms_days',
+            # Bank
+            'bank_name', 'account_number', 'account_name',
+            # Status
+            'is_active',
+        ]
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'e.g. General Hospital Clinic, Dr. Adebayo Referrals',
+            }),
+            'code': forms.TextInput(attrs={
+                'class': 'form-control text-uppercase',
+                'placeholder': 'e.g. GHC, ABY',
+                'maxlength': 50,
+            }),
+            'contact_person': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Primary contact name',
+            }),
+            'phone': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': '+234 800 000 0000',
+            }),
+            'email': forms.EmailInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'accounts@partnerhospital.com',
+            }),
+            'address': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 2,
+                'placeholder': 'Street address, city',
+            }),
+            'rebate_type': forms.Select(attrs={'class': 'form-select', 'id': 'id_rebate_type'}),
+            'rebate_value': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'min': '0',
+                'id': 'id_rebate_value',
+            }),
+            'payment_terms_days': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': '1',
+                'max': '365',
+            }),
+            'bank_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'e.g. First Bank, GTBank',
+            }),
+            'account_number': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': '10-digit account number',
+                'maxlength': 20,
+            }),
+            'account_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Exact account name as registered with bank',
+            }),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+        help_texts = {
+            'code': 'Short uppercase identifier used in statement numbers (e.g. GHC → RBS-GHC-2026-0001)',
+            'rebate_value': 'Enter percentage (e.g. 10.00 for 10%) or fixed amount (e.g. 500.00 for ₦500)',
+            'payment_terms_days': 'Days after statement date when payment is due',
+        }
 
-
-
-
-
-# ==========================================
-# INVOICE FORMS
-# ==========================================
-
-# class InvoiceForm(forms.ModelForm):
-#     """Form for creating invoices"""
-    
-#     class Meta:
-#         model = Invoice
-#         fields = [
-#             'invoice_date', 'due_date', 'insurance_provider',
-#             'corporate_client', 'period_start', 'period_end', 'notes'
-#         ]
-#         widgets = {
-#             'invoice_date': forms.DateInput(attrs={
-#                 'class': 'form-control',
-#                 'type': 'date'
-#             }),
-#             'due_date': forms.DateInput(attrs={
-#                 'class': 'form-control',
-#                 'type': 'date'
-#             }),
-#             'insurance_provider': forms.Select(attrs={'class': 'form-select'}),
-#             'corporate_client': forms.Select(attrs={'class': 'form-select'}),
-#             'period_start': forms.DateInput(attrs={
-#                 'class': 'form-control',
-#                 'type': 'date'
-#             }),
-#             'period_end': forms.DateInput(attrs={
-#                 'class': 'form-control',
-#                 'type': 'date'
-#             }),
-#             'notes': forms.Textarea(attrs={
-#                 'class': 'form-control',
-#                 'rows': 3
-#             }),
-#         }
-
-#     # def __init__(self, *args, **kwargs):
-#     #     vendor = kwargs.pop('vendor', None)
-#     #     super().__init__(*args, **kwargs)
+    # def clean_code(self):
+    #     return self.cleaned_data.get('code', '').strip().upper()
+    def __init__(self, *args, **kwargs):
+        # We pass the vendor from the view to the form
+        self.vendor = kwargs.pop('vendor', None)
+        super().__init__(*args, **kwargs)
         
-#     #     if vendor:
-#     #         self.fields['insurance_provider'].queryset = InsuranceProvider.objects.filter(
-#     #             vendor=vendor, is_active=True
-#     #         )
-#     #         self.fields['corporate_client'].queryset = CorporateClient.objects.filter(
-#     #             vendor=vendor, is_active=True
-#     #         )
-    
-#     def __init__(self, *args, **kwargs):
-#         vendor = kwargs.pop('vendor', None)
-#         super().__init__(*args, **kwargs)
-        
-#         if vendor:
-#             # Only show HMOs that actually have un-invoiced billing records
-#             self.fields['insurance_provider'].queryset = InsuranceProvider.objects.filter(
-#                 vendor=vendor, 
-#                 is_active=True,
-#                 billinginformation__invoices__isnull=True,
-#                 billinginformation__insurance_portion__gt=0
-#             ).distinct()
+    def clean_code(self):
+        code = self.cleaned_data.get('code')
+        if code and self.vendor:
+            # Check if this vendor already has this code
+            exists = Referrer.objects.filter(vendor=self.vendor, code=code).exists()
+            
+            # If editing, exclude the current instance
+            if self.instance.pk:
+                exists = Referrer.objects.filter(vendor=self.vendor, code=code).exclude(pk=self.instance.pk).exists()
+            
+            if exists:
+                raise forms.ValidationError(f"The code '{code}' is already assigned to another partner in your lab.")
+        return code
 
-#             # Same logic for Corporate
-#             self.fields['corporate_client'].queryset = CorporateClient.objects.filter(
-#                 vendor=vendor, 
-#                 is_active=True,
-#                 billinginformation__invoices__isnull=True,
-#                 billinginformation__insurance_portion__gt=0
-#             ).distinct()
+    def clean_rebate_value(self):
+        value = self.cleaned_data.get('rebate_value', D('0'))
+        rebate_type = self.cleaned_data.get('rebate_type')
+        if rebate_type == 'PERCENTAGE' and value > 100:
+            raise forms.ValidationError(
+                "Percentage cannot exceed 100%. Did you mean to use Fixed Amount instead?"
+            )
+        if value < 0:
+            raise forms.ValidationError("Rebate value cannot be negative.")
+        return value
 
-#     def clean(self):
-#         cleaned_data = super().clean()
-#         insurance_provider = cleaned_data.get('insurance_provider')
-#         corporate_client = cleaned_data.get('corporate_client')
-#         period_start = cleaned_data.get('period_start')
-#         period_end = cleaned_data.get('period_end')
-#         invoice_date = cleaned_data.get('invoice_date')
-#         due_date = cleaned_data.get('due_date')
-
-#         # Must have either insurance or corporate client
-#         if not insurance_provider and not corporate_client:
-#             raise ValidationError('Please select either an insurance provider or corporate client.')
-        
-#         if insurance_provider and corporate_client:
-#             raise ValidationError('Please select only one: insurance provider OR corporate client.')
-
-#         # Period validation
-#         if period_start and period_end:
-#             if period_end <= period_start:
-#                 raise ValidationError('Period end date must be after period start date.')
-
-#         # Due date validation
-#         if invoice_date and due_date:
-#             if due_date < invoice_date:
-#                 raise ValidationError('Due date cannot be before invoice date.')
-
-#         return cleaned_data
-
-
-
-#  ==========================================
-# INSURANCE PROVIDER FORMS
-# ==========================================
-
-# class InsuranceProviderForm(forms.ModelForm):
-#     """Form for managing insurance/HMO providers"""
-    
-#     def __init__(self, *args, **kwargs):
-#         # 1. Capture the vendor passed from the view
-#         self.vendor = kwargs.pop('vendor', None)
-#         super().__init__(*args, **kwargs)
-        
-#         # 2. If vendor exists, filter the price_list queryset
-#         if self.vendor:
-#             self.fields['price_list'].queryset = PriceList.objects.filter(vendor=self.vendor)
-
-#     class Meta:
-#         model = InsuranceProvider
-#         fields = [
-#             'name', 'code', 'contact_person', 'phone', 'email', 'address',
-#             'payment_terms_days', 'credit_limit', 'patient_copay_percentage',
-#             'is_active', 'requires_preauth', 'price_list'
-#         ]
-
-#         widgets = {
-#             'name': forms.TextInput(attrs={
-#                 'class': 'form-control',
-#                 'placeholder': 'e.g., AVON HMO'
-#             }),
-#             'code': forms.TextInput(attrs={
-#                 'class': 'form-control',
-#                 'placeholder': 'e.g., AVON'
-#             }),
-#             'contact_person': forms.TextInput(attrs={'class': 'form-control'}),
-#             'phone': forms.TextInput(attrs={'class': 'form-control'}),
-#             'email': forms.EmailInput(attrs={'class': 'form-control'}),
-#             'address': forms.Textarea(attrs={
-#                 'class': 'form-control',
-#                 'rows': 3
-#             }),
-#             'payment_terms_days': forms.NumberInput(attrs={
-#                 'class': 'form-control',
-#                 'min': '0'
-#             }),
-#             'credit_limit': forms.NumberInput(attrs={
-#                 'class': 'form-control',
-#                 'step': '0.01',
-#                 'min': '0'
-#             }),
-#             'patient_copay_percentage': forms.NumberInput(attrs={
-#                 'class': 'form-control',
-#                 'step': '0.0001',
-#                 'min': '0',
-#                 'max': '1',
-#                 'placeholder': '0.60 for 60%'
-#             }),
-#             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-#             'requires_preauth': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-#             'price_list': forms.Select(attrs={'class': 'form-select'}),
-#         }
-
-
-# ==========================================
-# CORPORATE CLIENT FORMS
-# ==========================================
-
-# class CorporateClientForm(forms.ModelForm):
-#     """Form for managing corporate accounts"""
-    
-#     class Meta:
-#         model = CorporateClient
-#         fields = [
-#             'company_name', 'bank_name', 'bank_account_number',
-#             'contact_person', 'phone', 'email', 'billing_address',
-#             'payment_terms_days', 'credit_limit', 'special_discount_percentage',
-#             'max_discount_amount', 'price_list', 'is_active'
-#         ]
-#         widgets = {
-#             'company_name': forms.TextInput(attrs={
-#                 'class': 'form-control',
-#                 'placeholder': 'Company Name'
-#             }),
-#             'bank_name': forms.TextInput(attrs={
-#                 'class': 'form-control',
-#                 'placeholder': 'Bank Name'
-#             }),
-#             'bank_account_number': forms.TextInput(attrs={
-#                 'class': 'form-control',
-#                 'placeholder': 'Account Number'
-#             }),
-#             'contact_person': forms.TextInput(attrs={'class': 'form-control'}),
-#             'phone': forms.TextInput(attrs={'class': 'form-control'}),
-#             'email': forms.EmailInput(attrs={'class': 'form-control'}),
-#             'billing_address': forms.Textarea(attrs={
-#                 'class': 'form-control',
-#                 'rows': 3
-#             }),
-#             'payment_terms_days': forms.NumberInput(attrs={
-#                 'class': 'form-control',
-#                 'min': '0'
-#             }),
-#             'credit_limit': forms.NumberInput(attrs={
-#                 'class': 'form-control',
-#                 'step': '0.01',
-#                 'min': '0'
-#             }),
-#             'special_discount_percentage': forms.NumberInput(attrs={
-#                 'class': 'form-control',
-#                 'step': '0.01',
-#                 'min': '0',
-#                 'max': '100'
-#             }),
-#             'max_discount_amount': forms.NumberInput(attrs={
-#                 'class': 'form-control',
-#                 'step': '0.01',
-#                 'min': '0'
-#             }),
-#             'price_list': forms.Select(attrs={'class': 'form-select'}),
-#             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-#         }
-
-
-# ==========================================
-# BILLING INFORMATION FORMS
-# ==========================================
-
-# class BillingInformationForm(forms.ModelForm):
-#     """Form for creating/updating billing records"""
-    
-#     class Meta:
-#         model = BillingInformation
-#         fields = [
-#             'billing_type', 'price_list', 'insurance_provider',
-#             'policy_number', 'pre_authorization_code', 'corporate_client',
-#             'employee_id', 'manual_discount', 'waiver_amount', 'billing_notes'
-#         ]
-#         widgets = {
-#             'billing_type': forms.Select(attrs={'class': 'form-select'}),
-#             'price_list': forms.Select(attrs={'class': 'form-select'}),
-#             'insurance_provider': forms.Select(attrs={'class': 'form-select'}),
-#             'policy_number': forms.TextInput(attrs={'class': 'form-control'}),
-#             'pre_authorization_code': forms.TextInput(attrs={'class': 'form-control'}),
-#             'corporate_client': forms.Select(attrs={'class': 'form-select'}),
-#             'employee_id': forms.TextInput(attrs={'class': 'form-control'}),
-#             'manual_discount': forms.NumberInput(attrs={
-#                 'class': 'form-control',
-#                 'step': '0.01',
-#                 'min': '0'
-#             }),
-#             'waiver_amount': forms.NumberInput(attrs={
-#                 'class': 'form-control',
-#                 'step': '0.01',
-#                 'min': '0'
-#             }),
-#             'billing_notes': forms.Textarea(attrs={
-#                 'class': 'form-control',
-#                 'rows': 3
-#             }),
-#         }
-
-#     def __init__(self, *args, **kwargs):
-#         vendor = kwargs.pop('vendor', None)
-#         super().__init__(*args, **kwargs)
-        
-#         if vendor:
-#             self.fields['price_list'].queryset = PriceList.objects.filter(
-#                 vendor=vendor, is_active=True
-#             )
-#             self.fields['insurance_provider'].queryset = InsuranceProvider.objects.filter(
-#                 vendor=vendor, is_active=True
-#             )
-#             self.fields['corporate_client'].queryset = CorporateClient.objects.filter(
-#                 vendor=vendor, is_active=True
-#             )
-
-#     def clean(self):
-#         cleaned_data = super().clean()
-#         billing_type = cleaned_data.get('billing_type')
-#         insurance_provider = cleaned_data.get('insurance_provider')
-#         corporate_client = cleaned_data.get('corporate_client')
-#         policy_number = cleaned_data.get('policy_number')
-
-#         # Validation based on billing type
-#         if billing_type == 'HMO':
-#             if not insurance_provider:
-#                 raise ValidationError('Insurance provider is required for HMO billing.')
-#             if not policy_number:
-#                 raise ValidationError('Policy number is required for HMO billing.')
-        
-#         elif billing_type == 'CORPORATE':
-#             if not corporate_client:
-#                 raise ValidationError('Corporate client is required for corporate billing.')
-
-#         return cleaned_data
 

@@ -75,7 +75,6 @@
         box-shadow: 0 5px 20px rgba(0,0,0,0.02);
         border: 1px solid rgba(0,0,0,0.05);
         transition: all 0.3s ease;
-        height: 100%;
     }
 
     .info-card:hover {
@@ -537,7 +536,7 @@
     <div class="action-grid">
         <!-- Authorize Button -->
         {% if not is_authorized and not is_waived %}
-        <a href="#" class="action-btn" data-bs-toggle="modal" data-bs-target="#authorizeModal">
+        <a href="" class="action-btn" data-bs-toggle="modal" data-bs-target="#authorizeModal">
             <i class="fas fa-check-double"></i>
             <span>Authorize Payment</span>
             <small>Approve and proceed</small>
@@ -546,7 +545,7 @@
 
         <!-- Waive Button -->
         {% if not is_waived and not is_fully_paid %}
-        <a href="#" class="action-btn" data-bs-toggle="modal" data-bs-target="#waiveModal">
+        <a href="" class="action-btn" data-bs-toggle="modal" data-bs-target="#waiveModal">
             <i class="fas fa-gift"></i>
             <span>Waive Payment</span>
             <small>Mark as waived</small>
@@ -555,7 +554,7 @@
 
         <!-- Record Payment Button -->
         {% if not is_fully_paid and not is_waived %}
-        <a href="#" class="action-btn" data-bs-toggle="modal" data-bs-target="#paymentModal">
+        <a href="" class="action-btn" data-bs-toggle="modal" data-bs-target="#paymentModal">
             <i class="fas fa-money-bill-wave"></i>
             <span>Record Payment</span>
             <small>Cash, card, or transfer</small>
@@ -1010,7 +1009,7 @@
     </div>
 </div>
 
-<!-- Payment Modal -->
+{% comment %} <!-- Payment Modal -->
 <div class="modal fade" id="paymentModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -1039,7 +1038,7 @@
                     
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Payment Method <span class="text-danger">*</span></label>
-                        <select class="form-select" name="method" required>
+                        <select class="form-select" name="payment_method" required>
                             <option value="">Select method...</option>
                             {% for code, label in payment_methods %}
                             <option value="{{ code }}">{{ label }}</option>
@@ -1066,7 +1065,77 @@
             </form>
         </div>
     </div>
+</div> {% endcomment %}
+
+<!-- Payment Modal - CORRECTED -->
+<div class="modal fade" id="paymentModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-money-bill-wave me-2 text-success"></i>
+                    Record Payment
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'billing:confirm_payment' billing.pk %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="amount-highlight mb-3">
+                        <div class="small">Balance Due</div>
+                        <div class="amount">₦{{ patient_balance_due|floatformat:2 }}</div>
+                        {% if billing.payment_status == 'AUTHORIZED' %}
+                        <div class="badge bg-info mt-2">Authorized - Payment Required</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Payment Amount <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">₦</span>
+                            <input type="number" class="form-control" name="amount" step="0.01" min="0.01" 
+                                   max="{{ patient_balance_due|stringformat:'f' }}" value="{{ patient_balance_due }}" required>
+                        </div>
+                        <small class="text-muted">Maximum: ₦{{ patient_balance_due|floatformat:2 }}</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Payment Method <span class="text-danger">*</span></label>
+                        <select class="form-select" name="payment_method" required>
+                            <option value="">Select method...</option>
+                            <option value="CASH">Cash</option>
+                            <option value="CARD">Card</option>
+                            <option value="TRANSFER">Bank Transfer</option>
+                            <option value="CHEQUE">Cheque</option>
+                            <option value="INSURANCE">Insurance</option>
+                            <option value="OTHER">Other</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Transaction Reference</label>
+                        <input type="text" class="form-control" name="transaction_reference" 
+                               placeholder="Receipt/Transaction number">
+                        <small class="text-muted">Optional but recommended for tracking</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Notes</label>
+                        <textarea class="form-control" name="payment_notes" rows="2" 
+                                  placeholder="Any additional information..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check me-2"></i>Record Payment
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
+
 {% endblock %}
 
 {% block extra_js %}

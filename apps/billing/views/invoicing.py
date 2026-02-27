@@ -13,7 +13,7 @@ from django.utils import timezone
 
 # ----- Local app -----
 from ..forms import InvoiceGenerationForm, InvoicePaymentForm
-from ..models import BillingInformation, InsuranceProvider, Invoice, InvoicePayment
+from ..models import BillingInformation, InsuranceProvider, Invoice, InvoicePayment, D
 from ..services.helper import _auto_mark_overdue, _generate_invoice_number
 from ..services.invoice_email import send_invoice_email, send_receipt_email
 from ..services.invoice_pdf_view import build_invoice_pdf, build_receipt_pdf
@@ -446,8 +446,7 @@ def record_invoice_payment_view(request, pk):
 
             messages.success(
                 request,
-                f"Payment of NGN {amount:,.2f} recorded. {status_text}{email_note} "
-                f'<a href="{receipt_url}" class="alert-link">Download Receipt PDF</a>.'
+                f"Payment of NGN {amount:,.2f} recorded. {status_text}{email_note}."
             )
 
         except Exception:
