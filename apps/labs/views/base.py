@@ -29,8 +29,9 @@ from ..utils import check_tenant_access
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-
+# =====================
 # --- Decorator Definition ---
+# =====================
 def tenant_required(view_func):
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
@@ -42,6 +43,14 @@ def tenant_required(view_func):
         request.is_platform_admin = is_platform_admin
         return view_func(request, *args, **kwargs)
     return _wrapped_view
+
+
+
+# # =====================
+# # --- Landing Page ---
+# # =====================
+# def lab_landing_page(request):
+#     return render('laboratory/index.html')
 
 
 # --- CRM Views ---
@@ -187,7 +196,6 @@ def dashboard(request):
         "equipment_stats": equipment_stats,
     }
     return render(request, "laboratory/dashboard.html", context)
-
 
 
 # lab view

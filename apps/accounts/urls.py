@@ -29,9 +29,7 @@ urlpatterns = [
 
     # PASSWORD RESET (Tenant-scoped)
     # Step 1: Request password reset
-    path('password-reset/', 
-         auth.TenantPasswordResetView.as_view(), name='password_reset'
-         ),
+    path('password-reset/', auth.TenantPasswordResetView.as_view(), name='password_reset'),
 
     # path('password-reset/done/', auth_views.PasswordResetDoneView.as_view(template_name='registration/password_reset_done.html'), name='password_reset_done'),
 

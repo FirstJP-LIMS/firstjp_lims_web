@@ -8,7 +8,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-
 class TenantMiddleware(MiddlewareMixin):
     """
     Tenant Middleware (NO CACHING)
@@ -55,14 +54,13 @@ class TenantMiddleware(MiddlewareMixin):
 
         # 5b. Redirect learning portal root "/" to learning landing page
         if request.is_learning_portal and request.path == "/":
-            # return HttpResponseRedirect(reverse('lms:index'))
             return HttpResponseRedirect(reverse('learn:index'))
 
         return None
 
-    # ------------------------------------
+    # ---------------------------------
     # INTERNAL METHODS (NO CACHE)
-    # ------------------------------------
+    # ---------------------------------
 
     def _get_tenant_by_header(self, tenant_id):
         """Resolve tenants via X-Tenant-ID header (direct DB lookup)."""

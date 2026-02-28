@@ -1,71 +1,107 @@
 {% load static %}
-<!-- Laboratory Header - Redesigned to Match Dashboard -->
+<!-- Modern Laboratory Header - Clean & Responsive -->
 <header class="laboratory-header">
-    <nav class="bg-white shadow-sm border-b border-gray-200">
+    <nav class="bg-white shadow-sm border-b border-gray-200" role="navigation">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <!-- Brand Logo & Name - Aligned with Dashboard Colors -->
+            <!-- Main Header Row -->
             <div class="flex justify-between items-center h-16">
-                <div class="flex items-center">
-                    <a class="flex items-center" href="{% url 'labs:vendor_dashboard' %}">
+                <!-- Logo & Brand - Responsive sizing -->
+                <div class="flex items-center flex-shrink-0">
+                    <a class="flex items-center space-x-2 md:space-x-3" href="{% url 'labs:vendor_dashboard' %}" aria-label="Home">
                         {% if vendor_profile.logo %}
-                        <img src="{{ vendor_profile.logo.url }}" alt="{{ vendor.name }}" class="h-8 w-auto mr-2">
+                        <img src="{{ vendor_profile.logo.url }}" 
+                             alt="{{ vendor.name }}" 
+                             class="h-8 w-auto md:h-10 transition-all duration-200">
                         {% else %}
-                        <div class="mr-2">
-                            <div class="h-8 w-8 flex items-center justify-center">
-                                <svg class="h-6 w-6 text-red-600 fill-current" viewBox="0 0 24 24">
-                                    <path d="M12 2L2 7L12 12L22 7L12 2Z"/>
-                                </svg>
-                            </div>
+                        <div class="h-8 w-8 md:h-10 md:w-10 flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-700 rounded-lg shadow-sm">
+                            <svg class="h-5 w-5 md:h-6 md:w-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 2L2 7L12 12L22 7L12 2Z"/>
+                            </svg>
                         </div>
                         {% endif %}
-                        <div class="flex flex-col">
-                            <strong class="text-blue-700 font-semibold text-lg leading-tight">{{ vendor.name|default:"MEDVUNO" }}</strong>
-                            <small class="text-gray-500 text-xs leading-tight">Laboratory Management System</small>
+                        
+                        <!-- Brand text - hidden on smallest screens, visible on sm+ -->
+                        <div class="hidden sm:block">
+                            <strong class="block text-blue-700 font-semibold text-sm md:text-base leading-tight">
+                                {{ vendor.name|default:"MEDVUNO" }}
+                            </strong>
+                            <span class="block text-gray-500 text-xs leading-tight">
+                                Laboratory Management
+                            </span>
+                        </div>
+                        
+                        <!-- Minimal brand for mobile (only first letter/abbrev) -->
+                        <div class="sm:hidden">
+                            <strong class="text-blue-700 font-semibold text-base">
+                                {{ vendor.name|default:"M" }}
+                            </strong>
                         </div>
                     </a>
                 </div>
 
-                <!-- Desktop Navigation Menu -->
-                <div class="hidden md:block">
-                    <div class="ml-10 flex items-center space-x-4">
-                        <!-- Register as section -->
-                        <div class="flex items-center space-x-4">
-                            <div class="text-gray-600 text-sm font-medium">
+                <!-- Desktop Navigation -->
+                <div class="hidden lg:flex items-center space-x-1">
+                    <!-- Book Appointment - Prominent CTA -->
+                    <a href="{% url 'labs:result_search' %}"
+                       class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-gray-700 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200 shadow-sm">
+                        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/>
+                        </svg>
+                        Search Results
+                    </a>
+                    <a href="{% url 'appointment:public_appointment_book' %}"
+                       class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-gray-700 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200 shadow-sm">
+                        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/>
+                        </svg>
+                        Book Appointment
+                    </a>
 
-                            <a href="{% url 'appointment:public_appointment_book' %}"
-                                
-                                   class="text-gray-700 hover:text-blue-700 hover:bg-gray-50 px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors duration-200">
-                                    <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                        <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/>
-                                    </svg>
-                                    Book Appointment
-                                </a>
-                            </div>
+                    <!-- Registration Dropdown -->
+                    <div class="relative ml-3" x-data="{ open: false }">
+                        <button type="button"
+                                class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                                @click="open = !open"
+                                @click.away="open = false">
+                            <svg class="w-4 h-4 mr-2 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z"/>
+                            </svg>
+                            Register
+                            <svg class="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                            </svg>
+                        </button>
 
-                            <div class="text-gray-600 text-sm font-medium">
-                                <p class="m-0">Register as:</p>
-                            </div>
-                            
-                            <div class="flex items-center space-x-2">
+                        <!-- Dropdown Menu -->
+                        <div x-show="open" 
+                             x-transition:enter="transition ease-out duration-100"
+                             x-transition:enter-start="transform opacity-0 scale-95"
+                             x-transition:enter-end="transform opacity-100 scale-100"
+                             x-transition:leave="transition ease-in duration-75"
+                             x-transition:leave-start="transform opacity-100 scale-100"
+                             x-transition:leave-end="transform opacity-0 scale-95"
+                             class="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
+                            <div class="py-1" role="menu">
                                 <a href="{% url 'account:staff_register' %}" 
-                                   class="text-gray-700 hover:text-blue-700 hover:bg-gray-50 px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors duration-200">
-                                    <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                   class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-blue-700 transition-colors duration-150"
+                                   role="menuitem">
+                                    <svg class="w-5 h-5 mr-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                                         <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/>
                                     </svg>
                                     Lab Staff
                                 </a>
-                                
                                 <a href="{% url 'account:patient_register' %}" 
-                                   class="text-gray-700 hover:text-blue-700 hover:bg-gray-50 px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors duration-200">
-                                    <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                   class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-blue-700 transition-colors duration-150"
+                                   role="menuitem">
+                                    <svg class="w-5 h-5 mr-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                                         <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
                                     </svg>
                                     Patients
                                 </a>
-                                
                                 <a href="{% url 'account:clinician_register' %}" 
-                                   class="text-gray-700 hover:text-blue-700 hover:bg-gray-50 px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors duration-200">
-                                    <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                   class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-blue-700 transition-colors duration-150"
+                                   role="menuitem">
+                                    <svg class="w-5 h-5 mr-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
                                     </svg>
                                     Clinician
@@ -75,53 +111,72 @@
                     </div>
                 </div>
 
-                <!-- Mobile menu button -->
-                <div class="md:hidden">
+                <!-- Mobile: Search Result & Menu Button -->
+                <div class="flex items-center space-x-2 md:hidden">
+
+
+                    <!-- Mobile Menu Button -->
                     <button type="button" 
-                            class="mobile-menu-button inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-blue-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+                            class="mobile-menu-button inline-flex items-center justify-center p-2 rounded-lg text-gray-700 hover:text-blue-700 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 transition-colors duration-200"
                             aria-controls="mobile-menu"
                             aria-expanded="false">
                         <span class="sr-only">Open main menu</span>
-                        <!-- Icon when menu is closed -->
                         <svg class="block h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                            <path stroke-linecap="round" stroke-linecap="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                         </svg>
-                        <!-- Icon when menu is open -->
                         <svg class="hidden h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            <path stroke-linecap="round" stroke-linecap="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                         </svg>
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- Mobile menu, show/hide based on menu state -->
+        <!-- Mobile Menu -->
         <div class="md:hidden hidden" id="mobile-menu">
-            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-                <!-- Register as section for mobile -->
-                <div class="px-3 py-2">
-                    <p class="text-gray-600 text-sm font-medium mb-2">Register as:</p>
+            <div class="px-2 pt-2 pb-3 space-y-1 border-t border-gray-200">
+                <!-- Mobile Search Result Banner -->
+                <a href="{% url 'labs:result_search' %}"
+                   class="flex items-center px-3 py-2 text-base font-medium text-white bg-gray-700 hover:bg-gray-800 rounded-lg mx-3 mb-3 transition-colors duration-200">
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/>
+                    </svg>
+                    Search Results
+                </a>
+
+                <!-- Mobile Book Appointment -->
+                <a href="{% url 'appointment:public_appointment_book' %}"
+                   class="flex items-center px-3 py-2 text-base font-medium text-white bg-gray-700 hover:bg-gray-800 rounded-lg mx-3 mb-3 transition-colors duration-200">
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/>
+                    </svg>
+                    Book Appointment
+                </a>
+
+                <!-- Mobile Registration Options -->
+                <div class="px-3">
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Register as</p>
                     
                     <div class="space-y-1">
                         <a href="{% url 'account:staff_register' %}" 
-                           class="text-gray-700 hover:text-blue-700 hover:bg-gray-100 block px-3 py-2 rounded-md text-base font-medium flex items-center">
-                            <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                           class="flex items-center px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-blue-700 transition-colors duration-150">
+                            <svg class="w-5 h-5 mr-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                                 <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/>
                             </svg>
                             Lab Staff
                         </a>
                         
                         <a href="{% url 'account:patient_register' %}" 
-                           class="text-gray-700 hover:text-blue-700 hover:bg-gray-100 block px-3 py-2 rounded-md text-base font-medium flex items-center">
-                            <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                           class="flex items-center px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-blue-700 transition-colors duration-150">
+                            <svg class="w-5 h-5 mr-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                                 <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
                             </svg>
                             Patients
                         </a>
                         
                         <a href="{% url 'account:clinician_register' %}" 
-                           class="text-gray-700 hover:text-blue-700 hover:bg-gray-100 block px-3 py-2 rounded-md text-base font-medium flex items-center">
-                            <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                           class="flex items-center px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-blue-700 transition-colors duration-150">
+                            <svg class="w-5 h-5 mr-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
                             </svg>
                             Clinician
@@ -133,21 +188,73 @@
     </nav>
 </header>
 
+<!-- Add Alpine.js for dropdown functionality (if not already included) -->
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+<!-- Mobile menu toggle script -->
 <script>
-// Mobile menu toggle functionality
-document.querySelector('.mobile-menu-button').addEventListener('click', function() {
+(function() {
+    const menuButton = document.querySelector('.mobile-menu-button');
     const mobileMenu = document.getElementById('mobile-menu');
-    const isHidden = mobileMenu.classList.contains('hidden');
     
-    // Toggle mobile menu visibility
-    mobileMenu.classList.toggle('hidden');
-    
-    // Toggle hamburger menu icon
-    const menuIcons = this.querySelectorAll('svg');
-    menuIcons.forEach(icon => icon.classList.toggle('hidden'));
-    menuIcons.forEach(icon => icon.classList.toggle('block'));
-    
-    // Update aria-expanded attribute
-    this.setAttribute('aria-expanded', !isHidden);
-});
+    if (menuButton && mobileMenu) {
+        menuButton.addEventListener('click', function() {
+            const isHidden = mobileMenu.classList.contains('hidden');
+            
+            // Toggle mobile menu
+            mobileMenu.classList.toggle('hidden');
+            
+            // Toggle icons
+            const icons = this.querySelectorAll('svg');
+            icons.forEach(icon => {
+                icon.classList.toggle('hidden');
+                icon.classList.toggle('block');
+            });
+            
+            // Update aria-expanded
+            this.setAttribute('aria-expanded', !isHidden);
+            
+            // Optional: Add body scroll lock when menu is open
+            document.body.style.overflow = isHidden ? 'hidden' : '';
+        });
+        
+        // Close menu on window resize (if going from mobile to desktop)
+        window.addEventListener('resize', function() {
+            if (window.innerWidth >= 768 && !mobileMenu.classList.contains('hidden')) {
+                mobileMenu.classList.add('hidden');
+                const icons = menuButton.querySelectorAll('svg');
+                icons.forEach(icon => {
+                    icon.classList.add('hidden');
+                    icon.classList.remove('block');
+                });
+                // Show hamburger icon, hide close icon
+                if (icons[0]) icons[0].classList.remove('hidden');
+                if (icons[1]) icons[1].classList.add('hidden');
+                menuButton.setAttribute('aria-expanded', 'false');
+                document.body.style.overflow = '';
+            }
+        });
+    }
+})();
 </script>
+
+<style>
+/* Optional: Add smooth transitions */
+#mobile-menu {
+    transition: opacity 0.2s ease-in-out;
+}
+
+/* Ensure proper stacking */
+.laboratory-header {
+    position: relative;
+    z-index: 50;
+}
+
+/* Improve touch targets on mobile */
+@media (max-width: 767px) {
+    .mobile-menu-button {
+        min-height: 44px;
+        min-width: 44px;
+    }
+}
+</style>

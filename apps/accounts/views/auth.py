@@ -110,7 +110,6 @@ def learn_register(request, role_name):
 
 # @ratelimit(key='ip', rate='5/m', method='POST')
 def tenant_login(request):
-
     storage = get_messages(request)
     for message in storage:
         pass

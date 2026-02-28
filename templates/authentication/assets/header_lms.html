@@ -1,54 +1,193 @@
-<header class="bg-white border-b shadow-sm">
-    <nav class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-        
-        <!-- Logo -->
-        <a href="{% url 'learn:index' %}" class="flex items-center space-x-2">
-            <div class="h-8 w-8 bg-blue-600 text-white rounded flex items-center justify-center font-bold">
+<header class="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
+    <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16 lg:h-20">
+            
+            <!-- Logo with improved branding -->
+            <a href="{% url 'learn:index' %}" class="flex items-center space-x-3 group">
+                <div class="h-8 w-8 bg-blue-600 text-white rounded flex items-center justify-center font-bold">
                 L
-            </div>
-            <span class="text-lg font-semibold text-gray-700">
-                Medvuno Learning
-            </span>
-        </a>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-base lg:text-lg font-semibold text-gray-800 leading-tight group-hover:text-blue-600 transition-colors">
+                        Medvuno Learning
+                    </span>
+                </div>
+            </a>
 
-        <!-- Registration options -->
-        <div class="hidden md:flex items-center space-x-4">
+            <!-- Desktop Navigation - Enhanced with icons and better visual hierarchy -->
+            <div class="hidden md:flex items-center space-x-1 lg:space-x-2">
+                <!-- Registration options with card-like design -->
+                <div class="flex items-center bg-gray-50 rounded-lg p-1">
+                    <a href="{% url 'account:learner_register' %}"
+                       class="flex items-center px-4 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-white hover:shadow-sm transition-all duration-200 group">
+                        <svg class="w-4 h-4 mr-2 text-gray-400 group-hover:text-blue-500 transition-colors" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
+                        </svg>
+                        <span>Join as Student</span>
+                    </a>
+                    
+                    <div class="w-px h-6 bg-gray-200 mx-1"></div>
+                    
+                    <a href="{% url 'account:facilitator_register' %}"
+                       class="flex items-center px-4 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-white hover:shadow-sm transition-all duration-200 group">
+                        <svg class="w-4 h-4 mr-2 text-gray-400 group-hover:text-blue-500 transition-colors" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/>
+                        </svg>
+                        <span>Teach as Facilitator</span>
+                    </a>
+                </div>
+
+                <!-- Optional: Add login link if not authenticated -->
+                <a href="{% url 'account:login' %}" 
+                   class="ml-2 px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors duration-200">
+                    Sign In
+                </a>
+            </div>
+
+            <!-- Mobile menu button with improved design -->
+            <button class="md:hidden relative inline-flex items-center justify-center p-2 rounded-lg text-gray-600 hover:text-blue-600 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 transition-all duration-200 mobile-menu-btn"
+                    aria-label="Main menu"
+                    aria-expanded="false">
+                <svg class="block h-6 w-6 menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linecap="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+                <svg class="hidden h-6 w-6 close-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linecap="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Mobile menu with improved design -->
+    <div id="learning-mobile-menu" class="hidden md:hidden bg-white border-t border-gray-200 shadow-lg">
+        <div class="px-4 py-3 space-y-1">
+            <!-- Mobile registration options with icons -->
             <a href="{% url 'account:learner_register' %}"
-               class="text-gray-700 hover:text-blue-600 text-sm font-medium">
-                Student
+               class="flex items-center px-3 py-3 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition-colors duration-150 group">
+                <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3 group-hover:bg-blue-200">
+                    <svg class="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <div class="font-medium">Join as Student</div>
+                    <div class="text-xs text-gray-500">Access courses and track progress</div>
+                </div>
+                <svg class="w-5 h-5 text-gray-400 group-hover:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linecap="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
             </a>
 
             <a href="{% url 'account:facilitator_register' %}"
-               class="text-gray-700 hover:text-blue-600 text-sm font-medium">
-                Facilitator
+               class="flex items-center px-3 py-3 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-blue-50 transition-colors duration-150 group">
+                <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mr-3 group-hover:bg-green-200">
+                    <svg class="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <div class="font-medium">Teach as Facilitator</div>
+                    <div class="text-xs text-gray-500">Share your expertise and earn</div>
+                </div>
+                <svg class="w-5 h-5 text-gray-400 group-hover:text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linecap="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+            </a>
+
+            <!-- Divider -->
+            <div class="border-t border-gray-200 my-2"></div>
+
+            <!-- Mobile sign in option -->
+            <a href="{% url 'account:login' %}" 
+               class="flex items-center px-3 py-3 rounded-lg text-gray-700 hover:text-blue-600 hover:bg-gray-50 transition-colors duration-150">
+                <svg class="w-5 h-5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linecap="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/>
+                </svg>
+                <span>Sign In to Existing Account</span>
             </a>
         </div>
-
-        <!-- Mobile -->
-        <button class="md:hidden p-2 rounded text-gray-600 mobile-menu-btn">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-        </button>
-    </nav>
-
-    <!-- Mobile menu -->
-    <div id="learning-mobile-menu" class="hidden md:hidden px-4 pb-3 space-y-2">
-        <a href="{% url 'account:learner_register' %}"
-           class="block text-gray-700 hover:text-blue-600">
-            Student
-        </a>
-        <a href="{% url 'account:facilitator_register' %}"
-           class="block text-gray-700 hover:text-blue-600">
-            Facilitator
-        </a>
     </div>
 </header>
 
 <script>
-document.querySelector('.mobile-menu-btn')?.addEventListener('click', function() {
-    const menu = document.getElementById('learning-mobile-menu');
-    menu.classList.toggle('hidden');
-});
+(function() {
+    const menuBtn = document.querySelector('.mobile-menu-btn');
+    const mobileMenu = document.getElementById('learning-mobile-menu');
+    const menuIcon = menuBtn?.querySelector('.menu-icon');
+    const closeIcon = menuBtn?.querySelector('.close-icon');
+    
+    if (menuBtn && mobileMenu) {
+        menuBtn.addEventListener('click', function() {
+            const isExpanded = this.getAttribute('aria-expanded') === 'true';
+            
+            // Toggle menu
+            mobileMenu.classList.toggle('hidden');
+            
+            // Toggle icons
+            if (menuIcon && closeIcon) {
+                menuIcon.classList.toggle('hidden');
+                closeIcon.classList.toggle('hidden');
+            }
+            
+            // Update aria-expanded
+            this.setAttribute('aria-expanded', !isExpanded);
+            
+            // Optional: Add animation class
+            if (!mobileMenu.classList.contains('hidden')) {
+                mobileMenu.style.animation = 'slideDown 0.2s ease-out';
+            } else {
+                mobileMenu.style.animation = 'slideUp 0.2s ease-out';
+            }
+        });
+
+        // Close menu on window resize (if moving to desktop)
+        window.addEventListener('resize', function() {
+            if (window.innerWidth >= 768 && !mobileMenu.classList.contains('hidden')) {
+                mobileMenu.classList.add('hidden');
+                if (menuIcon && closeIcon) {
+                    menuIcon.classList.remove('hidden');
+                    closeIcon.classList.add('hidden');
+                }
+                menuBtn.setAttribute('aria-expanded', 'false');
+            }
+        });
+    }
+})();
 </script>
+
+<style>
+/* Optional animations */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+}
+
+/* Mobile touch targets */
+@media (max-width: 767px) {
+    .mobile-menu-btn {
+        min-height: 44px;
+        min-width: 44px;
+    }
+    
+    #learning-mobile-menu a {
+        min-height: 60px;
+    }
+}
+</style>
