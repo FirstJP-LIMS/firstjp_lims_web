@@ -3,7 +3,7 @@ from django.urls import path
 # from . import views
 from .views import equipment_setup, profile, auth, users 
 
-from django.contrib.auth import views as auth_views
+# from django.contrib.auth import views as auth_views
 
 app_name = "account"
 
@@ -29,43 +29,53 @@ urlpatterns = [
 
     # PASSWORD RESET (Tenant-scoped)
     # Step 1: Request password reset
-    path('password-reset/', auth.TenantPasswordResetView.as_view(), name='password_reset'),
-
-    # path('password-reset/done/', auth_views.PasswordResetDoneView.as_view(template_name='registration/password_reset_done.html'), name='password_reset_done'),
-
-    # path('reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(template_name='registration/password_reset_confirm.html'), name='password_reset_confirm'),
-
-    # path('reset/done/', auth_views.PasswordResetCompleteView.as_view(template_name='registration/password_reset_complete.html'), name='password_reset_complete'),
+    # path('password-reset/', auth.TenantPasswordResetView.as_view(), name='password_reset'),
+    path('password-reset/', auth.tenant_password_reset_view, name='password_reset'),
 
     # Step 2: Email sent confirmation
+    # path(
+    #     'password-reset/done/',
+    #     auth.TenantPasswordResetDoneView.as_view(),
+    #     name='password_reset_done'
+    # ),
     path(
         'password-reset/done/',
-        auth.TenantPasswordResetDoneView.as_view(),
+        auth.tenant_password_reset_done_view,
         name='password_reset_done'
     ),
     
     # Step 3: Set new password (from email link)
+    # path(
+    #     'password-reset/confirm/<uidb64>/<token>/',
+    #     auth.TenantPasswordResetConfirmView.as_view(),
+    #     name='password_reset_confirm'
+    # ),
     path(
         'password-reset/confirm/<uidb64>/<token>/',
-        auth.TenantPasswordResetConfirmView.as_view(),
+        auth.tenant_password_reset_confirm_view,
         name='password_reset_confirm'
     ),
     
     # Step 4: Reset complete
+    # path(
+    #     'password-reset/complete/',
+    #     auth.TenantPasswordResetCompleteView.as_view(),
+    #     name='password_reset_complete'
+    # ),
     path(
         'password-reset/complete/',
-        auth.TenantPasswordResetCompleteView.as_view(),
+        auth.tenant_password_reset_complete_view,
         name='password_reset_complete'
     ),
     
     # ==============================================
     # PASSWORD RESET (Learning Portal)
     # ==============================================
-    path(
-        'learn/password-reset/',
-        auth.LearnPasswordResetView.as_view(),
-        name='learn_password_reset'
-    ),
+    # path(
+    #     'learn/password-reset/',
+    #     auth.LearnPasswordResetView.as_view(),
+    #     name='learn_password_reset'
+    # ),
     # Reuse done/confirm/complete views (they check is_learning_portal flag)
 
 

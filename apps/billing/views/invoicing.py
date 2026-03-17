@@ -515,6 +515,9 @@ def cancel_invoice_view(request, pk):
 
 @login_required
 def invoice_list_view(request):
+    """
+    List HMOS, NHIS Orgs 
+    """
     vendor = getattr(request.user, 'vendor', None)
     if not vendor:
         messages.error(request, "Vendor account required.")

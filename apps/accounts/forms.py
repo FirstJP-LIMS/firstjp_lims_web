@@ -16,7 +16,12 @@ from apps.labs.models import Equipment, Department
 from django.contrib.auth.forms import SetPasswordForm
 from django.core.exceptions import ValidationError
 import re
+import logging
+from django.contrib.auth.forms import PasswordResetForm
 
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 User = get_user_model()
 
@@ -24,95 +29,407 @@ LEARN_ALLOWED = {'learner', 'facilitator'}
 TENANT_ALLOWED = {'lab_staff', 'clinician', 'patient'}
 
 
-class RegistrationForm(forms.ModelForm):
+# from django import forms
+
+
+class BaseAuthForm(forms.Form):
+    """
+    Base form for authentication forms.
+    Automatically styles fields using Tailwind classes.
+    """
+
+    # default_classes = (
+    #     "w-full px-4 py-3 border border-gray-300 rounded-lg "
+    #     "focus:outline-none focus:ring-2 focus:ring-blue-500"
+    # )
+    default_classes = (
+    "w-full px-3 py-2 border border-gray-300 rounded-lg "
+    "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        for field_name, field in self.fields.items():
+
+            css = self.default_classes
+
+            if self.errors.get(field_name):
+                css += " border-red-500"
+
+            field.widget.attrs.update({
+                "class": css
+            })
+
+
+# class RegistrationForm(forms.ModelForm):
+#     password1 = forms.CharField(
+#         widget=forms.PasswordInput(attrs={'class': 'form-control'}),
+#         label="Password",
+#         min_length=8,
+#     )
+#     password2 = forms.CharField(
+#         widget=forms.PasswordInput(attrs={'class': 'form-control'}),
+#         label="Confirm Password"
+#     )
+    
+#     # PATIENT-SPECIFIC FIELDS (only shown when role='patient')
+#     date_of_birth = forms.DateField(
+#         required=False,  # Will be required conditionally
+#         widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+#         label="Date of Birth",
+#         help_text="Required for accurate test results"
+#     )
+    
+#     gender = forms.ChoiceField(
+#         required=False,  # Will be required conditionally
+#         choices=[('', 'Select Gender'), ('M', 'Male'), ('F', 'Female')],
+#         widget=forms.Select(attrs={'class': 'form-control'}),
+#         label="Gender"
+#     )
+    
+#     preferred_notification = forms.ChoiceField(
+#         required=False,
+#         choices=[
+#             ('email', 'Email Only'),
+#             ('sms', 'SMS Only'),
+#             ('both', 'Email & SMS'),
+#         ],
+#         initial='email',
+#         widget=forms.Select(attrs={'class': 'form-control'}),
+#         label="Notification Preference"
+#     )
+    
+#     consent_digital_results = forms.BooleanField(
+#         required=False,  # Will be required conditionally
+#         label="I consent to viewing my lab results online",
+#         help_text="Required to access test results through the patient portal",
+#         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+#     )
+    
+#     terms_and_conditions = forms.BooleanField(
+#         required=False,  # Will be required conditionally
+#         label="I agree to the Terms of Service and Privacy Policy",
+#         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+#     )
+
+#     # ===== CLINICIAN-SPECIFIC FIELDS ===== Only seen when role == 'clinician'
+#     license_number = forms.CharField(
+#         required=False,
+#         max_length=100,
+#         widget=forms.TextInput(attrs={'class': 'form-control'}),
+#         label="Medical License Number",
+#         help_text="Required for verification"
+#     )
+    
+#     specialization = forms.ChoiceField(
+#         required=False,
+#         choices=[('', 'Select Specialization')] + [
+#             ('general_practice', 'General Practice'),
+#             ('internal_medicine', 'Internal Medicine'),
+#             ('pediatrics', 'Pediatrics'),
+#             ('cardiology', 'Cardiology'),
+#             ('endocrinology', 'Endocrinology'),
+#             ('hematology', 'Hematology'),
+#             ('oncology', 'Oncology'),
+#             ('infectious_disease', 'Infectious Disease'),
+#             ('pathology', 'Pathology'),
+#             ('other', 'Other'),
+#         ],
+#         widget=forms.Select(attrs={'class': 'form-control'}),
+#         label="Specialization"
+#     )
+
+        
+#     organization = forms.CharField(
+#         required=False,
+#         max_length=255,
+#         widget=forms.TextInput(attrs={'class': 'form-control'}),
+#         label="Hospital/Clinic Name"
+#     )
+    
+#     qualifications = forms.CharField(
+#         required=False,
+#         widget=forms.TextInput(attrs={'class': 'form-control', 'rows': 3}),
+#         label="Qualifications",
+#         help_text="e.g., MD, MBBS, DO, PhD"
+#     )
+
+#     class Meta:
+#         model = User
+#         fields = [
+#             'email', 'first_name', 'last_name',
+#             'contact_number', 'password1', 'password2'
+#         ]
+#         widgets = {
+#             'email': forms.EmailInput(attrs={'class': 'form-control'}),
+#             'first_name': forms.TextInput(attrs={'class': 'form-control'}),
+#             'last_name': forms.TextInput(attrs={'class': 'form-control'}),
+#             'contact_number': forms.TextInput(attrs={'class': 'form-control'}),
+#         }
+
+#     def __init__(self, *args, vendor=None, forced_role=None, is_learning_portal=False, **kwargs):
+#         super().__init__(*args, **kwargs)
+#         self.vendor = vendor
+#         self.forced_role = forced_role
+#         self.is_learning_portal = is_learning_portal
+        
+#         # Make patient-specific fields required only for patient role
+#         if forced_role == 'patient':
+#             self.fields['date_of_birth'].required = True
+#             self.fields['gender'].required = True
+#             self.fields['consent_digital_results'].required = True
+#             self.fields['terms_and_conditions'].required = True
+#             # Remove clinician fields
+#             del self.fields['license_number']
+#             del self.fields['specialization']
+#             del self.fields['organization']
+#             del self.fields['qualifications']
+        
+#         elif forced_role == 'clinician':
+#             # Make clinician fields required
+#             self.fields['license_number'].required = True
+#             self.fields['specialization'].required = True
+#             self.fields['organization'].required = True
+#             # Remove patient fields
+#             del self.fields['date_of_birth']
+#             del self.fields['gender']
+#             del self.fields['preferred_notification']
+#             del self.fields['consent_digital_results']
+#             del self.fields['terms_and_conditions']
+#         else:
+#             # Lab staff, vendor admin - remove both patient and clinician fields
+#             for field in ['date_of_birth', 'gender', 'preferred_notification', 'consent_digital_results', 'terms_and_conditions', 'license_number', 'specialization', 'organization', 'qualifications']:
+#                 if field in self.fields:
+#                     del self.fields[field]
+
+#     def clean(self):
+#         cleaned = super().clean()
+#         role = self.forced_role
+
+#         if not role:
+#             raise forms.ValidationError("Registration role not supplied.")
+
+#         # Validate roles
+#         if self.is_learning_portal:
+#             if role not in LEARN_ALLOWED:
+#                 raise forms.ValidationError("Invalid role for learning portal.")
+
+#         elif self.vendor:
+#             if role not in TENANT_ALLOWED:
+#                 raise forms.ValidationError("Invalid role for tenant registration.")
+
+#         else:
+#             if role != 'platform_admin':
+#                 raise forms.ValidationError("Invalid platform role.")
+        
+#         # Patient-specific validation
+#         if role == 'patient':
+#             if not cleaned.get('consent_digital_results'):
+#                 raise forms.ValidationError(
+#                     "You must consent to viewing digital results to create a patient account."
+#                 )
+#             if not cleaned.get('terms_and_conditions'):
+#                 raise forms.ValidationError(
+#                     "You must accept the terms and conditions."
+#                 )
+
+#         return cleaned
+
+#     def clean_email(self):
+#         email = self.cleaned_data.get('email')
+
+#         if self.vendor and User.objects.filter(email=email, vendor=self.vendor).exists():
+#             raise forms.ValidationError(
+#                 f"An account with this email already exists at {self.vendor.name}."
+#             )
+#         return email
+
+#     def clean_password2(self):
+#         p1 = self.cleaned_data.get('password1')
+#         p2 = self.cleaned_data.get('password2')
+#         if p1 and p2 and p1 != p2:
+#             raise forms.ValidationError('Passwords do not match')
+#         return p2
+    
+#     def clean_date_of_birth(self):
+#         """Validate date of birth for patients."""
+#         dob = self.cleaned_data.get('date_of_birth')
+#         if dob and self.forced_role == 'patient':
+#             from datetime import date
+#             age = (date.today() - dob).days // 365
+#             if age < 0:
+#                 raise forms.ValidationError("Date of birth cannot be in the future.")
+#             if age < 18:
+#                 raise forms.ValidationError(
+#                     "You must be 18 or older to create a patient account."
+#                 )
+#         return dob
+
+#     def save(self, commit=True, vendor=None):
+#         """
+#         Save user and create role specific profiles.
+#         """
+#         data = self.cleaned_data
+#         pwd = data['password1']
+#         role = self.forced_role
+
+#         vendor_to_use = vendor if vendor else self.vendor
+#         if self.is_learning_portal:
+#             vendor_to_use = None
+
+#         user = User(
+#             email=data['email'],
+#             first_name=data['first_name'],
+#             last_name=data['last_name'],
+#             contact_number=data.get('contact_number'),
+#             vendor=vendor_to_use,
+#             role=role,
+#         )
+#         user.set_password(pwd)
+
+#         if commit:
+#             with transaction.atomic():
+#                 user.save()
+                
+#                 # Create Patient and PatientUser records if role is 'patient'
+#                 if role == 'patient' and vendor_to_use:
+#                     # Create Patient record (for lab operations)
+#                     patient = Patient.objects.create(
+#                         vendor=vendor_to_use,
+#                         first_name=data['first_name'],
+#                         last_name=data['last_name'],
+#                         date_of_birth=data.get('date_of_birth'),
+#                         gender=data.get('gender'),
+#                         contact_email=data['email'],
+#                         contact_phone=data.get('contact_number', ''),
+#                     )
+#                     # patient_id is auto-generated via Patient.save()
+                    
+#                     # Create PatientUser record (portal access bridge)
+#                     PatientUser.objects.create(
+#                         user=user,
+#                         patient=patient,
+#                         preferred_notification=data.get('preferred_notification', 'email'),
+#                         consent_to_digital_results=data.get('consent_digital_results', False),
+#                         terms_accepted_at=timezone.now(),
+#                         # email_verified=False,  # Will be verified later
+#                         # phone_verified=False,
+#                         email_verified=True,  # Will be verified later
+#                         phone_verified=True,
+#                     )
+
+#                 # Create ClinicianProfile if role is 'clinician'
+#                 elif role == 'clinician' and vendor_to_use:
+#                     ClinicianProfile.objects.create(
+#                         user=user,
+#                         license_number=data.get('license_number', ''),
+#                         specialization=data.get('specialization', 'general_practice'),
+#                         organization=data.get('organization', ''),
+#                         qualifications=data.get('qualifications', ''),
+#                         is_verified=False,  # Requires admin verification
+#                         is_active=True,
+#                     )
+        
+#         return user
+    
+
+
+# New 
+class RegistrationForm(BaseAuthForm, forms.ModelForm):
+
     password1 = forms.CharField(
-        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
+        widget=forms.PasswordInput(attrs={
+            "placeholder": "Create a password",
+            "autocomplete": "new-password"
+        }),
         label="Password",
         min_length=8,
     )
+
     password2 = forms.CharField(
-        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
+        widget=forms.PasswordInput(attrs={
+            "placeholder": "Confirm your password",
+            "autocomplete": "new-password"
+        }),
         label="Confirm Password"
     )
-    
+
     # PATIENT-SPECIFIC FIELDS (only shown when role='patient')
     date_of_birth = forms.DateField(
-        required=False,  # Will be required conditionally
-        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+        required=False,
+        widget=forms.DateInput(attrs={"type": "date"}),
         label="Date of Birth",
-        help_text="Required for accurate test results"
+        help_text="Required for accurate test results",
     )
-    
+
     gender = forms.ChoiceField(
-        required=False,  # Will be required conditionally
-        choices=[('', 'Select Gender'), ('M', 'Male'), ('F', 'Female')],
-        widget=forms.Select(attrs={'class': 'form-control'}),
+        required=False,
+        choices=[
+            ("", "Select Gender"),
+            ("M", "Male"),
+            ("F", "Female"),
+        ],
         label="Gender"
     )
-    
+
     preferred_notification = forms.ChoiceField(
         required=False,
         choices=[
-            ('email', 'Email Only'),
-            ('sms', 'SMS Only'),
-            ('both', 'Email & SMS'),
+            ("email", "Email Only"),
+            ("sms", "SMS Only"),
+            ("both", "Email & SMS"),
         ],
-        initial='email',
-        widget=forms.Select(attrs={'class': 'form-control'}),
+        initial="email",
         label="Notification Preference"
     )
-    
+
     consent_digital_results = forms.BooleanField(
-        required=False,  # Will be required conditionally
+        required=False,
         label="I consent to viewing my lab results online",
         help_text="Required to access test results through the patient portal",
-        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
     )
-    
+
     terms_and_conditions = forms.BooleanField(
-        required=False,  # Will be required conditionally
+        required=False,
         label="I agree to the Terms of Service and Privacy Policy",
-        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
     )
 
     # ===== CLINICIAN-SPECIFIC FIELDS ===== Only seen when role == 'clinician'
     license_number = forms.CharField(
         required=False,
         max_length=100,
-        widget=forms.TextInput(attrs={'class': 'form-control'}),
         label="Medical License Number",
         help_text="Required for verification"
     )
-    
+
     specialization = forms.ChoiceField(
         required=False,
-        choices=[('', 'Select Specialization')] + [
-            ('general_practice', 'General Practice'),
-            ('internal_medicine', 'Internal Medicine'),
-            ('pediatrics', 'Pediatrics'),
-            ('cardiology', 'Cardiology'),
-            ('endocrinology', 'Endocrinology'),
-            ('hematology', 'Hematology'),
-            ('oncology', 'Oncology'),
-            ('infectious_disease', 'Infectious Disease'),
-            ('pathology', 'Pathology'),
-            ('other', 'Other'),
+        choices=[
+            ("", "Select Specialization"),
+            ("general_practice", "General Practice"),
+            ("internal_medicine", "Internal Medicine"),
+            ("pediatrics", "Pediatrics"),
+            ("cardiology", "Cardiology"),
+            ("endocrinology", "Endocrinology"),
+            ("hematology", "Hematology"),
+            ("oncology", "Oncology"),
+            ("infectious_disease", "Infectious Disease"),
+            ("pathology", "Pathology"),
+            ("other", "Other"),
         ],
-        widget=forms.Select(attrs={'class': 'form-control'}),
         label="Specialization"
     )
 
-        
     organization = forms.CharField(
         required=False,
         max_length=255,
-        widget=forms.TextInput(attrs={'class': 'form-control'}),
         label="Hospital/Clinic Name"
     )
-    
+
     qualifications = forms.CharField(
         required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'rows': 3}),
+        widget=forms.Textarea(attrs={"rows": 3}),
         label="Qualifications",
         help_text="e.g., MD, MBBS, DO, PhD"
     )
@@ -120,50 +437,83 @@ class RegistrationForm(forms.ModelForm):
     class Meta:
         model = User
         fields = [
-            'email', 'first_name', 'last_name',
-            'contact_number', 'password1', 'password2'
+            "email",
+            "first_name",
+            "last_name",
+            "contact_number",
+            "password1",
+            "password2",
         ]
         widgets = {
-            'email': forms.EmailInput(attrs={'class': 'form-control'}),
-            'first_name': forms.TextInput(attrs={'class': 'form-control'}),
-            'last_name': forms.TextInput(attrs={'class': 'form-control'}),
-            'contact_number': forms.TextInput(attrs={'class': 'form-control'}),
+            "email": forms.EmailInput(attrs={
+                "placeholder": "Enter your email address"
+            }),
+            "first_name": forms.TextInput(attrs={
+                "placeholder": "First name"
+            }),
+            "last_name": forms.TextInput(attrs={
+                "placeholder": "Last name"
+            }),
+            "contact_number": forms.TextInput(attrs={
+                "placeholder": "Phone number"
+            }),
         }
 
     def __init__(self, *args, vendor=None, forced_role=None, is_learning_portal=False, **kwargs):
         super().__init__(*args, **kwargs)
+
         self.vendor = vendor
         self.forced_role = forced_role
         self.is_learning_portal = is_learning_portal
-        
-        # Make patient-specific fields required only for patient role
-        if forced_role == 'patient':
-            self.fields['date_of_birth'].required = True
-            self.fields['gender'].required = True
-            self.fields['consent_digital_results'].required = True
-            self.fields['terms_and_conditions'].required = True
-            # Remove clinician fields
-            del self.fields['license_number']
-            del self.fields['specialization']
-            del self.fields['organization']
-            del self.fields['qualifications']
-        
-        elif forced_role == 'clinician':
-            # Make clinician fields required
-            self.fields['license_number'].required = True
-            self.fields['specialization'].required = True
-            self.fields['organization'].required = True
-            # Remove patient fields
-            del self.fields['date_of_birth']
-            del self.fields['gender']
-            del self.fields['preferred_notification']
-            del self.fields['consent_digital_results']
-            del self.fields['terms_and_conditions']
+
+        # Helper to remove fields cleanly
+        def remove_fields(field_list):
+            for f in field_list:
+                self.fields.pop(f, None)
+
+        if forced_role == "patient":
+            # required patient fields 
+            self.fields["date_of_birth"].required = True
+            self.fields["gender"].required = True
+            self.fields["consent_digital_results"].required = True
+            self.fields["terms_and_conditions"].required = True
+            
+            # remove fields
+            remove_fields([
+                "license_number",
+                "specialization",
+                "organization",
+                "qualifications",
+            ])
+
+        elif forced_role == "clinician":
+            # required clinician fields 
+            self.fields["license_number"].required = True
+            self.fields["specialization"].required = True
+            self.fields["organization"].required = True
+            
+            # remove fields
+            remove_fields([
+                "date_of_birth",
+                "gender",
+                "preferred_notification",
+                "consent_digital_results",
+                "terms_and_conditions",
+            ])
+
         else:
-            # Lab staff, vendor admin - remove both patient and clinician fields
-            for field in ['date_of_birth', 'gender', 'preferred_notification', 'consent_digital_results', 'terms_and_conditions', 'license_number', 'specialization', 'organization', 'qualifications']:
-                if field in self.fields:
-                    del self.fields[field]
+            # for Lab staff, vendor admin - remove both patient and clinician fields
+            remove_fields([
+                "date_of_birth",
+                "gender",
+                "preferred_notification",
+                "consent_digital_results",
+                "terms_and_conditions",
+                "license_number",
+                "specialization",
+                "organization",
+                "qualifications",
+            ])
 
     def clean(self):
         cleaned = super().clean()
@@ -172,7 +522,6 @@ class RegistrationForm(forms.ModelForm):
         if not role:
             raise forms.ValidationError("Registration role not supplied.")
 
-        # Validate roles
         if self.is_learning_portal:
             if role not in LEARN_ALLOWED:
                 raise forms.ValidationError("Invalid role for learning portal.")
@@ -182,16 +531,17 @@ class RegistrationForm(forms.ModelForm):
                 raise forms.ValidationError("Invalid role for tenant registration.")
 
         else:
-            if role != 'platform_admin':
+            if role != "platform_admin":
                 raise forms.ValidationError("Invalid platform role.")
-        
-        # Patient-specific validation
-        if role == 'patient':
-            if not cleaned.get('consent_digital_results'):
+
+        # Patient Specific Validation 
+        if role == "patient":
+            if not cleaned.get("consent_digital_results"):
                 raise forms.ValidationError(
                     "You must consent to viewing digital results to create a patient account."
                 )
-            if not cleaned.get('terms_and_conditions'):
+
+            if not cleaned.get("terms_and_conditions"):
                 raise forms.ValidationError(
                     "You must accept the terms and conditions."
                 )
@@ -296,82 +646,93 @@ class RegistrationForm(forms.ModelForm):
         return user
     
 
-class TenantAuthenticationForm(AuthenticationForm):
+
+class TenantAuthenticationForm(BaseAuthForm, AuthenticationForm):
+
     username = forms.EmailField(
+        label="Email address",
         widget=forms.EmailInput(
             attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
-                'placeholder': 'Enter your email address',
-                'autofocus': True,
+                "placeholder": "Enter your email address",
+                "autofocus": True,
+                "autocomplete": "email",
             }
         ),
-        label='Email Address',
     )
+
     password = forms.CharField(
+        label="Password",
         widget=forms.PasswordInput(
             attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
-                'placeholder': 'Enter your password',
+                "placeholder": "Enter your password",
+                "autocomplete": "current-password",
             }
         ),
-        label='Password',
     )
+
+# class TenantAuthenticationForm(AuthenticationForm):
+#     username = forms.EmailField(
+#         widget=forms.EmailInput(
+#             attrs={
+#                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+#                 'placeholder': 'Enter your email address',
+#                 'autofocus': True,
+#             }
+#         ),
+#         label='Email Address',
+#     )
+#     password = forms.CharField(
+#         widget=forms.PasswordInput(
+#             attrs={
+#                 'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+#                 'placeholder': 'Enter your password',
+#             }
+#         ),
+#         label='Password',
+#     )
+
+
+# class TenantPasswordResetForm(PasswordResetForm):
+
+#     def __init__(self, *args, **kwargs):
+#         self.tenant = kwargs.pop("tenant", None)
+#         super().__init__(*args, **kwargs)
+
+#     def get_users(self, email):
+
+#         active_users = super().get_users(email)
+
+#         if self.tenant:
+#             return [u for u in active_users if u.vendor == self.tenant]
+
+#         return active_users
+
 
 
 class TenantPasswordResetForm(PasswordResetForm):
-    """
-    Tenant-scoped password reset: only finds users belonging to the current tenant.
-    """
-    
+
     def __init__(self, *args, **kwargs):
-        self.tenant = kwargs.pop('tenant', None)  # Pass tenant from view
+        self.tenant = kwargs.pop("tenant", None)
         super().__init__(*args, **kwargs)
-        
-        # Update field styling
-        self.fields['email'].widget.attrs.update({
-            'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500',
-            'placeholder': 'Enter your registered email'
+
+        # Style email field
+        self.fields["email"].widget.attrs.update({
+            "class": "w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500",
+            "placeholder": "Enter your email address",
+            "autocomplete": "email"
         })
-    
-    def clean_email(self):
-        email = self.cleaned_data.get('email')
-        
-        # Validate that user exists in THIS tenant
-        if self.tenant:
-            user_exists = User.objects.filter(
-                email=email,
-                vendor=self.tenant,
-                is_active=True
-            ).exists()
-            
-            if not user_exists:
-                # Don't reveal if email exists (security)
-                # But internally we know it's tenant-scoped
-                pass
-        
-        return email
-    
+
     def get_users(self, email):
         """
-        Override to return only users from the current tenant.
-        This is called by Django's password reset view.
+        Filter users by tenant.
         """
-        if not self.tenant:
-            return User.objects.none()  # No tenant = no users
-        
-        # Only return active users from THIS tenant
-        active_users = User.objects.filter(
-            email__iexact=email,
-            vendor=self.tenant,
-            is_active=True,
-        )
-        
-        return (
-            u for u in active_users
-            if u.has_usable_password() and 
-            u.email  # Ensure email is not empty
-        )
 
+        active_users = super().get_users(email)
+
+        if self.tenant:
+            return [u for u in active_users if u.vendor == self.tenant]
+
+        return active_users
 
 class TenantSetPasswordForm(SetPasswordForm):
     """

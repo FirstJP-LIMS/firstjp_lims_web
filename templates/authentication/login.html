@@ -1,100 +1,134 @@
 {% extends "authentication/assets/base.html" %}
+
 {% load static %}
+
 {% block content %}
-<div class="min-h-screen flex items-center justify-center bg-gray-50 px-4">
 
-        <!-- Login Card -->
-        <div class="bg-white p-8 rounded-xl shadow-md">
-            <div class="space-y-6">
-                <!-- Logo & Title -->
-                <div class="text-center">
-                    <div class="flex justify-center mb-4">
-                        <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                            <svg class="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
-                            </svg>
-                        </div>
+<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
+
+    <!-- Login Card -->
+    <div class="max-w-md w-full space-y-8">
+        <!-- Logo/Header -->
+        <div class="text-center">
+            <div class="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-indigo-100">
+                <svg class="h-8 w-8 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                </svg>
+            </div>
+            <h2 class="mt-6 text-3xl font-extrabold text-gray-900">
+                Login
+            </h2>
+            <p class="mt-2 text-sm text-gray-600">
+                {% if tenant %}
+                    {{ tenant.name }}
+                {% elif is_learning_portal %}
+                    MedVuno Learning Portal
+                {% else %}
+                    MedVuno Platform
+                {% endif %}
+            </p>
+            <p class="mt-2 text-sm text-gray-500">
+                Enter your email address and password to login.
+            </p>
+        </div>
+
+        <!-- Messages -->
+        {% if messages %}
+            {% for message in messages %}
+                <div class="p-3 rounded-md
+                    {% if message.tags == 'success' %}bg-green-50 text-green-800
+                    {% elif message.tags == 'error' %}bg-red-50 text-red-800
+                    {% else %}bg-blue-50 text-blue-800{% endif %}">
+                    <div class="flex">
+                        <div class="flex-1">{{ message }}</div>
+                        <button type="button" class="ml-2"
+                                onclick="this.closest('.alert').remove()">
+                            ✕
+                        </button>
                     </div>
-                    
-                    <h2 class="text-2xl font-bold text-gray-900">
-                        {% if tenant %}
-                            {{ tenant.name }}
-                        {% else %}
-                            LIMS Portal
-                        {% endif %}
-                    </h2>
-                    <p class="mt-1 text-gray-500 text-sm">
-                        {% if tenant %}
-                        Login
-                        {% else %}Sign in to continue{% endif %}
-                    </p>
                 </div>
+            {% empty %}
+                {# no messages – render nothing #}
+            {% endfor %}
+        {% endif %}
 
-                <!-- Messages -->
-                {% if messages %}
-                    {% for message in messages %}
-                        <div class="p-3 rounded-md
-                            {% if message.tags == 'success' %}bg-green-50 text-green-800
-                            {% elif message.tags == 'error' %}bg-red-50 text-red-800
-                            {% else %}bg-blue-50 text-blue-800{% endif %}">
-                            <div class="flex">
-                                <div class="flex-1">{{ message }}</div>
-                                <button type="button" class="ml-2"
-                                        onclick="this.closest('.alert').remove()">
-                                    ✕
-                                </button>
+        <!-- Form -->
+        <div class="bg-white py-8 px-6 shadow-xl rounded-lg">
+            <form class="space-y-6" method="post">
+                {% csrf_token %}
+                {% if form.errors %}
+                    <div class="bg-red-50 border-l-4 border-red-400 p-4 mb-4">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm text-red-700">
+                                    {{ form.errors }}
+                                </p>
                             </div>
                         </div>
-                    {% empty %}
-                        {# no messages – render nothing #}
-                    {% endfor %}
+                    </div>
                 {% endif %}
 
-                <!-- Login Form -->
-                <form method="post" class="space-y-5">
-                    {% csrf_token %}
-                    
-                    <!-- Username -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                            Email
-                        </label>
-                        <input type="text" 
-                               name="username" 
-                               id="id_username"
-                               required
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    </div>
-                    
-                    <!-- Password -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                            Password
-                        </label>
-                        <input type="password" 
-                               name="password" 
-                               id="id_password"
-                               required
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    </div>
-                    
-                    <!-- Submit Button -->
-                    <button type="submit" 
-                            class="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition">
-                        Sign In
-                    </button>
-                </form>
+                <div>
+                    <label for="id_username" class="block text-sm font-medium text-gray-700 mb-2">
+                        Email address
+                    </label>
 
-                <!-- Forgot Password -->
-                <div class="text-center">
-                    <a href="#" class="text-sm text-blue-600 hover:text-blue-500">
-                        Forgot your password?
+                    {{ form.username }}
+
+                    {% if form.username.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ form.username.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="id_password" class="block text-sm font-medium text-gray-700 mb-2">
+                        Password
+                    </label>
+
+                    {{ form.password }}
+
+                    {% if form.password.errors %}
+                        <p class="mt-2 text-sm text-red-600">{{ form.password.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <button type="submit" class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-gray-900 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out">
+                        <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+                            <svg class="h-5 w-5 text-indigo-500 group-hover:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                        </span>
+                        Login
+                    </button>
+                </div>
+            </form>
+
+            <div class="mt-6">
+                <div class="mt-6">
+                    <a href="{% url 'account:password_reset' %}" class="w-full flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        <svg class="h-5 w-5 mr-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                        </svg>
+                        Forgot Password?
                     </a>
                 </div>
             </div>
         </div>
-        <!-- End Login Card -->
+
+        <!-- Security Note -->
+        <div class="text-center">
+            <p class="text-xs text-gray-500">
+                🔒 Don't reveal your password! 
+            </p>
+        </div>
     </div>
+        <!-- End Login Card -->
 </div>
 {% endblock content %}
 

@@ -11,7 +11,7 @@ import dj_database_url
 load_dotenv()
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
-ENVIRONMENT = "production" 
+# ENVIRONMENT = "production" 
 
 # BASE_DIR = Path(__file__).resolve().parent.parent.parent
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -93,10 +93,8 @@ AUTHENTICATION_BACKENDS = [
     # 'django.contrib.auth.backends.ModelBackend',  # fallback
 ]
 
-
 LOGIN_URL = 'account:login'
 LOGOUT_REDIRECT_URL = 'account:login'
-
 
 ROOT_URLCONF = "lims_auth.urls"
 
@@ -134,6 +132,9 @@ USE_I18N = True
 USE_TZ = True
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# password reset token expiry time - 24hrs (in seconds)
+PASSWORD_RESET_TIMEOUT = 86400
 
 # Email setting - Gmail
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"

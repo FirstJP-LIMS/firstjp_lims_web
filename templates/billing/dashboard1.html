@@ -636,15 +636,16 @@
                             <div class="d-flex align-items-center gap-2">
                                 <div class="avatar-placeholder"><i class="bi bi-person"></i></div>
                                 <div>
-                                    <div class="fw-medium small">{{ billing.request.patient.get_full_name|default:"Unknown" }}</div>
+                                    <div class="fw-medium small">{{ billing.request.patient.get_full_name }}</div>
                                     <div class="text-muted" style="font-size:0.78rem;">{{ billing.request.patient.contact_phone|default:"—" }}</div>
                                 </div>
                             </div>
                         </td>
                         <td>
                             <span class="badge bg-light text-dark px-2 py-1 small">
-                                {{ billing.get_billing_type_display }}
+                                {{ billing.get_payment_status_display }}
                             </span>
+                            
                             {% if billing.insurance_provider %}
                             <div class="text-muted mt-1" style="font-size:0.75rem;">
                                 {{ billing.insurance_provider.name|truncatechars:14 }}

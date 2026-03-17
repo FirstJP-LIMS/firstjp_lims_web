@@ -108,6 +108,7 @@ def learn_register(request, role_name):
         'role_name': role_name.title(),
     })
 
+
 # @ratelimit(key='ip', rate='5/m', method='POST')
 def tenant_login(request):
     storage = get_messages(request)
@@ -119,56 +120,67 @@ def tenant_login(request):
 
     if request.method == 'POST':
         form = TenantAuthenticationForm(request, data=request.POST)
-        if form.is_valid():
-            user = form.get_user()
+        try:
+            if form.is_valid():
+                user = form.get_user()
 
-            # 1️⃣ Learning portal login
-            if is_learning:
-                # Only learner/facilitator allowed, vendor must be None
-                if user.vendor is not None or user.role not in LEARN_ALLOWED:
-                    messages.error(request, "This account cannot access the learning portal.")
+                # 1️⃣ Learning portal login
+                if is_learning:
+                    # Only learner/facilitator allowed, vendor must be None
+                    if user.vendor is not None or user.role not in LEARN_ALLOWED:
+                        messages.error(request, "This account cannot access the learning portal.")
+                        return redirect(reverse('account:login'))
+
+                    login(request, user)
+                    messages.success(request, f"Welcome, {user.first_name or user.email}")
+                    # return redirect(reverse('learn:index'))  # create a learn dashboard route
+                    if user.role == "learner":
+                        return redirect(reverse('learn:index'))  # create a learn dashboard route
+                    elif user.role == "facilitator":
+                        return redirect(reverse('learn:facilitator_dashboard'))  # create a learn dashboard route
+
+                # 2️⃣ Platform Admin: global access
+                if getattr(user, 'is_platform_admin', False):
+                    login(request, user)
+                    # messages.success(request, f"Welcome back, {user.first_name}")
+                    return redirect(reverse('dashboard'))
+
+                # 3️⃣ Tenant validation (vendor sites)
+                if not tenant:
+                    messages.error(request, "No tenant could be resolved. Access denied.")
+                    return redirect(reverse('no_tenant'))
+
+                if not user.vendor or user.vendor.internal_id != tenant.internal_id:
+                    messages.error(request, "This account does not belong to this tenant.")
+                    return redirect(reverse('account:login'))
+
+                # Reject learning roles for tenant domains
+                if user.role not in TENANT_ALLOWED:
+                    messages.error(request, "This account role cannot access this tenant.")
                     return redirect(reverse('account:login'))
 
                 login(request, user)
-                messages.success(request, f"Welcome, {user.first_name or user.email}")
-                # return redirect(reverse('learn:index'))  # create a learn dashboard route
-                if user.role == "learner":
-                    return redirect(reverse('learn:index'))  # create a learn dashboard route
-                elif user.role == "facilitator":
-                    return redirect(reverse('learn:facilitator_dashboard'))  # create a learn dashboard route
+                messages.success(request, f"Welcome, {user.email}")
 
-            # 2️⃣ Platform Admin: global access
-            if getattr(user, 'is_platform_admin', False):
-                login(request, user)
-                # messages.success(request, f"Welcome back, {user.first_name}")
-                return redirect(reverse('dashboard'))
-
-            # 3️⃣ Tenant validation (vendor sites)
-            if not tenant:
-                messages.error(request, "No tenant could be resolved. Access denied.")
-                return redirect(reverse('no_tenant'))
-
-            if not user.vendor or user.vendor.internal_id != tenant.internal_id:
-                messages.error(request, "This account does not belong to this tenant.")
-                return redirect(reverse('account:login'))
-
-            # Reject learning roles for tenant domains
-            if user.role not in TENANT_ALLOWED:
-                messages.error(request, "This account role cannot access this tenant.")
-                return redirect(reverse('account:login'))
-
-            login(request, user)
-            messages.success(request, f"Welcome, {user.email}")
-
-            # role routing
-            if user.role in ['vendor_admin', 'lab_staff']:
-                return redirect(reverse('labs:vendor_dashboard'))
-            elif user.role == 'patient':
-                return redirect(reverse('patient:patient_dashboard'))
-            elif user.role == 'clinician':
-                return redirect(reverse('clinician:clinician_dashboard'))
-            else:
-                return redirect(reverse('account:login'))
+                # role routing
+                if user.role in ['vendor_admin', 'lab_staff']:
+                    print("Logged-in Successfully")
+                    return redirect(reverse('labs:vendor_dashboard'))
+                elif user.role == 'patient':
+                    return redirect(reverse('patient:patient_dashboard'))
+                elif user.role == 'clinician':
+                    return redirect(reverse('clinician:clinician_dashboard'))
+                else:
+                    return redirect(reverse('account:login'))
+        except Exception as e:
+            import traceback
+            print(traceback.format_exc()) # This will show the full error in your console
+            messages.error(request, f"Internal Server Error: {str(e)}")
+        else:
+            # ADD THIS FOR DEBUGGING
+            print(f"Form Errors: {form.errors.as_json()}") 
+            messages.error(request, "Invalid username or password.")
+    
     else:
         form = TenantAuthenticationForm(request)
 
@@ -191,327 +203,334 @@ def tenant_logout(request):
 """
 
 # apps/accounts/views.py (Password Reset Views)
-from django.shortcuts import render, redirect
-from django.contrib.auth.views import (
-    PasswordResetView, 
-    PasswordResetDoneView,
-    PasswordResetConfirmView, 
-    PasswordResetCompleteView
-)
-from django.contrib.auth.tokens import default_token_generator
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.utils.encoding import force_bytes, force_str
-from django.core.mail import send_mail
-from django.template.loader import render_to_string
-from django.urls import reverse_lazy, reverse
-from django.contrib import messages
-from django.conf import settings
-from ..forms import TenantPasswordResetForm, TenantSetPasswordForm
+# from django.shortcuts import render, redirect
+# from django.contrib.auth.views import (
+#     PasswordResetView, 
+#     PasswordResetDoneView,
+#     PasswordResetConfirmView, 
+#     PasswordResetCompleteView
+# )
+# from django.contrib.auth.tokens import default_token_generator
+# from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+# from django.utils.encoding import force_bytes, force_str
+# from django.core.mail import send_mail
+# from django.template.loader import render_to_string
+# from django.urls import reverse_lazy, reverse
+# from django.contrib import messages
+# from django.conf import settings
+# from ..forms import TenantPasswordResetForm, TenantSetPasswordForm
 
 
-class TenantPasswordResetView(PasswordResetView):
-    """
-    ARCHITECTURE NOTES:
-    - Django: Form submission → Email sent → Redirect to done page
-    - Future REST: POST /api/v1/auth/password-reset/ → JSON response with status
-    """
-    template_name = 'authentication/password_reset/password_reset_form.html'
-    form_class = TenantPasswordResetForm
-    success_url = reverse_lazy('account:password_reset_done')
-    email_template_name = 'authentication/password_reset/password_reset_email.html'
-    subject_template_name = 'authentication/password_reset/password_reset_subject.txt'
-    
-    def get_form_kwargs(self):
-        """Pass tenant context to form."""
-        kwargs = super().get_form_kwargs()
-        kwargs['tenant'] = getattr(self.request, 'tenant', None)
-        return kwargs
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['tenant'] = getattr(self.request, 'tenant', None)
-        context['is_learning_portal'] = getattr(self.request, 'is_learning_portal', False)
-        return context
-    
-    def form_valid(self, form):
-        """
-        Send password reset email.
-        
-        SCALABILITY NOTE:
-        - Current: Synchronous email sending (blocks request)
-        - Future: Use Celery/RQ for async email dispatch
-        - REST API: Return 202 Accepted immediately, send email in background
-        """
-        tenant = getattr(self.request, 'tenant', None)
-        
-        # Get users matching email + tenant
-        email = form.cleaned_data['email']
-        users = form.get_users(email)
-        
-        for user in users:
-            # Generate token and uid
-            token = default_token_generator.make_token(user)
-            uid = urlsafe_base64_encode(force_bytes(user.pk))
-            
-            # Build reset URL
-            reset_url = self.request.build_absolute_uri(
-                reverse('account:password_reset_confirm', kwargs={
-                    'uidb64': uid,
-                    'token': token
-                })
-            )
-            
-            # Prepare email context
-            context = {
-                'user': user,
-                'reset_url': reset_url,
-                'tenant': tenant,
-                'vendor_name': tenant.name if tenant else 'MedVuno Platform',
-                'valid_hours': 24,  # Token validity period
-            }
-            
-            # Render email
-            email_body = render_to_string(self.email_template_name, context)
-            email_subject = render_to_string(self.subject_template_name, context).strip()
-            
-            try:
-                send_mail(
-                    subject=email_subject,
-                    message=email_body,
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[user.email],
-                    fail_silently=False,
-                )
-                logger.info(f"Password reset email sent to {user.email} (Tenant: {tenant})")
-            except Exception as e:
-                logger.error(f"Failed to send password reset email to {user.email}: {str(e)}")
-                # Don't reveal error to user for security
-        
-        # Always show success message (even if email doesn't exist)
-        # This prevents email enumeration attacks
-        return super().form_valid(form)
-
-
-class TenantPasswordResetDoneView(PasswordResetDoneView):
-    """
-    Step 2: Confirmation that reset email was sent.
-    
-    ARCHITECTURE NOTES:
-    - Django: Static template with message
-    - Future REST: Not needed (API returns JSON immediately)
-    """
-    template_name = 'authentication/password_reset/password_reset_done.html'
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['tenant'] = getattr(self.request, 'tenant', None)
-        context['is_learning_portal'] = getattr(self.request, 'is_learning_portal', False)
-        return context
-
-
-class TenantPasswordResetConfirmView(PasswordResetConfirmView):
-    """
-    Step 3: User clicks email link and sets new password.
-    
-    ARCHITECTURE NOTES:
-    - Django: GET shows form, POST processes new password
-    - Future REST: 
-        - GET /api/v1/auth/password-reset/verify/{uid}/{token}/ → Validate token
-        - POST /api/v1/auth/password-reset/confirm/ → Set new password
-    """
-    template_name = 'authentication/password_reset/password_reset_confirm.html'
-    form_class = TenantSetPasswordForm
-    success_url = reverse_lazy('account:password_reset_complete')
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['tenant'] = getattr(self.request, 'tenant', None)
-        context['is_learning_portal'] = getattr(self.request, 'is_learning_portal', False)
-        
-        # Check if token is valid
-        if self.validlink:
-            context['validlink'] = True
-        else:
-            context['validlink'] = False
-            
-        return context
-    
-    def form_valid(self, form):
-        """Log password reset success."""
-        user = form.save()
-        logger.info(f"Password successfully reset for user: {user.email}")
-        messages.success(
-            self.request, 
-            "Your password has been reset successfully. You can now log in with your new password."
-        )
-        return super().form_valid(form)
-
-
-class TenantPasswordResetCompleteView(PasswordResetCompleteView):
-    """
-    Step 4: Success page with link to login.
-    
-    ARCHITECTURE NOTES:
-    - Django: Static success template
-    - Future REST: Not needed (handled client-side after confirmation)
-    """
-    template_name = 'authentication/password_reset/password_reset_complete.html'
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['tenant'] = getattr(self.request, 'tenant', None)
-        context['is_learning_portal'] = getattr(self.request, 'is_learning_portal', False)
-        context['login_url'] = reverse('account:login')
-        return context
-
-
-# =====================================
-# LEARNING PORTAL PASSWORD RESET (For learners/facilitators)
-# =======================================
-
-class LearnPasswordResetView(PasswordResetView):
-    """
-    Password reset for learning portal users (vendor=None).
-    
-    DIFFERENCE FROM TENANT RESET:
-    - No tenant filtering
-    - Only allows learner/facilitator roles
-    """
-    template_name = 'authentication/password_reset/password_reset_form.html'
-    form_class = TenantPasswordResetForm
-    success_url = reverse_lazy('account:password_reset_done')
-    email_template_name = 'authentication/password_reset/password_reset_email.html'
-    
-    def dispatch(self, request, *args, **kwargs):
-        """Ensure this is only accessible from learning portal."""
-        if not getattr(request, 'is_learning_portal', False):
-            messages.error(request, "This page is only accessible from the learning portal.")
-            return redirect('account:login')
-        return super().dispatch(request, *args, **kwargs)
-    
-    def get_form_kwargs(self):
-        """Pass tenant=None for learning portal."""
-        kwargs = super().get_form_kwargs()
-        kwargs['tenant'] = None
-        kwargs['is_learning_portal'] = True
-        return kwargs
-
-
-# Admin-only vendor-admin creation
-def is_platform_admin(user):
-    return user.is_authenticated and user.is_platform_admin
-
-@user_passes_test(is_platform_admin)
-def create_vendor_admin(request, vendor_id):
-    vendor = get_object_or_404(Vendor, internal_id=vendor_id)
-    if request.method == 'POST':
-        form = RegistrationForm(request.POST)
-        if form.is_valid():
-            form.save(vendor=vendor, role='vendor_admin')
-            return redirect('admin:tenants_vendor_change', vendor.internal_id)
-    else:
-        form = RegistrationForm()
-    return render(request, 'registration/create_vendor_admin.html', {'form': form, 'vendor': vendor})
-
-
-
-
-# # apps/accounts/views.py
-# from django.contrib.auth import views as auth_views
-
-# @ratelimit(key='ip', rate='3/h', method='POST')  # 3 password resets per hour
-# class TenantPasswordResetView(auth_views.PasswordResetView):
-#     """
-#     Custom password reset view that injects tenant into the form.
-#     """
-#     template_name = 'registration/password_reset_form.html'
-#     email_template_name = 'registration/password_reset_email.html'
-#     subject_template_name = 'registration/password_reset_subject.txt'
+# class TenantPasswordResetView(PasswordResetView):
+#     template_name = 'authentication/password_reset/password_reset_form.html'
 #     form_class = TenantPasswordResetForm
+#     success_url = reverse_lazy('account:password_reset_done')
     
 #     def get_form_kwargs(self):
 #         kwargs = super().get_form_kwargs()
 #         kwargs['tenant'] = getattr(self.request, 'tenant', None)
 #         return kwargs
+
+
+# class TenantPasswordResetDoneView(PasswordResetDoneView):
+#     """
+#     Step 2: Confirmation that reset email was sent.
+    
+#     ARCHITECTURE NOTES:
+#     - Django: Static template with message
+#     - Future REST: Not needed (API returns JSON immediately)
+#     """
+#     template_name = 'authentication/password_reset/password_reset_done.html'
+    
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+#         context['tenant'] = getattr(self.request, 'tenant', None)
+#         context['is_learning_portal'] = getattr(self.request, 'is_learning_portal', False)
+#         return context
+
+
+# class TenantPasswordResetConfirmView(PasswordResetConfirmView):
+#     """
+#     Step 3: User clicks email link and sets new password.
+    
+#     ARCHITECTURE NOTES:
+#     - Django: GET shows form, POST processes new password
+#     - Future REST: 
+#         - GET /api/v1/auth/password-reset/verify/{uid}/{token}/ → Validate token
+#         - POST /api/v1/auth/password-reset/confirm/ → Set new password
+#     """
+#     template_name = 'authentication/password_reset/password_reset_confirm.html'
+#     form_class = TenantSetPasswordForm
+#     success_url = reverse_lazy('account:password_reset_complete')
+    
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+#         context['tenant'] = getattr(self.request, 'tenant', None)
+#         context['is_learning_portal'] = getattr(self.request, 'is_learning_portal', False)
+        
+#         # Check if token is valid
+#         if self.validlink:
+#             context['validlink'] = True
+#         else:
+#             context['validlink'] = False
+            
+#         return context
     
 #     def form_valid(self, form):
-#         """
-#         Add extra context for better user experience.
-#         """
-#         tenant = getattr(self.request, 'tenant', None)
-#         if tenant:
-#             messages.info(
-#                 self.request,
-#                 f"If your email is registered with {tenant.name}, you'll receive reset instructions."
-#             )
+#         """Log password reset success."""
+#         user = form.save()
+#         logger.info(f"Password successfully reset for user: {user.email}")
+#         messages.success(
+#             self.request, 
+#             "Your password has been reset successfully. You can now log in with your new password."
+#         )
 #         return super().form_valid(form)
 
 
-# # ------------------------------
-# # Tenant-Aware Auth. ends here
-# # ------------------------------
-
-# # ===== RESET PASSWORD =====
-# @login_required
-# # @vendor_admin_required
-# # @require_http_methods(["GET", "POST"])
-# def user_reset_password(request, user_id):
+# class TenantPasswordResetCompleteView(PasswordResetCompleteView):
 #     """
-#     Reset a user's password (admin function).
+#     Step 4: Success page with link to login.
+    
+#     ARCHITECTURE NOTES:
+#     - Django: Static success template
+#     - Future REST: Not needed (handled client-side after confirmation)
 #     """
-#     vendor = request.user.vendor
-#     user = get_object_or_404(
-#         User.objects.select_related('vendor'),
-#         id=user_id,
-#         vendor=vendor
-#     )
+#     template_name = 'authentication/password_reset/password_reset_complete.html'
     
-#     # Prevent resetting own password here
-#     if user.id == request.user.id:
-#         messages.error(request, "Use the profile settings to change your own password.")
-#         return redirect('users:user_detail', user_id=user.id)
-    
-#     if request.method == "POST":
-#         new_password = request.POST.get('new_password', '').strip()
-#         confirm_password = request.POST.get('confirm_password', '').strip()
-        
-#         if not new_password:
-#             messages.error(request, "Password is required.")
-#         elif len(new_password) < 8:
-#             messages.error(request, "Password must be at least 8 characters long.")
-#         elif new_password != confirm_password:
-#             messages.error(request, "Passwords do not match.")
-#         else:
-#             try:
-#                 user.set_password(new_password)
-#                 user.save(update_fields=['password'])
-                
-#                 # Audit log
-#                 try:
-#                     from apps.labs.models import AuditLog
-#                     AuditLog.objects.create(
-#                         vendor=vendor,
-#                         user=request.user,
-#                         action=f"Reset password for user: {user.get_full_name()}",
-#                         ip_address=request.META.get('REMOTE_ADDR')
-#                     )
-#                 except ImportError:
-#                     pass
-                
-#                 messages.success(
-#                     request, 
-#                     f"Password reset successfully for {user.get_full_name()}. "
-#                     "The user can now log in with the new password."
-#                 )
-#                 return redirect('users:user_detail', user_id=user.id)
-                
-#             except Exception as e:
-#                 logger.exception(f"Error resetting password: {e}")
-#                 messages.error(request, f"Error: {str(e)}")
-    
-#     context = {
-#         'profile_user': user,
-#     }
-    
-#     return render(request, 'users/user_reset_password.html', context)
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+#         context['tenant'] = getattr(self.request, 'tenant', None)
+#         context['is_learning_portal'] = getattr(self.request, 'is_learning_portal', False)
+#         context['login_url'] = reverse('account:login')
+#         return context
 
+
+# # =====================================
+# # LEARNING PORTAL PASSWORD RESET (For learners/facilitators)
+# # =======================================
+
+# class LearnPasswordResetView(PasswordResetView):
+# #     """
+# #     Password reset for learning portal users (vendor=None).
+    
+# #     DIFFERENCE FROM TENANT RESET:
+# #     - No tenant filtering
+# #     - Only allows learner/facilitator roles
+# #     """
+# #     template_name = 'authentication/password_reset/password_reset_form.html'
+# #     form_class = TenantPasswordResetForm
+# #     success_url = reverse_lazy('account:password_reset_done')
+# #     email_template_name = 'authentication/password_reset/password_reset_email.html'
+    
+# #     def dispatch(self, request, *args, **kwargs):
+# #         """Ensure this is only accessible from learning portal."""
+# #         if not getattr(request, 'is_learning_portal', False):
+# #             messages.error(request, "This page is only accessible from the learning portal.")
+# #             return redirect('account:login')
+# #         return super().dispatch(request, *args, **kwargs)
+    
+# #     def get_form_kwargs(self):
+# #         """Pass tenant=None for learning portal."""
+# #         kwargs = super().get_form_kwargs()
+# #         kwargs['tenant'] = None
+# #         kwargs['is_learning_portal'] = True
+# #         return kwargs
+
+
+# # Admin-only vendor-admin creation
+# def is_platform_admin(user):
+#     return user.is_authenticated and user.is_platform_admin
+
+# @user_passes_test(is_platform_admin)
+# def create_vendor_admin(request, vendor_id):
+#     vendor = get_object_or_404(Vendor, internal_id=vendor_id)
+#     if request.method == 'POST':
+#         form = RegistrationForm(request.POST)
+#         if form.is_valid():
+#             form.save(vendor=vendor, role='vendor_admin')
+#             return redirect('admin:tenants_vendor_change', vendor.internal_id)
+#     else:
+#         form = RegistrationForm()
+#     return render(request, 'registration/create_vendor_admin.html', {'form': form, 'vendor': vendor})
+
+
+
+
+# apps/accounts/views.py
+
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.urls import reverse, reverse_lazy
+from django.conf import settings
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
+from django.utils.encoding import force_bytes, force_str
+
+from django.template.loader import render_to_string
+from django.core.mail import send_mail
+from django.contrib.sites.shortcuts import get_current_site
+
+from ..forms import TenantPasswordResetForm
+
+
+def tenant_password_reset_view(request):
+
+    tenant = getattr(request, "tenant", None)
+
+    if request.method == "POST":
+
+        form = TenantPasswordResetForm(
+            request.POST,
+            tenant=tenant
+        )
+
+        if form.is_valid():
+
+            email = form.cleaned_data["email"]
+            users = form.get_users(email)
+
+            print(f"\n--- RESET DEBUG: Found {len(users)} users for {email} ---")
+
+            for user in users:
+
+                token = default_token_generator.make_token(user)
+                uid = urlsafe_base64_encode(force_bytes(user.pk))
+
+                current_site = get_current_site(request)
+                domain = current_site.domain
+                protocol = "https" if request.is_secure() else "http"
+
+                reset_url = f"{protocol}://{domain}{reverse('account:password_reset_confirm', kwargs={'uidb64': uid, 'token': token})}"
+
+                print("\n" + "!" * 60)
+                print(f"DEVELOPMENT RESET LINK FOR {user.email}:")
+                print(reset_url)
+                print("!" * 60 + "\n")
+
+                context = {
+                    "user": user,
+                    "reset_url": reset_url,
+                    "tenant": tenant,
+                    "domain": domain,
+                    "site_name": current_site.name,
+                    "protocol": protocol,
+                }
+
+                subject = render_to_string(
+                    "authentication/emails/password_reset_subject.txt",
+                    context
+                ).strip()
+
+                message = render_to_string(
+                    "authentication/emails/password_reset_email.html",
+                    context
+                )
+
+                send_mail(
+                    subject,
+                    message,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [user.email],
+                    fail_silently=False,
+                )
+
+            return redirect("account:password_reset_done")
+
+    else:
+        form = TenantPasswordResetForm(tenant=tenant)
+
+    return render(
+        request,
+        "authentication/password_reset/password_reset_form.html",
+        {
+            "form": form,
+            "tenant": tenant,
+        },
+    )
+
+
+def tenant_password_reset_done_view(request):
+
+    context = {
+        "tenant": getattr(request, "tenant", None),
+        "is_learning_portal": getattr(request, "is_learning_portal", False),
+    }
+
+    return render(
+        request,
+        "authentication/password_reset/password_reset_done.html",
+        context
+    )
+
+
+from django.contrib.auth import get_user_model
+from django.utils.http import urlsafe_base64_decode
+from django.contrib.auth.tokens import default_token_generator
+from ..forms import TenantSetPasswordForm
+
+User = get_user_model()
+
+
+def tenant_password_reset_confirm_view(request, uidb64, token):
+
+    tenant = getattr(request, "tenant", None)
+    is_learning_portal = getattr(request, "is_learning_portal", False)
+
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid)
+    except Exception:
+        user = None
+
+    validlink = False
+
+    if user and default_token_generator.check_token(user, token):
+        validlink = True
+
+        if request.method == "POST":
+            form = TenantSetPasswordForm(user, request.POST)
+
+            if form.is_valid():
+
+                user = form.save()
+
+                messages.success(
+                    request,
+                    "Your password has been reset successfully. You can now log in with your new password."
+                )
+
+                return redirect("account:password_reset_complete")
+
+        else:
+            form = TenantSetPasswordForm(user)
+
+    else:
+        form = None
+
+    context = {
+        "form": form,
+        "validlink": validlink,
+        "tenant": tenant,
+        "is_learning_portal": is_learning_portal,
+    }
+
+    return render(
+        request,
+        "authentication/password_reset/password_reset_confirm.html",
+        context,
+    )
+
+def tenant_password_reset_complete_view(request):
+
+    context = {
+        "tenant": getattr(request, "tenant", None),
+        "is_learning_portal": getattr(request, "is_learning_portal", False),
+        "login_url": reverse("account:login"),
+    }
+
+    return render(
+        request,
+        "authentication/password_reset/password_reset_complete.html",
+        context,
+    )
