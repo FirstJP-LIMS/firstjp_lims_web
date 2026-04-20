@@ -85,3 +85,4 @@ Test performed
 Month-end: Lab generates invoice
 ↓
 Shell pays within 60 days
+

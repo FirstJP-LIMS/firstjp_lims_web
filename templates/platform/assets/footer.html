@@ -1,99 +1,396 @@
-<footer class="bg-[#0a2347] text-white pt-16 pb-8">
-  <div class="max-w-7xl mx-auto px-6 lg:px-8">
+{% load static %}
 
-    <!-- MAIN GRID -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Serif+Display&display=swap');
 
-      <!-- Products & Services -->
-      <div>
-        <h3 class="text-lg font-semibold mb-4 text-[#D4AF37]">Platform</h3>
-        <ul class="space-y-2.5 text-sm opacity-90">
-          <li><a href="#" class="hover:text-[#D4AF37] transition-colors">Patient Management</a></li>
-          <li><a href="#" class="hover:text-[#D4AF37] transition-colors">Lab Testing</a></li>
-          <li><a href="#" class="hover:text-[#D4AF37] transition-colors">Results & Reporting</a></li>
-          <li><a href="#" class="hover:text-[#D4AF37] transition-colors">Inventory Management</a></li>
-          <li><a href="#" class="hover:text-[#D4AF37] transition-colors">Financial Management</a></li>
-        </ul>
+  /* ─────────────────────────────────────────
+     FOOTER
+  ───────────────────────────────────────── */
+
+  .site-footer {
+    background: #0f1e35;
+    font-family: 'DM Sans', sans-serif;
+    color: #fff;
+  }
+
+  /* Main grid */
+  .footer-top {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 64px 2.5rem 52px;
+    display: grid;
+    grid-template-columns: 1.6fr 1fr 1fr 1fr 1fr;
+    gap: 2.5rem;
+  }
+
+  /* ── Brand column ── */
+  .footer-compliance-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(212, 175, 55, 0.08);
+    border: 0.5px solid rgba(212, 175, 55, 0.25);
+    border-radius: 100px;
+    padding: 4px 12px;
+    margin-bottom: 20px;
+  }
+
+  .footer-compliance-badge-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #D4AF37;
+    flex-shrink: 0;
+  }
+
+  .footer-compliance-badge-text {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: #D4AF37;
+  }
+
+  .footer-brand-mark {
+    width: 36px;
+    height: 36px;
+    background: #183153;
+    border: 1px solid rgba(212, 175, 55, 0.25);
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+  }
+
+  .footer-brand-mark svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .footer-brand-name {
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px;
+    color: #fff;
+    margin-bottom: 12px;
+    letter-spacing: -0.2px;
+  }
+
+  .footer-brand-name span {
+    color: #D4AF37;
+  }
+
+  .footer-tagline {
+    font-size: 13px;
+    line-height: 1.75;
+    color: rgba(255, 255, 255, 0.42);
+    max-width: 220px;
+    margin-bottom: 28px;
+  }
+
+  /* Contact items */
+  .footer-contact {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+
+  .footer-contact-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.5);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .footer-contact-item:hover {
+    color: #D4AF37;
+  }
+
+  .footer-contact-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.06);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .footer-contact-icon svg {
+    width: 13px;
+    height: 13px;
+    stroke: rgba(255, 255, 255, 0.45);
+    fill: none;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* Social icons */
+  .footer-socials {
+    display: flex;
+    gap: 8px;
+  }
+
+  .footer-social-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 0.5px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    color: rgba(255, 255, 255, 0.45);
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
+  }
+
+  .footer-social-btn:hover {
+    border-color: rgba(212, 175, 55, 0.5);
+    color: #D4AF37;
+    background: rgba(212, 175, 55, 0.06);
+  }
+
+  .footer-social-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  /* ── Link columns ── */
+  .footer-col h4 {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: #D4AF37;
+    margin-bottom: 18px;
+  }
+
+  .footer-col ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .footer-col ul li a {
+    font-size: 13.5px;
+    color: rgba(255, 255, 255, 0.48);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .footer-col ul li a:hover {
+    color: #fff;
+  }
+
+  /* ── Divider ── */
+  .footer-divider {
+    border: none;
+    border-top: 0.5px solid rgba(255, 255, 255, 0.08);
+    margin: 0 2.5rem;
+  }
+
+  /* ── Bottom bar ── */
+  .footer-bottom {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 20px 2.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .footer-legal {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  .footer-legal a {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.32);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .footer-legal a:hover {
+    color: rgba(255, 255, 255, 0.65);
+  }
+
+  .footer-copy {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.25);
+  }
+
+  .footer-copy strong {
+    color: rgba(255, 255, 255, 0.42);
+    font-weight: 500;
+  }
+
+  /* ─────────────────────────────────────────
+     RESPONSIVE
+  ───────────────────────────────────────── */
+
+  @media (max-width: 1024px) {
+    .footer-top {
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 2rem;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .footer-top {
+      grid-template-columns: 1fr 1fr;
+      padding: 48px 1.5rem 40px;
+    }
+
+    .footer-brand-col {
+      grid-column: 1 / -1;
+    }
+
+    .footer-divider {
+      margin: 0 1.5rem;
+    }
+
+    .footer-bottom {
+      padding: 18px 1.5rem;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+    }
+  }
+</style>
+
+
+<footer class="site-footer">
+  <div class="footer-top">
+
+    <!-- ── Brand & Contact ── -->
+    <div class="footer-brand-col">
+      <div class="footer-compliance-badge">
+        <div class="footer-compliance-badge-dot"></div>
+        <span class="footer-compliance-badge-text">ISO 15189 Compliant</span>
       </div>
 
-      <!-- Lab Testing -->
-      <div>
-        <h3 class="text-lg font-semibold mb-4 text-[#D4AF37]">Lab Testing</h3>
-        <ul class="space-y-2.5 text-sm opacity-90">
-          <li><a href="#" class="hover:text-[#D4AF37] transition-colors">Hematology</a></li>
-          <li><a href="#" class="hover:text-[#D4AF37] transition-colors">Blood Chemistry</a></li>
-          <li><a href="#" class="hover:text-[#D4AF37] transition-colors">Molecular Testing</a></li>
-          <li><a href="#" class="hover:text-[#D4AF37] transition-colors">Toxicology</a></li>
-          <li><a href="#" class="hover:text-[#D4AF37] transition-colors">Radiology</a></li>
-        </ul>
+    {% comment %} <div class="footer-brand-mark">
+        <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 2L16 6V14L10 18L4 14V6L10 2Z" stroke="white" stroke-width="1.4" fill="none"/>
+          <path d="M7 10H13M10 7V13" stroke="#D4AF37" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+      </div> {% endcomment %}
+
+      <div class="footer-brand-name">Med<span>vuno</span></div>
+
+      <p class="footer-tagline">AI-driven laboratory information management, built for modern diagnostic operations.</p>
+
+      <div class="footer-contact">
+        <a href="tel:+2348064540860" class="footer-contact-item">
+          <div class="footer-contact-icon">
+            <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.63A2 2 0 012 .82h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 8.91A16 16 0 0015.1 17.9l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+          </div>
+          +234 806 454 0860
+        </a>
+
+        <span class="footer-contact-item">
+          <div class="footer-contact-icon">
+            <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          </div>
+          Lagos, Nigeria
+        </span>
       </div>
 
-      <!-- Resources -->
-      <div>
-        <h3 class="text-lg font-semibold mb-4 text-[#D4AF37]">Resources</h3>
-        <ul class="space-y-2.5 text-sm opacity-90">
-          <li><a href="#" class="hover:text-[#D4AF37] transition-colors">Developer API</a></li>
-          <li><a href="#" class="hover:text-[#D4AF37] transition-colors">Documentation</a></li>
-          <li><a href="#" class="hover:text-[#D4AF37] transition-colors">Support Center</a></li>
-          <li><a href="#" class="hover:text-[#D4AF37] transition-colors">Blog</a></li>
-        </ul>
+      <div class="footer-socials">
+        <a href="#" class="footer-social-btn" aria-label="LinkedIn">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/>
+            <circle cx="4" cy="4" r="2"/>
+          </svg>
+        </a>
+        <a href="#" class="footer-social-btn" aria-label="Facebook">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/>
+          </svg>
+        </a>
+        <a href="#" class="footer-social-btn" aria-label="X / Twitter">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+          </svg>
+        </a>
+        <a href="https://wa.me/2348064540860" target="_blank" rel="noopener noreferrer" class="footer-social-btn" aria-label="WhatsApp">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+            <path d="M11.9 0C5.33 0 0 5.33 0 11.9c0 2.1.55 4.07 1.5 5.78L0 24l6.5-1.7A11.86 11.86 0 0011.9 23.8C18.47 23.8 23.8 18.47 23.8 11.9S18.47 0 11.9 0zm0 21.8c-1.85 0-3.59-.5-5.08-1.36l-.36-.22-3.77.98 1.01-3.66-.24-.38A9.84 9.84 0 012.1 11.9C2.1 6.44 6.44 2.1 11.9 2.1S21.7 6.44 21.7 11.9 17.36 21.8 11.9 21.8z"/>
+          </svg>
+        </a>
       </div>
-
-      <!-- Company & Contact -->
-      <div>
-        <h3 class="text-lg font-semibold mb-4 text-[#D4AF37]">Company</h3>
-        <ul class="space-y-2.5 text-sm opacity-90">
-          <li><a href="#" class="hover:text-[#D4AF37] transition-colors">About Us</a></li>
-          <li><a href="#" class="hover:text-[#D4AF37] transition-colors">Careers</a></li>
-          <li><a href="#" class="hover:text-[#D4AF37] transition-colors">Contact</a></li>
-        </ul>
-
-        <div class="mt-6 space-y-3">
-          <a href="tel:+2348064540860" class="flex items-center gap-2 text-sm hover:text-[#D4AF37] transition-colors">
-            <i class="fa-solid fa-phone"></i>
-            <span>+234 806 454 0860</span>
-          </a>
-          
-          <p class="text-sm opacity-80">Lagos, Nigeria</p>
-        </div>
-
-        <!-- Social Icons -->
-        <div class="flex items-center gap-4 mt-6">
-          <a href="#" class="text-white hover:text-[#D4AF37] transition-colors" aria-label="LinkedIn">
-            <i class="fa-brands fa-linkedin-in text-lg"></i>
-          </a>
-          <a href="#" class="text-white hover:text-[#D4AF37] transition-colors" aria-label="Facebook">
-            <i class="fa-brands fa-facebook-f text-lg"></i>
-          </a>
-          <a href="#" class="text-white hover:text-[#D4AF37] transition-colors" aria-label="Twitter">
-            <i class="fa-brands fa-x-twitter text-lg"></i>
-          </a>
-          <a href="https://wa.me/2348064540860" target="_blank" rel="noopener noreferrer" 
-             class="text-white hover:text-[#D4AF37] transition-colors" aria-label="WhatsApp">
-            <i class="fa-brands fa-whatsapp text-xl"></i>
-          </a>
-        </div>
-      </div>
-
     </div>
 
-    <!-- DIVIDER -->
-    <div class="border-t border-white/10 my-8"></div>
-
-    <!-- Bottom Section -->
-    <div class="flex flex-col md:flex-row justify-between items-center gap-4 text-sm">
-      
-      <!-- Legal Links -->
-      <div class="flex flex-wrap justify-center gap-x-6 gap-y-2 opacity-80">
-        <a href="#" class="hover:text-[#D4AF37] transition-colors">Terms of Use</a>
-        <a href="#" class="hover:text-[#D4AF37] transition-colors">Privacy Policy</a>
-        <a href="#" class="hover:text-[#D4AF37] transition-colors">Data Processing Agreement</a>
-      </div>
-
-      <!-- Copyright -->
-      <p class="text-xs opacity-70">
-        © {% now "Y" %} <strong>Medvuno</strong> — All Rights Reserved.
-      </p>
+    <!-- ── Platform ── -->
+    <div class="footer-col">
+      <h4>Platform</h4>
+      <ul>
+        <li><a href="#">Patient Management</a></li>
+        <li><a href="#">Lab Testing</a></li>
+        <li><a href="#">Results &amp; Reporting</a></li>
+        <li><a href="#">Inventory Management</a></li>
+        <li><a href="#">Financial Management</a></li>
+      </ul>
     </div>
-  </div> 
+
+    <!-- ── Lab Testing ── -->
+    <div class="footer-col">
+      <h4>Lab Testing</h4>
+      <ul>
+        <li><a href="#">Hematology</a></li>
+        <li><a href="#">Blood Chemistry</a></li>
+        <li><a href="#">Molecular Testing</a></li>
+        <li><a href="#">Toxicology</a></li>
+        <li><a href="#">Radiology</a></li>
+      </ul>
+    </div>
+
+    <!-- ── Resources ── -->
+    <div class="footer-col">
+      <h4>Resources</h4>
+      <ul>
+        <li><a href="#">Developer API</a></li>
+        <li><a href="#">Documentation</a></li>
+        <li><a href="#">Support Center</a></li>
+        <li><a href="#">Blog</a></li>
+      </ul>
+    </div>
+
+    <!-- ── Company ── -->
+    <div class="footer-col">
+      <h4>Company</h4>
+      <ul>
+        <li><a href="#">About Us</a></li>
+        <li><a href="#">Careers</a></li>
+        <li><a href="#">Contact</a></li>
+      </ul>
+    </div>
+
+  </div>
+
+  <hr class="footer-divider">
+
+  <div class="footer-bottom">
+    <div class="footer-legal">
+      <a href="#">Terms of Use</a>
+      <a href="#">Privacy Policy</a>
+      <a href="#">Data Processing Agreement</a>
+    </div>
+    <p class="footer-copy">
+      &copy; {% now "Y" %} <strong>Medvuno</strong> &middot; All Rights Reserved &middot; A <strong>FIRSTJP Consult</strong> product
+    </p>
+  </div>
 </footer>

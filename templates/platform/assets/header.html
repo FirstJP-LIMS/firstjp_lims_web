@@ -1,147 +1,494 @@
 {% load static %}
-<nav class="bg-white shadow-md sticky top-0 z-50">
-     <div class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
-        <div class="flex justify-between h-16">
-            <!-- Logo and Brand -->
-            <div class="flex items-center">
-                <div class="flex-shrink-0 flex items-center">
-                    {% comment %} <span class="ml-2 text-xl font-bold text-red-500">MEDVUNO</span> {% endcomment %}
-                    <img src="{% static 'assets/images/logo/med.jpg' %}" alt="MEDVUNO" style="width: 160px;">
-                </div>
-            </div>
 
-            <!-- Desktop Menu Items -->
-            <div class="hidden md:flex items-center space-x-4 nav-items">
-                <a href="/" class="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition duration-300">Home</a>
-                <a href="{{ LEARN_BASE_URL }}" class="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition duration-300">
-                    Learn
-                </a>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap');
 
-                <!-- Services Dropdown -->
-                <div class="relative group">
-                    <button class="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium flex items-center transition duration-300">
-                        Services
-                        <svg class="ml-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </button>
-                    <div class="absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-10">
-                        <div class="py-1">
-                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600">Consulting</a>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Company Dropdown -->
-                <div class="relative group">
-                    <button class="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium flex items-center transition duration-300">
-                        Company
-                        <svg class="ml-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </button>
-                    <div class="absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-10">
-                        <div class="py-1">
-                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600">About Us</a>
-                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600">Our Team</a>
-                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600">Careers</a>
-                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600">Contact</a>
-                        </div>
-                    </div>
-                </div>
-                
-                <a href="#" class="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition duration-300">Pricing</a>
-                <a href="#" class="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition duration-300">Blog</a>
-                
-                <!-- CTA Buttons -->
-                <button class="btn btn-outline btn-neutral btn-sm">Book Demo</button>
-                <button class="btn btn-neutral btn-sm text-white">
-                    <a href="{% url 'vendor_onboarding' %}">
-                        Get Started
-                    </a>
-                </button>
-            </div>
+  .nav-wrapper {
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    font-family: 'DM Sans', sans-serif;
+  }
 
-            <!-- Mobile menu button -->
-            <div class="md:hidden flex items-center">
-                <button id="mobile-menu-button" type="button" class="inline-flex items-center justify-center p-2 rounded-md text-gray-600 hover:text-indigo-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500" aria-controls="mobile-menu" aria-expanded="false">
-                    <span class="sr-only">Open main menu</span>
-                    <!-- Icon when menu is closed -->
-                    <svg class="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                    </svg>
-                </button>
+  .nav-inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 64px;
+  }
+
+  /* Brand */
+  .nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+  }
+
+  .nav-brand-mark {
+    width: 32px;
+    height: 32px;
+    background: #1a1a2e;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .nav-brand-name {
+    font-size: 17px;
+    font-weight: 600;
+    color: #1a1a2e;
+    letter-spacing: -0.3px;
+  }
+
+  .nav-brand-name span {
+    color: #4f6ef7;
+  }
+
+  /* Desktop nav links */
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .nav-link {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: #555;
+    padding: 7px 12px;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: color 0.2s, background 0.2s;
+    position: relative;
+    cursor: pointer;
+    background: none;
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+  }
+
+  .nav-link:hover {
+    color: #1a1a2e;
+    background: rgba(0, 0, 0, 0.04);
+  }
+
+  .nav-link.active {
+    color: #1a1a2e;
+  }
+
+  .nav-link.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 12px;
+    right: 12px;
+    height: 2px;
+    background: #4f6ef7;
+    border-radius: 2px 2px 0 0;
+  }
+
+  /* Chevron icon */
+  .nav-chevron {
+    width: 12px;
+    height: 12px;
+    opacity: 0.5;
+    transition: transform 0.2s;
+    flex-shrink: 0;
+  }
+
+  /* Dropdown groups */
+  .nav-dropdown-group {
+    position: relative;
+  }
+
+  .nav-dropdown-group:hover .nav-chevron {
+    transform: rotate(180deg);
+    opacity: 0.8;
+  }
+
+  .nav-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    background: #fff;
+    border: 0.5px solid rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    padding: 6px;
+    min-width: 190px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-6px);
+    transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    z-index: 100;
+  }
+
+  .nav-dropdown-group:hover .nav-dropdown {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+
+  .nav-dropdown a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: #444;
+    text-decoration: none;
+    border-radius: 8px;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .nav-dropdown a:hover {
+    background: #f3f4ff;
+    color: #4f6ef7;
+  }
+
+  .nav-dropdown-divider {
+    height: 0.5px;
+    background: rgba(0, 0, 0, 0.07);
+    margin: 4px 0;
+  }
+
+  .nav-badge {
+    font-size: 10px;
+    font-weight: 600;
+    color: #4f6ef7;
+    background: #eef0ff;
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.3px;
+    margin-left: auto;
+  }
+
+  /* CTA Buttons */
+  .nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-demo {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: #444;
+    background: none;
+    border: 0.5px solid rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    padding: 7px 14px;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .btn-demo:hover {
+    border-color: #4f6ef7;
+    color: #4f6ef7;
+  }
+
+  .btn-start {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #fff;
+    background: #1a1a2e;
+    border: none;
+    border-radius: 8px;
+    padding: 7px 16px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .btn-start:hover {
+    background: #4f6ef7;
+    transform: translateY(-1px);
+    color: #fff;
+  }
+
+  /* Mobile toggle button */
+  .nav-mobile-btn {
+    display: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    color: #444;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Mobile menu */
+  .nav-mobile-menu {
+    display: none;
+    background: #fff;
+    border-top: 0.5px solid rgba(0, 0, 0, 0.07);
+    padding: 12px 1.5rem 20px;
+  }
+
+  .nav-mobile-menu.open {
+    display: block;
+  }
+
+  .nav-mobile-link {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14.5px;
+    font-weight: 500;
+    color: #444;
+    text-decoration: none;
+    padding: 11px 0;
+    border-bottom: 0.5px solid rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+    background: none;
+    border-left: none;
+    border-right: none;
+    border-top: none;
+    width: 100%;
+    text-align: left;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .nav-mobile-sub {
+    display: none;
+    padding-left: 16px;
+    border-bottom: 0.5px solid rgba(0, 0, 0, 0.05);
+  }
+
+  .nav-mobile-sub.open {
+    display: block;
+  }
+
+  .nav-mobile-sub a {
+    display: block;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: #666;
+    text-decoration: none;
+    padding: 9px 0;
+    border-bottom: 0.5px solid rgba(0, 0, 0, 0.04);
+  }
+
+  .nav-mobile-sub a:last-child {
+    border-bottom: none;
+  }
+
+  .nav-mobile-sub a:hover {
+    color: #4f6ef7;
+  }
+
+  .nav-mobile-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .nav-mobile-actions .btn-demo,
+  .nav-mobile-actions .btn-start {
+    width: 100%;
+    padding: 10px;
+    border-radius: 10px;
+    font-size: 14px;
+    text-align: center;
+    justify-content: center;
+  }
+
+  /* Responsive breakpoint */
+  @media (max-width: 768px) {
+    .nav-links,
+    .nav-actions {
+      display: none;
+    }
+
+    .nav-mobile-btn {
+      display: flex;
+    }
+  }
+</style>
+
+<nav class="nav-wrapper">
+  <div class="nav-inner">
+
+    <!-- Brand / Logo -->
+    <a href="/" class="nav-brand">
+      {% comment %} <div class="nav-brand-mark">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M9 2L15 6V12L9 16L3 12V6L9 2Z" stroke="white" stroke-width="1.5" fill="none"/>
+          <path d="M6 9H12M9 6V12" stroke="#4f6ef7" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div> {% endcomment %}
+        <div class="flex items-center">
+            <div class="flex-shrink-0 flex items-center">
+                <img src="{% static 'assets/images/logo/med.jpg' %}" alt="MEDVUNO" style="width: 160px;">
             </div>
         </div>
+
+      {% comment %} <span class="nav-brand-name">Med<span>vuno</span></span> {% endcomment %}
+    </a>
+
+    <!-- Desktop Navigation Links -->
+    <div class="nav-links">
+
+      <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}">Home</a>
+
+      <a href="{{ LEARN_BASE_URL }}" class="nav-link {% if LEARN_BASE_URL in request.path %}active{% endif %}">Learn</a>
+
+      <!-- Services Dropdown -->
+      <div class="nav-dropdown-group">
+        <button class="nav-link">
+          Services
+          <svg class="nav-chevron" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <div class="nav-dropdown">
+          <a href="#">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <rect x="1" y="1" width="12" height="12" rx="3" stroke="currentColor" stroke-width="1.2"/>
+              <path d="M4 7h6M4 4.5h6M4 9.5h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+            </svg>
+            Consulting
+          </a>
+        </div>
+      </div>
+
+      <!-- Company Dropdown -->
+      <div class="nav-dropdown-group">
+        <button class="nav-link">
+          Company
+          <svg class="nav-chevron" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <div class="nav-dropdown">
+          <a href="#">About Us</a>
+          <a href="#">Our Team</a>
+          <div class="nav-dropdown-divider"></div>
+          <a href="#">Careers</a>
+          <a href="#">Contact</a>
+        </div>
+      </div>
+
+      <a href="#pricing" class="nav-link">Pricing</a>
+
+      <a href="#" class="nav-link">Blog</a>
+
     </div>
 
-    <!-- Mobile Menu -->
-    <div id="mobile-menu" class="md:hidden hidden">
-        <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t">
-            <a href="#" class="text-gray-600 hover:text-indigo-600 block px-3 py-2 rounded-md text-base font-medium">Home</a>
-            <a href="{{ LEARN_BASE_URL }}" class="text-gray-600 hover:text-indigo-600 block px-3 py-2 rounded-md text-base font-medium">Learn</a>
-            
-            <!-- Mobile Services Dropdown -->
-            <div class="relative">
-                <button id="mobile-services-button" class="text-gray-600 hover:text-indigo-600 w-full text-left px-3 py-2 rounded-md text-base font-medium flex justify-between items-center">
-                    Services
-                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                    </svg>
-                </button>
-                <div id="mobile-services-menu" class="hidden pl-4 mt-1">
-                    <a href="#" class="text-gray-600 hover:text-indigo-600 block px-3 py-2 rounded-md text-base font-medium">Consulting</a>
-                </div>
-            </div>
-            
-            <!-- Mobile Company Dropdown -->
-            <div class="relative">
-                <button id="mobile-company-button" class="text-gray-600 hover:text-indigo-600 w-full text-left px-3 py-2 rounded-md text-base font-medium flex justify-between items-center">
-                    Company
-                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                    </svg>
-                </button>
-                <div id="mobile-company-menu" class="hidden pl-4 mt-1">
-                    <a href="#" class="text-gray-600 hover:text-indigo-600 block px-3 py-2 rounded-md text-base font-medium">About Us</a>
-                    <a href="#" class="text-gray-600 hover:text-indigo-600 block px-3 py-2 rounded-md text-base font-medium">Our Team</a>
-                    <a href="#" class="text-gray-600 hover:text-indigo-600 block px-3 py-2 rounded-md text-base font-medium">Careers</a>
-                    <a href="#" class="text-gray-600 hover:text-indigo-600 block px-3 py-2 rounded-md text-base font-medium">Contact</a>
-                </div>
-            </div>
-            
-            <a href="#pricing" class="text-gray-600 hover:text-indigo-600 block px-3 py-2 rounded-md text-base font-medium">Pricing</a>
-            <a href="#" class="text-gray-600 hover:text-indigo-600 block px-3 py-2 rounded-md text-base font-medium">Blog</a>
-            
-            <div class="pt-4 pb-2 flex flex-col space-y-2">
-                <button class="btn btn-outline btn-neutral btn-sm">Book Demo</button>
-                <button class="btn btn-neutral btn-sm text-white">
-                    <a href="{% url 'vendor_onboarding' %}">
-                        Get Started
-                    </a>
-                </button>
-            </div>
-        </div>
+    <!-- Desktop CTA Buttons -->
+    <div class="nav-actions">
+      <button class="btn-demo">Book Demo</button>
+      <a href="{% url 'vendor_onboarding' %}" class="btn-start">Get Started →</a>
     </div>
+
+    <!-- Mobile Hamburger -->
+    <button
+      class="nav-mobile-btn"
+      id="nav-mobile-toggle"
+      aria-label="Open navigation menu"
+      aria-expanded="false"
+      aria-controls="nav-mobile-menu"
+    >
+      <svg id="nav-icon-open" width="22" height="22" viewBox="0 0 22 22" fill="none">
+        <path d="M3 6h16M3 11h16M3 16h16" stroke="#333" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+      <svg id="nav-icon-close" width="22" height="22" viewBox="0 0 22 22" fill="none" style="display:none">
+        <path d="M5 5l12 12M17 5L5 17" stroke="#333" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+    </button>
+
+  </div>
+
+  <!-- Mobile Menu -->
+  <div class="nav-mobile-menu" id="nav-mobile-menu" role="navigation" aria-label="Mobile navigation">
+
+    <a href="/" class="nav-mobile-link">Home</a>
+    <a href="{{ LEARN_BASE_URL }}" class="nav-mobile-link">Learn</a>
+
+    <!-- Mobile Services Dropdown -->
+    <button class="nav-mobile-link" id="nav-mobile-services-btn" aria-expanded="false">
+      Services
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+        <path d="M2 4l4 4 4-4" stroke="#888" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <div class="nav-mobile-sub" id="nav-mobile-services-menu">
+      <a href="#">Consulting</a>
+    </div>
+
+    <!-- Mobile Company Dropdown -->
+    <button class="nav-mobile-link" id="nav-mobile-company-btn" aria-expanded="false">
+      Company
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+        <path d="M2 4l4 4 4-4" stroke="#888" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <div class="nav-mobile-sub" id="nav-mobile-company-menu">
+      <a href="#">About Us</a>
+      <a href="#">Our Team</a>
+      <a href="#">Careers</a>
+      <a href="#">Contact</a>
+    </div>
+
+    <a href="#pricing" class="nav-mobile-link">Pricing</a>
+    <a href="#" class="nav-mobile-link" style="border-bottom: none;">Blog</a>
+
+    <div class="nav-mobile-actions">
+      <button class="btn-demo">Book Demo</button>
+      <a href="{% url 'vendor_onboarding' %}" class="btn-start">Get Started →</a>
+    </div>
+
+  </div>
 </nav>
 
-<!-- Main Content -->
-
 <script>
-    // Mobile menu toggle
-    document.getElementById('mobile-menu-button').addEventListener('click', function() {
-        const mobileMenu = document.getElementById('mobile-menu');
-        mobileMenu.classList.toggle('hidden');
-    });
+  (function () {
+    const toggle = document.getElementById('nav-mobile-toggle');
+    const menu = document.getElementById('nav-mobile-menu');
+    const iconOpen = document.getElementById('nav-icon-open');
+    const iconClose = document.getElementById('nav-icon-close');
 
-    // Mobile dropdown toggles
-    document.getElementById('mobile-services-button').addEventListener('click', function() {
-        const servicesMenu = document.getElementById('mobile-services-menu');
-        servicesMenu.classList.toggle('hidden');
-    });
+    function toggleMobileMenu() {
+      const isOpen = menu.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', isOpen);
+      iconOpen.style.display = isOpen ? 'none' : 'block';
+      iconClose.style.display = isOpen ? 'block' : 'none';
+    }
 
-    document.getElementById('mobile-company-button').addEventListener('click', function() {
-        const companyMenu = document.getElementById('mobile-company-menu');
-        companyMenu.classList.toggle('hidden');
-    });
+    function toggleSub(btnId, menuId) {
+      const btn = document.getElementById(btnId);
+      const sub = document.getElementById(menuId);
+      btn.addEventListener('click', function () {
+        const isOpen = sub.classList.toggle('open');
+        btn.setAttribute('aria-expanded', isOpen);
+      });
+    }
+
+    toggle.addEventListener('click', toggleMobileMenu);
+    toggleSub('nav-mobile-services-btn', 'nav-mobile-services-menu');
+    toggleSub('nav-mobile-company-btn', 'nav-mobile-company-menu');
+  })();
 </script>

@@ -2,7 +2,7 @@ from django.shortcuts import render
 from . models import CompanyInfo
 
 # Create your views here.
-
+# LIMS landing Page!!!
 def platform_home(request):
     # Information = CompanyInfo.objects.first()
     Information = CompanyInfo.objects.all()

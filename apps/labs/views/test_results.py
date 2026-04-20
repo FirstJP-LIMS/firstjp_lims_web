@@ -27,7 +27,7 @@ from ..decorators import require_capability
 from django.conf import settings
 from django.template.loader import render_to_string
 from django.http import HttpResponse
-from weasyprint import HTML
+# from weasyprint import HTML
 import tempfile
 
 from django.core.mail import EmailMessage
