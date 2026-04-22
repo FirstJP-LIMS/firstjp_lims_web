@@ -1,216 +1,724 @@
 {% extends "platform/assets/base.html" %}
+{% load static %}
+
 {% block content %}
-<div class="max-w-3xl mx-auto py-10">
-    <div class="bg-white shadow-md rounded-lg overflow-hidden">
-        <div class="bg-[#0a2347] text-white text-center py-6">
-            <h2 class="text-2xl font-semibold">Join MEDVUNO</h2>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Serif+Display&display=swap');
+
+  /* ─────────────────────────────────────────
+     ONBOARDING WRAPPER
+  ───────────────────────────────────────── */
+
+  .ob-page {
+    min-height: 100vh;
+    background: #f0f2f5;
+    padding: 48px 16px 72px;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .ob-wrap {
+    max-width: 760px;
+    margin: 0 auto;
+  }
+
+  /* ── Progress steps ── */
+  .ob-steps {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 32px;
+  }
+
+  .ob-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    position: relative;
+  }
+
+  .ob-step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 15px;
+    left: 50%;
+    width: 100%;
+    height: 1.5px;
+    background: #d1d5db;
+    z-index: 0;
+  }
+
+  .ob-step-dot {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: #9ca3af;
+    position: relative;
+    z-index: 1;
+    transition: all 0.2s;
+  }
+
+  .ob-step.done::after {
+    background: #183153;
+  }
+
+  .ob-step.done .ob-step-dot {
+    background: #183153;
+    color: #fff;
+  }
+
+  .ob-step.active .ob-step-dot {
+    background: #4f6ef7;
+    color: #fff;
+    box-shadow: 0 0 0 4px rgba(79, 110, 247, 0.15);
+  }
+
+  .ob-step-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: #9ca3af;
+    margin-top: 6px;
+    text-align: center;
+  }
+
+  .ob-step.active .ob-step-label {
+    color: #4f6ef7;
+    font-weight: 600;
+  }
+
+  .ob-step.done .ob-step-label {
+    color: #183153;
+  }
+
+  /* ── Card ── */
+  .ob-card {
+    background: #fff;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 0.5px solid rgba(0, 0, 0, 0.07);
+  }
+
+  /* ── Card header ── */
+  .ob-header {
+    background: #183153;
+    padding: 32px 40px;
+  }
+
+  .ob-header-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .ob-header-mark {
+    width: 36px;
+    height: 36px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .ob-header-mark svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .ob-header-brand {
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px;
+    color: #fff;
+    letter-spacing: -0.2px;
+  }
+
+  .ob-header-brand span {
+    color: #D4AF37;
+  }
+
+  .ob-header h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 26px;
+    font-weight: 400;
+    color: #fff;
+    margin-bottom: 6px;
+  }
+
+  .ob-header p {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.48);
+  }
+
+  /* ── Body ── */
+  .ob-body {
+    padding: 36px 40px;
+  }
+
+  /* ── Flash messages ── */
+  .ob-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+
+  .ob-alert svg {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .ob-alert-success {
+    background: #f0fdf4;
+    border: 0.5px solid #bbf7d0;
+    color: #15803d;
+  }
+
+  .ob-alert-error {
+    background: #fef2f2;
+    border: 0.5px solid #fecaca;
+    color: #dc2626;
+  }
+
+  .ob-alert-info {
+    background: #eff6ff;
+    border: 0.5px solid #bfdbfe;
+    color: #1d4ed8;
+  }
+
+  /* ── Section blocks ── */
+  .ob-section {
+    margin-bottom: 32px;
+  }
+
+  .ob-section-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 0.5px solid rgba(0, 0, 0, 0.07);
+  }
+
+  .ob-section-num {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    background: #eef0ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: #4f6ef7;
+    flex-shrink: 0;
+  }
+
+  .ob-section-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #183153;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+  }
+
+  /* ── Field layout ── */
+  .ob-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .ob-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-bottom: 16px;
+  }
+
+  .ob-field:last-child {
+    margin-bottom: 0;
+  }
+
+  .ob-label {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #374151;
+  }
+
+  .ob-label-optional {
+    font-weight: 400;
+    color: #9ca3af;
+  }
+
+  .ob-hint {
+    font-size: 11.5px;
+    color: #9ca3af;
+    margin-top: 2px;
+  }
+
+  /* ── Inputs — Django renders these so we style via class added in forms.py ── */
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="password"],
+  input[type="number"],
+  select,
+  textarea {
+    height: 40px;
+    width: 100%;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 0 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: #111;
+    background: #fff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    appearance: auto;
+  }
+
+  textarea {
+    height: auto;
+    padding: 10px 12px;
+    resize: vertical;
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus {
+    outline: none;
+    border-color: #4f6ef7;
+    box-shadow: 0 0 0 3px rgba(79, 110, 247, 0.1);
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: #c4c7cc;
+  }
+
+  /* Error state on inputs */
+  input.input-error,
+  select.input-error {
+    border-color: #fca5a5;
+    background: #fff8f8;
+  }
+
+  /* ── Field-level error messages ── */
+  .ob-field-error {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: #dc2626;
+    margin-top: 3px;
+  }
+
+  .ob-field-error svg {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+  }
+
+  /* ── Non-field errors ── */
+  .ob-non-field-errors {
+    background: #fef2f2;
+    border: 0.5px solid #fecaca;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 20px;
+  }
+
+  .ob-non-field-errors p {
+    font-size: 13px;
+    color: #dc2626;
+  }
+
+  /* ── Submit button ── */
+  .ob-submit {
+    width: 100%;
+    height: 46px;
+    background: #183153;
+    color: #fff;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14.5px;
+    font-weight: 600;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .ob-submit svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .ob-submit:hover {
+    background: #4f6ef7;
+    transform: translateY(-1px);
+  }
+
+  .ob-submit:active {
+    transform: translateY(0);
+  }
+
+  .ob-signin {
+    text-align: center;
+    margin-top: 16px;
+    font-size: 13px;
+    color: #9ca3af;
+  }
+
+  .ob-signin a {
+    color: #4f6ef7;
+    font-weight: 500;
+    text-decoration: none;
+  }
+
+  .ob-signin a:hover {
+    text-decoration: underline;
+  }
+
+  /* ─────────────────────────────────────────
+     RESPONSIVE
+  ───────────────────────────────────────── */
+
+  @media (max-width: 600px) {
+    .ob-page {
+      padding: 32px 12px 56px;
+    }
+
+    .ob-header {
+      padding: 24px 20px;
+    }
+
+    .ob-body {
+      padding: 24px 20px;
+    }
+
+    .ob-grid-2 {
+      grid-template-columns: 1fr;
+    }
+
+    .ob-steps {
+      margin-bottom: 24px;
+    }
+
+    .ob-step-label {
+      font-size: 10px;
+    }
+  }
+</style>
+
+
+<div class="ob-page">
+  <div class="ob-wrap">
+
+    <!-- Progress steps -->
+    <div class="ob-steps">
+      <div class="ob-step done">
+        <div class="ob-step-dot">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+            <path d="M2 6.5l3.5 3.5 5.5-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
         </div>
-
-        <div class="p-8">
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="mb-4 px-4 py-3 rounded text-white 
-                        {% if message.tags == 'success' %} bg-green-600 
-                        {% elif message.tags == 'error' %} bg-red-600 
-                        {% else %} bg-gray-700 {% endif %}">
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            {% endif %}
-
-            <form method="post" class="space-y-6">
-                {% csrf_token %}
-
-                <!-- Business Information -->
-                <div>
-                    <h3 class="text-nav-blue font-semibold border-b pb-2 mb-3">Business Information</h3>
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Business / Lab Name</label>
-                        {{ form.name }}
-                        {% if form.name.errors %}
-                            <div class="text-red-600 text-sm mt-1">
-                                {% for error in form.name.errors %}
-                                    <p>{{ error }}</p>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- Admin Information -->
-                <div>
-                    <h3 class="text-nav-blue font-semibold border-b pb-2 mb-3">Admin Information</h3>
-                    
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Admin Email</label>
-                        {{ form.admin_email }}
-                        {% if form.admin_email.errors %}
-                            <div class="text-red-600 text-sm mt-1">
-                                {% for error in form.admin_email.errors %}
-                                    <p>{{ error }}</p>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
-                            {{ form.admin_first_name }}
-                            {% if form.admin_first_name.errors %}
-                                <div class="text-red-600 text-sm mt-1">
-                                    {% for error in form.admin_first_name.errors %}
-                                        <p>{{ error }}</p>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-                            {{ form.admin_last_name }}
-                            {% if form.admin_last_name.errors %}
-                                <div class="text-red-600 text-sm mt-1">
-                                    {% for error in form.admin_last_name.errors %}
-                                        <p>{{ error }}</p>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Contact Number</label>
-                            <div class="flex">
-                                {{ form.contact_number }}
-                            </div>
-                            {% if form.contact_number.errors %}
-                                <div class="text-red-600 text-sm mt-1" id="phone-error">
-                                    {% for error in form.contact_number.errors %}
-                                        <p>{{ error }}</p>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                            <p class="text-xs text-gray-500 mt-1">
-                                Use your country code (e.g. +234-905696969)
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                            {{ form.admin_password }}
-                            {% if form.admin_password.errors %}
-                                <div class="text-red-600 text-sm mt-1">
-                                    {% for error in form.admin_password.errors %}
-                                        <p>{{ error }}</p>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
-                            {{ form.admin_password_confirm }}
-                            {% if form.admin_password_confirm.errors %}
-                                <div class="text-red-600 text-sm mt-1">
-                                    {% for error in form.admin_password_confirm.errors %}
-                                        <p>{{ error }}</p>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Rest of your template remains the same -->
-                <!-- Address Information -->
-                <div>
-                    <h3 class="text-nav-blue font-semibold border-b pb-2 mb-3">Address Information</h3>
-                    
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Street Address</label>
-                        {{ form.office_street_address }}
-                        {% if form.office_street_address.errors %}
-                            <div class="text-red-600 text-sm mt-1">
-                                {% for error in form.office_street_address.errors %}
-                                    <p>{{ error }}</p>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">City & State</label>
-                            {{ form.office_city_state }}
-                            {% if form.office_city_state.errors %}
-                                <div class="text-red-600 text-sm mt-1">
-                                    {% for error in form.office_city_state.errors %}
-                                        <p>{{ error }}</p>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Country</label>
-                            {{ form.office_country }}
-                            {% if form.office_country.errors %}
-                                <div class="text-red-600 text-sm mt-1">
-                                    {% for error in form.office_country.errors %}
-                                        <p>{{ error }}</p>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Zipcode</label>
-                        {{ form.office_zipcode }}
-                        {% if form.office_zipcode.errors %}
-                            <div class="text-red-600 text-sm mt-1">
-                                {% for error in form.office_zipcode.errors %}
-                                    <p>{{ error }}</p>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- Plan Selection -->
-                <div>
-                    <h3 class="text-nav-blue font-semibold border-b pb-2 mb-3">Subscription Plan</h3>
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Plan Type</label>
-                        {{ form.plan_type }}
-                        {% if form.plan_type.errors %}
-                            <div class="text-red-600 text-sm mt-1">
-                                {% for error in form.plan_type.errors %}
-                                    <p>{{ error }}</p>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- Non-field errors -->
-                {% if form.non_field_errors %}
-                    <div class="text-red-600 text-sm mb-4">
-                        {% for error in form.non_field_errors %}
-                            <p>{{ error }}</p>
-                        {% endfor %}
-                    </div>
-                {% endif %}
-
-                <!-- Submit Button -->
-                <button type="submit" class="w-full bg-[#0a2347] text-white font-medium py-3 rounded-md transition hover:bg-blue-800">
-                    Submit Registration
-                </button>
-            </form>
-        </div>
+        <span class="ob-step-label">Plan</span>
+      </div>
+      <div class="ob-step active">
+        <div class="ob-step-dot">2</div>
+        <span class="ob-step-label">Account</span>
+      </div>
+      <div class="ob-step">
+        <div class="ob-step-dot">3</div>
+        <span class="ob-step-label">Verify</span>
+      </div>
+      <div class="ob-step">
+        <div class="ob-step-dot">4</div>
+        <span class="ob-step-label">Launch</span>
+      </div>
     </div>
-</div>
 
+    <div class="ob-card">
+
+      <!-- Header -->
+      <div class="ob-header">
+        <div class="ob-header-top">
+          <div class="ob-header-mark">
+            <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M10 2L16 6V14L10 18L4 14V6L10 2Z" stroke="white" stroke-width="1.4" fill="none"/>
+              <path d="M7 10H13M10 7V13" stroke="#D4AF37" stroke-width="1.4" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="ob-header-brand">Med<span>vuno</span></div>
+        </div>
+        <h2>Join Medvuno</h2>
+        <p>Set up your lab account in under 3 minutes. No credit card required to start.</p>
+      </div>
+
+      <!-- Form body -->
+      <div class="ob-body">
+
+        <!-- Django flash messages -->
+        {% if messages %}
+          {% for message in messages %}
+            <div class="ob-alert {% if message.tags == 'success' %}ob-alert-success{% elif message.tags == 'error' %}ob-alert-error{% else %}ob-alert-info{% endif %}">
+              {% if message.tags == 'success' %}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+                </svg>
+              {% else %}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+              {% endif %}
+              {{ message }}
+            </div>
+          {% endfor %}
+        {% endif %}
+
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          <!-- ── 1. Business Information ── -->
+          <div class="ob-section">
+            <div class="ob-section-heading">
+              <div class="ob-section-num">1</div>
+              <span class="ob-section-title">Business Information</span>
+            </div>
+
+            <div class="ob-field">
+              <label class="ob-label" for="{{ form.name.id_for_label }}">Business / Lab Name</label>
+              {{ form.name }}
+              {% if form.name.errors %}
+                {% for error in form.name.errors %}
+                  <div class="ob-field-error">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    {{ error }}
+                  </div>
+                {% endfor %}
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- ── 2. Admin Information ── -->
+          <div class="ob-section">
+            <div class="ob-section-heading">
+              <div class="ob-section-num">2</div>
+              <span class="ob-section-title">Admin Information</span>
+            </div>
+
+            <div class="ob-field">
+              <label class="ob-label" for="{{ form.admin_email.id_for_label }}">Admin Email</label>
+              {{ form.admin_email }}
+              {% if form.admin_email.errors %}
+                {% for error in form.admin_email.errors %}
+                  <div class="ob-field-error">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    {{ error }}
+                  </div>
+                {% endfor %}
+              {% endif %}
+            </div>
+
+            <div class="ob-grid-2">
+              <div class="ob-field">
+                <label class="ob-label" for="{{ form.admin_first_name.id_for_label }}">First Name</label>
+                {{ form.admin_first_name }}
+                {% if form.admin_first_name.errors %}
+                  {% for error in form.admin_first_name.errors %}
+                    <div class="ob-field-error">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      {{ error }}
+                    </div>
+                  {% endfor %}
+                {% endif %}
+              </div>
+              <div class="ob-field">
+                <label class="ob-label" for="{{ form.admin_last_name.id_for_label }}">Last Name</label>
+                {{ form.admin_last_name }}
+                {% if form.admin_last_name.errors %}
+                  {% for error in form.admin_last_name.errors %}
+                    <div class="ob-field-error">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      {{ error }}
+                    </div>
+                  {% endfor %}
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="ob-grid-2">
+              <div class="ob-field">
+                <label class="ob-label" for="{{ form.contact_number.id_for_label }}">Contact Number</label>
+                {{ form.contact_number }}
+                {% if form.contact_number.errors %}
+                  {% for error in form.contact_number.errors %}
+                    <div class="ob-field-error">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      {{ error }}
+                    </div>
+                  {% endfor %}
+                {% endif %}
+                <span class="ob-hint">Include your country code, e.g. +234-9056969690</span>
+              </div>
+            </div>
+
+            <div class="ob-grid-2">
+              <div class="ob-field">
+                <label class="ob-label" for="{{ form.admin_password.id_for_label }}">Password</label>
+                {{ form.admin_password }}
+                {% if form.admin_password.errors %}
+                  {% for error in form.admin_password.errors %}
+                    <div class="ob-field-error">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      {{ error }}
+                    </div>
+                  {% endfor %}
+                {% endif %}
+              </div>
+              <div class="ob-field">
+                <label class="ob-label" for="{{ form.admin_password_confirm.id_for_label }}">Confirm Password</label>
+                {{ form.admin_password_confirm }}
+                {% if form.admin_password_confirm.errors %}
+                  {% for error in form.admin_password_confirm.errors %}
+                    <div class="ob-field-error">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      {{ error }}
+                    </div>
+                  {% endfor %}
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <!-- ── 3. Address Information ── -->
+          <div class="ob-section">
+            <div class="ob-section-heading">
+              <div class="ob-section-num">3</div>
+              <span class="ob-section-title">Address Information</span>
+            </div>
+
+            <div class="ob-field">
+              <label class="ob-label" for="{{ form.office_street_address.id_for_label }}">Street Address</label>
+              {{ form.office_street_address }}
+              {% if form.office_street_address.errors %}
+                {% for error in form.office_street_address.errors %}
+                  <div class="ob-field-error">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    {{ error }}
+                  </div>
+                {% endfor %}
+              {% endif %}
+            </div>
+
+            <div class="ob-grid-2">
+              <div class="ob-field">
+                <label class="ob-label" for="{{ form.office_city_state.id_for_label }}">City &amp; State</label>
+                {{ form.office_city_state }}
+                {% if form.office_city_state.errors %}
+                  {% for error in form.office_city_state.errors %}
+                    <div class="ob-field-error">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      {{ error }}
+                    </div>
+                  {% endfor %}
+                {% endif %}
+              </div>
+              <div class="ob-field">
+                <label class="ob-label" for="{{ form.office_country.id_for_label }}">Country</label>
+                {{ form.office_country }}
+                {% if form.office_country.errors %}
+                  {% for error in form.office_country.errors %}
+                    <div class="ob-field-error">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      {{ error }}
+                    </div>
+                  {% endfor %}
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="ob-grid-2">
+              <div class="ob-field">
+                <label class="ob-label" for="{{ form.office_zipcode.id_for_label }}">
+                  Zipcode <span class="ob-label-optional">(optional)</span>
+                </label>
+                {{ form.office_zipcode }}
+                {% if form.office_zipcode.errors %}
+                  {% for error in form.office_zipcode.errors %}
+                    <div class="ob-field-error">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      {{ error }}
+                    </div>
+                  {% endfor %}
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <!-- ── 4. Subscription Plan ── -->
+          <div class="ob-section" style="margin-bottom: 24px;">
+            <div class="ob-section-heading">
+              <div class="ob-section-num">4</div>
+              <span class="ob-section-title">Subscription Plan</span>
+            </div>
+
+            <div class="ob-field">
+              <label class="ob-label" for="{{ form.plan_type.id_for_label }}">Plan Type</label>
+              {{ form.plan_type }}
+              {% if form.plan_type.errors %}
+                {% for error in form.plan_type.errors %}
+                  <div class="ob-field-error">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    {{ error }}
+                  </div>
+                {% endfor %}
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Non-field errors -->
+          {% if form.non_field_errors %}
+            <div class="ob-non-field-errors">
+              {% for error in form.non_field_errors %}
+                <p>{{ error }}</p>
+              {% endfor %}
+            </div>
+          {% endif %}
+
+          <!-- Submit -->
+          <button type="submit" class="ob-submit">
+            Complete Registration
+            <svg viewBox="0 0 16 16" fill="none">
+              <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>
 
 {% endblock %}

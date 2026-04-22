@@ -1,126 +1,624 @@
 {% extends "platform/assets/base.html" %}
 {% load static %}
 
-{% block title %}Application Submitted - FirstJP LIMS{% endblock %}
+{% block title %}Application Submitted — Medvuno{% endblock %}
 
 {% block content %}
 
-<div class="py-12">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Serif+Display&display=swap');
 
-    <!-- Success Header -->
-    <div class="text-center mb-12">
-        <div class="mx-auto w-20 h-20 flex items-center justify-center rounded-full bg-green-100 text-green-600 mb-6">
-            <svg class="w-12 h-12" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15-5-5 1.41-1.41L10 14.17l7.59-7.58L19 8l-9 9z"/>
-            </svg>
-        </div>
+  /* ─────────────────────────────────────────
+     SUCCESS PAGE
+  ───────────────────────────────────────── */
 
-        <h1 class="text-3xl font-bold text-nav-blue mb-3">Application Submitted Successfully!</h1>
-        <p class="text-gray-600 max-w-2xl mx-auto">
-            Thank you for choosing FirstJP LIMS. Your journey to streamlined laboratory management begins now.
-        </p>
+  .sc-page {
+    min-height: 100vh;
+    background: #f0f2f5;
+    padding: 56px 16px 80px;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .sc-wrap {
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  /* ── Animated success icon ── */
+  .sc-icon-ring {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: rgba(34, 197, 94, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 24px;
+    animation: sc-pulse 2.4s ease-in-out infinite;
+  }
+
+  @keyframes sc-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.2); }
+    50%       { box-shadow: 0 0 0 14px rgba(34, 197, 94, 0); }
+  }
+
+  .sc-icon-inner {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #22c55e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .sc-icon-inner svg {
+    width: 26px;
+    height: 26px;
+    stroke: #fff;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+  }
+
+  /* ── Page heading ── */
+  .sc-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 30px;
+    font-weight: 400;
+    color: #183153;
+    text-align: center;
+    margin-bottom: 8px;
+  }
+
+  .sc-sub {
+    font-size: 14px;
+    color: #9ca3af;
+    text-align: center;
+    line-height: 1.6;
+    max-width: 380px;
+    margin: 0 auto 32px;
+  }
+
+  /* ── Main card ── */
+  .sc-card {
+    background: #fff;
+    border-radius: 16px;
+    border: 0.5px solid rgba(0, 0, 0, 0.07);
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+
+  .sc-card-header {
+    background: #183153;
+    padding: 20px 28px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .sc-card-header-mark {
+    width: 32px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .sc-card-header-mark svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .sc-card-header-brand {
+    font-family: 'DM Serif Display', serif;
+    font-size: 18px;
+    color: #fff;
+    letter-spacing: -0.2px;
+  }
+
+  .sc-card-header-brand span {
+    color: #D4AF37;
+  }
+
+  .sc-status-badge {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(34, 197, 94, 0.12);
+    border: 0.5px solid rgba(34, 197, 94, 0.3);
+    border-radius: 100px;
+    padding: 4px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #22c55e;
+  }
+
+  .sc-status-badge-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #22c55e;
+  }
+
+  .sc-card-body {
+    padding: 28px;
+  }
+
+  /* ── Submission summary ── */
+  .sc-summary {
+    background: #f8fafc;
+    border: 0.5px solid rgba(0, 0, 0, 0.06);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .sc-summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+  }
+
+  .sc-summary-label {
+    color: #9ca3af;
+    font-weight: 500;
+  }
+
+  .sc-summary-val {
+    color: #183153;
+    font-weight: 600;
+  }
+
+  .sc-summary-divider {
+    height: 0.5px;
+    background: rgba(0, 0, 0, 0.06);
+  }
+
+  /* ── What happens next ── */
+  .sc-steps-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: #9ca3af;
+    margin-bottom: 14px;
+  }
+
+  .sc-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  .sc-step:last-child {
+    margin-bottom: 0;
+  }
+
+  .sc-step-num {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    background: #eef0ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: #4f6ef7;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .sc-step-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #183153;
+    margin-bottom: 2px;
+  }
+
+  .sc-step-desc {
+    font-size: 12.5px;
+    color: #9ca3af;
+    line-height: 1.5;
+  }
+
+  /* ── Divider ── */
+  .sc-divider {
+    height: 0.5px;
+    background: rgba(0, 0, 0, 0.07);
+    margin: 24px 0;
+  }
+
+  /* ── Contact strip ── */
+  .sc-contact {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  .sc-contact-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #555;
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .sc-contact-item:hover {
+    color: #4f6ef7;
+  }
+
+  .sc-contact-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: #f3f4ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .sc-contact-icon svg {
+    width: 13px;
+    height: 13px;
+    stroke: #4f6ef7;
+    fill: none;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* ── Action buttons ── */
+  .sc-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .sc-btn-primary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 44px;
+    background: #183153;
+    color: #fff;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13.5px;
+    font-weight: 600;
+    border-radius: 10px;
+    text-decoration: none;
+    transition: background 0.2s;
+  }
+
+  .sc-btn-primary:hover {
+    background: #4f6ef7;
+    color: #fff;
+  }
+
+  .sc-btn-secondary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 44px;
+    background: none;
+    color: #555;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13.5px;
+    font-weight: 500;
+    border-radius: 10px;
+    text-decoration: none;
+    border: 0.5px solid rgba(0, 0, 0, 0.15);
+    transition: border-color 0.2s, color 0.2s;
+  }
+
+  .sc-btn-secondary:hover {
+    border-color: #4f6ef7;
+    color: #4f6ef7;
+  }
+
+  .sc-btn-primary svg,
+  .sc-btn-secondary svg {
+    width: 14px;
+    height: 14px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex-shrink: 0;
+  }
+
+  /* ── Resources list ── */
+  .sc-resources {
+    background: #fff;
+    border-radius: 16px;
+    border: 0.5px solid rgba(0, 0, 0, 0.07);
+    padding: 24px 28px;
+  }
+
+  .sc-resources-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: #9ca3af;
+    margin-bottom: 16px;
+  }
+
+  .sc-resource {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 0.5px solid rgba(0, 0, 0, 0.05);
+    text-decoration: none;
+    transition: none;
+  }
+
+  .sc-resource:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .sc-resource-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: #f3f4ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .sc-resource-icon svg {
+    width: 15px;
+    height: 15px;
+    stroke: #4f6ef7;
+    fill: none;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .sc-resource-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #183153;
+    transition: color 0.2s;
+  }
+
+  .sc-resource-sub {
+    font-size: 12px;
+    color: #9ca3af;
+  }
+
+  .sc-resource-arrow {
+    margin-left: auto;
+    color: #d1d5db;
+    flex-shrink: 0;
+    transition: color 0.2s;
+  }
+
+  .sc-resource-arrow svg {
+    width: 14px;
+    height: 14px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .sc-resource:hover .sc-resource-title {
+    color: #4f6ef7;
+  }
+
+  .sc-resource:hover .sc-resource-arrow {
+    color: #4f6ef7;
+  }
+
+  /* ─────────────────────────────────────────
+     RESPONSIVE
+  ───────────────────────────────────────── */
+
+  @media (max-width: 480px) {
+    .sc-page {
+      padding: 40px 12px 64px;
+    }
+
+    .sc-title {
+      font-size: 24px;
+    }
+
+    .sc-actions {
+      grid-template-columns: 1fr;
+    }
+
+    .sc-card-body {
+      padding: 20px;
+    }
+
+    .sc-resources {
+      padding: 20px;
+    }
+  }
+</style>
+
+
+<div class="sc-page">
+  <div class="sc-wrap">
+
+    <!-- Success icon -->
+    <div class="sc-icon-ring">
+      <div class="sc-icon-inner">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
     </div>
 
-    <div class="max-w-4xl mx-auto">
+    <h1 class="sc-title">You're in. Welcome to Medvuno.</h1>
+    <p class="sc-sub">Your application has been received. Here's what happens next.</p>
 
-        <!-- Success Alert -->
-        <div class="bg-green-50 border-l-4 border-green-600 p-6 rounded-lg mb-12">
-            <h3 class="text-xl font-semibold text-nav-blue mb-1">We've received your application</h3>
-            <p class="text-gray-700">
-                Our team will review your submission and contact you within 24–48 hours with next steps.
-            </p>
+    <!-- Main confirmation card -->
+    <div class="sc-card">
+
+      <div class="sc-card-header">
+        <div class="sc-card-header-mark">
+          <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M10 2L16 6V14L10 18L4 14V6L10 2Z" stroke="white" stroke-width="1.4" fill="none"/>
+            <path d="M7 10H13M10 7V13" stroke="#D4AF37" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="sc-card-header-brand">Med<span>vuno</span></div>
+        <div class="sc-status-badge">
+          <div class="sc-status-badge-dot"></div>
+          Under Review
+        </div>
+      </div>
+
+      <div class="sc-card-body">
+
+        <!-- Submission summary -->
+        <div class="sc-summary">
+          <div class="sc-summary-row">
+            <span class="sc-summary-label">Lab Name</span>
+            <span class="sc-summary-val">{{ vendor.name }}</span>
+          </div>
+          <div class="sc-summary-divider"></div>
+          <div class="sc-summary-row">
+            <span class="sc-summary-label">Admin Email</span>
+            <span class="sc-summary-val">{{ vendor.admin_email }}</span>
+          </div>
+          <div class="sc-summary-divider"></div>
+          <div class="sc-summary-row">
+            <span class="sc-summary-label">Plan</span>
+            <span class="sc-summary-val">{{ vendor.plan_type|title }}</span>
+          </div>
+          <div class="sc-summary-divider"></div>
+          <div class="sc-summary-row">
+            <span class="sc-summary-label">Submitted</span>
+            <span class="sc-summary-val">{% now "j M Y, g:i A" %}</span>
+          </div>
         </div>
 
-        <!-- Next Steps -->
-        <div class="text-center mb-12">
-            <h2 class="text-2xl font-semibold text-nav-blue mb-6">What Happens Next?</h2>
+        <!-- What happens next -->
+        <div class="sc-steps-label">What happens next</div>
 
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                {% for step in steps %}
-                    {% with number=step.0 title=step.1 desc=step.2 %}
-                        <div class="p-4 bg-white shadow rounded">
-                            <div class="text-3xl font-bold text-blue-600">{{ number }}</div>
-                            <h3 class="font-semibold">{{ title }}</h3>
-                            <p class="text-gray-600">{{ desc }}</p>
-                        </div>
-                    {% endwith %}
-                {% endfor %}
-            </div>
+        <div class="sc-step">
+          <div class="sc-step-num">1</div>
+          <div>
+            <div class="sc-step-title">Application Review</div>
+            <div class="sc-step-desc">Our team reviews your submission within 24–48 hours.</div>
+          </div>
         </div>
+
+        <div class="sc-step">
+          <div class="sc-step-num">2</div>
+          <div>
+            <div class="sc-step-title">Account Activation Email</div>
+            <div class="sc-step-desc">We'll email you a confirmation link to activate your lab account.</div>
+          </div>
+        </div>
+
+        <div class="sc-step">
+          <div class="sc-step-num">3</div>
+          <div>
+            <div class="sc-step-title">Onboarding Call</div>
+            <div class="sc-step-desc">A specialist will schedule a short call to configure your workspace.</div>
+          </div>
+        </div>
+
+        <div class="sc-divider"></div>
 
         <!-- Contact -->
-        <div class="bg-gray-50 rounded-xl p-10 text-center mb-16">
-            <h3 class="text-2xl font-semibold text-nav-blue mb-6">Need Immediate Assistance?</h3>
-
-            <div class="flex flex-col md:flex-row justify-center gap-8">
-                <div class="flex items-center gap-3">
-                    <i class="fas fa-envelope text-brand-red"></i>
-                    <span class="text-gray-700">support@firstjplims.com</span>
-                </div>
-                <div class="flex items-center gap-3">
-                    <i class="fas fa-phone text-brand-red"></i>
-                    <span class="text-gray-700">+1 (555) 123-LABS</span>
-                </div>
+        <div class="sc-contact">
+          <a href="mailto:support@medvuno.com" class="sc-contact-item">
+            <div class="sc-contact-icon">
+              <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
             </div>
-
-            <p class="text-gray-500 mt-4 text-sm">
-                Available Monday–Friday • 9AM–6PM EST
-            </p>
-        </div>
-
-        <!-- Action Buttons -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-16">
-            <a href="{% url 'vendor_onboarding' %}" 
-               class="w-full py-3 text-brand-red border border-brand-red rounded-md text-center font-semibold hover:bg-brand-red">
-                Submit Another Application
-            </a>
-
-            <a href="/" 
-               class="w-full py-3 bg-nav-blue text-white rounded-md text-center font-semibold hover:bg-brand-red transition">
-                Return to Homepage
-            </a>
-        </div>
-
-        <!-- Resource Links -->
-        <div class="text-center mb-10">
-            <h3 class="text-2xl font-semibold text-nav-blue mb-8">Explore Resources While You Wait</h3>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-                <!-- Card 1 -->
-                <div class="p-6 text-center border rounded-lg">
-                    <div class="w-20 h-20 flex items-center justify-center rounded-full bg-brand-red text-white mx-auto mb-4">
-                        <i class="fas fa-book-open text-xl"></i>
-                    </div>
-                    <h5 class="font-semibold text-nav-blue mb-2">Documentation</h5>
-                    <p class="text-gray-600 text-sm mb-3">Browse guides and API documentation.</p>
-                    <a href="#" class="text-brand-red font-medium text-sm hover:underline">View Docs</a>
-                </div>
-
-                <!-- Card 2 -->
-                <div class="p-6 text-center border rounded-lg">
-                    <div class="w-20 h-20 flex items-center justify-center rounded-full bg-brand-red text-white mx-auto mb-4">
-                        <i class="fas fa-video text-xl"></i>
-                    </div>
-                    <h5 class="font-semibold text-nav-blue mb-2">Video Tutorials</h5>
-                    <p class="text-gray-600 text-sm mb-3">Watch step-by-step tutorials.</p>
-                    <a href="#" class="text-brand-red font-medium text-sm hover:underline">Watch Videos</a>
-                </div>
-
-                <!-- Card 3 -->
-                <div class="p-6 text-center border rounded-lg">
-                    <div class="w-20 h-20 flex items-center justify-center rounded-full bg-brand-red text-white mx-auto mb-4">
-                        <i class="fas fa-calendar-alt text-xl"></i>
-                    </div>
-                    <h5 class="font-semibold text-nav-blue mb-2">Schedule Demo</h5>
-                    <p class="text-gray-600 text-sm mb-3">Book a personalized demo.</p>
-                    <a href="#" class="text-brand-red font-medium text-sm hover:underline">Book Now</a>
-                </div>
-
+            support@medvuno.com
+          </a>
+          <a href="tel:+2348064540860" class="sc-contact-item">
+            <div class="sc-contact-icon">
+              <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.63A2 2 0 012 .82h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 8.91A16 16 0 0015.1 17.9l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
             </div>
+            +234 806 454 0860
+          </a>
         </div>
+
+      </div>
+    </div>
+
+    <!-- Action buttons -->
+    <div class="sc-actions">
+      <a href="/" class="sc-btn-primary">
+        <svg viewBox="0 0 16 16"><path d="M6 12L2 8l4-4M2 8h12"/></svg>
+        Back to Homepage
+      </a>
+      <a href="{{ LEARN_BASE_URL }}" class="sc-btn-secondary">
+        <svg viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M5 8h6M5 5.5h6M5 10.5h3"/></svg>
+        View Documentation
+      </a>
+    </div>
+
+    <!-- Resources -->
+    <div class="sc-resources">
+      <div class="sc-resources-title">Explore while you wait</div>
+
+      <a href="#" class="sc-resource">
+        <div class="sc-resource-icon">
+          <svg viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+        </div>
+        <div>
+          <div class="sc-resource-title">Documentation</div>
+          <div class="sc-resource-sub">Guides, API reference and integration docs</div>
+        </div>
+        <div class="sc-resource-arrow"><svg viewBox="0 0 14 14"><path d="M3 7h8M7 3l4 4-4 4"/></svg></div>
+      </a>
+
+      <a href="#" class="sc-resource">
+        <div class="sc-resource-icon">
+          <svg viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+        </div>
+        <div>
+          <div class="sc-resource-title">Video Tutorials</div>
+          <div class="sc-resource-sub">Step-by-step walkthroughs of core features</div>
+        </div>
+        <div class="sc-resource-arrow"><svg viewBox="0 0 14 14"><path d="M3 7h8M7 3l4 4-4 4"/></svg></div>
+      </a>
+
+      <a href="#" class="sc-resource">
+        <div class="sc-resource-icon">
+          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+        <div>
+          <div class="sc-resource-title">Book a Demo</div>
+          <div class="sc-resource-sub">Get a personalised walkthrough with our team</div>
+        </div>
+        <div class="sc-resource-arrow"><svg viewBox="0 0 14 14"><path d="M3 7h8M7 3l4 4-4 4"/></svg></div>
+      </a>
 
     </div>
+
+  </div>
 </div>
 
 {% endblock %}

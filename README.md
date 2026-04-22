@@ -1,128 +1,164 @@
 # 🧪 FirstJP LIMS — Multi-Tenant Laboratory Information Management System
 
-**FirstJP LIMS** is a modern, modular Laboratory Information Management System (LIMS) built with **Django**, designed to support **multi-tenant architecture** — where multiple laboratories (vendors) operate independently under one platform.
+**FirstJP LIMS** is a modular **Laboratory Information Management System (LIMS)** built with **Django**, designed for **multi-tenant laboratory operations**, where multiple independent laboratories operate securely under a shared platform.
 
-Each lab (tenant) has its own domain/subdomain, users, and data isolation.
-The system supports various user roles such as **Platform Admin**, **Vendor Admin**, **Lab Staff**, **Clinician**, and **Patient**.
+Each tenant (lab/vendor) is isolated via **subdomain-based architecture**, ensuring strict data separation, role-based access control, and independent workflows.
+
+The system exposes RESTful endpoints that can be consumed by external frontend applications.
 
 ---
 
 ## 🚀 Key Features
 
-* **Multi-Tenant Architecture**
+### 🏢 Multi-Tenant Architecture
 
-  * Tenant resolution via subdomain (e.g., `carbon12.localhost.test:5050`)
-  * Isolated data per vendor with shared core models
-
-* **Role-Based Access**
-
-  * Platform Admin: Global control and vendor management
-  * Vendor Admin: Manages lab operations, staff, and test catalogs
-  * Lab Staff: Handles sample collection, verification, and reporting
-  * Clinician: Requests and reviews test results
-  * Patient: Accesses personal test results securely
-
-* **Authentication**
-
-  * Tenant-aware login and registration
-  * Role-restricted user registration (per vendor)
-  * Secure password management and session handling
-
-* **Core LIMS Workflow**
-
-  1. Patient Registration
-  2. Test Request Creation
-  3. Sample Collection & Barcode Assignment
-  4. Sample Reception & Verification
-  5. Test Assignment and Processing
-  6. Result Entry & Validation
-
-* **Vendor Management**
-
-  * Vendor onboarding (by Platform Admin)
-  * Customizable test pricing and turnaround times (via `VendorTest` model)
-  * Automatic barcode generation for samples
+* Subdomain-based tenant resolution (e.g., `carbon12.localhost.test:5050`)
+* Strict data isolation per vendor
+* Shared core infrastructure with tenant-scoped data access
 
 ---
-python manage.py startapp inventory apps/inventory
+### Architecture Diagram
+![lims-architecture-diagram](https://github.com/Sevenwings26/lims-multitenant-system/main/lims-architecture-diagram.png?raw=true)
+---
+
+### 🔐 Role-Based Access Control (RBAC)
+
+* **Platform Admin** → Global system and vendor management
+* **Vendor Admin** → Manages lab operations, staff, and test catalog
+* **Lab Staff** → Handles sample processing and result entry
+* **Clinician** → Requests and reviews test results
+* **Patient** → Secure access to personal test results
+
+---
+
+### 🔑 Authentication System
+
+* Tenant-aware authentication flow
+* Role-restricted registration per vendor
+* Secure session handling with custom user model
+
+---
+
+### 🔬 Core LIMS Workflow
+
+1. Patient registration
+2. Test request creation
+3. Sample collection & barcode assignment
+4. Sample reception & verification
+5. Test assignment and processing
+6. Result entry, validation, and reporting
+
+---
+
+### 🧩 Vendor Management
+
+* Vendor onboarding (Platform Admin controlled)
+* Custom test catalog per vendor (`VendorTest` model)
+* Barcode generation for sample tracking
+* Independent operational configuration per lab
+
+---
+
+### 🌐 REST API Integration
+
+The system exposes RESTful endpoints that can be integrated with external frontend systems, enabling decoupled UI development.
+
+---
 
 ## 🏗️ Tech Stack
 
-| Component       | Technology                                     |
-| --------------- | ---------------------------------------------- |
-| Backend         | Django 5.x                                     |
-| Frontend        | Django Templating (Jinja2)                     |
-| Database        | PostgreSQL (Recommended for schema separation) |
-| Tenant Handling | Custom Middleware (`TenantMiddleware`)         |
-| Authentication  | Django’s Custom User Model                     |
-| Environment     | Python 3.12+, Virtual Environment              |
+| Layer          | Technology                             |
+| -------------- | -------------------------------------- |
+| Backend        | Django 5.x                             |
+| Frontend       | Django Templates (Jinja2)              |
+| Database       | PostgreSQL                             |
+| Multi-Tenancy  | Custom Middleware (`TenantMiddleware`) |
+| Authentication | Custom Django User Model               |
+| Environment    | Python 3.12+ (Virtual Environment)     |
 
 ---
 
 ## ⚙️ Installation & Setup
 
 ```bash
-# 1️⃣ Clone the repository
-git clone repo
+# 1. Clone repository
+git clone https://github.com/Sevenwings26/lims-multitenant-system.git
+cd lims-multitenant-system
 
-cd firstjp-lims
+# 2. Create virtual environment
+uv venv
 
-# 2️⃣ Create and activate a virtual environment
-python -m venv .venv
+# Activate (Windows)
+.venv\Scripts\activate
 
-.venv\Scripts\activate # On Mac: source .venv/bin/activate
+# Activate (Windows)
+.venv/bin/activate
 
-# 3️⃣ Install dependencies
+# 3. Install dependencies
 pip install -r requirements.txt
 
-# 4️⃣ Apply migrations
-python manage.py migrations
+# 4. Apply migrations
+python manage.py makemigrations
 python manage.py migrate
 
-# 5️⃣ Run the development server
+# 5. Run server
 python manage.py runserver
+```
 
-```
 ---
+
+## 🔄 System Workflow
+
+```text
+Patient Registration → Test Request → Sample Collection → Verification → Analysis → Result Entry → Review & Reporting
 ```
-  Create Test Request  →  Collect Sample  →  Verify/Approve Sample  →  Perform Analysis  →  Record Results  →  Review/Verify Report
-```
+
 ---
 
 ## 🌐 Tenant Configuration
 
-### Example: Vendor Subdomain Setup
+### Example Vendor Subdomains
 
-| Vendor             | Domain                    | URL                                                                        |
-| ------------------ | ------------------------- | -------------------------------------------------------------------------- |
-| Carbon12 Labs      | `carbon12.localhost.test` | [http://carbon12.localhost.test:5050](http://carbon12.localhost.test:5050) |
-| MedPro Diagnostics | `medpro.localhost.test`   | [http://medpro.localhost.test:5050](http://medpro.localhost.test:5050)     |
+| Vendor             | Domain                  | URL                                                                        |
+| ------------------ | ----------------------- | -------------------------------------------------------------------------- |
+| Carbon12 Labs      | carbon12.localhost.test | [http://carbon12.localhost.test:5050](http://carbon12.localhost.test:5050) |
+| MedPro Diagnostics | medpro.localhost.test   | [http://medpro.localhost.test:5050](http://medpro.localhost.test:5050)     |
 
-Each domain is linked via the `VendorDomain` model in the admin panel or through the onboarding form.
+Each tenant is mapped via the `VendorDomain` model and resolved dynamically using middleware.
 
 ---
 
-## 👥 User Roles Overview
+## 👥 User Roles
 
-| Role               | Description                                  | Access Domain    |
-| ------------------ | -------------------------------------------- | ---------------- |
-| **Platform Admin** | Oversees platform-wide operations            | Main domain      |
-| **Vendor Admin**   | Manages one lab/vendor account               | Vendor subdomain |
-| **Lab Staff**      | Operates within lab (sample, result, report) | Vendor subdomain |
-| **Clinician**      | Requests and views patient tests             | Vendor subdomain |
-| **Patient**        | Views own test results                       | Vendor subdomain |
+| Role           | Description                                 |
+| -------------- | ------------------------------------------- |
+| Platform Admin | Oversees entire system and vendor lifecycle |
+| Vendor Admin   | Manages lab operations and configurations   |
+| Lab Staff      | Handles samples, testing, and reporting     |
+| Clinician      | Requests tests and reviews results          |
+| Patient        | Views personal test results securely        |
 
 ---
 
 ## 🧭 Development Notes
 
-* Always test using vendor subdomains (`<vendor>.localhost.test:5050`)
-* Use `TenantMiddleware` to attach `request.tenant` dynamically
-* Vendor Admins are created only by Platform Admins
-* Other roles register within their vendor’s subdomain only
+* Always test using tenant subdomains (`<vendor>.localhost.test`)
+* Tenant context is resolved via `TenantMiddleware`
+* Vendor Admin accounts are created only by Platform Admins
+* Role-based access is enforced across all workflows
+* External frontend systems can consume REST APIs independently
+
+---
+
+## 📌 Project Status
+
+* Core system fully implemented
+* REST API endpoints exposed for frontend integration
+* Multi-tenant architecture functional and tested
+* Some production deployments are currently offline due to infrastructure changes
 
 ---
 
 ## 📜 License
 
-MIT License © 2025
+MIT License © 2026
